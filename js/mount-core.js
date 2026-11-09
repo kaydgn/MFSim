@@ -2402,20 +2402,27 @@ var veMountCore = (function() {
   // ── Hafif ticari — 3 noktalı askı ──
   // 2,2 L dört silindirli dizel + 6 ileri manuel, arkadan itiş (boyuna motor).
   // İki motor takozu (sıkıştırma/kayma ≈ 3,3) + bir şanzıman takozu.
+  // BRAKET (kullanıcı 2026-11-09, Canlı Not 70: *"Takozların braketler aracılığı
+  // ile bağlanması gerekir"*): motor takozları bloğun yan yüzünden 50 mm dışarıda,
+  // aradaki braket nokta kütle (2,2 kg, ortada); şanzıman takozu kuyruk gövdesine
+  // doğrudan oturur (karşı braketi şasinin). Takozlar dışarı kayınca yalpalama modu
+  // 12,1 → 12,9 Hz; rölanti 750 → 800 d/dk (sınır 0,5·f_ateş 12,5 → 13,3 Hz).
   const HAFIF_TORQUE = { Te:360, Rstall:1, iTransfer:1,
                          fwd:{iGear:4.86, phiAxle:1}, rev:{iGear:-4.39, phiAxle:1}, derate:1 };
   const HAFIF_EXAMPLE = {
     g: 9.81,
     components: [
       {name:'Motor', mass:185, cg:[380, 10, 520], Ixx:11.15, Iyy:12.24, Izz:10.76, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor', at:[179,331],
-       veri:{ Te:360, TeRpm:1750, Pmax:120, PmaxRpm:3500, idleRpm:750, cylinders:4 }},
+       veri:{ Te:360, TeRpm:1750, Pmax:120, PmaxRpm:3500, idleRpm:800, cylinders:4 }},
       {name:'Şanzıman', mass:62, cg:[930, -15, 470], Ixx:1.66, Iyy:2.31, Izz:2.14, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[577,331],
        veri:{ g1:4.86, g2:2.61, g3:1.52, g4:1, g5:0.8, g6:0.67, gR:-4.39, Rstall:1 }},
-      {name:'Alternatör + klima', mass:18, cg:[250, 235, 600], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[85,331]}
+      {name:'Alternatör + klima', mass:18, cg:[250, 235, 600], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[85,331]},
+      {name:'Sağ motor braketi', mass:2.2, cg:[300,  315, 480], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[121,234]},
+      {name:'Sol motor braketi', mass:2.2, cg:[300, -295, 480], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[121,430]}
     ],
     mounts: [
-      {name:'Sağ Motor Takozu', pos:[ 300,  300, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,137]},
-      {name:'Sol Motor Takozu', pos:[ 300, -300, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,533]},
+      {name:'Sağ Motor Takozu', pos:[ 300,  340, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,137]},
+      {name:'Sol Motor Takozu', pos:[ 300, -320, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,533]},
       {name:'Şanzıman Takozu',  pos:[1080,    0, 440], kstat:[145,70,240], kdyn:[205,100,335], at:[685,331]}
     ],
     torque: HAFIF_TORQUE,
@@ -2425,6 +2432,9 @@ var veMountCore = (function() {
 
   // ── Orta kamyon — nonlineer takoz ──
   // 7,7 L altı silindirli dizel + 6 ileri manuel; önde ve arkada ikişer takoz.
+  // BRAKET (Canlı Not 70): her takoz braketle bağlı — ön takozlar bloğun ön
+  // yüzünden 145 mm önde (ön braket 4,5 kg), arka takozlar yan yüzden 120 mm
+  // dışarıda, şasi kirişinde (arka braket 6,5 kg); braket nokta kütle, ortada.
   // Yasalar katalogla orijinde ÖZ-TUTARLI (k0 = k_stat — lawCatalogMismatch
   // susar): basmada sertleşen rasyonel yasa (asimptot 20 mm), yanal/boyunada
   // kübik sertleşme, geri-gelmede kübik.
@@ -2439,19 +2449,28 @@ var veMountCore = (function() {
        veri:{ Te:1200, TeRpm:1300, Pmax:220, PmaxRpm:2300, idleRpm:600, cylinders:6 }},
       {name:'Şanzıman', mass:175, cg:[1180, 0, 520], Ixx:8.52, Iyy:11.72, Izz:11.09, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[686,331],
        veri:{ g1:6.7, g2:4.1, g3:2.5, g4:1.6, g5:1, g6:0.78, gR:-6.1, Rstall:1 }},
-      {name:'Hava kompresörü', mass:24, cg:[120, -330, 720], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[261,331]}
+      {name:'Hava kompresörü', mass:24, cg:[120, -330, 720], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[261,331]},
+      {name:'Sağ ön braket',   mass:4.5, cg:[-350,  320, 470], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[ 85,234]},
+      {name:'Sol ön braket',   mass:4.5, cg:[-350, -320, 470], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[ 85,430]},
+      {name:'Sağ arka braket', mass:6.5, cg:[ 820,  420, 600], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[470,234]},
+      {name:'Sol arka braket', mass:6.5, cg:[ 820, -420, 600], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket', at:[470,430]}
     ],
     mounts: [
-      {name:'Sağ Ön Takoz',   pos:[-320,  320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,137]},
-      {name:'Sol Ön Takoz',   pos:[-320, -320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,533]},
-      {name:'Sağ Arka Takoz', pos:[ 820,  380, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,137]},
-      {name:'Sol Arka Takoz', pos:[ 820, -380, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,533]}
+      {name:'Sağ Ön Takoz',   pos:[-420,  320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,137]},
+      {name:'Sol Ön Takoz',   pos:[-420, -320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,533]},
+      {name:'Sağ Arka Takoz', pos:[ 820,  480, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,137]},
+      {name:'Sol Arka Takoz', pos:[ 820, -480, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,533]}
     ],
     torque: KAMYON_TORQUE,
     cozucu: { zeta:0.05 },
     loadCases: _torkDurumlari(KAMYON_TORQUE)
   };
   const _KURGU_KAYNAK = ['Kaynak', 'Kurgu — gerçek bir aracı temsil etmez'];
+  // Kütle sayısı ve rölanti modelden (elle yazılan "750 d/dk · f_ateş 25 Hz" model değişince eskiyordu)
+  const _kurguKutle = (ex) => String(ex.components.length) + ' kütle';
+  const _kurguBraket = (ex) => ex.components.filter((c) => c.kind === 'mnt-bracket').length;
+  const _kurguRolanti = (ex) => { const v = ex.components[0].veri, f = Math.round(v.idleRpm / 60 * v.cylinders / 2 * 10) / 10;
+    return _sayi(v.idleRpm) + ' d/dk · ' + _sayi(v.cylinders) + ' → f_ateş ' + _sayi(f) + ' Hz'; };
 
   const MOUNT_EXAMPLES = {
     siper: {
@@ -2611,14 +2630,15 @@ var veMountCore = (function() {
       id: 'hafif', kurgu: true,
       name: 'Hafif ticari — 3 noktalı askı',
       vehicle: 'Hafif ticari',
-      subtitle: '3 kütle · 3 takoz güç grubu',
+      subtitle: _kurguKutle(HAFIF_EXAMPLE) + ' · 3 takoz güç grubu',
       description: '2,2 L dizel · 6 ileri manuel · 3 noktalı askı',
       specs: [
         ['Kütle gövdesi', String(HAFIF_EXAMPLE.components.length)],
         ['Takoz', String(HAFIF_EXAMPLE.mounts.length) + ' · iki motor + şanzıman'],
+        ['Braket', String(_kurguBraket(HAFIF_EXAMPLE)) + ' · motor takozlarında'],
         ['Toplam kütle', _toplamKg(HAFIF_EXAMPLE)],
         ['Motor torku', _sayi(HAFIF_TORQUE.Te) + ' N·m · 1. vites ' + _sayi(_torkIleri(HAFIF_TORQUE), 0) + ' N·m'],
-        ['Rölanti · silindir', '750 d/dk · 4 → f_ateş 25 Hz'],
+        ['Rölanti · silindir', _kurguRolanti(HAFIF_EXAMPLE)],
         _KURGU_KAYNAK
       ],
       // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
@@ -2637,14 +2657,15 @@ var veMountCore = (function() {
       id: 'kamyon', kurgu: true,
       name: 'Orta kamyon — nonlineer takoz',
       vehicle: 'Orta kamyon',
-      subtitle: '3 kütle · 4 nonlineer takoz',
+      subtitle: _kurguKutle(KAMYON_EXAMPLE) + ' · 4 nonlineer takoz',
       description: '7,7 L dizel · 6 ileri manuel · nonlineer takoz',
       specs: [
         ['Kütle gövdesi', String(KAMYON_EXAMPLE.components.length)],
         ['Takoz', String(KAMYON_EXAMPLE.mounts.length) + ' · nonlineer yasa (x · y · z)'],
+        ['Braket', String(_kurguBraket(KAMYON_EXAMPLE)) + ' · her takozda'],
         ['Toplam kütle', _toplamKg(KAMYON_EXAMPLE)],
         ['Motor torku', _sayi(KAMYON_TORQUE.Te) + ' N·m · 1. vites ' + _sayi(_torkIleri(KAMYON_TORQUE), 0) + ' N·m'],
-        ['Rölanti · silindir', '600 d/dk · 6 → f_ateş 30 Hz'],
+        ['Rölanti · silindir', _kurguRolanti(KAMYON_EXAMPLE)],
         _KURGU_KAYNAK
       ],
       // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.

@@ -801,7 +801,10 @@ function _mwStepKaynak(c){
     + '<button type="button" class="ve-fw-mini"' + (!yok && sira >= ids.length - 1 ? ' disabled' : '') + ' title="' + (yok ? 'İlk örnek' : 'Sonraki örnek') + '" onclick="veMntWizOrnekAdim(1)">' + _mwIkon('arrow-down') + '</button>'
     + '<span class="ve-fw-seednav-n">' + (sira >= 0 ? (sira + 1) + ' / ' + ids.length : '— / ' + ids.length) + '</span></div>' : '';
   var ex = (yuklu && typeof veMountCore !== 'undefined') ? veMountCore.getMountExample(yuklu) : null;
-  h += _mwCard('Örnekten doldur', '<label class="ve-fw-field"><span class="ve-fw-lbl">Örnek</span>' + sec + '</label>' + gez);
+  // Gezinme listenin SATIRINDA, yanında (kullanıcı 2026-11-09, Canlı Not 78: *"Bir satır aşağıda
+  // olmasının bir anlamı yok"*). Kapı: mount-wizard.test.js → *GEZİNME LİSTENİN SATIRINDA*.
+  h += _mwCard('Örnekten doldur', '<div class="ve-fw-field ve-mw-ornek"><span class="ve-fw-lbl">Örnek</span>'
+    + '<div class="ve-mw-ornek-d">' + sec + gez + '</div></div>');
   if(ex){
     var ih = ex.description ? '<div class="ve-fw-exnote">' + _mwEsc(ex.description) + '</div>' : '';
     if(ex.specs && ex.specs.length){
@@ -2388,8 +2391,10 @@ function _mwMasaHTML(k, c){
       + '</div>';
   }
   // 3B'nin göstergesi modelden (braket · nokta kütle var mı): çizimle _mwMasaCiz doldurur
+  // düz görünüşte gövde eşdeğer kutusunun çerçevesiyle (Canlı Not 79)
   var lejant = (tur === 'figur' && !uc)
-    ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
+    ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-kutu"></i>Gövde</span>'
+      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
       + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde CG</span>'
       + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
     : '';

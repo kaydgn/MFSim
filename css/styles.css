@@ -9068,6 +9068,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 
 .ve-fw-seednav{ display:flex; align-items:center; gap:4px; margin-top:6px; }
+/* Takoz sihirbazının Örnekten doldur'u (Canlı Not 78): gezinme listenin satırında; ad sütunu
+   adın kendisi kadar, liste kalan genişliği alır */
+.ve-fw-yan .ve-fw-card-b > .ve-fw-field.ve-mw-ornek{ grid-template-columns:auto minmax(0, 1fr); }
+.ve-mw-ornek-d{ display:flex; align-items:center; gap:4px; min-width:0; }
+.ve-mw-ornek-d > select.ve-fw-inp{ flex:1 1 auto; min-width:0; width:auto; }
+.ve-mw-ornek-d > .ve-fw-seednav{ flex:none; margin-top:0; }
 /* Denklem: KaTeX gelmeden ÖNCE de okunur dursun — yedek metin matematiksel
    bir dizgiyle yazılır, ham `p = c − a·(...)` gibi görünmez. */
 .ve-fw-tex{ font-size:var(--fs-tiny); letter-spacing:0.2px; }
@@ -11788,6 +11794,8 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-akso .ve-mnt-2d{ margin:0; border:none; border-radius:0; background:transparent; }
 .ve-mw-lj-ak{ flex:none; width:10px; height:10px; }
 .ve-mw-lj-takoz{ border:1.6px solid var(--accent-success); border-radius:var(--radius-xs); }
+/* düz görünüşte gövdenin çerçevesi (Canlı Not 79): eşdeğer kutunun izdüşümü */
+.ve-mw-lj-kutu{ width:14px; border:1px solid var(--text-secondary); background:var(--bg-tertiary); }
 .ve-mw-lj-govde{ border:1.6px solid var(--accent-warning); border-radius:50%; }
 .ve-mw-lj-cg{ border:1.6px solid var(--accent-danger); border-radius:50%;
   background:conic-gradient(var(--bg-primary) 0 25%, var(--accent-danger) 0 50%, var(--bg-primary) 0 75%, var(--accent-danger) 0); }

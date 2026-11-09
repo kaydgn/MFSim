@@ -3484,7 +3484,14 @@ function veMnt2DViewRefresh(){
 function _mnt2DGather(liste){
   var g=_mntGatherForSolver(null, liste);
   var num=function(v){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:NaN; };
-  var comps=g.components.map(function(c){ return {id:c.id, name:c.name, mass:num(c.mass), x:num(c.cgx), y:num(c.cgy), z:num(c.cgz)}; })
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var comps=g.components.map(function(c){
+      var o={id:c.id, name:c.name, mass:num(c.mass), x:num(c.cgx), y:num(c.cgy), z:num(c.cgz)};
+      // Eşdeğer kutu (mm, x · y · z) — 3B'nin kutusu (_mntAksoModelKur): düz görünüşte
+      // gövdenin çerçevesi (Canlı Not 79). Nokta kütle ve atalet eksikse yok.
+      var k=(C && C.equivalentBox) ? C.equivalentBox(o.mass, [[num(c.Ixx),0,0],[0,num(c.Iyy),0],[0,0,num(c.Izz)]], !!c.pointMass) : null;
+      if(k && k.every(function(v){ return v>0 && Number.isFinite(v); })) o.kutu=k.map(function(v){ return v*1000; });
+      return o; })
     .filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
   var mounts=g.mounts.map(function(m){ return {id:m.id, name:m.name, x:num(m.x), y:num(m.y), z:num(m.z)}; })
     .filter(function(m){ return Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z); });
@@ -3854,6 +3861,19 @@ function _mnt2DFigure(o){
   // binen işaretler (aynı piksele düşen sol/sağ çiftleri: yandan X–Z ve önden Y–Z
   // görünüşlerinde) görünürlük için hafifçe yatay yelpazelenir. Her takoz tek tek
   // etiketlenir; çakışan etiketler yerleştiricide çözülür.
+  // GÖVDENİN ÇERÇEVESİ (kullanıcı 2026-11-09, Canlı Not 79: *"Üstten-Yandan-Önden görünüşlerde
+  // en azından komponentlerin bir çerçevesi çıksın … Sanki 3B'ya yandan üstten bakıyormuş gibi
+  // olsun"*): eşdeğer kutunun izdüşümü (3B'nin kutusu), işaretlerin ALTINDA; tıklanınca gövdeyi
+  // seçer, seçiliyken kenarı vurgu. Kutusuz gövde (nokta kütle) yalnız dairesiyle.
+  var EKS={ x:0, y:1, z:2 }, kh=EKS[hKey], kv=EKS[o.vKey||'z'];
+  o.comps.forEach(function(c, ci){
+    if(!c.kutu) return;
+    var cv=(o.vKey==='y'?c.y:c.z), x0=o.px(hval(c)-c.kutu[kh]/2), x1=o.px(hval(c)+c.kutu[kh]/2);
+    var y0=o.pyFn(cv+c.kutu[kv]/2), y1=o.pyFn(cv-c.kutu[kv]/2), sec=seciliMi('govde', ci);
+    svg+='<g class="ve-mnt2d-kutu"'+secAttr('govde', ci)+'><rect x="'+_mnt2DR(Math.min(x0, x1))+'" y="'+_mnt2DR(Math.min(y0, y1))+'"'
+      + ' width="'+_mnt2DR(Math.abs(x1-x0))+'" height="'+_mnt2DR(Math.abs(y1-y0))+'" fill="var(--text-muted)" fill-opacity="0.07"'
+      + ' stroke="'+(sec ? 'var(--accent-primary)' : 'var(--text-secondary)')+'" stroke-width="'+(sec ? 1.6 : 1)+'"/></g>';
+  });
   var mpts=o.mounts.map(function(m, mi){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, mi:mi, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
   var COIN=12;   // px — bu yarıçapta üst üste binenler yelpazelenir (konum aldatmacası değil)
   mpts.forEach(function(a,i){ if(a._grp) return; var grp=[a]; a._grp=1;
@@ -3931,6 +3951,11 @@ function veMnt2DGorunusSVG(veri, W, H, opt){
   var hs=[], vs=[0];                          // referans çizgisi (v = 0) görünür kalsın
   function ekle(p){ hs.push(p[G.h]); vs.push(p[G.v]); }
   mounts.forEach(ekle); comps.forEach(ekle); if(cg) ekle(cg);
+  // gövdenin çerçevesi de alanın içinde (Canlı Not 79)
+  var EKS={ x:0, y:1, z:2 };
+  comps.forEach(function(c){ if(!c.kutu) return;
+    var wh=c.kutu[EKS[G.h]]/2, wv=c.kutu[EKS[G.v]]/2;
+    hs.push(c[G.h]-wh, c[G.h]+wh); vs.push(c[G.v]-wv, c[G.v]+wv); });
   var hMin=Math.min.apply(null,hs), hMax=Math.max.apply(null,hs);
   var vMin=Math.min.apply(null,vs), vMax=Math.max.apply(null,vs);
   var hR=Math.max(hMax-hMin,1), vR=Math.max(vMax-vMin,1);

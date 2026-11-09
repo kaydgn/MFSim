@@ -144,13 +144,53 @@ describe('hafif ve kamyon — kurgunun tasarım özellikleri tutuyor', () => {
   });
 });
 
+// BRAKET (kullanıcı 2026-11-09, Canlı Not 70: "örneklerde sadece takozlar var. Model olarak
+// mantıksız. Takozların braketler aracılığı ile bağlanması gerekir.") Önce: takozlar gövdenin
+// yüzüne 10–45 mm'de, braket yoktu. Şimdi her motor takozu (kamyonda her takoz) gövdenin
+// yüzünden ≈ 50 mm ya da daha dışarıda ve arada braket: nokta kütle, takozla yüzün arasında; Görünümler
+// onu takozdan gövdeye uzanan levha olarak çizer. Kutu kapalı form — braketsiz kalır.
+describe('braket — takoz gövdeye braketle bağlı (Canlı Not 70)', () => {
+  const kutuKap = (c) => { const k = core.equivalentBox(c.mass, [[c.Ixx, 0, 0], [0, c.Iyy, 0], [0, 0, c.Izz]], false).map((v) => v * 1000);
+    return { lo: c.cg.map((v, i) => v - k[i] / 2), hi: c.cg.map((v, i) => v + k[i] / 2) }; };
+  // takozun gövdeye uzaklığı: kutunun dışındaki en yakın yüz (kutu içindeyse 0)
+  const yuzUzak = (p, K) => Math.sqrt([0, 1, 2].reduce((s, i) => s + Math.pow(Math.max(K.lo[i] - p[i], 0, p[i] - K.hi[i]), 2), 0));
+  test.each([['hafif', 2, ['Sağ Motor Takozu', 'Sol Motor Takozu']], ['kamyon', 4, ['Sağ Ön Takoz', 'Sol Ön Takoz', 'Sağ Arka Takoz', 'Sol Arka Takoz']]])(
+    '%s: %s braket; her biri bir takozla motorun yüzü arasında, takoz yüzden ≥ 45 mm', (id, n, takozlar) => {
+      const M = core.getMountExample(id).model, motor = M.components.find((c) => c.kind === 'mnt-motor'), K = kutuKap(motor);
+      const br = M.components.filter((c) => c.kind === 'mnt-bracket');
+      expect(br).toHaveLength(n);
+      br.forEach((b) => {
+        expect([b.name, b.pointMass, b.mass > 1 && b.mass < 10]).toEqual([b.name, true, true]);
+        const t = M.mounts.filter((m) => takozlar.includes(m.name))
+          .map((m) => ({ m, d: Math.hypot(m.pos[0] - b.cg[0], m.pos[1] - b.cg[1], m.pos[2] - b.cg[2]) })).sort((a, c) => a.d - c.d)[0].m;
+        // braket takozla yüzün arasında: takozdan yüze olan doğrunun üstünde
+        expect(yuzUzak(b.cg, K)).toBeLessThan(yuzUzak(t.pos, K));
+        expect(yuzUzak(t.pos, K)).toBeGreaterThanOrEqual(45);
+      });
+      expect(M.mounts.filter((m) => takozlar.includes(m.name)).map((m) => yuzUzak(m.pos, K) >= 45)).toEqual(takozlar.map(() => true));
+    });
+  test('Görünümler braketi levha çizer: takozdan motorun yüzüne', () => {
+    const { cp } = H.kur();
+    ['hafif', 'kamyon'].forEach((id) => {
+      const m = cp.veMntAksoOrnekModel(core.getMountExample(id).model);
+      const motor = m.govde.find((x) => /Motor$/.test(x.ad));
+      const br = m.govde.filter((x) => x.braket);
+      expect(br.length).toBeGreaterThan(0);
+      br.forEach((b) => expect([id, b.ad, !!b.levha, b.levha && b.levha.govde, b.levha && b.levha.d >= 45]).toEqual([id, b.ad, true, motor.k, true]));
+    });
+  });
+  test('kutu braketsiz (kapalı form)', () => {
+    expect(core.getMountExample('kutu').model.components.filter((c) => c.kind === 'mnt-bracket')).toEqual([]);
+  });
+});
+
 // Kayıt defteri (panel önizlemesi + başlangıç sayfasının resmi) ile JSON
 // ("Örneği aktar") aynı modelin İKİ kopyası. Kurgu örneklerde JSON modelden
 // üretildi: her sayı birebir aynı olmak zorunda.
 describe('iki kopya sayı sayı aynı: kayıt defteri ↔ JSON', () => {
   test.each(KURGU.map((e) => [e.id, e]))('%s', (id, e) => {
     const j = json(e), M = e.model;
-    const govde = j.nodes.filter((n) => ['mnt-motor', 'mnt-gearbox', 'mnt-pump'].includes(n.type));
+    const govde = j.nodes.filter((n) => ['mnt-motor', 'mnt-gearbox', 'mnt-pump', 'mnt-bracket'].includes(n.type));
     expect(govde.map((n) => n.customName).sort()).toEqual(M.components.map((c) => c.name).sort());
     M.components.forEach((c) => {
       const d = govde.find((n) => n.customName === c.name);

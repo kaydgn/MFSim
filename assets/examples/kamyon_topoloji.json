@@ -100,7 +100,7 @@
       "height": 46,
       "customName": "Sağ Ön Takoz",
       "data": {
-        "x": -320,
+        "x": -420,
         "y": 320,
         "z": 470,
         "kxs": 120,
@@ -147,7 +147,7 @@
       "customName": "Sağ Arka Takoz",
       "data": {
         "x": 820,
-        "y": 380,
+        "y": 480,
         "z": 600,
         "kxs": 250,
         "kys": 200,
@@ -192,7 +192,7 @@
       "height": 46,
       "customName": "Sol Ön Takoz",
       "data": {
-        "x": -320,
+        "x": -420,
         "y": -320,
         "z": 470,
         "kxs": 120,
@@ -239,7 +239,7 @@
       "customName": "Sol Arka Takoz",
       "data": {
         "x": 820,
-        "y": -380,
+        "y": -480,
         "z": 600,
         "kxs": 250,
         "kys": 200,
@@ -270,6 +270,106 @@
             "c3": 0.6
           }
         }
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n15",
+      "type": "mnt-bracket",
+      "x": 295,
+      "y": 312,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ ön braket",
+      "data": {
+        "mass": 4.5,
+        "cgx": -350,
+        "cgy": 320,
+        "cgz": 470,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n16",
+      "type": "mnt-bracket",
+      "x": 295,
+      "y": 508,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol ön braket",
+      "data": {
+        "mass": 4.5,
+        "cgx": -350,
+        "cgy": -320,
+        "cgz": 470,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n17",
+      "type": "mnt-bracket",
+      "x": 680,
+      "y": 312,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ arka braket",
+      "data": {
+        "mass": 6.5,
+        "cgx": 820,
+        "cgy": 420,
+        "cgz": 600,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n18",
+      "type": "mnt-bracket",
+      "x": 680,
+      "y": 508,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol arka braket",
+      "data": {
+        "mass": 6.5,
+        "cgx": 820,
+        "cgy": -420,
+        "cgz": 600,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -362,7 +462,7 @@
     }
   ],
   "connections": [],
-  "compCounter": 14,
+  "compCounter": 18,
   "canvasOffset": {
     "x": 2839.3503196952106,
     "y": 2881.4967211058097

@@ -51,7 +51,7 @@
         "TeRpm": 1750,
         "Pmax": 120,
         "PmaxRpm": 3500,
-        "idleRpm": 750,
+        "idleRpm": 800,
         "cylinders": 4
       },
       "mirrored": false,
@@ -124,7 +124,7 @@
       "customName": "Sağ Motor Takozu",
       "data": {
         "x": 300,
-        "y": 300,
+        "y": 340,
         "z": 480,
         "kxs": 90,
         "kys": 90,
@@ -147,7 +147,7 @@
       "customName": "Sol Motor Takozu",
       "data": {
         "x": 300,
-        "y": -300,
+        "y": -320,
         "z": 480,
         "kxs": 90,
         "kys": 90,
@@ -155,6 +155,56 @@
         "kxd": 125,
         "kyd": 125,
         "kzd": 420
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n14",
+      "type": "mnt-bracket",
+      "x": 331,
+      "y": 312,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ motor braketi",
+      "data": {
+        "mass": 2.2,
+        "cgx": 300,
+        "cgy": 315,
+        "cgz": 480,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n15",
+      "type": "mnt-bracket",
+      "x": 331,
+      "y": 508,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol motor braketi",
+      "data": {
+        "mass": 2.2,
+        "cgx": 300,
+        "cgy": -295,
+        "cgz": 480,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -247,7 +297,7 @@
     }
   ],
   "connections": [],
-  "compCounter": 13,
+  "compCounter": 15,
   "canvasOffset": {
     "x": 2839.3503196952106,
     "y": 2881.4967211058097
