@@ -147,7 +147,7 @@ describe('springScaleFor: ölçüt sınıra hangi ölçekte ulaşır', () => {
   const en = (r) => { let b = null; Rx.sensitivity[r].e.forEach((row, i) => row.forEach((v, ax) => { if (!b || v > b.e) b = { i, ax, e: v }; })); return b; };
   const fmax = (md) => md[md.length - 1].f_Hz;
   test('Kriter 1 payı: bulunan ölçekte en yüksek mod tam sınırda; doğrusal tahminle %5 içinde', () => {
-    const L = 12.5, b = en(5);
+    const t = Rx.gather.torque, L = 0.5 * (t.idleRpm / 60) * (t.cylinders / 2), b = en(5);   // ½·f_ateş
     const z = core.springScaleFor(Rx.mounts, Rx.mp.cg, M, Rx.kBasis, b.i, b.ax, fmax, L, +1);
     expect(z).not.toBeNull();
     expect(z.s).toBeGreaterThan(1);
@@ -231,15 +231,16 @@ describe('rapor §8.17 — kriter kaldıraçları çekirdeğin aramasıyla AYNI 
   test('hafif: üç kriter tutuyor; kaldıraçlar ve paylar yeniden çözümle doğrulanıyor', () => {
     const Rx = R.hafif, K = rp._mntRepKaldiraclar(Rx, {});
     expect(K.map((k) => [k.no, k.durum])).toEqual([['1', 'ok'], ['1a', 'ok'], ['1b', 'ok']]);
-    // K1: en yüksek mod (6) — Sol Motor k_z sertleşince sınıra (½·f_ateş = 12,5 Hz) değer
+    // K1: en yüksek mod (6) — Sol Motor k_z sertleşince sınıra (½·f_ateş = 13,3 Hz; rölanti 800 d/dk,
+    // Canlı Not 70) değer
     expect([Rx.mounts[K[0].b.i].name, K[0].b.ax]).toEqual(['Sol Motor Takozu', 2]);
-    expect(Math.abs(maks(K[0].z.modes) - 12.5)).toBeLessThan(1e-6);
+    expect(Math.abs(maks(K[0].z.modes) - 0.5 * (800 / 60) * 2)).toBeLessThan(1e-6);
     expect(K[0].sonuc).toBe(yuzde(K[0].z.s) + ' sertleşmede sınıra değer');
-    expect(K[0].sonuc).toBe('+%7,4 sertleşmede sınıra değer');
-    // K1b: 10,24 Hz'teki mod 4 — Sağ Motor k_z yumuşayınca banda (10 Hz) iner
-    expect([Rx.mounts[K[2].b.i].name, K[2].b.ax]).toEqual(['Sağ Motor Takozu', 2]);
-    expect(Math.abs(K[2].z.modes[3].f_Hz - 10)).toBeLessThan(1e-6);
-    expect(K[2].sonuc).toBe('−%5,3 yumuşamada banda girer');
+    expect(K[0].sonuc).toBe('+%9,6 sertleşmede sınıra değer');
+    // K1b: 7,81 Hz'teki mod 3 — Şanzıman k_y sertleşince banda (8 Hz) girer
+    expect([Rx.mounts[K[2].b.i].name, K[2].b.ax]).toEqual(['Şanzıman Takozu', 1]);
+    expect(Math.abs(K[2].z.modes[2].f_Hz - 8)).toBeLessThan(1e-6);
+    expect(K[2].sonuc).toBe('+%9,1 sertleşmede banda girer');
     // K1a: en küçük aralık 0,5 Hz'e iner
     const gap = (md) => Math.min(...md.slice(1).map((m, k) => m.f_Hz - md[k].f_Hz));
     expect(Math.abs(gap(K[1].z.modes) - 0.5)).toBeLessThan(1e-6);
