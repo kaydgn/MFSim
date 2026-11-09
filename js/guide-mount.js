@@ -1175,7 +1175,9 @@ function _gmSec16(){
     + 'şanzıman malzeme almaz (kütleleri başka yoldan). Parça birimin içindeki en yakın atamayı alır, ataması yoksa '
     + 'birimin malzemesini. <strong>Özellikler</strong>’in <strong>Malzeme</strong> satırı yalnız atanmış ya da '
     + 'devralınan malzemede görünür: <em>üstten</em> (atanmış alt montaj), <em>birimden</em> (birimin kaynağı); '
-    + 'kendi ataması varsa yanında kaldırma düğmesi. Birim seçiliyken satır birimin kütle kaynağını yazar. '
+    + 'kendi ataması varsa yanında kaldırma düğmesi. Hesaptan sonra birimin kendisi seçiliyken malzeme '
+    + '<strong>Kütle ve ağırlık merkezi</strong> bölümünün <strong>Kaynak</strong> listesinden de seçilir '
+    + '(Elle · Dosyadan · Parçalardan · malzemeler · katalog); malzemede kütle hacim × yoğunluk. '
     + 'Atanan malzeme ürün ağacında satırın yanında görünür ve rollerle birlikte projeye kaydedilir; rol '
     + 'değişince düğümün malzemesi kalır.</p>';
   h += _gmAlanTablo('Malzemeler', (typeof VE_MNT_STP_MALZEME !== 'undefined' ? VE_MNT_STP_MALZEME : []).map(function(m){
