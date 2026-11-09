@@ -667,17 +667,24 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   SÖYLENİR; başlık ve özet yapışık. Kopyala (sekme, virgüllü) ve CSV (`;`,
   noktalı) TÜM örnekleri alır. Kapı: `sonuc-tablo.test.js` + `.spec.js`.
 - **KABUĞUN ÜST BANDI TEK ÇİZGİ, TUVAL KENARA YAPIŞIK.** Her sayfada yan yana
-  duran başlıklar (Topoloji: "Bileşenler" · sekme bandı · müfettiş başlığı;
-  Sonuçlar: Veri Gezgini · araç çubuğu · rapor bandı) ölçüyü ve zemini TEK
-  jetondan alır: `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki
-  sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok (çukur emekli):
-  sınırı komşusunun çizgisidir. Ray kendi sütunu: palet ile arasında TEK
-  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Bandın çizgisi
-  KESİNTİSİZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): rayın çizgisi
-  bandın altından iner, aktif sekme düz (altı aksan), palet kapalıyken açma
-  düğmesi köşe hücresinde — tuvalin üstünde yüzen kart yok. Kapı:
-  `kabuk-bant.test.js` + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ·
-  *"RAY ÇERÇEVELİ"* · *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
+  duran başlıklar (Topoloji: "Bileşenler" · müfettiş başlığı; Sonuçlar: Veri
+  Gezgini · araç çubuğu · rapor bandı) ölçüyü ve zemini TEK jetondan alır:
+  `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki sütunun sol kenarından
+  başlar. Tuvalin kendi çerçevesi yok (çukur emekli): sınırı komşusunun
+  çizgisidir; tuvalin üstünde bant YOK. Ray kendi sütunu ve TAM BOY (kullanıcı
+  2026-11-09, Canlı Not 89): palet ile arasında TEK çizgi tepeden dibe, rayın
+  başında köşe hücresi yok — bandın boyunda zeminsiz aralık, palet kapalıyken
+  açma düğmesi orada; tuvalin üstünde yüzen kart yok. Kapı: `kabuk-bant.test.js`
+  + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* · *"RAY TAM BOY"* · *"AÇMA
+  DÜĞMESİ RAYIN BAŞINDA"*.
+- **PROGRAM TEK TOPOLOJİYLE ÇALIŞIR** (kullanıcı 2026-11-09, Canlı Not 87:
+  *"Yan yana ek topolojiler açıp sistem kurmuyoruz"*): sekme şeridi, sekme
+  ekleme · kapatma · çoğaltma ve yan yana görünüm YOK; `veTabs` içte tek
+  elemanlı kap (kayıt biçimi `tabs:[…]` değişmez). Çok sekmeli eski proje
+  yüklenince yalnız etkin topoloji kurulur ve kalanların sayısı söylenir
+  (`veTekTopoloji`). Uyarılar durum çubuğundaki düğmesinin üstünde, pencere
+  ailesinin başlığıyla açılır (Canlı Not 90). Kapı: `tek-topoloji.test.js` +
+  `kabuk-sutun.spec.js` → *"TEK TOPOLOJİ"*.
 - **ŞERİDİN GÖVDESİ YOK — komutlar kenardaki küçük pencerede** (kullanıcı
   2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın sağ ucundaki
   **Komutlar** düğmesi (`#ve-rb-expand`) bandın altında YÜZEN pencereyi
@@ -874,7 +881,7 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
   kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
   YERİNDE değiştirir. Kapatan yalnız ✕ · Esc · bağlam değişimi
-  (`veMufettisKapat`: proje sekmesi, modüle giriş/çıkış, yeni proje). İçerik
+  (`veMufettisKapat`: proje yükleme, modüle giriş/çıkış, yeni proje). İçerik
   değişmeden önce odak bırakılır (yazılmış değer eski bileşene yazılsın).
   Sütuna sığmayan bileşen açık sütunda KART olur, geniş pencere çift tıkla ya
   da karttan açılır ve kapanınca karta döner. Çöp kutusu konuyu siler, seçimi
@@ -1175,7 +1182,7 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/mount-shock.test.js` | `js/mount-core.js` şok + `js/mount-signals.js` | Newmark-β geçici rejim: yarı-statik limit, sönümsüz enerji korunumu, modal salınım frekansı, **metal-metal durdurucunun gerçekten sınırlaması** (daha az yol, daha çok kuvvet) |
 | `tests/unit/mount-nonlinear-transient.test.js` | `js/mount-core.js` `shockResponse` + `buildKfromBasis` + FRF | **İki sessiz hatanın kapısı**: (1) şok çözümü lineerdi — statik taraf Newton koşarken geçici rejim sabit K ile tek çözüm yapıyordu; (2) rijitlik tabanı üç ayrı yerden geliyordu (modal tanjanttan, FRF/şok nominal k_dyn'den) → aynı panoda modal frekans ile FRF tepesi ayrışıyordu. Kilitler: yarı-statik limitte Newton'un `solveCaseNL`'e inmesi + kalan farkın sönümle küçülmesi (atalet artığı, model sapması değil), küçük genlikte şok salınımının TANJANT moda oturması, lineer modelde Newton yolunun eski çözümle birebir eşleşmesi, ve TTAR referans modelinde durdurucu payının statik önyükle birlikte ölçülmesi |
 | `tests/unit/arac-example.test.js` | `js/cp-arac-example.js` + `assets/examples/ap_*` | Araç Performans örnek kartları: kayıt defteri ↔ disk tutarlılığı, öksüz dosya yok, her örnekte çalışır güç aktarma zinciri |
-| `tests/unit/node-label-anchor.test.js` | `js/components.js` `veNodeLabelAnchor` + `js/export-topology.js` + `js/topology.js` | Düğüm ADININ çizim çıpası tek kaynaktan: `node.data.labelPos` (üst/sol/sağ/alt) yalnız canlı kanvasta okunuyordu; dışa aktarılan SVG/PNG ve şerit paneli adı hep kutunun ALTINA çiziyordu — ekranda tellerden kaçırılan ad çıktıda yine şeritteydi |
+| `tests/unit/node-label-anchor.test.js` | `js/components.js` `veNodeLabelAnchor` + `js/export-topology.js` + `js/topology.js` | Düğüm ADININ çizim çıpası tek kaynaktan: `node.data.labelPos` (üst/sol/sağ/alt) yalnız canlı kanvasta okunuyordu; dışa aktarılan SVG/PNG ve şerit paneli adı hep kutunun ALTINA çiziyordu — ekranda tellerden kaçırılan ad çıktıda yine şeritteydi (şerit paneli 2026-11-09'da kalktı, Canlı Not 87) |
 | `tests/unit/arac-example-layout.test.js` | `assets/examples/ap_*` + `js/cp-arac-performans.js` | **Kanonik yerleşim kapısı**: şaft ekseni (zincirin dört bağlantısı tam yatay), fan simetrisi, dik açılı telin ne bileşenin ne de bir ADIN üstünden geçmesi, kutu çakışmaması, `lineType` sözleşmesi (zincir `curve` / dal `stepped`), bütün örneklerin AYNI sütunlarda olması, `VE_ARAC_PERFORMANS_LAYOUT` ile birebir uyum (6×6'da fan dışı + fan sütunları), "Örneği Aktar"ın eklediği `ap-example` düğümünün boş köşeye düşmesi |
 | `tests/unit/arac-performans-shift-4500sp.test.js` | `js/cp-gearbox.js` | Allison 4500 SP S1–S4 vites eşikleri; 2C→2L avlanma bekçisi + bütün profillerde yapısal kapı |
 | `tests/unit/matching-selection.test.js` | `js/cp-gearbox.js` + `js/cp-torque-converter.js` + `assets/examples/ap_*` | "Hangi şanzıman/konvertör seçili?" çözümü (anahtar → ad → oran/eğri eşleşmesi) + örneklerin preset anahtarı sayılarla tutarlı |

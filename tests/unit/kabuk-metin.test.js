@@ -57,7 +57,7 @@ const KABUK = ['js/ribbon.js', 'js/settings.js', 'js/command-palette.js', 'js/st
 const IZIN = [
   /^Geri alındı$/, /^İleri alındı$/, /^Yedek alındı$/, /^Yedek geri yüklendi$/, /^Otomatik yedek silindi$/,
   /^Tercihler sıfırlandı, sayfa yenileniyor…$/, /^Sipariş fişi panoya kopyalandı\.$/, /^Fiş seçildi · Ctrl\+C$/,
-  /^Proje yüklendi: ‹› sekme$/, /^Topoloji yüklendi: ‹› bileşen$/,
+  /^Proje yüklendi$/, /^Topoloji yüklendi: ‹› bileşen$/,
   /^‹› bileşen (kopyalandı|yapıştırıldı)$/, /^İstasyon eklendi: ‹›$/, /^‹› parça eklendi\.$/
 ];
 const izinli = (m) => IZIN.some((re) => re.test(m));

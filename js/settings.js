@@ -390,9 +390,12 @@ function _veSettingsApplyProjectData(data) {
   // (bkz. veResetSubtopoNav — topology.js).
   if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
   if(typeof veClearCanvasDOM === 'function') veClearCanvasDOM();
+  // TEK TOPOLOJİ (Canlı Not 87): yalnız etkin sekme kurulur
+  var tek = (typeof veTekTopoloji === 'function') ? veTekTopoloji(data)
+    : { tab: data.tabs[Math.min(data.activeTabIdx || 0, data.tabs.length - 1)], atlanan: 0 };
   veTabs = [];
-  veTabCounter = data.tabCounter || data.tabs.length;
-  data.tabs.forEach(function(t) {
+  veTabCounter = 1;
+  [tek.tab].forEach(function(t) {
     // Yükleme sırasında iç içe subTopology'yi hafiflet (bkz. veSanitizeEmbeddedState):
     // eski yedeklerde undo geçmişi + tam sim gömülü olabilir; belleği sınırla.
     var st = (t.state && typeof veSanitizeEmbeddedState === 'function')
@@ -403,7 +406,7 @@ function _veSettingsApplyProjectData(data) {
       connCount: (st && st.connections) ? st.connections.length : 0
     });
   });
-  veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
+  veActiveTabIdx = 0;
   veActiveModule = 'full-throttle';
   var ov = document.getElementById('ve-module-overlay');
   if(ov) ov.style.display = 'none';
@@ -413,7 +416,7 @@ function _veSettingsApplyProjectData(data) {
     veProjectName = data.projectName;
     if(typeof veSetProjectNameButton === 'function') veSetProjectNameButton(veProjectName);
   }
-  if(typeof veRenderTabs === 'function') veRenderTabs();
+  if(typeof veTekTopolojiBildir === 'function') veTekTopolojiBildir(tek);
   return true;
 }
 

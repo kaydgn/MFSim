@@ -1123,10 +1123,10 @@ function veSetWarningsOpen(open) {
   var chip   = document.getElementById('ve-warnings-chip');
   if(body)   body.classList.toggle('collapsed', !open);
   if(panel)  panel.classList.toggle('open', open);
-  // Ok panelin AÇILIŞ yönünü gösterir. Bant tuvalin üstüne taşındığından panel
-  // artık AŞAĞI açılıyor: kapalıyken "aşağı açılır", açıkken "yukarı
-  // kapanır". Eskiden tersiydi ve bant alttaydı. Çizgi ikon (karar 10·B).
-  veIkonDegis(toggle, open ? 'chevron-up' : 'chevron-down');
+  // Ok panelin AÇILIŞ yönünü gösterir. Panel durum çubuğundaki düğmesinin ÜSTÜNDE
+  // açılır (Canlı Not 90): kapalıyken "yukarı açılır", açıkken "aşağı kapanır".
+  // Çizgi ikon (karar 10·B).
+  veIkonDegis(toggle, open ? 'chevron-down' : 'chevron-up');
   if(chip)   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
@@ -1225,10 +1225,9 @@ function veRenderWarningsPanel(items, opts) {
   if(items.length === 0) {
     // Dürüst boş durum: doğrulanmadıysa "hazır" DEME. Eskiden hiç bileşen
     // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
-    var msg = (opts.source === 'dogrulama')
-      ? '<span style="color:var(--ink-success);">' + veIkon('check') + ' Hesaplamaya hazır.</span>'
-      : 'Doğrulama çalıştırılmadı. ' + veYon('Doğrula ile çalıştırın.');
-    body.innerHTML = '<div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">' + msg + '</div>';
+    body.innerHTML = (opts.source === 'dogrulama')
+      ? '<div class="ve-warnings-bos ok">' + veIkon('check') + ' Hesaplamaya hazır.</div>'
+      : '<div class="ve-warnings-bos">Doğrulama çalıştırılmadı. ' + veYon('Doğrula ile çalıştırın.') + '</div>';
     return;
   }
 

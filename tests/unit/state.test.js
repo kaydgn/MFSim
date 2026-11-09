@@ -24,7 +24,6 @@ global.addResizeHandles = jest.fn();
 global.addPortListeners = jest.fn();
 global.veFlushOpenPanelData = jest.fn();
 global.veSaveActiveTabState = jest.fn();
-global.veRenderTabs = jest.fn();
 global.componentDefs = {
   'Motor': { name: 'Motor', svg: '<svg></svg>', inputs: 0, outputs: 1 },
   'Gearbox': { name: 'Şanzıman', svg: '<svg></svg>', inputs: 1, outputs: 1 }

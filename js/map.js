@@ -2959,7 +2959,7 @@ function veEditNodeName(nodeId) {
 // zıplatıyordu. Kural artık:
 //   · pencerenin KONUSU son gösterilen bileşendir; seçim boşalınca içerik kalır
 //   · başka bir bileşen seçilince içerik YERİNDE değişir — kapanıp açılmaz
-//   · bağlam değişince (proje sekmesi, modüle giriş/çıkış, yeni proje) açıkça
+//   · bağlam değişince (proje yükleme, modüle giriş/çıkış, yeni proje) açıkça
 //     kapanır: veMufettisKapat
 // Kapı: tests/unit/mufettis-kalir.test.js + tests/e2e/mufettis-sutun.spec.js → *KALIR*.
 function veMufettisAcik() {

@@ -46,14 +46,9 @@ function veRedo() {
 // ===== PROJE KOMUTLARI =====
 // (Marka menüsü kaldırıldı — bu komutların yüzeyi artık şerit: js/ribbon.js)
 function veNewProject() {
-  var totalNodes = 0;
-  veTabs.forEach(function(t, i) {
-    if(i === veActiveTabIdx) totalNodes += nodes.length;
-    else totalNodes += (t.nodeCount || 0);
-  });
+  var totalNodes = nodes.length;
   
   var doNew = function() {
-    if(veSplitMode) veCloseSplit();
     // Proje yüklemesinin sıfırlaması (gezinme yolu + oturumluk sonuçlar ve
     // Takoz'un STEP oturumu): compCounter sıfırlandığı için yeni projenin ilk
     // modülü öncekinin kimliğini alıyor.
@@ -232,7 +227,6 @@ function veClearAll() {
     updateAllConnections();
     updateNodeCount();
     veSaveActiveTabState();
-    veRenderTabs();
   });
 }
 
@@ -401,10 +395,12 @@ function veLoadTopology() {
           // eski parentState'i geri yazar ve yeni açılan proje kaybolur.
           if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
           veClearCanvasDOM();
+          // TEK TOPOLOJİ (Canlı Not 87): yalnız etkin sekme kurulur
+          var tek = veTekTopoloji(data);
           veTabs = [];
-          veTabCounter = data.tabCounter || data.tabs.length;
+          veTabCounter = 1;
           
-          data.tabs.forEach(function(t) {
+          [tek.tab].forEach(function(t) {
             // Yükleme sırasında hafiflet: eski dosyalarda iç içe subTopology blobları
             // undo geçmişi + tam simResults taşıyabilir → belleği şişirir, editör
             // açınca RangeError'a yol açar. Sonuçlar KORUNUR (seyreltilerek).
@@ -419,7 +415,7 @@ function veLoadTopology() {
             });
           });
           
-          veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
+          veActiveTabIdx = 0;
           
           // Tek modül — her zaman full-throttle
           veActiveModule = 'full-throttle';
@@ -434,8 +430,8 @@ function veLoadTopology() {
             veSetProjectNameButton(veProjectName);
           }
           
-          veRenderTabs();
-          showToast('Proje yüklendi: ' + veTabs.length + ' sekme');
+          showToast('Proje yüklendi');
+          veTekTopolojiBildir(tek);
           return;
         }
         
@@ -462,7 +458,6 @@ function veLoadTopology() {
         redoStack = [];
         saveState();
         veSaveActiveTabState();
-        veRenderTabs();
         
         showToast('Topoloji yüklendi: ' + data.nodes.length + ' bileşen');
       } catch(err) {

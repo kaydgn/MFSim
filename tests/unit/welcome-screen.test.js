@@ -94,7 +94,6 @@ function setupDOM() {
     '<span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown"></span>' +
     '<div id="sayfa2-content">' +
     '  <div class="ve-main">' +
-    '    <div class="ve-doc-dock"></div>' +
     '    <div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div>' +
     WELCOME +
     '  </div>' +
@@ -137,10 +136,11 @@ describe('Karşılama ekranı — kabuk kapanışı', () => {
     expect(document.body.classList.contains('ve-no-module')).toBe(false);
   });
 
-  test('CSS kuralları duruyor: şerit gizli, belge bandı gizli, üst boşluk sıfır', () => {
-    // Boşluğa toleranslı ama kuralın KENDİSİNİ arayan eşleşmeler.
+  test('CSS kuralları duruyor: şerit gizli, durum şeridi gizli, üst boşluk sıfır', () => {
+    // Boşluğa toleranslı ama kuralın KENDİSİNİ arayan eşleşmeler. Belge bandı yok
+    // (Canlı Not 87 — sekme şeridi kalktı).
     expect(CSS).toMatch(/body\.ve-no-module\s*#ve-ribbon\s*\{\s*display:\s*none/);
-    expect(CSS).toMatch(/\.ve-main\.ve-no-module\s*\.ve-doc-dock\s*\{\s*display:\s*none/);
+    expect(CSS).toMatch(/\.ve-main\.ve-no-module\s*\.ve-status-bar\s*\{\s*display:\s*none/);
     // Şerit gizlenince sayfa yukarı çıkmalı: #sayfa2.active { top:var(--chrome-h) }
     expect(CSS).toMatch(/body\.ve-no-module\s*\{\s*--chrome-h:\s*0px/);
     expect(CSS).toMatch(/#sayfa2\.active\{[^}]*top:var\(--chrome-h/);

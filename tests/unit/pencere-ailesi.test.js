@@ -111,8 +111,9 @@ describe('başlık TEK bileşen', () => {
     // pencere onu kendi satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
     expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
     // Beşinci: Takoz Başlangıç Sihirbazı (FEAD sihirbazının kabuğu, aynı başlık).
-    // Komuta Penceresi 2026-11-02'de kaldırıldı (6 → 5).
-    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(5);
+    // Komuta Penceresi 2026-11-02'de kaldırıldı (6 → 5). Altıncı: Uyarılar
+    // (2026-11-09, Canlı Not 90 — durum çubuğundaki düğmesinin üstünde açılır).
+    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(6);
   });
 
   test('pencere KURAN her dosya ortak başlığı taşır — liste değil kural', () => {
@@ -204,7 +205,7 @@ describe('başlık ikonu onu açan şerit girişinin ikonu', () => {
 
   test('her başlık bir çizgi ikonla başlar (emoji yok)', () => {
     const basliklar = HTML.match(/<div class="ve-settings-header">\s*<span[^>]*>[^<]*<?/g) || [];
-    expect(basliklar).toHaveLength(5);
+    expect(basliklar).toHaveLength(6);
     basliklar.forEach((b) => expect(b).toMatch(/<span[^>]*>\s*<$/));
     expect(HTML).toMatch(/id="ve-fw-title"><span class="mf-ico mf-ico-wand"><\/span>/);
     expect(HTML).toMatch(/id="ve-mw-title"><span class="mf-ico mf-ico-wand"><\/span>/);

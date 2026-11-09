@@ -703,6 +703,17 @@ bağlanır" yarısı emekli), palet kapalıyken açma düğmesi köşe hücresin
 `ve-no-module` · `ve-paletsiz` · `ve-bas-acik`, öteki sayfada yok). Kapı:
 `kabuk-sutun.spec.js` → *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
 
+**2026-11-09 — tek topoloji, ray tam boy.** Kullanıcı (Canlı Not 87): *"Yan
+yana ek topolojiler açıp sistem kurmuyoruz … bu topoloji pencere mantığını
+tamamen kaldıralım"* — sekme bandı, sekme işlemleri ve bölünmüş görünüm kalktı,
+tuval üst bandın hemen altından başlar (bantta "Bileşenler" ile müfettiş başlığı
+kalır). Canlı Not 89 (*"Baksana, çok çirkin. Düzelt."*): köşe hücresi kalktı;
+ray tepeden dibe tek sütun, çizgisi tepeden iner, başında bant boyu zeminsiz
+aralık (açma düğmesinin yeri). Canlı Not 90: uyarılar durum çubuğundaki
+düğmesinin üstünde, pencere ailesinin başlığıyla. Kapı: `tek-topoloji.test.js`
++ `kabuk-sutun.spec.js` → *"RAY TAM BOY"* · *"TEK TOPOLOJİ"* · *"AÇMA DÜĞMESİ
+RAYIN BAŞINDA"*.
+
 ## Kabuk TEK ÇİZGİ — üst bant tek jeton, tuval kenara yapışık (2026-09-23)
 
 **Hüküm.** Yan yana duran üst başlıklar ölçüyü ve zemini tek jetondan alır
