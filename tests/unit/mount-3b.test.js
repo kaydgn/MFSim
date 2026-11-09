@@ -1828,7 +1828,8 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(veMntWiz3bDurumBiti({ odak: null, sec: { 5: 1 } }, 5)).toBe(VE_MW_3B_SECIK);
     const arac = loadSource('cp-mount-3b-arac.js');
     expect(arac).toMatch(/side: THREE\.DoubleSide, depthWrite: false, depthTest: false \}\);/);
-    expect(arac).toMatch(/var f = V\.suzgec === 'yuz' \? \(V\.yuzOn \|\| V\.yuzSec\) : null/);
+    // süzgeçte fare altı ya da seçili yüz; referans kipinde (Canlı Not 71) fare altındaki aday yüz
+    expect(arac).toMatch(/var f = V\.ref \? V\.yuzOn : \(V\.suzgec === 'yuz' \? \(V\.yuzOn \|\| V\.yuzSec\) : null\)/);
     expect(loadSource('cp-mount-3b.js')).toMatch(/V\.solukVar = !!R\.sec \|\| !!R\.odak \|\| R\.xray;/);
   });
 
