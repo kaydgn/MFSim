@@ -1375,6 +1375,68 @@ describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeler
 // başlık bandı + ✕; okuma tuvalin ortasında 460 px'lik kart, başlığı 16 px;
 // kurulum kutusu sol üstte. Gerçek tarayıcı: tests/e2e/mount-3b.spec.js →
 // *DURDUR · DEVAM* (kartın yeri, tam ekran) · tests/e2e/mount-cad.spec.js (Kapat).
+// ── REFERANS YÜZEY DİLİNDE (Canlı Not 71, 2026-11-09) ───────────────────────
+// Kullanıcı: "'Bloğun ön yüzü' ve 'Krank ekseni' referanslarını seçerken normal yüzey
+// seçiyormuş gibi olmuyor … son güncellemelerde yüzey seçme mantığını ve görselleştirmesini
+// değiştirdik. Ama burada işlemiyor." Önce: referans kipinde fare altında yalnız 24 px'lik
+// halka, yüz vurgusu ve odak yok (Yüzey süzgecinde var). Şimdi aday YÜZ süzgecin vurgusuyla,
+// parçası odakta; eksen kipinde ekseni olan yüz — kayıt eksenindeki sınır çemberi (dosyada
+// yeniden bulunur). Gerçek fare: mount-veri-sayfasi.spec.js.
+describe('REFERANS YÜZEY DİLİNDE — aday yüz süzgecin vurgusuyla; eksen silindirin çemberinden', () => {
+  const P21 = require('../../js/step-p21.js');
+  beforeAll(() => { Object.assign(global, P21); });
+  const son = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
+  const ag = veMntStpAgUret(son, [], son.parcalar.map((p) => p.i));
+  const s = { sonuc: son, ag };
+  const parca = (ad) => son.parcalar.filter((p) => p.ad === ad)[0].i;
+
+  test('silindirin yüz kaydı sınır çemberlerini taşır; eksendeki çember p\'ye en yakını', () => {
+    const pi = parca('Sağ ön takoz'), a = ag[pi];
+    const b = [0, 1, 2, 3].map((f) => veMntWiz3bYuzBilgi(s, pi, a.yuzUcgen[f] * 3)).filter((x) => x.tip === 'CYLINDRICAL_SURFACE')[0];
+    expect(b.cemberler.length).toBeGreaterThanOrEqual(2);
+    b.cemberler.forEach((c) => expect(c.r).toBeCloseTo(45, 9));
+    const zler = b.cemberler.map((c) => c.c[2]);
+    const alt = veMntWiz3bEksenCemberi(b, [-650, 380, Math.min(...zler) + 1]);
+    const ust = veMntWiz3bEksenCemberi(b, [-650, 380, Math.max(...zler) - 1]);
+    expect(alt.c[2]).toBeCloseTo(Math.min(...zler), 9);
+    expect(ust.c[2]).toBeCloseTo(Math.max(...zler), 9);
+    // kayıt kenarınkiyle aynı biçim ve dosyada yeniden bulunur
+    const d = veMntStpKenarDaire(son, pi, ust.kenar);
+    expect(d).toMatchObject({ parca: pi, kenar: ust.kenar });
+    expect(d.r).toBeCloseTo(45, 9);
+    const geri = veMntStpDaireBul(son, d.yol, d.c, d.r);
+    expect(geri && geri.parca).toBe(pi);
+  });
+
+  test('eksensiz yüz (düzlem) ve eksen dışı çember aday değil', () => {
+    const pi = parca('Motor bloğu');
+    const duz = veMntWiz3bYuzBilgi(s, pi, ag[pi].yuzUcgen[0] * 3);
+    expect(duz.tip).toBe('PLANE');
+    expect(veMntWiz3bEksenCemberi(duz, [0, 0, 0])).toBe(null);
+    const yapay = { eksen: [0, 0, 1], o: [0, 0, 0], cemberler: [
+      { c: [5, 0, 10], n: [0, 0, 1], r: 3, kenar: 1 },                 // eksenin 5 mm yanında
+      { c: [0, 0, 40], n: [1, 0, 0], r: 3, kenar: 2 },                 // eksene dik
+      { c: [0, 0, 90], n: [0, 0, -1], r: 3, kenar: 3 }] };              // eksende, ters yönlü normal
+    expect(veMntWiz3bEksenCemberi(yapay, [0, 0, 0]).kenar).toBe(3);
+    expect(veMntWiz3bEksenCemberi({ eksen: [0, 0, 1], o: [0, 0, 0], cemberler: [yapay.cemberler[0]] }, [0, 0, 0])).toBe(null);
+  });
+
+  test('odak: referans kipinde fare altındaki aday yüzün parçası (süzgeç Parça olsa da); seçili yüz odak vermez', () => {
+    const eski = _mw3b;
+    try {
+      _mw3b = { ref: { birim: 1, tur: 'yuz' }, suzgec: 'parca', yuzOn: { parca: 4, f: 2 }, yuzSec: null, yuzOdak: -1 };
+      _mw3bYuzOdak();
+      expect(_mw3b.yuzOdak).toBe(4);
+      _mw3b = { ref: { birim: 1, tur: 'eksen' }, suzgec: 'yuz', yuzOn: null, yuzSec: { parca: 2, f: 0 }, yuzOdak: -1 };
+      _mw3bYuzOdak();
+      expect(_mw3b.yuzOdak).toBe(-1);
+      _mw3b = { ref: null, suzgec: 'yuz', yuzOn: null, yuzSec: { parca: 2, f: 0 }, yuzOdak: -1 };
+      _mw3bYuzOdak();
+      expect(_mw3b.yuzOdak).toBe(2);                                     // süzgecin kendi davranışı aynı
+    } finally { _mw3b = eski; }
+  });
+});
+
 describe('TAM EKRAN ve İŞ KARTI — başlık bandı ve komut çubuğu yok, Kapat tuvalin sağ üstünde, iş sağ altta', () => {
   const fs = require('fs'), path = require('path');
   const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
@@ -1766,7 +1828,8 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(veMntWiz3bDurumBiti({ odak: null, sec: { 5: 1 } }, 5)).toBe(VE_MW_3B_SECIK);
     const arac = loadSource('cp-mount-3b-arac.js');
     expect(arac).toMatch(/side: THREE\.DoubleSide, depthWrite: false, depthTest: false \}\);/);
-    expect(arac).toMatch(/var f = V\.suzgec === 'yuz' \? \(V\.yuzOn \|\| V\.yuzSec\) : null/);
+    // süzgeçte fare altı ya da seçili yüz; referans kipinde (Canlı Not 71) fare altındaki aday yüz
+    expect(arac).toMatch(/var f = V\.ref \? V\.yuzOn : \(V\.suzgec === 'yuz' \? \(V\.yuzOn \|\| V\.yuzSec\) : null\)/);
     expect(loadSource('cp-mount-3b.js')).toMatch(/V\.solukVar = !!R\.sec \|\| !!R\.odak \|\| R\.xray;/);
   });
 

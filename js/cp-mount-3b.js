@@ -1686,39 +1686,49 @@ function _mw3bRefKip(ref){
   V.ref = ref;
   V.aday = null;
   _mw3bAdayHalka(null);
+  if(V.scene && typeof _mw3bYuzOn === 'function'){ V.yuzFare = null; _mw3bYuzOn(null); }
   if(V.kap && V.kap.classList) V.kap.classList.toggle('ve-mw-3b-nokta-kip', !!ref || V.nokta >= 0);
   if(typeof document !== 'undefined') _mw3bIpucu(null);
 }
+// REFERANS YÜZEY SEÇİMİNİN DİLİYLE (kullanıcı 2026-11-09, Canlı Not 71: *"normal yüzey
+// seçiyormuş gibi olmuyor … son güncellemelerde yüzey seçme mantığını ve görselleştirmesini
+// değiştirdik. Ama burada işlemiyor"*): aday bir YÜZ — Yüzey süzgecinin vurgusuyla önden
+// görünür (js/cp-mount-3b-arac.js → _mw3bYuzOn), parçası odakta, öteki parçalar tül; ipucu
+// süzgecin yazısı. Yüz kipinde aday birimin DÜZLEM yüzü, kayıt dosyanın düzlemi; eksen
+// kipinde ekseni olan yüz (silindir · koni), kayıt eksenindeki sınır çemberi (kenarınkiyle
+// aynı biçim) — yoksa farenin yakınındaki dairesel kenar (halka). Kapı: mount-3b.test.js →
+// *REFERANS YÜZEY DİLİNDE* + mount-veri-sayfasi.spec.js.
 // Farenin altındaki düzlem yüz: birimin parçalarında ışının ilk üçgeni → dosyanın
 // düzlemi (parçanın düzlemleri fare ilk geldiğinde bir kez çıkar — gerçek motor
-// biriminin hepsi kip açılırken 0,4 sn'ydi). Döner: { parca, p, duzlem: { yol, o, n, parca } } | null
+// biriminin hepsi kip açılırken 0,4 sn'ydi). Döner: { parca, p, duzlem: { yol, o, n, parca }, yuz } | null
+// (yuz: Yüzey süzgecinin yüz kaydı; ağda yüz aralığı yoksa null — eski halka)
 function _mw3bYuzAra(cx, cy){
   var V = _mw3b;
-  if(!V || !V.camera || !V.ekli.length || typeof veMntStpDuzlemSec !== 'function') return null;
-  var R = V.renderer.domElement.getBoundingClientRect(), w = R.width || 1, h = R.height || 1;
-  V.camera.updateMatrixWorld();
-  V.ray.setFromCamera(new THREE.Vector2((cx - R.left) / w * 2 - 1, -((cy - R.top) / h) * 2 + 1), V.camera);
+  if(!V || !V.camera || !V.ekli.length || typeof veMntStpDuzlemSec !== 'function' || typeof _mw3bIsinK !== 'function') return null;
   var birim = {};
   veMntWiz3bParcalar(V.s, V.ref.birim).forEach(function(i){ birim[i] = 1; });
-  var o = V.ray.ray.origin, d = V.ray.ray.direction, K = V.kutular, aday = [];
-  for(var e = 0; e < V.ekli.length; e++){
-    if(!birim[V.ekli[e]]) continue;
-    var t = _mw3bKutuKes(o, d, K, e * 6);
-    if(t >= 0) aday.push([t, V.ekli[e]]);
-  }
-  aday.sort(function(a, b){ return a[0] - b[0]; });
-  var en = { t: Infinity, k: -1, i: -1 };
-  for(var c = 0; c < aday.length && aday[c][0] <= en.t; c++){
-    var q = _mw3bUcgenKesK(o, d, V.s.ag[aday[c][1]], en.t, V.kesitK);
-    if(q.t < en.t) en = { t: q.t, k: q.k, i: aday[c][1] };
-  }
-  if(en.i < 0) return null;
-  var a = V.s.ag[en.i], u = a.uc, T = a.ucgen, i0 = T[en.k] * 3, i1 = T[en.k + 1] * 3, i2 = T[en.k + 2] * 3;
+  var h = _mw3bIsinK(cx, cy, birim);
+  if(!h) return null;
+  var yz = (typeof veMntWiz3bYuzBilgi === 'function') ? veMntWiz3bYuzBilgi(V.s, h.i, h.k) : null;
+  if(yz && yz.tip !== 'PLANE') return null;
+  var duz = veMntStpDuzlemSec(V.s.sonuc, h.i, h.p, _mw3bUcgenNormal(V.s.ag[h.i], h.k));
+  return duz ? { parca: h.i, p: h.p, duzlem: duz, yuz: yz } : null;
+}
+// Üçgenin normali (k: üçgen dizisindeki yeri; ağın sargısıyla)
+function _mw3bUcgenNormal(a, k){
+  var u = a.uc, T = a.ucgen, i0 = T[k] * 3, i1 = T[k + 1] * 3, i2 = T[k + 2] * 3;
   var e1 = [u[i1] - u[i0], u[i1 + 1] - u[i0 + 1], u[i1 + 2] - u[i0 + 2]], e2 = [u[i2] - u[i0], u[i2 + 1] - u[i0 + 1], u[i2 + 2] - u[i0 + 2]];
-  var nt = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
-  var p = [o.x + en.t * d.x, o.y + en.t * d.y, o.z + en.t * d.z];
-  var duz = veMntStpDuzlemSec(V.s.sonuc, en.i, p, nt);
-  return duz ? { parca: en.i, p: p, duzlem: duz } : null;
+  return [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+}
+// Farenin altındaki EKSENLİ yüz (bütün parçalarda: krank kasnağı birimin dışında
+// olabilir) → eksenindeki sınır çemberinin kaydı. Döner: { parca, yuz, daire } | null
+function _mw3bEksenYuzAra(cx, cy){
+  var V = _mw3b;
+  if(!V || typeof _mw3bIsinK !== 'function' || typeof veMntWiz3bYuzBilgi !== 'function' || typeof veMntStpKenarDaire !== 'function') return null;
+  var h = _mw3bIsinK(cx, cy), yz = h ? veMntWiz3bYuzBilgi(V.s, h.i, h.k) : null;
+  var c = yz ? veMntWiz3bEksenCemberi(yz, h.p) : null;
+  var d = c ? veMntStpKenarDaire(V.s.sonuc, h.i, c.kenar) : null;
+  return d ? { parca: h.i, yuz: yz, daire: d } : null;
 }
 // Işın ↔ parçanın üçgenleri, üçgenin yeriyle: { t, k } (k: üçgen dizisindeki konum)
 function _mw3bUcgenKesK(o, d, a, sinir, kes){
@@ -1756,12 +1766,16 @@ function _mw3bRefAday(cx, cy){
   var V = _mw3b;
   if(!V || !V.ref) return null;
   if(V.ref.tur === 'eksen'){
+    var ye = _mw3bEksenYuzAra(cx, cy);
+    if(ye) return { tur: 'eksen', parca: ye.parca, kenar: ye.daire.kenar, secim: ye.daire, daire: ye.daire, halka: null,
+                    yuz: ye.yuz, metin: veMntWiz3bYuzYazi(ye.yuz) };
     var a = _mw3bDaireAra(cx, cy);
-    return a ? { tur: 'eksen', parca: a.parca, kenar: a.kenar, secim: a.daire, halka: a.daire,
+    return a ? { tur: 'eksen', parca: a.parca, kenar: a.kenar, secim: a.daire, daire: a.daire, halka: a.daire, yuz: null,
                  metin: 'Ø ' + _mwSayi(2 * a.daire.r, 1) + ' mm · ' + _mwStpKonum(a.daire.c, 3) } : null;
   }
   var y = _mw3bYuzAra(cx, cy);
   if(!y) return null;
+  if(y.yuz) return { tur: 'yuz', parca: y.parca, kenar: -1, secim: y.duzlem, halka: null, yuz: y.yuz, metin: veMntWiz3bYuzYazi(y.yuz) };
   // Halka ekranda ~24 px: tıklanan noktada, düzlemin normaliyle
   var h = V.kap.clientHeight || 1, uz = V.camera.position.distanceTo(new THREE.Vector3(y.p[0], y.p[1], y.p[2]));
   var r = 24 * 2 * uz * Math.tan(V.camera.fov * Math.PI / 360) / h, n = y.duzlem.n, x = -1;
@@ -1777,10 +1791,12 @@ function _mw3bRefFare(e){
     V.fareIstek = 0;
     if(_mw3b !== V || !V.ref) return;
     var ev = V.fareSon, a = _mw3bRefAday(ev.clientX, ev.clientY);
-    var ayni = a && V.aday && (a.tur === 'eksen' ? a.parca === V.aday.parca && a.kenar === V.aday.kenar : _mw3bAyniDuzlem(a, V.aday));
+    var ayni = a && V.aday && ((a.yuz || V.aday.yuz) ? !!(a.yuz && V.aday.yuz && a.parca === V.aday.parca && a.yuz.f === V.aday.yuz.f)
+      : a.tur === 'eksen' ? a.parca === V.aday.parca && a.kenar === V.aday.kenar : _mw3bAyniDuzlem(a, V.aday));
     if(!ayni){
       V.aday = a;
       _mw3bAdayHalka(a ? a.halka : null);
+      if(typeof _mw3bYuzOn === 'function') _mw3bYuzOn(a && a.yuz ? a.yuz : null);
       _mw3bCiz(true);
     }
     _mw3bIpucuYaz(ev, a ? a.metin : '');
@@ -1792,6 +1808,8 @@ function _mw3bRefTik(e){
   if(!a){ _mw3bIpucuYaz(e, V.ref.tur === 'yuz' ? 'Düzlem yüz yok.' : 'Dairesel kenar yok.'); return false; }
   var r = V.ref;
   _mw3bRefKip(null);
+  // Yüzey süzgeci açıksa seçilen referans yüzü seçili yüz olur (süzgecin tıkı gibi)
+  if(a.yuz && V.suzgec === 'yuz' && typeof _mw3bYuzSec === 'function'){ _mw3bYuzSec(a.yuz); _mw3bCiz(true); }
   veMntWizStpReferans(r.birim, r.tur, a.secim);
   return true;
 }
@@ -2657,6 +2675,24 @@ function veMntWiz3bYuzNoktasi(i, n, o){
     var b = _mw3bYuzAra(x, y);
     if(b && b.parca === i && b.duzlem.n[0] * n[0] + b.duzlem.n[1] * n[1] + b.duzlem.n[2] * n[2] > 1 - 1e-9
        && !(o && Math.abs((b.duzlem.o[0] - o[0]) * n[0] + (b.duzlem.o[1] - o[1]) * n[1] + (b.duzlem.o[2] - o[2]) * n[2]) > 0.05)) return { x: x, y: y };
+  }
+  return null;
+}
+// Referans kipinde ADAY YÜZE gelmek için (Canlı Not 71): parçanın `tip` yüzünün
+// ekranda görünen bir üçgeninin ağırlık merkezi — aday orada o parçanın o tip yüzüyse
+function veMntWiz3bAdayYuzNoktasi(i, tip){
+  var V = _mw3b, a = V && V.s.ag && V.s.ag[i];
+  if(!a || !V.camera || !V.ref) return null;
+  V.camera.updateMatrixWorld();
+  var R = V.renderer.domElement.getBoundingClientRect(), u = a.uc, T = a.ucgen;
+  for(var k = 0; k < T.length; k += 3){
+    var i0 = T[k] * 3, i1 = T[k + 1] * 3, i2 = T[k + 2] * 3;
+    var p = new THREE.Vector3((u[i0] + u[i1] + u[i2]) / 3, (u[i0 + 1] + u[i1 + 1] + u[i2 + 1]) / 3, (u[i0 + 2] + u[i1 + 2] + u[i2 + 2]) / 3).project(V.camera);
+    if(Math.abs(p.x) > 0.95 || Math.abs(p.y) > 0.95 || p.z > 1) continue;
+    var x = R.left + (p.x + 1) / 2 * R.width, y = R.top + (1 - p.y) / 2 * R.height;
+    if(document.elementFromPoint(x, y) !== V.renderer.domElement) continue;
+    var c = _mw3bRefAday(x, y);
+    if(c && c.parca === i && c.yuz && c.yuz.tip === tip) return { x: x, y: y };
   }
   return null;
 }
