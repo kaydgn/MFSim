@@ -739,8 +739,9 @@ function veMntStpImza(sonuc){
 // yolu, merkezi, yarıçapı. `ref` (gövde): veri sayfasının referansı — 3B'de
 // seçilen yüz { yol, o, n } ve eksenin dairesi { yol, c, n, r }. `malzeme`:
 // rolsüz düğümlere atanan malzemeler (birimin kendi malzemesi `yog`ta).
-function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans, malzeme){
+function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans, malzeme, kgElle){
   kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {}; yogunluk = yogunluk || {}; referans = referans || {}; malzeme = malzeme || {};
+  kgElle = kgElle || {};
   var out = { surum: VE_MNT_STP_KAYIT_SURUM, dosya: kunye.dosya || '', bayt: kunye.bayt > 0 ? kunye.bayt : null,
               imza: veMntStpImza(sonuc), parca: ((sonuc && sonuc.parcalar) || []).length, roller: [] };
   ((sonuc && sonuc.agac) || []).forEach(function(d){
@@ -749,6 +750,7 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans
     var r = { yol: veMntStpYol(sonuc, d.i), rol: tip, ad: d.ad };
     if(+kutle[d.i] > 0) r.kg = +kutle[d.i];
     if(tip !== 'mnt-mount' && _mstYogGecerli(yogunluk[d.i], tip)) r.yog = yogunluk[d.i];
+    if(tip !== 'mnt-mount' && kgElle[d.i] === true) r.kgElle = true;            // Canlı Not 77
     var n = tip === 'mnt-mount' ? _mstNoktaGecerli(nokta[d.i]) : null;
     if(n) r.nokta = n;
     var rf = tip !== 'mnt-mount' ? _mstRefGecerli(referans[d.i]) : null;
@@ -787,8 +789,8 @@ function _mstRefGecerli(rf){
 // — kayıt sırası ağaç sırası. Dairenin bu dosyada olup olmadığına hesap bakar
 // (veMntStpCoz → veMntStpDaireBul).
 function veMntStpRolKaydiUygula(sonuc, kayit){
-  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {}, yog = {}, ref = {}, mzl = {};
-  var out = { roller: roller, kutle: kutle, yogunluk: yog, nokta: nokta, referans: ref, malzeme: mzl, eslesen: 0, toplam: 0, eksik: [], ayni: false };
+  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {}, yog = {}, ref = {}, mzl = {}, kge = {};
+  var out = { roller: roller, kutle: kutle, yogunluk: yog, nokta: nokta, referans: ref, malzeme: mzl, kgElle: kge, eslesen: 0, toplam: 0, eksik: [], ayni: false };
   if(!kayit || !Array.isArray(kayit.roller)) return out;
   out.toplam = kayit.roller.length;
   out.ayni = kayit.imza === veMntStpImza(sonuc);
@@ -798,6 +800,7 @@ function veMntStpRolKaydiUygula(sonuc, kayit){
     if(d === undefined || !veMntStpRolVer(sonuc, roller, d, r.rol)){ out.eksik.push(r); return; }
     if(+r.kg > 0) kutle[d] = +r.kg;
     if(r.rol !== 'mnt-mount' && _mstYogGecerli(r.yog, r.rol)) yog[d] = r.yog;
+    if(r.rol !== 'mnt-mount' && r.kgElle === true) kge[d] = true;
     var n = r.rol === 'mnt-mount' ? _mstNoktaGecerli(r.nokta) : null;
     if(n) nokta[d] = n;
     var rf = r.rol !== 'mnt-mount' ? _mstRefGecerli(r.ref) : null;
@@ -806,6 +809,7 @@ function veMntStpRolKaydiUygula(sonuc, kayit){
   // rolü sonra düşen düğümün kütlesi, kaynağı, noktası ve referansı gider
   Object.keys(kutle).forEach(function(d){ if(!roller[d]) delete kutle[d]; });
   Object.keys(yog).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete yog[d]; });
+  Object.keys(kge).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete kge[d]; });
   Object.keys(nokta).forEach(function(d){ if(roller[d] !== 'mnt-mount') delete nokta[d]; });
   Object.keys(ref).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete ref[d]; });
   (Array.isArray(kayit.malzeme) ? kayit.malzeme : []).forEach(function(m){
@@ -1367,19 +1371,33 @@ function veMntStpYogEtkin(b, y){
   if(y) return y;
   return (b && b.tip !== 'mnt-mount' && b.dosya) ? 'dosya' : '';
 }
-function veMntStpKutle(b, kg, yog){
+// elle (ops.): VERİ SAYFALI birimde kütle kullanıcının değeri (kullanıcı 2026-11-09,
+// Canlı Not 77: *"birincisi kütleyi kendisi manuel olarak girecek, ikincisi ise datasheet
+// üzerinden seçecek … kullanıcının elinde bazen ağırlık değerleri oluyor"*): ağırlık
+// merkezi sayfanın referansından kalır, atalet sayfanınki kütleyle ölçeklenir (dönme
+// yarıçapı aynı); değer yoksa kütle bilinmiyor. Kapı: mount-veri-sayfasi.test.js →
+// *KÜTLE ELLE*.
+function veMntStpKutle(b, kg, yog, elle){
   var out = { m: NaN, I: null, kaynak: 'elle', not: 'homojen yoğunluk' };
   if(!b) return out;
   yog = veMntStpYogEtkin(b, yog);
   var tensor = function(T, k){ return T ? T.map(function(sat){ return sat.map(function(v){ return v * k; }); }) : null; };
   var vs = b.tip !== 'mnt-mount' ? veMntStpVs(yog, b.tip) : null;
   if(vs){
-    // Kütle sayfanın ıslak kütlesi; yazılan kütle sayılmaz (aksesuarlar ayrı bileşen)
+    // Kütle sayfanın ıslak kütlesi; yazılan kütle sayılmaz (aksesuarlar ayrı bileşen) —
+    // kullanıcı kütleyi elle seçmediyse
     out.kaynak = 'veri'; out.vs = vs;
     out.m = vs.kutle.islak;
     out.not = vs.ad + ' · veri sayfası';
     if(b.veri) out.I = b.veri.I.map(function(s){ return s.slice(); });
     else if(b.kapali && b.J && b.V > 0){ out.I = tensor(b.J, out.m / b.V * 1e-6); out.Inot = 'homojen yoğunluk'; }
+    if(elle){
+      var me = Number(typeof kg === 'string' ? String(kg).replace(',', '.') : kg);
+      out.elle = true;
+      out.not = 'elle · ' + vs.ad + ' · veri sayfası';
+      if(me > 0){ if(out.I) out.I = tensor(out.I, me / out.m); out.m = me; }
+      else { out.m = NaN; out.I = null; }
+    }
     return out;
   }
   // Aksesuar: kütle kayıtlı aksesuardan ya da elle/malzeme/dosya; atalet yok
@@ -1429,8 +1447,8 @@ function veMntStpKutle(b, kg, yog){
 // `mass` yalnız kütle geometriden türediyse — malzeme ya da dosya). `T`:
 // öteleme (dosya − model, veMntStpKarsilastir) — konumlar modelin sistemine.
 function _mstYuv(x, k){ return Math.round(x * k) / k + 0; }
-function veMntStpKayit(coz, kutle, yogunluk, T){
-  kutle = kutle || {}; yogunluk = yogunluk || {}; T = T || [0, 0, 0];
+function veMntStpKayit(coz, kutle, yogunluk, T, kgElle){
+  kutle = kutle || {}; yogunluk = yogunluk || {}; T = T || [0, 0, 0]; kgElle = kgElle || {};
   var liste = [], kaynak = [];
   ((coz && coz.birimler) || []).forEach(function(b){
     if(!b.konum) return;
@@ -1441,7 +1459,7 @@ function veMntStpKayit(coz, kutle, yogunluk, T){
       return;
     }
     var d = { cgx: p[0], cgy: p[1], cgz: p[2] };
-    var K = veMntStpKutle(b, kutle[b.dugum], yogunluk[b.dugum]);
+    var K = veMntStpKutle(b, kutle[b.dugum], yogunluk[b.dugum], kgElle[b.dugum]);
     // Veri sayfasından gelen alan "S" (geometriden) değil
     var veri = b.kaynak === 'veri', yazilan = K.kaynak === 'elle' || K.kaynak === 'veri' || K.kaynak === 'katalog';
     var iz = veri ? { not: K.not } : { cg: true, not: K.Inot || K.not };

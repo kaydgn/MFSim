@@ -1174,9 +1174,18 @@ function veMntWiz3bBirimKutleHTML(s, secili, secim){
   // pencerenin Kütle bölümünün AYNI seçicisi (Elle · Dosyadan · Parçalardan · malzemeler ·
   // katalog); malzeme seçilince kütle ρ·V. Motor, şanzıman ve takozda yazı (Not 16).
   // Kapı: mount-3b.test.js → *KAYNAK SEÇİLİR*.
+  // VERİ SAYFALI BİRİMDE (motor, şanzıman) KÜTLE: Veri sayfası ya da Elle (kullanıcı
+  // 2026-11-09, Canlı Not 77: *"kullanıcının elinde bazen ağırlık değerleri oluyor"*) —
+  // ağırlık merkezi ve atalet sayfadan kalır. Kapı: mount-3b.test.js → *KÜTLE ELLE*.
   var kaynak = _mw3bKutleSecici(s, b.dugum)
     ? _mwStpKaynakSecHTML(s, b, _mwStpKaynak(s, b, K))
-    : '<span class="ve-mw-3b-kaynak" title="' + _mwEsc(K.not) + '">' + _mwEsc(kay) + '</span>';
+    : K.kaynak === 'veri' && typeof veMntWizStpKgElle === 'function'
+      ? '<select class="ve-fw-inp" data-ve-3b-kg-kaynak="' + b.dugum + '" aria-label="Kütle kaynağı — ' + _mwEsc(b.ad) + '"'
+        + ' onchange="veMntWizStpKgElle(' + b.dugum + ', this.value === \'elle\')">'
+        + '<option value="veri"' + (K.elle ? '' : ' selected') + '>Veri sayfası</option>'
+        + '<option value="elle"' + (K.elle ? ' selected' : '') + '>Elle</option></select>'
+      : '<span class="ve-mw-3b-kaynak" title="' + _mwEsc(K.not) + '">' + _mwEsc(kay) + '</span>';
+  if(K.elle) vs = null;                                   // kuru · yağ sayfanın kütlesini açıklar
   return h + '<h4>Kütle ve ağırlık merkezi</h4><div class="ve-mw-3b-alanlar">'
     + '<span class="ve-mw-3b-alan-ad">Kaynak</span>' + kaynak
     + '<span class="ve-mw-3b-alan-ad">Kütle</span><span class="ve-mw-3b-kg">' + _mwStpKutleHucre(s, b, K) + '<span class="ve-fw-dim">kg</span></span>'

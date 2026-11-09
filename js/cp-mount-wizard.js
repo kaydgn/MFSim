@@ -883,7 +883,7 @@ function _mwStpKayitYaz(s, coz){
   (((coz || s.coz) && (coz || s.coz).birimler) || []).forEach(function(b){
     if(!yog[b.dugum] && s.roller[b.dugum] === b.tip && veMntStpYogEtkin(b, '') === 'dosya') yog[b.dugum] = 'dosya';
   });
-  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt }, s.nokta, yog, s.referans, s.malzeme);
+  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt }, s.nokta, yog, s.referans, s.malzeme, s.kgElle);
   return true;
 }
 // Geri-al / ileri-al / sekme ve modül geçişi düğüm verisini yeniden kurar:
@@ -897,7 +897,7 @@ function _mwStpKayittanAl(s){
   if(!k || !Array.isArray(k.roller) || (!k.roller.length && !mzVar) || typeof veMntStpRolKaydiUygula !== 'function') return null;
   var u = veMntStpRolKaydiUygula(s.sonuc, k);
   s.kayit = { dosya: k.dosya || '', toplam: u.toplam, eslesen: u.eslesen, eksik: u.eksik.length, ayni: u.ayni };
-  if(u.eslesen){ s.roller = u.roller; s.kutle = u.kutle; s.yogunluk = u.yogunluk || {}; s.nokta = u.nokta || {}; s.referans = u.referans || {}; }
+  if(u.eslesen){ s.roller = u.roller; s.kutle = u.kutle; s.yogunluk = u.yogunluk || {}; s.nokta = u.nokta || {}; s.referans = u.referans || {}; s.kgElle = u.kgElle || {}; }
   if(u.eslesen || Object.keys(u.malzeme || {}).length) s.malzeme = u.malzeme || {};
   s.kayitSahibi = !u.eksik.length;
   return s.kayit;
@@ -1404,7 +1404,7 @@ function _mwStpHacim(V){
 // veMntStpKutle); kart, 3B ve aktarım AYNI sonucu okur. Seçicinin değeri
 // geçerli kaynak: '' (elle) · 'dosya' · malzeme anahtarı · rolün veri sayfası
 // (js/mount-veri-sayfasi.js — ağırlık merkezi 3B'de seçilen referanstan).
-function _mwStpKutleK(s, b){ return veMntStpKutle(b, s.kutle[b.dugum], (s.yogunluk || {})[b.dugum]); }
+function _mwStpKutleK(s, b){ return veMntStpKutle(b, s.kutle[b.dugum], (s.yogunluk || {})[b.dugum], (s.kgElle || {})[b.dugum]); }
 function _mwStpKaynak(s, b, K){
   K = K || _mwStpKutleK(s, b);
   return K.kaynak === 'dosya' ? 'dosya'
@@ -1444,7 +1444,7 @@ function _mwStpKaynakSecHTML(s, b, y){
 // malzeme ya da dosya → türetilen değer (`isaret`: "S" — kaynak sütunu olmayan
 // yüzey, 3B)
 function _mwStpKutleHucre(s, b, K, isaret){
-  if(K.kaynak === 'elle'){
+  if(K.kaynak === 'elle' || K.elle){
     var m = s.kutle[b.dugum];
     return '<input type="text" inputmode="decimal" class="ve-fw-inp" data-mw-stp-kutle="' + b.dugum + '"'
       + ' value="' + (m !== undefined ? _mwEsc(m) : '') + '"'
@@ -1479,6 +1479,20 @@ function _mwStpAtaletHTML(s, b){
 }
 // KÜTLE — gövde başına; kart ve 3B AYNI alanı yazar. Yama: tam yeniden çizim
 // yazılan alanın odağını düşürür ve aynı tıklamadaki "Sihirbaza aktar"ı yutar.
+// VERİ SAYFALI BİRİMDE KÜTLE ELLE (kullanıcı 2026-11-09, Canlı Not 77): ağırlık merkezi ve
+// atalet veri sayfasından, kütle kullanıcının değeri (js/mount-step.js → veMntStpKutle `elle`)
+function veMntWizStpKgElle(dugum, elle){
+  var s = _mwStp;
+  if(!s || s.durum !== 'hazir' || !s.roller[dugum] || s.roller[dugum] === 'mnt-mount') return false;
+  if(!s.kgElle) s.kgElle = {};
+  if(!!s.kgElle[dugum] === !!elle) return false;
+  if(elle) s.kgElle[dugum] = true; else delete s.kgElle[dugum];
+  s.kayitSahibi = true;
+  _mwStpKayitYaz(s);
+  if(s.coz && !s.hesapBekliyor) s.coz = _mwStpCoz(s);
+  _mwStpTazele();
+  return true;
+}
 function veMntWizStpKutle(dugum, v){
   var s = _mwStp;
   if(!s || !s.coz || !_mwStpBirim(s, dugum)) return false;
@@ -1788,7 +1802,7 @@ function _mwStpSeciliSay(K){ return K ? K.satirlar.filter(function(r){ return r.
 function veMntWizStpModeleUygula(){
   var s = veMntWizStpBurada(), K = veMntWizStpKarsilastirma(s, 'tuval');
   if(!K) return 0;
-  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K.T), veri = {}, tuval = {}, n = 0;
+  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K.T, s.kgElle), veri = {}, tuval = {}, n = 0;
   kayit.liste.forEach(function(k){ veri[k.dugum] = k.data; });
   _mwTuvalModeli().forEach(function(x){ tuval[x.id] = x; });
   K.satirlar.forEach(function(r){
@@ -1847,7 +1861,7 @@ function veMntWizStpModelNoktalari(s, yer){
 // Döner: { st (yeni durum; mevcut değişmez), kayit, birlestir }
 function _mwStpAktarDurumu(s){
   var K = veMntWizStpKarsilastirma(s, 'sihirbaz');
-  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K ? K.T : null), sec = {}, liste = [], kaynak = [];
+  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K ? K.T : null, s.kgElle), sec = {}, liste = [], kaynak = [];
   (K ? K.satirlar : []).forEach(function(r){ if(r.secili) sec[r.dugum] = r; });
   kayit.liste.forEach(function(n, k){ if(sec[n.dugum]){ liste.push(n); kaynak.push(kayit.kaynak[k]); } });
   var birlestir = _mwStpBirlestir(_mwState), st, say = { govde:0, takoz:0 };
@@ -2818,7 +2832,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpAgTum: veMntWizStpAgTum,
     veMntWizStpAc: veMntWizStpAc, veMntWizStpDaha: veMntWizStpDaha, _mwStpSatirlar: _mwStpSatirlar, _mwStpAcilis: _mwStpAcilis,
     VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
-    veMntWizStpRol: veMntWizStpRol, veMntWizStpRolCok: veMntWizStpRolCok, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
+    veMntWizStpRol: veMntWizStpRol, veMntWizStpRolCok: veMntWizStpRolCok, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle, veMntWizStpKgElle: veMntWizStpKgElle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,
     veMntWizStpDrop: veMntWizStpDrop, _mwStpKartHTML: _mwStpKartHTML, _mwStpOnizleme: _mwStpOnizleme,
     veMntWizStpNokta: veMntWizStpNokta, veMntWizStpNoktaKaynak: veMntWizStpNoktaKaynak, veMntWizKey: veMntWizKey,

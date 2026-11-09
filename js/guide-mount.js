@@ -1201,12 +1201,16 @@ function _gmSec16(){
     '3B’de motor birimini seçin; <strong>Özellikler</strong>’in <strong>Motor modeli</strong> listesinden modeli seçin. Aynı '
       + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
     'Referans yüzünün düğmesine (<em>Bloğun ön yüzü</em> ya da <em>Bloğun arka yüzü</em>) basın ve düzlem '
-      + 'yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün konumu belirir. Seçim yalnız birimin '
-      + 'parçalarındadır; kamera birime sığar.',
-    '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
-      + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
+      + 'yüzü tıklayın: fare düzlem bir yüze gelince yüz Yüzey süzgecindeki gibi vurgulanır, parçası odakta '
+      + 'kalır ve yüzün konumu belirir. Seçim yalnız birimin parçalarındadır; kamera birime sığar.',
+    '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli silindir bir yüzü ya da dairesel bir kenarı (krank '
+      + 'kasnağı, volan muhafazası) tıklayın; silindirde eksen yüzün sınır çemberinden alınır. Bu seçim bütün '
+      + 'parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
     '<strong>Hesapla</strong>: ağırlık merkezi, atalet ve kütle (ıslak) veri sayfasından. '
-      + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).'
+      + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).',
+    'Gerçek kütle biliniyorsa <strong>Kütle ve ağırlık merkezi</strong> bölümünün <strong>Kaynak</strong> '
+      + 'listesinden <em>Elle</em> seçilir ve kütle yazılır: ağırlık merkezi veri sayfasının referansından kalır, '
+      + 'atalet kütleyle ölçeklenir.'
   ]);
   h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '
     + 'yazar. Hesaptan sonra 3B’de eksenin dairesi halka, referans noktası işaret olarak çizilir. Ağırlık '
