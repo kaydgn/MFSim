@@ -31,12 +31,16 @@
 //    yoksa yarım taslak modül düğümü başına OTURUMLUK tutulur.
 //  • AÇIKLAMA YÜZEYİ YOK (FEAD kural 45 · 47): yönerge `title`da, kutuda durum.
 
+// ADIMIN SATIRI YALNIZ ADI TAŞIR (kullanıcı 2026-11-09, Canlı Not 83: *"Açıklamaları
+// düzeltelim, gereksiz açıklamaları kaldıralım."*): adın altındaki iki satırlık içerik
+// listesi ("Konum · katalog · statik ve dinamik rijitlik") bir açıklama yuvasıydı —
+// kalıp yuva taşımaz. Kapı: mount-wizard.test.js → *ADIMDA YALNIZ AD*.
 var VE_MW_STEPS = [
-  { key:'kaynak', ad:'Başlangıç',       ipucu:'STEP dosyası · örnekten doldur · tuvaldeki model' },
-  { key:'govde',  ad:'Kütle gövdeleri', ipucu:'Motor · şanzıman · braket — kütle, ağırlık merkezi, atalet' },
-  { key:'takoz',  ad:'Takozlar',        ipucu:'Konum · katalog · statik ve dinamik rijitlik' },
-  { key:'tork',   ad:'Tork ve çalışma', ipucu:'Motor torku · vites oranları · rölanti ve silindir' },
-  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Kurulacaklar · modelin özeti · kurulum' }
+  { key:'kaynak', ad:'Başlangıç' },
+  { key:'govde',  ad:'Kütle gövdeleri' },
+  { key:'takoz',  ad:'Takozlar' },
+  { key:'tork',   ad:'Tork ve çalışma' },
+  { key:'ozet',   ad:'Özet ve kurulum' }
 ];
 // Kütle gövdesi tipleri — Bileşenler'in "Takoz alt bileşenleri" ve "PTO
 // grubu" sırasıyla. Ad componentDefs'ten okunur.
@@ -753,7 +757,7 @@ function veMntWizNavHTML(c){
     h += '<li class="ve-fw-step ve-fw-st-' + d.durum + (i === _mwStep ? ' on' : '') + '" onclick="veMntWizGoto(' + i + ')" tabindex="0"'
       + ' onkeydown="if(event.key===\'Enter\'){veMntWizGoto(' + i + ');}">'
       + '<span class="ve-fw-step-no">' + (i + 1) + '</span>'
-      + '<span class="ve-fw-step-t"><b>' + _mwEsc(s.ad) + '</b><em>' + _mwEsc(s.ipucu) + '</em></span>'
+      + '<span class="ve-fw-step-t"><b>' + _mwEsc(s.ad) + '</b></span>'
       + rozet + '</li>';
   });
   return h + '</ol>';
@@ -2110,11 +2114,13 @@ function _mwStpKartHTML(){
   if(s && s.durum !== 'okunuyor')
     h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" aria-label="Dosyayı karttan kaldır"'
       + ' onclick="veMntWizStpKapat()">' + _mwIkon('x') + '</button>';
+  // Kart bir bırakma alanı (data-ve-dropzone): bunu söyleyen tek yönlendirme, DÜĞMENİN
+  // YANINDA (kullanıcı 2026-11-09, Canlı Not 82: *"Açıklamayı yana alalım."*) — önce
+  // altında ayrı bir satırdı. Kapı: mount-wizard.test.js → *YÖNLENDİRME DÜĞMENİN YANINDA*.
+  if(!s) h += '<span class="ve-fw-dim ve-fw-stp-yon">' + veYon('STEP dosyasını seçin ya da buraya bırakın.') + '</span>';
   h += '</div>';
 
   if(!s){
-    // Kart bir bırakma alanı (data-ve-dropzone): bunu söyleyen tek satır.
-    h += '<p class="ve-fw-dim ve-fw-stp-yon">' + veYon('STEP dosyasını seçin ya da buraya bırakın.') + '</p>';
     if(st.stepKaynak)
       h += '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>' + _mwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
         + ' <em>' + st.stepKaynak.govde + ' gövde · ' + st.stepKaynak.takoz + ' takoz</em></div>';

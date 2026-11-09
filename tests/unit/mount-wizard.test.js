@@ -161,6 +161,25 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(tuval.textContent).not.toMatch(/yüklendi/);
     expect(tuval.querySelector('.ve-fw-seeded').textContent.trim()).toBe('1 gövde · 1 takoz');
   });
+  // Canlı Not 81 · 82 · 83 (kullanıcı 2026-11-09): "Arada bir boşluk var. Fazla satırlı bir boşluk
+  // o." · "Açıklamayı yana alalım." · "Açıklamaları düzeltelim, gereksiz açıklamaları kaldıralım."
+  // Önce: adımın satırında adın altında iki satırlık içerik listesi; STEP kartının yönlendirmesi
+  // düğmelerin altında ayrı paragraf; Seçilen örnek'te künyenin ve tablonun alt payı kartın
+  // aralığını ikiye katlıyordu (yerleşimi mount-sihirbaz.spec.js → BAŞLANGIÇ SÜTUNU ölçer).
+  test('ADIMDA YALNIZ AD · YÖNLENDİRME DÜĞMENİN YANINDA · künye ile tablonun arası kartın aralığı', () => {
+    W.veMntWizAc();
+    expect(W.VE_MW_STEPS.every((s) => Object.keys(s).join() === 'key,ad')).toBe(true);   // kalıpta açıklama yuvası yok
+    expect(document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em')).toHaveLength(0);
+    expect([...document.querySelectorAll('#ve-mw-nav .ve-fw-step-t')].map((t) => t.textContent)).toEqual(W.VE_MW_STEPS.map((s) => s.ad));
+    const satir = document.querySelector('#ve-mw-yan .ve-fw-stp[data-ve-dropzone="step"] > .ve-fw-rowbtns');
+    expect([...satir.children].map((e) => e.className)).toEqual(['ve-fw-btn ve-fw-stp-sec', 've-fw-dim ve-fw-stp-yon']);
+    expect(satir.querySelector('.ve-fw-stp-yon').textContent).toBe('STEP dosyasını seçin ya da buraya bırakın.');
+    expect(document.querySelectorAll('#ve-mw-yan p.ve-fw-stp-yon')).toHaveLength(0);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\n\.ve-fw-rowbtns > \.ve-fw-stp-yon\{ flex:1 1 0; min-width:0; margin:0; text-wrap:balance; \}/);
+    expect(css).toMatch(/\n#ve-mw-yan \.ve-fw-exnote, #ve-mw-yan \.ve-fw-exspec\{ margin-bottom:0; \}/);
+    expect(css).toMatch(/\n#ve-mw-nav \.ve-fw-step\{ align-items:center; \}/);
+  });
   test('boş durumun eksikleri gövde ve takoz adımında', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());
     expect(l.filter((s) => s.tur === 'err').map((s) => s.adim).sort()).toEqual(['govde', 'takoz']);
