@@ -172,14 +172,14 @@ test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAM
   expect(r.pencere.y).toBeGreaterThanOrEqual(r.bant.b);
   expect(r.pencere.y - r.bant.b).toBeLessThanOrEqual(6);
   expect(Math.abs(r.pencere.r - r.dugme.r)).toBeLessThanOrEqual(1);
-  expect(r.pencere.w).toBeLessThanOrEqual(400);
+  expect(r.pencere.w).toBeLessThanOrEqual(320);                 // Canlı Not 88: 352 → 312 px
   // sekmeler pencerenin başında; açılınca odak seçili sekmede
   expect(r.sekme).toEqual(expect.arrayContaining(['Giriş', 'Görünüm', 'Araçlar']));
   expect(r.aktif).toBe('Giriş');
   expect(r.odak).toBe('Giriş');
   expect(r.grup.length).toBeGreaterThan(2);
   expect(r.satir).toBeGreaterThan(8);
-  expect(r.yuksek).toBeLessThanOrEqual(30);
+  expect(r.yuksek).toBeLessThanOrEqual(24);                     // Canlı Not 88: satır 28 + 2 → 24 px
   expect(r.kesik).toEqual([]);
   // İKİ TEMADA okunur ve yazı kutusuna sığar (ortak ölçüler)
   await kontrastKur(page);

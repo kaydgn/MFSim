@@ -731,36 +731,24 @@ function veGuideNote(tur, baslik, govde){
 }
 
 // ── PENCERE (şeritten açılır) ──────────────────────────────────────────────
-// Kabuk sınıfları `.ve-help-*` — Klavye Kısayolları penceresiyle AYNI. İkinci
-// bir pencere stili yazmak css/styles.css'e dokunmak demekti; o dosyaya
-// dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını bayatlatıyor (CLAUDE.md).
-// Kart içleri satır içi stille, FEAD rozetlerindeki kuralın aynısı.
+// Kabuk sınıfları `.ve-help-*` — Klavye Kısayolları penceresiyle AYNI başlık ve
+// perde. Gövde bir LİSTE (kullanıcı 2026-11-09, Canlı Not 91: *"yapısı güzel
+// değil, butonlar kocaman"*): kılavuz başına tek satır — ad, sağda Aç · İndir
+// (24 px). Önce iki sütunlu kartlar, "Hazır" rozeti, 156 px'lik Aç ve altta
+// "3 / 3 kılavuz hazır · MFSim" satırı vardı. Durum yalnız kılavuz hazır
+// DEĞİLKEN yazılır: düğmelerin varlığı hazır olduğunu zaten söyler.
 
 var _gkBuilt = false;
 
 function _gkKart(k){
-  var hazir = veGuideKitReady(k);
-  var kenar = hazir ? 'var(--accent-primary)' : 'var(--border-color)';
-  var h = '<div style="border:1px solid var(--border-color); border-left:3px solid '
-    + kenar + '; background:var(--bg-primary); padding:12px 14px; display:flex; '
-    + 'flex-direction:column; gap:8px;">';
-  h += '<div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">'
-     + '<b style="font-size:var(--fs-body); color:var(--text-primary);">' + _gkEsc(k.baslik) + '</b>'
-     + '<span style="font-size:var(--fs-micro); '
-     + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:var(--radius-xs); '
-     + (hazir
-        ? 'background:rgba(16,185,129,.14); color:var(--ink-success);">Hazır'
-        : 'background:var(--bg-tertiary); color:var(--text-muted);">Hazırlanıyor')
-     + '</span></div>';
+  var hazir = veGuideKitReady(k), id = _gkEsc(k.id);
+  var h = '<div class="ve-gk-satir"><span class="ve-gk-ad">' + _gkEsc(k.baslik) + '</span>';
   if(hazir){
-    h += '<div style="display:flex; gap:6px; margin-top:2px;">'
-      + '<button type="button" onclick="veGuideOpen(\'' + _gkEsc(k.id) + '\')" '
-      + 'style="flex:2; padding:7px 10px; font-size:var(--fs-micro); font-weight:600; '
-      + 'border:none; cursor:pointer; background:var(--accent-primary); color:var(--on-accent);">Aç</button>'
-      + '<button type="button" onclick="veGuideDownload(\'' + _gkEsc(k.id) + '\')" '
-      + 'style="flex:1; padding:7px 10px; font-size:var(--fs-micro); font-weight:600; '
-      + 'border:1px solid var(--border-color); cursor:pointer; background:var(--bg-tertiary); '
-      + 'color:var(--text-primary);">İndir</button></div>';
+    h += '<span class="ve-gk-eylem">'
+      + '<button type="button" class="ve-gk-btn ve-gk-btn--ac" onclick="veGuideOpen(\'' + id + '\')">Aç</button>'
+      + '<button type="button" class="ve-gk-btn" onclick="veGuideDownload(\'' + id + '\')">İndir</button></span>';
+  } else {
+    h += '<span class="ve-gk-durum">Hazırlanıyor</span>';
   }
   return h + '</div>';
 }
@@ -772,13 +760,11 @@ function _gkBuild(){
   ov.id = 've-guide-kit';
   ov.setAttribute('hidden', '');
   ov.innerHTML =
-    '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Kullanım kılavuzları">'
+    '<div class="ve-help-panel ve-help-panel--kilavuz" role="dialog" aria-modal="true" aria-label="Kullanım kılavuzları">'
     + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-clipboard"></span> Kullanım kılavuzları</span>'
     + '<button class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat" '
     + 'onclick="veGuideKitClose()"><span class="mf-ico mf-ico-x"></span></button></div>'
-    + '<div class="ve-help-body" id="ve-guide-kit-body"></div>'
-    + '<div class="ve-help-foot"><span id="ve-guide-kit-foot"></span>'
-    + '<span class="ve-help-brand">MFSim</span></div></div>';
+    + '<div class="ve-gk-liste" id="ve-guide-kit-body"></div></div>';
   document.body.appendChild(ov);
   ov.addEventListener('mousedown', function(e){ if(e.target === ov) veGuideKitClose(); });
   _gkBuilt = true;
@@ -790,11 +776,6 @@ function _gkRender(){
   var b = document.getElementById('ve-guide-kit-body');
   if(!b) return;
   b.innerHTML = VE_GUIDE_KIT.map(_gkKart).join('');
-  var f = document.getElementById('ve-guide-kit-foot');
-  if(f){
-    var n = veGuideKitCount();
-    f.textContent = n + ' / ' + VE_GUIDE_KIT.length + ' kılavuz hazır';
-  }
 }
 
 function veGuideKitOpen(){

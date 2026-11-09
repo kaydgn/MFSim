@@ -285,11 +285,14 @@ describe('pencere kartı', () => {
     expect(kart).not.toContain('veGuideOpen(');
   });
 
-  test('hazır kılavuz Aç ve İndir düğmelerini çizer', () => {
+  // LİSTE (Canlı Not 91: "yapısı güzel değil, butonlar kocaman"): kılavuz başına tek
+  // satır, Aç · İndir küçük düğme; hazır kılavuzda rozet yok (önce "Hazır").
+  test('hazır kılavuz tek satır: ad, Aç ve İndir; rozet yok', () => {
     global.veGuideFeadHTML = () => '<html></html>';
     const kart = KIT._gkKart(KIT.veGuideKitOf('fead'));
-    expect(kart).toContain('>Hazır<');
-    expect(kart).toContain('>FEAD — Kayış-kasnak sistemi<');
+    expect(kart).not.toContain('>Hazır<');
+    expect(kart).toMatch(/^<div class="ve-gk-satir"><span class="ve-gk-ad">FEAD — Kayış-kasnak sistemi<\/span><span class="ve-gk-eylem">/);
+    expect(kart).not.toMatch(/style="/);
     expect(kart).toContain("veGuideOpen('fead')");
     expect(kart).toContain("veGuideDownload('fead')");
   });
