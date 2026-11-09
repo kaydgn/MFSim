@@ -105,6 +105,12 @@ test('özel ad kendi dilinde büyür: MFSim · Artifact · Shift', async ({ page
     ex.data = ex.data || {}; ex.data.exampleKey = 'isb340_tc411'; veApLoadExample(ex.id);
   });
   await page.waitForFunction(() => nodes.some((n) => n.type === 'shift-controller'), null, { timeout: 20000 });
+  // Örnek yüklenince "Başlangıç ve Örnekler" yeniden kurulur ve createNode onu 20 ms SONRA seçer
+  // (ui-core.js); o seçim beklenmeden yapılan seçim geri alınıyordu — pencere örneğin paneliyle
+  // kalıyordu (zamanlamaya bağlı: CI'da yeşil, bir konteynerde 4/4 kırmızı). Seçili düğüm yeni
+  // kurulan düğüm olunca devam.
+  await page.waitForFunction(() => selectedNodes.length === 1 && selectedNodes[0].type === 'ap-example'
+    && nodes.indexOf(selectedNodes[0]) >= 0, null, { timeout: 5000 });
   const metin = async (tip) => page.evaluate(async (t) => {
     const n = nodes.find((x) => x.type === t);
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
