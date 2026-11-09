@@ -7,8 +7,9 @@
  *
  * Node'da HİÇ koşmayan halkalar: listenin gerçek seçimiyle açılış, sayfanın görseli,
  * bölgenin gerçek tıkı ve Özellikler'in yerinde tazelenmesi (belgenin kaydırması
- * korunur), bölüm dizini yok (Canlı Not 75), Esc'in yalnız belgeyi kapatması, yakınlık,
- * başka birimin seçimiyle kapanma ve yazının kutusuna sığması.
+ * korunur), bölüm dizini yok (Canlı Not 75), birbirini dışlayan satırlar ve zorunlu
+ * seçimin çizgisi, ön izleme (Canlı Not 73 · 74), Esc'in yalnız belgeyi kapatması,
+ * yakınlık, başka birimin seçimiyle kapanma ve yazının kutusuna sığması.
  * Birim tarafı: tests/unit/mount-belge.test.js.
  */
 const { test, expect } = require('@playwright/test');
@@ -91,14 +92,15 @@ test('BELGE: aile seçilince açılır; bölge tıkı seçeneği yazar, kaydırm
   expect((await secenek(page)).dizi).toBe('wr');
   await expect(page.locator('#ve-mw-3b-alt select[data-mw-vs-secenek="dizi"]')).toHaveValue('wr');
   expect(Math.abs((await kay.evaluate((k) => k.scrollTop)) - once)).toBeLessThanOrEqual(1);
-  // Canlı Not 56: işaretli bölgenin tıkı seçimini kaldırır (WR → CR); varsayılanın kendisi kilitli
+  // Birbirini dışlayan sütunlar (Canlı Not 73 · 74): seçili sütunun tıkı seçimi kaldırmaz, öteki
+  // sütun seçilir; kilit yok
   await wr.click();
-  await expect(wr).toHaveAttribute('aria-pressed', 'false');
+  await expect(wr).toHaveAttribute('aria-pressed', 'true');
+  expect((await secenek(page)).dizi).toBe('wr');
+  await expect(cr).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(cr).toHaveAttribute('title', 'Vites konfigürasyonu: Close Ratio (CR)');
+  await cr.click();
   await expect(cr).toHaveAttribute('aria-pressed', 'true');
-  expect((await secenek(page)).dizi).toBe('cr');
-  await expect(cr).toHaveAttribute('aria-disabled', 'true');
-  await expect(cr).toHaveAttribute('title', 'Varsayılan.');
-  await cr.click({ force: true });                                        // kilitli: tık bir şey yazmaz
   expect((await secenek(page)).dizi).toBe('cr');
   await wr.click();
   expect((await secenek(page)).dizi).toBe('wr');
@@ -136,8 +138,52 @@ test('BELGE: aile seçilince açılır; bölge tıkı seçeneği yazar, kaydırm
   await expect(p6).toBeDisabled();
   await expect(p6).toHaveAttribute('title', 'Vites konfigürasyonu: 7-Speed.');
   await git(page, 7);
-  await belge.locator('[data-belge-sayfa="7"] [data-belge-b]').nth(6).click();     // REMOTE-MOUNT · No Retarder, No PTO
+  // tablonun başlığı yalnız işaret (tıklanmaz); veri satırı seçer
+  expect(await belge.locator('[data-belge-sayfa="7"] [data-belge-y]').count()).toBe(2);
+  await belge.locator('[data-belge-sayfa="7"] [data-belge-b]').nth(4).click();     // REMOTE-MOUNT · No Retarder, No PTO
   expect(await secenek(page)).toMatchObject({ dizi: '7', bag: 'u', ret: '0', pto: '0' });
+  await expect(belge.locator('[data-belge-sayfa="7"] [data-belge-y]').nth(1)).toHaveClass(/secili/);   // REMOTE-MOUNT başlığı
+  // Canlı Not 74: "Birincisi neden seçilmiyor?" — Dry Weights'te altı vitesin satırı 7-Speed'den seçilir
+  await git(page, 5);
+  const alti = belge.locator('[data-belge-b="0-0"]');
+  await expect(alti).toBeEnabled();
+  await alti.click();
+  expect((await secenek(page)).dizi).toBe('cr');
+  await expect(alti).toHaveAttribute('aria-pressed', 'true');
+  await expect(belge.locator('[data-belge-b="0-1"]')).toHaveAttribute('aria-pressed', 'false');
+  // Canlı Not 73: Retarder Option zorunlu bir soğutucu seçimi taşır — yuvarlak işaret ve çizgi
+  const cizgi = belge.locator('[data-belge-grup-ust="0-3"]');
+  await expect(cizgi).not.toHaveClass(/etkin/);
+  await belge.locator('[data-belge-b="0-3"]').click();
+  expect(await secenek(page)).toMatchObject({ ret: '1', sog: 'u' });
+  await expect(cizgi).toHaveClass(/etkin/);
+  await expect(belge.locator('[data-belge-b="0-5"]')).toHaveAttribute('aria-pressed', 'true');
+  const isaret = await page.evaluate(() => {
+    const st = (q) => getComputedStyle(document.querySelector('#ve-mw-3b-belge ' + q));
+    const b = document.querySelector('#ve-mw-3b-belge [data-belge-b="0-5"]').getBoundingClientRect();
+    const c = document.querySelector('#ve-mw-3b-belge [data-belge-grup-ust="0-3"]').getBoundingClientRect();
+    return { secili: st('[data-belge-b="0-5"] .ve-mw-3b-belge-t--radyo > i').backgroundColor, bos: st('[data-belge-b="0-4"] .ve-mw-3b-belge-t--radyo > i').backgroundColor,
+      yuvarlak: st('[data-belge-b="0-5"] .ve-mw-3b-belge-t').borderTopLeftRadius, renk: st('[data-belge-grup-ust="0-3"]').color,
+      vurgu: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim(), cizgiAlt: Math.round(c.bottom - (b.top + b.bottom) / 2) };
+  });
+  expect(isaret.bos).toBe('rgba(0, 0, 0, 0)');
+  expect(isaret.secili).not.toBe('rgba(0, 0, 0, 0)');
+  expect(isaret.yuvarlak).toBe('50%');
+  expect(isaret.cizgiAlt).toBe(0);                                                  // çizgi son satırın ortasında biter
+  // seçili soğutucunun tıkı kaldırmaz; öteki seçilir
+  await belge.locator('[data-belge-b="0-5"]').click();
+  expect((await secenek(page)).sog).toBe('u');
+  await belge.locator('[data-belge-b="0-4"]').click();
+  expect(await secenek(page)).toMatchObject({ ret: '1', sog: 'r' });
+  // Ön izleme: Retarder Accumulator'ın üstünde solenoid de seçime girecek gibi görünür; fare çıkınca söner
+  await belge.locator('[data-belge-b="0-8"]').hover();
+  await expect(belge.locator('[data-belge-b="0-9"]')).toHaveClass(/\bekle\b/);
+  await page.mouse.move(5, 5);
+  await expect(belge.locator('.ekle, .cikar')).toHaveCount(0);
+  // Retarder Option'ın üstünde: soğutucu ve retarderli satırlar düşecek
+  await belge.locator('[data-belge-b="0-3"]').hover();
+  await expect(belge.locator('[data-belge-b="0-4"]')).toHaveClass(/\bcikar\b/);
+  await page.mouse.move(5, 5);
   // Yakınlık: %100'den büyür, Sığdır döner
   const yuzde = () => belge.locator('#ve-mw-3b-belge-yuzde').textContent();
   const y0 = await yuzde();

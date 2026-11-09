@@ -13,8 +13,11 @@
  *     Allison 4000 tablolarıyla birebir: 62 değer (§8 · §9 · §11 · §12 · §13).
  *     Belge değişirse ya da tablo elle bozulursa burası kırmızı.
  *   · DURUM — seçimin bölgeleri seçili; 7-Speed'de altı vitesin satırları kapalı ve
- *     sebebi listedeki dille; tık ailenin sırasıyla yazar (koşul önce).
- *   · GÖRÜNÜM — belgenin HTML'i (sayfa, bölge, dizin) ve Özellikler'in Belge satırı.
+ *     sebebi listedeki dille; tık ailenin sırasıyla yazar (koşul önce); birbirini dışlayan
+ *     satırlardan en çok biri seçili, zorunlu grupta tam biri; tıkın değiştireceği öteki
+ *     satırlar (ön izleme).
+ *   · GÖRÜNÜM — belgenin HTML'i (sayfa, bölge, işaret, zorunlu seçimin çizgisi) ve
+ *     Özellikler'in Belge satırı.
  *   · ARAÇ — belgenin sayılarını okuyan ayrıştırıcı (kapanmayan parantez, en tire).
  */
 const fs = require('fs');
@@ -158,52 +161,55 @@ describe('DURUM — seçili · geçerli · sebep · yazılan anahtar', () => {
   test('7-Speed: altı vitesin satırları kapalı, sebebi "Vites konfigürasyonu: 7-Speed."; yedi vitesin satırı seçilir', () => {
     const v7 = uye({ dizi: '7' });
     const d6 = BL.veMntBelgeDurum(A, v7, sayfa(6).bolge[2]);
-    expect(d6).toEqual({ secili: false, tik: false, anahtar: null, neden: 'Vites konfigürasyonu: 7-Speed.', kaldir: null });
+    expect(d6).toEqual({ secili: false, tik: false, anahtar: null, neden: 'Vites konfigürasyonu: 7-Speed.', kaldir: null, radyo: true });
     const sig = sayfa(10).bolge.find((b) => b.alan === 'yag.6.sig.0');
     expect(BL.veMntBelgeDurum(A, v7, sig).neden).toBe('Vites konfigürasyonu: 7-Speed.');
-    expect(seciliSatirlar(v7).find((x) => x[0] === 7)[1]).toEqual([0, 1]);   // DIRECT-MOUNT · No Retarder, No PTO
+    expect(seciliSatirlar(v7).find((x) => x[0] === 7)[1]).toEqual([0, 1]);   // DIRECT-MOUNT (başlık) · No Retarder, No PTO
     // akümülatör retardersizde: tık retarderi de yazar
     const aku = sayfa(5).bolge.find((b) => b.alan === 'kutle.aku');
     expect(VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, varsayilan(), aku).anahtar).secenek).toMatchObject({ ret: '1', aku: '1', sog: 'u' });
   });
-  test('tık ailenin sırasıyla yazar: retarderli soğutucu retarderi açar; altı vitesin satırı 7-Speed yazmaz; tıksız satır yazmaz', () => {
+  test('tık ailenin sırasıyla yazar: retarderli soğutucu retarderi açar; altı vitesin satırı 7-Speed yazmaz; yalnız işaret yazmaz', () => {
     const r = BL.veMntBelgeDurum(A, uye({ sog: 's' }), sayfa(5).bolge.find((b) => b.alan === 'kutle.sog.r'));
     expect(VS.veMntVeriSayfasi(r.anahtar).secenek).toMatchObject({ ret: '1', sog: 'r' });
     const satir = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.r');
     expect(VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, varsayilan(), satir).anahtar).secenek).toMatchObject({ dizi: 'cr', bag: 'u', ret: '1', pto: '1', sog: 'r' });
     const w = BL.veMntBelgeDurum(A, varsayilan(), sayfa(9).bolge[1]);
     expect(VS.veMntVeriSayfasi(w.anahtar).secenek.dizi).toBe('wr');
-    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(5).bolge[0])).toEqual({ secili: true, tik: false, anahtar: null, neden: '', kaldir: null });
+    // yalnız işaret: Output Flange (her seçimde) ve tabloların başlıkları (Canlı Not 73: başlığın tıkı
+    // alt satırlardan birini kendiliğinden seçiyordu)
+    const yalniz = { secili: true, tik: false, anahtar: null, neden: '', kaldir: null, radyo: false };
+    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(5).bolge[12])).toEqual(yalniz);
+    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(6).bolge[0])).toEqual(yalniz);              // DIRECT-MOUNT TRANSMISSIONS
+    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(6).bolge[1])).toEqual(yalniz);              // No Retarder, No PTO Provision
+    expect(BL.veMntBelgeDurum(A, uye({ ret: '1' }), sayfa(8).bolge[2])).toEqual(yalniz);          // With Retarder, No PTO Provision
+    expect(B.sayfalar.map((s) => [s.no, s.bolge.filter((b) => !b.s).length])).toEqual(
+      [[5, 1], [6, 10], [7, 2], [8, 2], [9, 0], [10, 0], [21, 0], [27, 0], [33, 0], [37, 0], [41, 0], [45, 0]]);
   });
   // Canlı Not 56 (kullanıcı 2026-11-06): "Seçtiklerimizi geri kaldıramıyoruz. Yani seçim oluyor
   // ama iptal edemiyoruz." Önce: işaretli bölgenin tıkı hiçbir şey yazmıyordu (anahtar = seçim).
   // Şimdi kaldırır — en özel seçenekten başlayarak, bölge düşene dek varsayılana.
-  test('KALDIR: işaretli bölgenin tıkı seçimini kaldırır — en özel seçenek önce; varsayılanın kendisi kilitli', () => {
+  test('KALDIR: işaretli onay kutusunun tıkı seçimini kaldırır — en özel seçenek önce; varsayılanın kendisi kilitli', () => {
     const k = (vs, b) => { const d = BL.veMntBelgeDurum(A, vs, b); return d.kaldir ? VS.veMntVeriSayfasi(d.kaldir).secenek : null; };
     const p5 = (alan) => sayfa(5).bolge.find((b) => b.alan === alan);
     const tam = uye({ dizi: '7', pto: '1', ret: '1', sog: 'r', aku: '1', bag: 'u' });
-    // PTO · retarder · akümülatör · bağlama · 7-Speed: yalnız kendi seçeneği
+    // PTO · akümülatör · bağlama: yalnız kendi seçeneği
     expect(k(tam, p5('kutle.pto'))).toMatchObject({ pto: '0', ret: '1', sog: 'r', aku: '1', dizi: '7', bag: 'u' });
     expect(k(tam, p5('kutle.aku'))).toMatchObject({ aku: '0', ret: '1', sog: 'r' });              // retarder kalır
     expect(k(tam, p5('kutle.uzak'))).toMatchObject({ bag: 'd', dizi: '7' });
-    expect(k(tam, p5('kutle.temel.7'))).toMatchObject({ dizi: 'cr', pto: '1', ret: '1' });
-    // retarderli soğutucu: soğutucu Remote'a, retarder kalır; retarderin kendisi: soğutucu ve akümülatör de düşer
-    expect(k(tam, p5('kutle.sog.r'))).toMatchObject({ ret: '1', sog: 'u', aku: '1' });
+    // retarderin kendisi: soğutucu ve akümülatör de düşer
     expect(k(tam, p5('kutle.ret'))).toMatchObject({ ret: '0', sog: 'u', aku: '0', pto: '1' });
-    // Remote retarder soğutucusu: retarder kalkar (soğutucu zaten Remote)
-    expect(k(uye({ ret: '1' }), sayfa(5).bolge.find((b) => b.s && b.s.ret === '1' && b.s.sog === 'u'))).toMatchObject({ ret: '0', sog: 'u' });
-    // tablonun satırı: en özel seçeneği (soğutucu) varsayılana — kardeş satır işaretlenir
-    const satir = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.r'), kardes = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.u');
-    const v = uye({ bag: 'u', ret: '1', pto: '1', sog: 'r' }), sonra = VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, v, satir).kaldir);
-    expect(sonra.secenek).toMatchObject({ bag: 'u', ret: '1', pto: '1', sog: 'u' });
-    expect([BL.veMntBelgeDurum(A, sonra, satir).secili, BL.veMntBelgeDurum(A, sonra, kardes).secili]).toEqual([false, true]);
-    // sütun (12.0): WR → CR; varsayılanın kendisi (CR · Direct mount · No Retarder, No PTO) kilitli
-    expect(k(uye({ dizi: 'wr' }), sayfa(9).bolge[1])).toMatchObject({ dizi: 'cr' });
-    const kilitli = B.sayfalar.reduce((L, s0) => L.concat(s0.bolge.filter((b) => b.s && BL.veMntBelgeDurum(A, varsayilan(), b).secili
-      && !BL.veMntBelgeDurum(A, varsayilan(), b).kaldir).map((b) => s0.no + ':' + JSON.stringify(b.s))), []);
-    expect(kilitli).toEqual(['6:{"bag":"d"}', '6:{"bag":"d","ret":"0","pto":"0"}', '6:{"bag":"d","ret":"0","pto":"0","sog":"u"}',
-      '8:{"ret":"0","pto":"0"}', '9:{"dizi":"cr"}', '10:{"kar":"derin","pto":"0"}', '41:{"sog":"u"}', '45:{"sog":"u"}']);
-    // işaretli her bölge ya kaldırılır ya kilitli; kaldırılan bölge seçimden düşer, kayıt geçerli
+    // retarderli olmayan soğutucu onay kutusu (bu sayfada "yok" satırı yok): kaldırınca Remote
+    expect(k(uye({ sog: 's' }), p5('kutle.sog.s'))).toMatchObject({ ret: '0', sog: 'u' });
+    // soğutucunun sayfası (17.3): retarder kalkar (soğutucu zaten Remote)
+    expect(k(uye({ ret: '1' }), sayfa(21).bolge[0])).toMatchObject({ ret: '0', sog: 'u' });
+    // varsayılanın kendisi kilitli: yalnız uzak soğutucunun sayfaları (öteki varsayılanlar birbirini dışlayan satırda)
+    const kilitli = B.sayfalar.reduce((L, s0) => L.concat(s0.bolge.filter((b) => {
+      const d = BL.veMntBelgeDurum(A, varsayilan(), b);
+      return b.s && d.secili && !d.kaldir && !d.radyo;
+    }).map((b) => s0.no + ':' + JSON.stringify(b.s))), []);
+    expect(kilitli).toEqual(['41:{"sog":"u"}', '45:{"sog":"u"}']);
+    // işaretli her onay kutusu ya kaldırılır ya kilitli; kaldırılan bölge seçimden düşer, kayıt geçerli
     [varsayilan(), tam, uye({ ret: '1', sog: 'u', pto: '1' }), uye({ bag: 'u', kar: 'sig' })].forEach((vs) => {
       B.sayfalar.forEach((s0) => s0.bolge.forEach((b) => {
         const d = BL.veMntBelgeDurum(A, vs, b);
@@ -214,10 +220,90 @@ describe('DURUM — seçili · geçerli · sebep · yazılan anahtar', () => {
       }));
     });
   });
+  // ZORUNLU SEÇİM (kullanıcı 2026-11-09, Canlı Not 73): "'Retarder Option' seçeneğine tıkladığım zaman,
+  // altındaki iki seçenekten birini seçiyor. Ama … aşağıdakilerden birinin zorunlu olduğunu belirgin
+  // etmemiz gerekiyor. … Diğer maddelerde de var böyle şeyler." Önce: bütün satırlar onay kutusuydu,
+  // seçili satırın tıkı onu kaldırıyordu ve tabloların başlığı alt satırlarından birini seçiyordu.
+  // Şimdi birbirini dışlayan satırlar bir grup: her seçimde gruptan EN ÇOK biri seçili, zorunlu
+  // grupta TAM biri; seçili satırın tıkı seçimi kaldırmaz (öteki satır seçilir).
+  test('ZORUNLU SEÇİM: ailenin her üyesinde gruptan en çok biri seçili; zorunlu grupta tam biri', () => {
+    const D = (k) => A.secenek.find((o) => o.k === k).d.map((e) => e[0]);
+    const uyeler = [];
+    D('dizi').forEach((dizi) => D('bag').forEach((bag) => D('pto').forEach((pto) => D('ret').forEach((ret) =>
+      D('sog').forEach((sog) => D('kar').forEach((kar) => D('aku').forEach((aku) => {
+        const sec = { dizi, bag, pto, ret, sog, kar, aku };
+        const ok = A.secenek.every((o) => Object.keys(o.kosul || {}).every((bk) => { const izin = o.kosul[bk][sec[bk]]; return !izin || izin.indexOf(sec[o.k]) >= 0; }));
+        if (ok) uyeler.push(sec);
+    })))))));
+    // bağlama 2 × PTO 2 × (retarder yok: soğutucu 3 · var: soğutucu 2 × akümülatör 2) × (CR · WR: karter 2 · 7-Speed: Deep)
+    expect(uyeler).toHaveLength(2 * 2 * (3 + 2 * 2) * (2 + 2 + 1));
+    const say = (sec, f) => B.sayfalar.reduce((t, s) => t + s.bolge.filter((b) => f(s, b) && BL.veMntBelgeDurum(A, { k: 'x', secenek: sec }, b).secili).length, 0);
+    const gruplar = {};
+    B.sayfalar.forEach((s) => s.bolge.forEach((b) => { if (b.grup) gruplar[s.no + ':' + b.grup] = 1; }));
+    expect(Object.keys(gruplar).sort()).toEqual(['10:yag', '5:dizi', '5:sog-ret', '6:cg', '7:cg', '8:at', '9:dizi'].sort());
+    uyeler.forEach((sec) => {
+      Object.keys(gruplar).forEach((g) => {
+        const [no, ad] = g.split(':');
+        expect([g, say(sec, (s, b) => String(s.no) === no && b.grup === ad) <= 1]).toEqual([g, true]);
+      });
+      const tam = (f) => say(sec, f);
+      expect([sec, tam((s, b) => b.grup === 'dizi' && s.no === 5), tam((s, b) => b.grup === 'dizi' && s.no === 9),
+        tam((s, b) => b.grup === 'cg'), tam((s, b) => b.grup === 'at'), tam((s, b) => b.grup === 'yag'),
+        tam((s, b) => b.grup === 'sog-ret')]).toEqual([sec, 1, 1, 1, 1, 1, sec.ret === '1' ? 1 : 0]);
+    });
+  });
+  test('ZORUNLU SEÇİM: seçili satırın tıkı kaldırmaz, öteki satır seçilir; zorunlu grubun üst satırı belgede', () => {
+    const p5 = (alan) => sayfa(5).bolge.find((b) => b.alan === alan);
+    // Canlı Not 74: "Birincisi neden seçilmiyor? İkincisini seçebiliyorum?" — 7-Speed'den altı vitesin
+    // satırı CR yazar; CR ya da WR seçiliyken seçili
+    const cr = sayfa(5).bolge[0];
+    expect(VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, uye({ dizi: '7' }), cr).anahtar).secenek.dizi).toBe('cr');
+    expect(['cr', 'wr', '7'].map((d) => BL.veMntBelgeDurum(A, uye({ dizi: d }), cr).secili)).toEqual([true, true, false]);
+    // seçili satır: kaldırma yok, kilitli de değil (radyo)
+    [[uye({ dizi: 'wr' }), cr], [uye({ dizi: '7' }), p5('kutle.temel.7')], [uye({ ret: '1', sog: 'r' }), p5('kutle.sog.r')],
+     [uye({ ret: '1' }), sayfa(5).bolge.find((b) => b.s && b.s.ret === '1' && b.s.sog === 'u')],
+     [uye({ dizi: 'wr' }), sayfa(9).bolge[1]], [varsayilan(), sayfa(8).bolge[0]], [varsayilan(), sayfa(10).bolge[1]],
+     [uye({ bag: 'u', ret: '1', pto: '1', sog: 'r' }), sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.r')]].forEach(([vs, b]) => {
+      const d = BL.veMntBelgeDurum(A, vs, b);
+      expect([b.alan || JSON.stringify(b.s), d.secili, d.radyo, d.kaldir]).toEqual([b.alan || JSON.stringify(b.s), true, true, null]);
+    });
+    // tablonun satırı: kardeşi seçilir
+    const v = uye({ bag: 'u', ret: '1', pto: '1', sog: 'r' }), kardes = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.u');
+    expect(VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, v, kardes).anahtar).secenek).toMatchObject({ bag: 'u', ret: '1', pto: '1', sog: 'u' });
+    // zorunlu grubun üst satırı (belgedeki sırası): retarderli iki soğutucu → Retarder Option
+    const s5 = sayfa(5).bolge, ust = s5.findIndex((b) => b.alan === 'kutle.ret');
+    expect(s5.filter((b) => b.ust !== undefined).map((b) => [b.grup, b.ust])).toEqual([['sog-ret', ust], ['sog-ret', ust]]);
+    expect(B.sayfalar.reduce((t, s) => t + s.bolge.filter((b) => b.ust !== undefined).length, 0)).toBe(2);
+    // retarderin kendisi onay kutusu: kaldırınca grubun ikisi de düşer
+    const P = VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, uye({ ret: '1', sog: 'r' }), s5[ust]).kaldir);
+    expect(s5.filter((b) => b.grup === 'sog-ret').map((b) => BL.veMntBelgeDurum(A, P, b).secili)).toEqual([false, false]);
+  });
+  // ÖN İZLEME (Canlı Not 73 — "Diğer maddelerde de var böyle şeyler"): tık birden çok satırı birlikte
+  // değiştiriyordu ve yalnız tıklanan satır görünüyordu
+  test('ÖN İZLEME: tıkın seçime katacağı ve düşüreceği öteki satırlar', () => {
+    const id = (no, f) => { const si = B.sayfalar.findIndex((s) => s.no === no); return si + '-' + B.sayfalar[si].bolge.findIndex(f); };
+    const al = (alan) => (b) => b.alan === alan;
+    const oz = (vs, no, f) => { const [si, bi] = id(no, f).split('-').map(Number); return BL.veMntBelgeOnizleme(A, vs, B, si, bi); };
+    // varsayılandan akümülatör: retarder, uzak soğutucusu (17.3 · yağ satırı), solenoid ve yağı; tablolarda
+    // retarderli satır girer, retarderli olmayan çıkar
+    const r = oz(varsayilan(), 5, al('kutle.aku'));
+    [id(5, al('kutle.ret')), id(5, (b) => b.s && b.s.ret === '1' && b.s.sog === 'u'), id(5, al('kutle.akuSol')),
+     id(10, al('yag.aku')), id(21, () => true), id(6, al('cg.6.d.10.u')), id(8, al('atalet.6.10.u'))]
+      .forEach((x) => expect(r.ekle).toContain(x));
+    [id(6, al('cg.6.d.00.u')), id(8, al('atalet.6.00'))].forEach((x) => expect(r.cikar).toContain(x));
+    expect(r.ekle).not.toContain(id(5, al('kutle.aku')));                                       // kendisi yok
+    // Remote-Mount Provision: arka braket birlikte
+    expect(oz(varsayilan(), 5, al('kutle.uzak')).ekle).toContain(id(5, al('kutle.uzakArka6')));
+    // seçili satırın tıkı bir şey değiştirmiyorsa ön izleme boş (radyo · kilitli · yalnız işaret)
+    expect(oz(varsayilan(), 5, () => true)).toEqual({ ekle: [], cikar: [] });                   // CR/WR seçili
+    expect(oz(varsayilan(), 41, () => true)).toEqual({ ekle: [], cikar: [] });                  // kilitli
+    expect(oz(varsayilan(), 5, (b) => !b.s)).toEqual({ ekle: [], cikar: [] });                  // Output Flange
+  });
   test('bölgenin adı yazdığı değerlerle, ailenin sırasıyla', () => {
     expect(BL.veMntBelgeEtiket(A, sayfa(5).bolge.find((b) => b.alan === 'kutle.sog.r'))).toBe('Retarder: Var · Soğutucu: Direct · retarder/sump');
     expect(BL.veMntBelgeEtiket(A, sayfa(9).bolge[2])).toBe('Vites konfigürasyonu: 7-Speed');
-    expect(BL.veMntBelgeEtiket(A, sayfa(5).bolge[0])).toBe('');
+    expect(BL.veMntBelgeEtiket(A, sayfa(5).bolge[0])).toBe('Vites konfigürasyonu: Close Ratio (CR) / Wide Ratio (WR)');   // koşulun değerleri
+    expect(BL.veMntBelgeEtiket(A, sayfa(5).bolge[12])).toBe('');
   });
 });
 
@@ -254,7 +340,12 @@ describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () =
   test('ONAY KUTUSU: her tıklanan bölgede bir kutu — satırda solunda, çizimde üst hizada, sütunda başlığın altında', () => {
     const el = kur(MB.veMntWiz3bBelgeHTML(B));
     const btn = [...el.querySelectorAll('button[data-belge-b]')];
-    expect(btn.every((b) => b.querySelectorAll(':scope > .ve-mw-3b-belge-t .mf-ico-check').length === 1)).toBe(true);
+    const kutu = btn.filter((b) => !b.hasAttribute('data-belge-grup')), radyo = btn.filter((b) => b.hasAttribute('data-belge-grup'));
+    expect(kutu.every((b) => b.querySelectorAll(':scope > .ve-mw-3b-belge-t .mf-ico-check').length === 1)).toBe(true);
+    // birbirini dışlayan satır (Canlı Not 73 · 74): yuvarlak işaret, onay simgesi yok
+    expect([kutu.length, radyo.length]).toEqual([19, 51]);
+    expect(radyo.every((b) => b.querySelectorAll(':scope > .ve-mw-3b-belge-t.ve-mw-3b-belge-t--radyo > i').length === 1
+      && !b.querySelector('.mf-ico-check'))).toBe(true);
     expect(el.querySelectorAll('[data-belge-y] .ve-mw-3b-belge-t')).toHaveLength(0);              // tıksız satırda kutu yok
     // sütun: tanımın yeri, kutunun yüzdesi (başlığın altı ile ilk değerin arası)
     sayfa(9).bolge.forEach((b, i) => {
@@ -273,6 +364,24 @@ describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () =
     expect(kural('.ve-mw-3b-belge-t')).toMatch(/position:absolute; right:100%; top:50%; width:14px; height:14px; margin:-7px 6px 0 0/);
     expect(kural('.ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t')).toMatch(/background:var\(--accent-primary\); color:var\(--on-accent\)/);
     expect(css).not.toMatch(/\.ve-mw-3b-belge-b[^{]*\{[^}]*dashed/);
+  });
+
+  // Canlı Not 73: zorunlu grubun çizgisi üst satırın işaretinden grubun son satırına; her satıra kol
+  test('ZORUNLU SEÇİM: Retarder Option\'dan retarderli iki soğutucuya çizgi; her satıra kol; yalnız orada', () => {
+    const el = kur(MB.veMntWiz3bBelgeHTML(B));
+    const g = [...el.querySelectorAll('.ve-mw-3b-belge-grup')];
+    const s5 = sayfa(5).bolge, ust = s5.findIndex((b) => b.alan === 'kutle.ret');
+    expect(g.map((x) => [x.getAttribute('data-belge-grup-ust'), x.getAttribute('aria-hidden')])).toEqual([['0-' + ust, 'true']]);
+    expect(g[0].parentNode.getAttribute('data-belge-sayfa')).toBe('5');
+    const orta = (b) => b.k[1] + b.k[3] / 2, uye = s5.filter((b) => b.grup === 'sog-ret');
+    const y0 = orta(s5[ust]), y1 = orta(uye[1]);
+    expect(parseFloat(g[0].style.top)).toBeCloseTo(y0 / 792 * 100, 2);
+    expect(parseFloat(g[0].style.height)).toBeCloseTo((y1 - y0) / 792 * 100, 2);
+    expect(parseFloat(g[0].style.left)).toBeCloseTo(s5[ust].k[0] / 612 * 100, 2);
+    expect([...g[0].querySelectorAll('i')].map((i) => Math.round(parseFloat(i.style.top)))).toEqual([0, Math.round((orta(uye[0]) - y0) / (y1 - y0) * 100), 100]);
+    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-3b-belge-grup\.etkin\{ color:var\(--accent-primary\); \}/);
+    expect(css).toMatch(/\.ve-mw-3b-belge-t--radyo\{ border-radius:50%; \}/);
   });
 
   test('derleme belgenin bütün sayfalarını gömer (assets/belge)', () => {

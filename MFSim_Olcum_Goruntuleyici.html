@@ -12385,6 +12385,23 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-belge-b--ic > .ve-mw-3b-belge-t{ right:auto; margin:-7px 0 0 -7px; }
 .ve-mw-3b-belge-b:hover:not([disabled]) > .ve-mw-3b-belge-t, .ve-mw-3b-belge-b:focus-visible > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); }
 .ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); background:var(--accent-primary); color:var(--on-accent); }
+/* Birbirini dışlayan satırlar (Canlı Not 73 · 74): yuvarlak işaret, seçilende iç nokta */
+.ve-mw-3b-belge-t--radyo{ border-radius:50%; }
+.ve-mw-3b-belge-t--radyo > i{ width:6px; height:6px; border-radius:50%; background:transparent; }
+.ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t--radyo > i{ background:var(--on-accent); }
+/* Zorunlu seçim (Canlı Not 73): üst satırdan grubun son satırına işaretlerin solunda çizgi,
+   her satırın işaretine kol; üst satır seçiliyken vurgulu */
+.ve-mw-3b-belge-grup{ position:absolute; width:0; margin-left:-27px; pointer-events:none; color:var(--border-hover);
+  border-left:1.5px solid currentColor; }
+.ve-mw-3b-belge-grup > i{ position:absolute; left:-1.5px; width:8.5px; height:0; margin-top:-0.75px; border-top:1.5px solid currentColor; }
+.ve-mw-3b-belge-grup.etkin{ color:var(--accent-primary); }
+/* Ön izleme (Canlı Not 73): fare üstündeki satırın tıkıyla seçime girecek satır işaretli gibi
+   çerçeveli, düşecek satırın işareti boş */
+.ve-mw-3b-belge-b.ekle{ background:var(--accent-tint-6); }
+.ve-mw-3b-belge-b.ekle > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); }
+.ve-mw-3b-belge-b.cikar{ background:var(--accent-tint-6); }
+.ve-mw-3b-belge-b.cikar[aria-pressed="true"] > .ve-mw-3b-belge-t{ background:transparent; color:transparent; }
+.ve-mw-3b-belge-b.cikar[aria-pressed="true"] > .ve-mw-3b-belge-t--radyo > i{ background:transparent; }
 .ve-mw-3b-belge-b[aria-pressed="true"][aria-disabled="true"] > .ve-mw-3b-belge-t{ border-color:transparent; background:var(--accent-tint-60); }
 .ve-mw-3b-belge-b[disabled] > .ve-mw-3b-belge-t{ border-color:var(--border-light); background:transparent; }
 /* Gizli düğüm ağaçta soluk, sonunda gizli simgesi; "Ağaçta göster" satırı kısa vurguyla bulur */

@@ -17,6 +17,10 @@
 //   sutun  sütun bölgesi: başlığın metni; kutu başlıktan `bitis` satırına
 //   kutu   [x0, y0, x1, y1] pt — elle (soğutucunun başlığı ve resmi)
 //   kutuSon  kutunun alt sınırı bu satırın altı (resmin künyesi)
+//   grup   birbirini dışlayan satırlar (aynı seçeneğin değerleri): yuvarlak işaret,
+//          seçili satırın tıkı seçimi kaldırmaz — öteki satır seçilir (Canlı Not 73 · 74)
+//   ust    grubun ZORUNLU olduğu satırın metni: o satır seçiliyken gruptan biri seçili
+//          kalır; belgede üst satırdan grubun son satırına köşeli çizgi (Canlı Not 73)
 // Sayfa: no (belgedeki), bas (bölümün belgedeki adı), x (satır kutusunun yatay
 // aralığı, pt).
 // ============================================================================
@@ -24,28 +28,30 @@
 
 const ALTI = { dizi: ['cr', 'wr'] };           // close ratio · wide ratio (altı vites)
 
-// §9.1 / §11.1 alt tabloları: grup satırı + soğutucu satırları
-function cgGrup(bag, bas) {
+// §9.1 / §9.2 alt tabloları: başlık satırı (bağlama · retarder/PTO) yalnız İŞARET — seçimi
+// gösterir, tıklanmaz (Canlı Not 73: başlığın tıkı alt satırlardan birini kendiliğinden
+// seçiyordu); veri satırları birbirini dışlar (grup)
+function cgGrup(bag) {
   const B = bag === 'd' ? 'DIRECT-MOUNT TRANSMISSIONS' : 'REMOTE-MOUNT TRANSMISSIONS';
-  const L = [{ m: B, s: { bag }, ek: ALTI }];
+  const L = [{ m: B, ek: Object.assign({ bag: [bag] }, ALTI) }];
   [['No Retarder, No PTO Provision', '0', '0', ['u', 's', 'y']],
    ['No Retarder, With PTO Provision', '0', '1', ['u', 's', 'y']],
    ['With Retarder, No PTO Provision', '1', '0', ['u', 'r']],
    ['With Retarder, With PTO Provision', '1', '1', ['u', 'r']]].forEach(([g, ret, pto, sog]) => {
-    L.push({ m: g, sonra: [B], s: { bag, ret, pto }, ek: ALTI });
+    L.push({ m: g, sonra: [B], ek: Object.assign({ bag: [bag], ret: [ret], pto: [pto] }, ALTI) });
     const ad = { u: 'With remote cooler provision', s: 'With standard-capacity, direct-mount cooler',
       y: 'With high-capacity, direct-mount cooler', r: 'With direct-mount retarder/sump cooler' };
-    sog.forEach((k) => L.push({ m: ad[k], sonra: [B, g], s: { bag, ret, pto, sog: k }, ek: ALTI,
+    sog.forEach((k) => L.push({ m: ad[k], sonra: [B, g], s: { bag, ret, pto, sog: k }, ek: ALTI, grup: 'cg',
       alan: 'cg.6.' + bag + '.' + ret + pto + '.' + k }));
   });
   return L;
 }
 function cg7(bag) {
   const B = bag === 'd' ? 'DIRECT-MOUNT TRANSMISSIONS' : 'REMOTE-MOUNT TRANSMISSIONS';
-  return [{ m: B, s: { dizi: '7', bag } }].concat([
+  return [{ m: B, ek: { dizi: ['7'], bag: [bag] } }].concat([
     ['No Retarder, No PTO Provision', '0', '0'], ['No Retarder, With PTO Provision', '0', '1'],
     ['With Retarder, No PTO Provision', '1', '0'], ['With Retarder, With PTO Provision', '1', '1']]
-    .map(([g, ret, pto]) => ({ m: g, sonra: [B], s: { dizi: '7', bag, ret, pto }, alan: 'cg.7.' + bag + '.' + ret + pto })));
+    .map(([g, ret, pto]) => ({ m: g, sonra: [B], s: { dizi: '7', bag, ret, pto }, grup: 'cg', alan: 'cg.7.' + bag + '.' + ret + pto })));
 }
 
 module.exports = {
@@ -55,13 +61,16 @@ module.exports = {
     dpi: 150, kalite: 0.8,
     sayfalar: [
       { no: 5, bas: '8.0 Dry Weights', x: [52, 560], bolge: [
-        { m: 'Close Ratio and Wide Ratio Models', ek: ALTI, alan: 'kutle.temel.cr' },
-        { m: 'Seven-Speed Models', s: { dizi: '7' }, alan: 'kutle.temel.7' },
+        // Canlı Not 74: "Birincisi neden seçilmiyor?" — altı vitesin satırı seçilir (CR yazar;
+        // CR ya da WR seçiliyken seçili)
+        { m: 'Close Ratio and Wide Ratio Models', s: { dizi: 'cr' }, ek: ALTI, grup: 'dizi', alan: 'kutle.temel.cr' },
+        { m: 'Seven-Speed Models', s: { dizi: '7' }, grup: 'dizi', alan: 'kutle.temel.7' },
         { m: 'Power Take-Off Provision', s: { pto: '1' }, alan: 'kutle.pto' },
         { m: 'Retarder Option', s: { ret: '1' }, alan: 'kutle.ret' },
-        { m: 'Direct-Mount Retarder / Sump Cooler', s: { ret: '1', sog: 'r' }, alan: 'kutle.sog.r' },
+        // Canlı Not 73: retarderin soğutucusu zorunlu bir seçim — Retarder Option'a bağlı grup
+        { m: 'Direct-Mount Retarder / Sump Cooler', s: { ret: '1', sog: 'r' }, grup: 'sog-ret', ust: 'Retarder Option', alan: 'kutle.sog.r' },
         // uzak soğutucu şasidedir: kütlesi gövdeye girmez (programda 0)
-        { m: 'Remote Retarder / Sump Cooler', s: { ret: '1', sog: 'u' } },
+        { m: 'Remote Retarder / Sump Cooler', s: { ret: '1', sog: 'u' }, grup: 'sog-ret', ust: 'Retarder Option' },
         { m: 'Direct-Mount Non-Retarder Standard-Capacity Cooler', s: { ret: '0', sog: 's' }, alan: 'kutle.sog.s' },
         { m: 'Direct-Mount Non-Retarder High-Capacity Cooler', s: { ret: '0', sog: 'y' }, alan: 'kutle.sog.y' },
         { m: 'Retarder Accumulator', tam: true, s: { ret: '1', aku: '1' }, alan: 'kutle.aku' },
@@ -74,31 +83,31 @@ module.exports = {
         bolge: cgGrup('d').concat(cgGrup('u')) },
       { no: 7, bas: '9.2 Center of Gravity: Seven-Speed Models', x: [58, 548], bolge: cg7('d').concat(cg7('u')) },
       { no: 8, bas: '11.0 Mass Moments of Inertia', x: [58, 552], bolge: [
-        { m: 'No Retarder, No PTO Provision', s: { ret: '0', pto: '0' }, ek: ALTI, alan: 'atalet.6.00' },
-        { m: 'No Retarder, With PTO Provision', s: { ret: '0', pto: '1' }, ek: ALTI, alan: 'atalet.6.01' },
-        { m: 'With Retarder, No PTO Provision', s: { ret: '1', pto: '0' }, ek: ALTI },
-        { m: 'With Remote Cooler Provision', sonra: ['With Retarder, No PTO Provision'], s: { ret: '1', pto: '0', sog: 'u' }, ek: ALTI, alan: 'atalet.6.10.u' },
-        { m: 'With Direct-Mount Retarder/Sump', sonra: ['With Retarder, No PTO Provision'], satir: 2, s: { ret: '1', pto: '0', sog: 'r' }, ek: ALTI, alan: 'atalet.6.10.r' },
-        { m: 'With Retarder and PTO Provision', s: { ret: '1', pto: '1' }, ek: ALTI },
-        { m: 'With Remote Cooler Provision', sonra: ['With Retarder and PTO Provision'], s: { ret: '1', pto: '1', sog: 'u' }, ek: ALTI, alan: 'atalet.6.11.u' },
-        { m: 'With Direct-Mount Retarder/Sump', sonra: ['With Retarder and PTO Provision'], satir: 2, s: { ret: '1', pto: '1', sog: 'r' }, ek: ALTI, alan: 'atalet.6.11.r' },
-        { m: 'No Retarder, No PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '0', pto: '0' }, alan: 'atalet.7.00' },
-        { m: 'No Retarder, With PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '0', pto: '1' }, alan: 'atalet.7.01' },
-        { m: 'With Retarder, No PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '1', pto: '0' }, alan: 'atalet.7.10' },
-        { m: 'With Retarder and PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '1', pto: '1' }, alan: 'atalet.7.11' }
+        { m: 'No Retarder, No PTO Provision', s: { ret: '0', pto: '0' }, ek: ALTI, grup: 'at', alan: 'atalet.6.00' },
+        { m: 'No Retarder, With PTO Provision', s: { ret: '0', pto: '1' }, ek: ALTI, grup: 'at', alan: 'atalet.6.01' },
+        { m: 'With Retarder, No PTO Provision', ek: Object.assign({ ret: ['1'], pto: ['0'] }, ALTI) },
+        { m: 'With Remote Cooler Provision', sonra: ['With Retarder, No PTO Provision'], s: { ret: '1', pto: '0', sog: 'u' }, ek: ALTI, grup: 'at', alan: 'atalet.6.10.u' },
+        { m: 'With Direct-Mount Retarder/Sump', sonra: ['With Retarder, No PTO Provision'], satir: 2, s: { ret: '1', pto: '0', sog: 'r' }, ek: ALTI, grup: 'at', alan: 'atalet.6.10.r' },
+        { m: 'With Retarder and PTO Provision', ek: Object.assign({ ret: ['1'], pto: ['1'] }, ALTI) },
+        { m: 'With Remote Cooler Provision', sonra: ['With Retarder and PTO Provision'], s: { ret: '1', pto: '1', sog: 'u' }, ek: ALTI, grup: 'at', alan: 'atalet.6.11.u' },
+        { m: 'With Direct-Mount Retarder/Sump', sonra: ['With Retarder and PTO Provision'], satir: 2, s: { ret: '1', pto: '1', sog: 'r' }, ek: ALTI, grup: 'at', alan: 'atalet.6.11.r' },
+        { m: 'No Retarder, No PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '0', pto: '0' }, grup: 'at', alan: 'atalet.7.00' },
+        { m: 'No Retarder, With PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '0', pto: '1' }, grup: 'at', alan: 'atalet.7.01' },
+        { m: 'With Retarder, No PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '1', pto: '0' }, grup: 'at', alan: 'atalet.7.10' },
+        { m: 'With Retarder and PTO Provision', sonra: ['11.2 MOMENTS OF INERTIA'], s: { dizi: '7', ret: '1', pto: '1' }, grup: 'at', alan: 'atalet.7.11' }
       ] },
       { no: 9, bas: '12.0 Gear Ratios', x: [72, 540], bolge: [
-        { sutun: 'CLOSE-RATIO', bitis: 'REVERSE', s: { dizi: 'cr' }, alan: ['oran.cr', 'geri.cr'] },
-        { sutun: 'WIDE-RATIO', bitis: 'REVERSE', s: { dizi: 'wr' }, alan: ['oran.wr', 'geri.wr'] },
-        { sutun: 'SEVEN-SPEED', bitis: 'REVERSE', s: { dizi: '7' }, alan: ['oran.7', 'geri.7'] }
+        { sutun: 'CLOSE-RATIO', bitis: 'REVERSE', s: { dizi: 'cr' }, grup: 'dizi', alan: ['oran.cr', 'geri.cr'] },
+        { sutun: 'WIDE-RATIO', bitis: 'REVERSE', s: { dizi: 'wr' }, grup: 'dizi', alan: ['oran.wr', 'geri.wr'] },
+        { sutun: 'SEVEN-SPEED', bitis: 'REVERSE', s: { dizi: '7' }, grup: 'dizi', alan: ['oran.7', 'geri.7'] }
       ] },
       { no: 10, bas: '13.0 Oil Types and Oil Fill Information', x: [58, 548], bolge: [
-        { m: 'Deep Oil Sump, with PTO Provision', sonra: ['Base Models'], s: { kar: 'derin', pto: '1' }, ek: ALTI, alan: 'yag.6.derin.1' },
-        { m: 'Deep Oil Sump, without PTO Provision', sonra: ['Base Models'], s: { kar: 'derin', pto: '0' }, ek: ALTI, alan: 'yag.6.derin.0' },
-        { m: 'Shallow Oil Sump, with PTO Provision', s: { kar: 'sig', pto: '1' }, ek: ALTI, alan: 'yag.6.sig.1' },
-        { m: 'Shallow Oil Sump, without PTO Provision', s: { kar: 'sig', pto: '0' }, ek: ALTI, alan: 'yag.6.sig.0' },
-        { m: 'Deep Oil Sump, with PTO Provision', sonra: ['Seven-Speed Models'], s: { dizi: '7', kar: 'derin', pto: '1' }, alan: 'yag.7.derin.1' },
-        { m: 'Deep Oil Sump, without PTO Provision', sonra: ['Seven-Speed Models'], s: { dizi: '7', kar: 'derin', pto: '0' }, alan: 'yag.7.derin.0' },
+        { m: 'Deep Oil Sump, with PTO Provision', sonra: ['Base Models'], s: { kar: 'derin', pto: '1' }, ek: ALTI, grup: 'yag', alan: 'yag.6.derin.1' },
+        { m: 'Deep Oil Sump, without PTO Provision', sonra: ['Base Models'], s: { kar: 'derin', pto: '0' }, ek: ALTI, grup: 'yag', alan: 'yag.6.derin.0' },
+        { m: 'Shallow Oil Sump, with PTO Provision', s: { kar: 'sig', pto: '1' }, ek: ALTI, grup: 'yag', alan: 'yag.6.sig.1' },
+        { m: 'Shallow Oil Sump, without PTO Provision', s: { kar: 'sig', pto: '0' }, ek: ALTI, grup: 'yag', alan: 'yag.6.sig.0' },
+        { m: 'Deep Oil Sump, with PTO Provision', sonra: ['Seven-Speed Models'], s: { dizi: '7', kar: 'derin', pto: '1' }, grup: 'yag', alan: 'yag.7.derin.1' },
+        { m: 'Deep Oil Sump, without PTO Provision', sonra: ['Seven-Speed Models'], s: { dizi: '7', kar: 'derin', pto: '0' }, grup: 'yag', alan: 'yag.7.derin.0' },
         { m: 'Direct-Mount, Non-Retarder, Standard-Capacity Cooler', s: { ret: '0', sog: 's' }, alan: 'yag.sog.s' },
         { m: 'Direct-Mount, Non-Retarder, High-Capacity Cooler', s: { ret: '0', sog: 'y' }, alan: 'yag.sog.y' },
         { m: 'Direct-Mount, Retarder/Sump Cooler', s: { ret: '1', sog: 'r' }, alan: 'yag.sog.r' },

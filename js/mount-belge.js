@@ -25,17 +25,23 @@ function _veBelgeSebep(A, k, s){
   var r = _veBelgeDegerAd(A, k, s[k]);
   return r.o ? r.o.ad + ': ' + r.ad + '.' : '';
 }
-// Bölgenin adı: yazdığı değerler, ailenin sırasıyla ("Retarder: Var · Soğutucu: Remote")
+// Bölgenin adı: yazdığı değerler, ailenin sırasıyla ("Retarder: Var · Soğutucu: Remote");
+// koşulu da olan seçenekte koşulun değerleri ("Vites konfigürasyonu: Close Ratio (CR) / Wide Ratio (WR)")
 function veMntBelgeEtiket(A, b){
   if(!A || !b || !b.s) return '';
+  var ek = b.ek || {};
   return A.secenek.filter(function(o){ return o.k in b.s; }).map(function(o){
-    return o.ad + ': ' + _veBelgeDegerAd(A, o.k, b.s[o.k]).ad;
+    var d = o.k in ek ? ek[o.k] : [b.s[o.k]];
+    return o.ad + ': ' + d.map(function(v){ return _veBelgeDegerAd(A, o.k, v).ad; }).join(' / ');
   }).join(' · ');
 }
+// Seçili: koşul (ek) ve yazılan değerler (s) seçimde; ikisinde de olan seçenekte koşul
+// belirler — "Close Ratio and Wide Ratio Models" CR yazar, CR ya da WR seçiliyken seçili
+// (Canlı Not 74)
 function _veBelgeSecili(s, b){
   var ek = b.ek || {}, sec = b.s || {};
   return Object.keys(ek).every(function(k){ return ek[k].indexOf(s[k]) >= 0; })
-    && Object.keys(sec).every(function(k){ return s[k] === sec[k]; });
+    && Object.keys(sec).every(function(k){ return (k in ek) || s[k] === sec[k]; });
 }
 // SEÇİMİN KALDIRILMASI (kullanıcı 2026-11-06, Canlı Not 56: *"Seçtiklerimizi geri
 // kaldıramıyoruz. Yani seçim oluyor ama iptal edemiyoruz."*): işaretli bölgenin tıkı
@@ -57,16 +63,19 @@ function veMntBelgeKaldir(A, vs, b){
   }
   return null;
 }
-// Durum: { secili, tik, anahtar, neden, kaldir }
+// Durum: { secili, tik, anahtar, neden, kaldir, radyo }
 //   secili   seçim bölgenin değerlerini (s) ve koşulunu (ek) taşıyor
 //   tik      bölge tıklanır (değer yazar); anahtar tıkın yazacağı kayıt
 //   neden    tık geçersizse bağdaşmayan seçeneğin adı ve değeri
 //   kaldir   işaretli bölgenin tıkının yazacağı kayıt (seçimin kaldırılması) | null
+//   radyo    birbirini dışlayan satırlardan (grup — Canlı Not 73 · 74): seçili satırın tıkı
+//            seçimi kaldırmaz (kaldir null), öteki satır seçilir
 function veMntBelgeDurum(A, vs, b){
   var s = (vs && vs.secenek) || {}, ek = b.ek || {}, sec = b.s || {};
   var ekUyar = function(S){ return Object.keys(ek).every(function(k){ return ek[k].indexOf(S[k]) >= 0; }); };
   var secili = _veBelgeSecili(s, b);
-  if(!b.s || !A || typeof veMntVsSecenekYaz !== 'function') return { secili: secili, tik: false, anahtar: null, neden: '', kaldir: null };
+  var radyo = !!b.grup;
+  if(!b.s || !A || typeof veMntVsSecenekYaz !== 'function') return { secili: secili, tik: false, anahtar: null, neden: '', kaldir: null, radyo: radyo };
   var k = vs.k, neden = '', cur = s;
   A.secenek.forEach(function(o){
     if(!k || !(o.k in sec)) return;
@@ -92,7 +101,29 @@ function veMntBelgeDurum(A, vs, b){
       k = null;
     }
   }
-  return { secili: secili, tik: !!k, anahtar: k || null, neden: k ? '' : neden, kaldir: secili ? veMntBelgeKaldir(A, vs, b) : null };
+  return { secili: secili, tik: !!k, anahtar: k || null, neden: k ? '' : neden,
+           kaldir: secili && !radyo ? veMntBelgeKaldir(A, vs, b) : null, radyo: radyo };
+}
+// ÖN İZLEME (kullanıcı 2026-11-09, Canlı Not 73: *"Diğer maddelerde de var böyle şeyler"*):
+// tık birden çok satırı birlikte değiştirir (akümülatör retarderi, soğutucusunu ve
+// solenoidi; Remote-Mount Provision arka braketi seçer). Fare üstündeki bölgenin tıkıyla
+// seçime girecek (ekle) ve seçimden düşecek (cikar) öteki bölgeler, "sayfa-bölge" kimliğiyle.
+function veMntBelgeOnizleme(A, vs, B, si, bi){
+  var r = { ekle: [], cikar: [] };
+  var b = B && B.sayfalar && B.sayfalar[si] ? B.sayfalar[si].bolge[bi] : null;
+  if(!A || !vs || !b || typeof veMntVeriSayfasi !== 'function') return r;
+  var d = veMntBelgeDurum(A, vs, b), k = d.secili ? d.kaldir : d.anahtar;
+  var P = k && k !== vs.k ? veMntVeriSayfasi(k) : null;
+  if(!P) return r;
+  var s0 = vs.secenek || {};
+  B.sayfalar.forEach(function(S, i){
+    S.bolge.forEach(function(x, j){
+      if(i === si && j === bi) return;
+      var once = _veBelgeSecili(s0, x), sonra = _veBelgeSecili(P.secenek, x);
+      if(once !== sonra) (sonra ? r.ekle : r.cikar).push(i + '-' + j);
+    });
+  });
+  return r;
 }
 // Sayfanın görseli: derleme gömer (build.js → __MFSIM_BELGE), modüler kopyada dosya
 function veMntBelgeResim(rel){
@@ -102,5 +133,5 @@ function veMntBelgeResim(rel){
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veMntBelge: veMntBelge, veMntBelgeDurum: veMntBelgeDurum, veMntBelgeEtiket: veMntBelgeEtiket, veMntBelgeResim: veMntBelgeResim,
-    veMntBelgeKaldir: veMntBelgeKaldir };
+    veMntBelgeKaldir: veMntBelgeKaldir, veMntBelgeOnizleme: veMntBelgeOnizleme };
 }
