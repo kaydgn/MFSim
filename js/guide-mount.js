@@ -955,7 +955,9 @@ function _gmSec15(){
       + 'kombinasyonun tipleri taranan grupların takozlarına yazılır (Bölüm 15.5). Ardından Çözücü’de '
       + '<strong>Hesapla</strong> ve ana rapor: Çözücü taramanın ölçtüğü modları ve sehimleri bulur.',
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
-      + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.'
+      + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.',
+    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması, '
+      + 'tarama tablosu ve konfigürasyon başına bir sayfa (Bölüm 15.5, <em>Excel çıktısı</em>).'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
@@ -970,7 +972,7 @@ function _gmSec15(){
   h += _gmAlanTablo('Sonuç bölümü', [
     ['<strong>Öneri</strong>', 'Grup başına tip: değişen grupta mevcut tip üstü çizili, önerinin tipi kalın; '
       + 'tipi aynı kalan grup <em>Aynı</em>, taranmayan grup <em>Sabit</em>. İletilebilirlik ve statik sehim: '
-      + 'mevcut → öneri', '<strong>Modele uygula</strong> ve <strong>Raporu indir</strong> bu bölümde'],
+      + 'mevcut → öneri', '<strong>Modele uygula</strong>, <strong>Raporu indir</strong> ve <strong>Excel’i indir</strong> bu bölümde'],
     ['<strong>Kriterler</strong>', 'Açık kısıt başına satır: sınır, mevcut tasarımın ve önerinin değeri; ✓ sağlıyor, '
       + '✗ sağlamıyor (hücre kırmızı). Statik sehimin alt ve üst sınırı tek satırdır',
       'Değeri olmayan kısıt (kapasitesi tanımsız tip) —; değer sınıra yuvarlanıyorsa ondalığı uzar'],
@@ -1024,6 +1026,20 @@ function _gmSec15(){
     + 'taranan grubu eksenlere koyar (tipler statik düşey rijitlik sırasıyla); öteki taranan gruplar seçilen tipte '
     + 'durur, varsayılan sıranın birincisinin tipidir. <em>Eksenler</em> ve <em>Grup</em> seçimi dört diyagramda '
     + 'ortaktır. Tek grup taranıyorsa kesit diyagramları çizilmez; Tasarım uzayı üç taranan grup ister.</p>';
+  h += _gmNot('Excel çıktısı',
+      '<strong>Excel’i indir</strong> taramayı bugünkü sınırlarla <code>takoz_konfigurasyonlari.xlsx</code> '
+    + 'dosyasına yazar; tarama yinelenmez, satırların ölçümü sürerken çubuk eylem satırındadır. '
+    + '<strong>Özet</strong>: mevcut tasarım (K0) ve sıranın ilk dokuz kombinasyonu (K1 … K9); grupların tipi, '
+    + '<em>Uygunluk</em>, dört kesin kriter, frekans payı, TR ve en düşük mod. <em>Uygunluk</em>: bütün açık '
+    + 'kısıtlar sağlanıyorsa <em>Uygun</em> (sıranın ilki <em>En uygun</em>, koyu yeşil), yalnız dört kesin '
+    + 'kriter sağlanıyorsa <em>Kısmen uygun</em>; yeşil sıra düştükçe açılır, <em>Uygun değil</em> renksizdir. '
+    + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve sayfa adı o konfigürasyonun '
+    + 'sayfasını açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter sayısına sonra '
+    + 'TR’ye göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, dört kriter (✓ / ✗), '
+    + 'frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
+    + '<strong>K0 … K9</strong>: modelin her yük durumunda takoz başına X, Y, Z yer değiştirmesi, modlar ve TR; '
+    + 'üstte <em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. Izgara '
+    + 'çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli açılır; hücreler değer taşır, formül yoktur.');
   h += _gmNot('Seçimi modele uygulamak',
       '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
     + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '

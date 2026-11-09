@@ -20,6 +20,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 var _MNT_PARAM_IS = null;       // çalışan tarama: { nodeId, dur }
+var _MNT_PARAM_XLS = { is:null }; // süren Excel çıktısı (cp-mount-param-sonuc.js): is = { nodeId, i, n }
 
 // ── Canlı model — taramanın girdisi ─────────────────────────────────────────
 // `liste` (ops.): düğüm listesi; verilmezse canlı `nodes`.
@@ -212,7 +213,22 @@ function _mntParamOlcucu(M, ctx){
     }
     return o;
   }
-  return { olc1:olc1, olc2:olc2 };
+  // Excel çıktısı (cp-mount-param-sonuc.js → veMntParamExcelIndir): anma
+  // rijitlikte birinci aşama (tarama satırı) ve konfigürasyonun TAM çözümü —
+  // modelin her yük durumunda takoz başına yer değiştirme [mm] ve modlar.
+  function anma(tipler){ return bir(tipler, 1); }
+  function tam(tipler){
+    var e=hazir(tipler, 1), prep=e.prep, st=e.st;
+    if(!prep || prep.error || !st || !st.res) return null;
+    var o=bir(tipler, 1);
+    var vakalar=prep.loadCases.map(function(lc){
+      var rc=(lc===statik(prep)) ? st : prep.solveOne(lc);
+      return { ad:lc.name, d:(rc && rc.res) ? rc.res.perMount.map(function(pm){
+        return [pm.delta[0]*1000, pm.delta[1]*1000, pm.delta[2]*1000]; }) : null };
+    });
+    return { o:o, vakalar:vakalar, modlar:o ? o.modes.map(function(md){ return { f:md.f_Hz, ad:md.label }; }) : [] };
+  }
+  return { olc1:olc1, olc2:olc2, anma:anma, tam:tam };
 }
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
@@ -460,6 +476,9 @@ function _mntParamDugme(nodeId){
 // Süren taramanın ilerlemesi (eylem satırının çubuğu) — yoksa null.
 function _mntParamIlerleme(nodeId){
   var s=_MNT_PARAM_IS;
+  var x=_MNT_PARAM_XLS.is;
+  if((!s || s.nodeId!==nodeId) && x && x.nodeId===nodeId)
+    return { ad:'Excel', metin:'Satır '+_mntS(x.i, 0)+' / '+_mntS(x.n, 0), oran:x.n ? x.i/x.n : 1 };
   if(!s || s.nodeId!==nodeId) return null;
   if(s.son) return { ad:'Tarama', metin:'Sonuç', oran:1 };
   return { ad:'Tarama', metin:'Kombinasyon '+_mntS(s.i, 0)+' / '+_mntS(s.n, 0), oran:s.n ? s.i/s.n : 0 };
@@ -560,6 +579,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
     _mntParamZenginlestir: _mntParamZenginlestir, _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,
     _mntParamIlerleme: _mntParamIlerleme, _mntParamSonraki: _mntParamSonraki, veMntParamDurdur: veMntParamDurdur,
+    _mntParamSimdi: _mntParamSimdi, _mntParamIlerlemeYaz: _mntParamIlerlemeYaz, _MNT_PARAM_DILIM: _MNT_PARAM_DILIM,
+    _MNT_PARAM_XLS: _MNT_PARAM_XLS,
     _MNT_PARAM_EK: _MNT_PARAM_EK, _MNT_PARAM_YUZDE: _MNT_PARAM_YUZDE, _mntParamAd: _mntParamAd,
     veMntParamSabit: veMntParamSabit, veMntParamAday: veMntParamAday, veMntParamAdayHepsi: veMntParamAdayHepsi,
     veMntParamSinir: veMntParamSinir, veMntParamAcik: veMntParamAcik, veMntParamTara: veMntParamTara

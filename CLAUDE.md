@@ -351,6 +351,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   imzada YOK (her kombinasyon onu kütüphaneden takar): uygulamak taramayı
   eskitmez, mevcut tasarım yeniden ölçülür. Kapı: `mount-param-ciz.test.js` (→ *SADE
   GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
+- `js/mount-param-excel.js` + `js/xlsx-yaz.js` — Parametrik Analiz'in **Excel çıktısı**
+  (kullanıcı kararı 2026-11-09: *"Kullanıcı bu Excel formatında çıktı alacak"*; düzen Canlı
+  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · K0…K9. Düzen o
+  notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı başlığın
+  NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara kapalı, kullanılmayan
+  satır/sütun gizli, adlar sayfaya bağlı, K sayfasında Özet · Geri · İleri düğmeleri,
+  "ASR…" eki yazılmaz. Konfigürasyonlar: mevcut + kesin kriterleri sağlayanlar (önce bütün
+  açık kısıtları sağlayanlar, sonra toplam ihlal); hücre değer taşır, formül YOK. Yazıcı
+  DOM'suz ve bağımlılıksız (okuyucunun karşılığı). Kapı: `mount-param-excel.test.js` +
+  `mount-param-excel-tta.test.js` (→ *TEK YOL* · *ONAY*) + `xlsx-yaz.test.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

@@ -289,3 +289,44 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
   expect(await page.evaluate((i) => document.getElementById('ve-mnt-param-st-' + i).textContent, id)).toMatch(/^Tarandı \([\d,]+ s\)$/);
   expect(hata).toEqual([]);
 });
+
+// EXCEL (kullanıcı kararı 2026-11-09: "Kullanıcı bu Excel formatında çıktı alacak"):
+// Öneri'deki düğmenin gerçek tıkı tarayıcının indirmesini başlatır; dosya
+// tarayıcının sıkıştırmasıyla (CompressionStream) yazılır ve programın kendi
+// okuyucusu açar — Node'da bu yol HİÇ koşmuyor (jsdom'da sıkıştırma yok).
+// Düğme satırı dar sütunda taşmaz (üç düğme alt satıra iner).
+test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, sayfalar ve Özet; düğme satırı taşmaz', async ({ page }) => {
+  const hata = [];
+  page.on('pageerror', (e) => hata.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
+  const id = await kur(page);
+  await page.click('#ve-mnt-param-btn-' + id);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 60000 });
+  await page.waitForTimeout(600);
+  const dugme = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem button[data-excel]');
+  await dugme.scrollIntoViewIfNeeded();
+  const satir = await page.evaluate(() => {
+    const e = document.querySelector('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem');
+    const r = e.getBoundingClientRect();
+    return { tasma: e.scrollWidth > e.clientWidth + 1,
+      disari: [...e.querySelectorAll('button')].filter((b) => { const q = b.getBoundingClientRect(); return q.right > r.right + 1 || q.left < r.left - 1; }).length };
+  });
+  expect(satir).toEqual({ tasma: false, disari: 0 });
+  const [indir] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), dugme.click()]);
+  expect(indir.suggestedFilename()).toBe('takoz_konfigurasyonlari.xlsx');
+  const yol = await indir.path();
+  const bayt = new Uint8Array(require('fs').readFileSync(yol));
+  const R = require('../../js/xlsx-read.js');
+  const z = R.veXlsZipRead(bayt);
+  expect(z.names.some((n) => z.entries[n].method === 8)).toBe(true);           // tarayıcıda sıkıştırılmış
+  const wb = R.veXlsOpen(bayt);
+  const ad = wb.sheets.map((s) => s.name);
+  expect(ad.slice(0, 3)).toEqual(['Özet', 'Tarama', 'K0 Mevcut']);
+  const oz = wb.readSheet(0).rows;
+  expect(oz[3].slice(1, 3)).toEqual(['K', 'Sayfa']);
+  expect(oz[4][1]).toBe('K0');
+  const ta = wb.readSheet(1).rows;
+  expect(ta[0][0]).toMatch(/^Tarama — [\d.]+ kombinasyon/);
+  await expect(page.locator('#ve-mnt-param-st-' + id)).toHaveText(/^İndirildi \([\d.]+ KB\)$/);
+  expect(hata).toEqual([]);
+});
