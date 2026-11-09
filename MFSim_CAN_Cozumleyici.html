@@ -11705,6 +11705,9 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 /* PANELİN ALTI: dönüş ve Kılavuz yan yana, panelin dibinde (Canlı Not 19) */
 .ve-bas-dip{ margin-top:auto; display:flex; gap:8px; padding-top:12px; }
 .ve-bas-dip > button{ flex:1 1 0; min-width:0; }
+/* Dönüş ve Kılavuz örnek satırının Yükle'si boyunda (kullanıcı 2026-11-09, Canlı Not 86:
+   *"Şu butonlar çok kalın olmuş … Boyuna kalın yani."*) — 32 → 26 px. */
+.ve-bas-dip > .ve-bas-donus, .ve-bas-dip > .ve-bas-kilavuz{ height:26px; }
 .ve-bas-donus{
   display:inline-flex; align-items:center; justify-content:center; gap:7px; height:32px; padding:0 12px; box-sizing:border-box;
   cursor:pointer; font-family:inherit; font-size:var(--fs-body); font-weight:600; color:var(--ink-accent);

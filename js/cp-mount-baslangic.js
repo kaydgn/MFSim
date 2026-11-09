@@ -127,21 +127,18 @@ function veMntBaslangicKimlik(){
   return { ad: def.name || 'Takoz Çökme-Titreşim', kilavuz: kilavuz };
 }
 
-// Kapıların künyesi — sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım
-// "Başlangıç" bu sayfanın ta kendisi, listede yok), STEP'in biçimi okuyucunun
-// başlığı ve dosya seçicinin uzantıları, boş kanvasın kurduğu araçlar.
-var VE_MNT_BAS_STEP = ['ISO 10303-21', '.stp', '.step', '.stpz', '.p21'];
+// KAPIDA KÜNYE YOK (kullanıcı 2026-11-09, Canlı Not 84: *"Gereksiz açıklamaları
+// kaldıralım."*): kapı yalnız simge ve ad — sihirbazın adımları, STEP'in biçimi ve
+// boş kanvasın araç sayısı adın altında iki satırdı. Boş kanvasın kurduğu araçların
+// adları `title`da (veri). Kitin künye yuvası FEAD'in sütununda duruyor.
 function veMntBaslangicKapilar(){
-  var adim = (_mntBasG('VE_MW_STEPS', './cp-mount-wizard.js') || []).slice(1)
-    .map(function(s){ return s.ad; });
   var arac = (_mntBasG('VE_MNT_ARAC_TIPLERI', './cp-mount.js') || []).map(function(t){
     return (typeof componentDefs !== 'undefined' && componentDefs[t] && componentDefs[t].name) || t;
   });
   return [
-    { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, kunye: adim },
-    { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla', kunye: VE_MNT_BAS_STEP },
-    { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas', kunye: arac.length ? [arac.length + ' araç'] : [],
-      title: arac.join(' · ') }
+    { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true },
+    { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla' },
+    { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas', title: arac.join(' · ') }
   ];
 }
 
@@ -282,7 +279,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntBaslangicKimlik: veMntBaslangicKimlik,
     veMntBaslangicKapilar: veMntBaslangicKapilar,
     VE_MNT_BAS_ID: VE_MNT_BAS_ID,
-    VE_MNT_BAS_STEP: VE_MNT_BAS_STEP, veMntBaslangicDegisiklik: veMntBaslangicDegisiklik,
+    veMntBaslangicDegisiklik: veMntBaslangicDegisiklik,
     _mntBasSifirla: function(){ _mntBasKapsam = false; }
   };
 }
