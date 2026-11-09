@@ -272,6 +272,133 @@ describe('index.html kaydı', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// İŞARETLER (kullanıcı 2026-11-09: "bol bol görseller ile, yönlendirmeler ile,
+// işaretler ile kullanıcı hep bilgilendirilmeli"): rozet ÖĞEYE bağlı, numara
+// dizideki sıra, lejant aynı diziden, bulunamayan hedef SESSİZ değil.
+describe('İŞARETLER — şekil, lejant, metin aynı numarayı taşır', () => {
+  const PANEL = '<div class="ve-fp-govde">'
+    + '<section class="ve-fp-card"><div class="ve-fp-sect"><b>Kütle</b><span>[kg]</span></div>'
+    + '<label>Kütle <input id="m" value="1"></label></section>'
+    + '<section class="ve-fp-card"><div class="ve-fp-sect"><b>Konum</b></div><p>x</p></section>'
+    + '<div class="ve-fp-yurut"><button type="button">Hesapla</button></div></div>';
+
+  test('üç tanım yolu (seçici · bölüm · metin) öğeyi bulur ve rozeti İÇİNE koyar', () => {
+    const r = KIT.veGuideIsaretle(PANEL, [
+      { bolum: 'Konum', ad: 'Konum' },
+      { metin: 'Hesapla', ad: 'Hesapla', yer: 'sag' },
+      { s: '.ve-fp-yurut', ad: 'Eylem satırı' },
+    ]);
+    expect(r.kayip).toEqual([]);
+    const d = document.createElement('div');
+    d.innerHTML = r.html;
+    const hedef = [...d.querySelectorAll('.gk-hedef')];
+    expect(hedef.map((h) => h.getAttribute('data-gk-no'))).toEqual(['1', '3', '2']);
+    // bölüm → bölümün KARTI (section), başlık satırı değil
+    expect(hedef[0].tagName).toBe('SECTION');
+    expect(hedef[0].querySelector(':scope > .gk-no').textContent).toBe('1');
+    // metin → yazısı tam o olan EN DERİN öğe (düğme, kabı değil)
+    const btn = d.querySelector('button.gk-hedef');
+    expect(btn.querySelector('.gk-no.gk-no--sag').textContent).toBe('2');
+    expect(r.lejant.map((l) => l.no + ':' + l.ad)).toEqual(['1:Konum', '2:Hesapla', '3:Eylem satırı']);
+  });
+
+  test('içine öğe alamayan hedef (alan) rozeti ebeveynine verir', () => {
+    const r = KIT.veGuideIsaretle(PANEL, [{ s: '#m', ad: 'Kütle alanı' }]);
+    const d = document.createElement('div');
+    d.innerHTML = r.html;
+    expect(d.querySelector('input .gk-no')).toBeNull();
+    expect(d.querySelector('label.gk-hedef > .gk-no').textContent).toBe('1');
+  });
+
+  test('bulunamayan hedef SESSİZ değil: lejant yine yazılır, kayıp listeye düşer', () => {
+    KIT.veGuideSceneReset();
+    const h = KIT.veGuideScene(PANEL, 'alt', 400, [
+      { bolum: 'Kütle', ad: 'Kütle' },
+      { bolum: 'Olmayan bölüm', ad: 'Hayalet' },
+    ]);
+    expect(KIT.veGuideIsaretKayip()).toEqual([{ sekil: 1, ad: 'Hayalet' }]);
+    expect(h).toContain('<ol class="gk-lejant');
+    expect((h.match(/<li>/g) || []).length).toBe(2);
+    expect(h).toContain('gk-sahne gk-sahne--isaret');
+    // sıra: kutu → lejant → altyazı
+    expect(h.indexOf('gk-lejant')).toBeGreaterThan(h.indexOf('gk-sahne'));
+    expect(h.indexOf('<figcaption>')).toBeGreaterThan(h.indexOf('gk-lejant'));
+    KIT.veGuideSceneReset();
+    expect(KIT.veGuideIsaretKayip()).toEqual([]);
+  });
+
+  test('işaretsiz sahne eskisi gibi: lejant yok, dolgu sınıfı yok', () => {
+    KIT.veGuideSceneReset();
+    const h = KIT.veGuideScene(PANEL, 'alt', 400);
+    expect(h).not.toContain('gk-lejant');
+    expect(h).not.toContain('gk-sahne--isaret');
+    expect(h).not.toContain('gk-hedef');
+  });
+
+  test('metin içindeki numara şekildekiyle aynı biçimde', () => {
+    expect(KIT.veGuideNo(3)).toBe('<span class="gk-no gk-no--metin">3</span>');
+  });
+
+  test('ekran görüntüsü şekli: kutu ve rozet YÜZDEYLE, eksik anahtar kayıp', () => {
+    KIT.veGuideSceneReset();
+    const resim = { src: 'data:image/webp;base64,AA', g: 1000, y: 500,
+      isaret: { a: [0.1, 0.2, 0.3, 0.4], b: [0.5, 0.5, 0.6, 0.7] } };
+    const h = KIT.veGuideEkran(resim, [
+      { k: 'a', ad: 'Bir' }, { k: 'b', ad: 'İki', yer: 'sag' }, { k: 'yok', ad: 'Üç' },
+    ], 'Ekran');
+    expect(h).toContain('left:10%; top:20%; width:20%; height:20%;');
+    expect(h).toContain('data-gk-no="1" style="left:10%; top:20%;"');
+    expect(h).toContain('data-gk-no="2" style="left:60%; top:50%;"');     // sağ üst köşe
+    expect(h).not.toContain('data-gk-no="3"');
+    expect(KIT.veGuideIsaretKayip()).toEqual([{ sekil: 1, ad: 'Üç' }]);
+    expect((h.match(/<li>/g) || []).length).toBe(3);
+    expect(h).toContain('<b>Şekil 1 —</b> Ekran');
+    expect(KIT.veGuideEkran(null, [], 'x')).toBe('');
+  });
+
+  // Küçük yazıda köşedeki rozet ilk harfi örtüyordu (hızlı atamanın kartı): dışarıdaki
+  // yerler; yanlış yazılmış yer sessizce sol üst köşeye düşerdi.
+  test('ekran görüntüsü: rozet öğenin dışında durabilir, bilinmeyen yer kayıp, görüntü büyütülmez', () => {
+    KIT.veGuideSceneReset();
+    const resim = { src: 'data:image/webp;base64,AA', g: 400, y: 200, isaret: { a: [0.5, 0.5, 0.75, 0.6] } };
+    const h = KIT.veGuideEkran(resim, [
+      { k: 'a', ad: 'Üstte', yer: 'ust' },
+      { k: 'a', ad: 'Solda', yer: 'sol-dis' },
+      { k: 'a', ad: 'Yanlış', yer: 'sag-dıs' },
+    ], 'Küçük', 600);
+    expect(h).toContain('max-width:400px;');                                   // 400 px görüntü 600'e büyümez
+    expect(h).toContain('data-gk-no="1" style="left:52.25%; top:44.5%;"');     // +9 px, 11 px üstte
+    expect(h).toContain('data-gk-no="2" style="left:47.25%; top:55%;"');       // 11 px solda, ortada
+    expect(h).toContain('data-gk-no="3" style="left:50%; top:50%;"');
+    expect(KIT.veGuideIsaretKayip()).toEqual([{ sekil: 1, ad: 'Yanlış · yer: sag-dıs' }]);
+    KIT.veGuideSceneReset();
+    // canlı sahnenin yerleri ayrı liste: ekranınki orada bilinmeyen yerdir
+    const r = KIT.veGuideIsaretle(PANEL, [{ s: '.ve-fp-yurut', ad: 'Eylem satırı', yer: 'ust' }]);
+    expect(r.kayip).toEqual(['Eylem satırı · yer: ust']);
+    expect(r.html).toContain('gk-no gk-no--sol');
+    // canlı sahnenin her yeri ekranda da aynı adla
+    expect(KIT.VE_GUIDE_ISARET_YER.filter((y) => KIT.VE_GUIDE_EKRAN_YER.indexOf(y) < 0)).toEqual([]);
+  });
+
+  test('sahne stili: hedefin konum kuralı programınkinden ÖNCE, rozet kuralları SONRA', () => {
+    const st = document.createElement('style');
+    st.textContent = '.ve-fp-card{position:absolute}.ve-ak-zem{fill:#fff}';
+    document.head.appendChild(st);
+    try {
+      const css = KIT.veGuideSceneCSS('', ['.ve-ak']);
+      const hedef = css.indexOf('.appfig .gk-hedef{position:relative;}');
+      const program = css.indexOf('.appfig .ve-fp-card{position:absolute}');
+      expect(hedef).toBeGreaterThan(-1);
+      expect(program).toBeGreaterThan(hedef);
+      expect(css.indexOf('.gk-lejant{')).toBeGreaterThan(program);
+      // kılavuza özgü önek: seçicinin İÇİNDE aranır
+      expect(css).toContain('.appfig .ve-ak-zem{fill:#fff}');
+      expect(KIT.veGuideSceneCSS('')).not.toContain('.ve-ak-zem');
+    } finally { st.remove(); }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe('pencere kartı', () => {
   afterEach(() => { delete global.veGuideFeadHTML; });
 

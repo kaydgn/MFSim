@@ -2471,7 +2471,7 @@ davranış gerekçesi ve test ölçümü kalktı, mühendislik içeriği kaldı;
 kapıları" → "Uygunluk kriterleri") · aşama 9b → kaydgn/MFSim#1147 (Sonuçlar'ın FEAD ve Takoz
 sekmeleri ve diyagram yorum motorları; kapı `yorum-metin.test.js`; şerit yorumunun
 öncü satırı — kümenin sabit açıklaması — kalktı, yorum bulgu, ölçüt ve geçerlilik
-sınırı söyler; eksen anlatımı ve fizik açıklaması Takoz kılavuzu §11.3'e taşındı) ·
+sınırı söyler; eksen anlatımı ve fizik açıklaması Takoz kılavuzunun modal bölümüne — *Frekans yanıtı ve Campbell diyagramı* — taşındı) ·
 aşama 9a → kaydgn/MFSim#1146 (Sonuçlar kabuğu: gezgin,
 ölçüm penceresi, föy, içe aktarma; kapı `sonuclar-metin.test.js`; kaynak
 tablosunun çare yuvası `cozum` kalktı, tarama tire ile bağlı bileşik terimi —

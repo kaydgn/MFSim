@@ -426,6 +426,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tools/kullanim.js` + `tools/kullanim-tahta.{js,html}` — **kullanım masası**: programı kullanıcının
   koşulunda (tek dosya, çevrimdışı, insan açılışı) gerçek girdiyle kullanan kalıcı tarayıcı ve
   bulguların **karar tahtası** (Artifact `db`). Çıktı `.kullanim/` (git'e dâhil değil). Protokol: skill `kullanim`.
+- `js/guide-mount.js` — **Takoz kullanım kılavuzu**, açılıştan rapora yönlendirici (kullanıcı 2026-11-09:
+  *"programı açtığı andan itibaren ne yaptığını bilmeli … bol bol görseller ile, yönlendirmeler ile,
+  işaretler ile"*): her konu şekil + numaralı işaret + lejant + aynı numarayla adım. Şekil programdan:
+  pencere ve başlangıç sayfası kendi üreticisinden, örnek modelde (`nodes` takası, `finally` ile geri);
+  HTML olarak çizilemeyen yüzey (karşılama, tuval, sihirbaz, Sonuçlar, 3B, rapor) ekran görüntüsü.
+  İşaret ÖĞEYE bağlanır (`js/guide-kit.js` → `veGuideScene(…, isaretler)` · `veGuideEkran` · `veGuideNo`),
+  numara ve gönderme kimlikle (`_gmN` · `_gmB` · `_gmS`), elle yazılmaz. Kapı: `guide-mount-sahne.test.js` +
+  `mount-kilavuz-baski.spec.js`.
+- `tools/kilavuz-resim.js` + `assets/kilavuz/` — **kılavuzun ekran görüntüleri**: programı gerçek
+  tarayıcıda gezer, görüntü (webp) ve işaretlerin kutuları (DOM'dan) → künye; derleme gömer
+  (`__MFSIM_KILAVUZ`). Elle düzenlenmez; program değişince `MFSIM_CHROMIUM=/opt/pw-browsers/chromium node
+  tools/kilavuz-resim.js`. Kapı: `kilavuz-resim.spec.js` (bayatlama).
 - `tools/degisiklik-resim.js` — **son değişikliklerin görseli** (Canlı Not 27): notun sonuç
   görüntüsü (2× PNG) → `assets/degisiklik/not-N.webp`; görsel NOTA bağlı (commit konusu "Canlı
   not N: …", `tools/version-info.js` → `notlar`), `build.js` yalnız künyenin modül listesindeki

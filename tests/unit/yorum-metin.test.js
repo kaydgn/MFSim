@@ -91,9 +91,10 @@ describe('geçerlilik sınırı kalır', () => {
 });
 
 describe('açıklama kılavuzda', () => {
-  test('Takoz kılavuzu §11.3: iletilebilirlik, vektörel toplam, Campbell okuması', () => {
+  // Alt bölümün numarası sırayla verilir (`_gmH3`); kapı başlığı arar (2026-11-09).
+  test('Takoz kılavuzu, modal bölümü: iletilebilirlik, vektörel toplam, Campbell okuması', () => {
     const src = oku('js/guide-mount.js');
-    expect(src).toMatch(/11\.3 Frekans yanıtı ve Campbell diyagramı/);
+    expect(src).toMatch(/_gmH3\('Frekans yanıtı ve Campbell diyagramı'/);
     expect(src).toMatch(/toplam vektöreldir/);
     expect(src).toMatch(/eğik çizgiler motorun uyarma mertebeleridir/);
   });

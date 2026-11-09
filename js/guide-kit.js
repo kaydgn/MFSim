@@ -287,7 +287,19 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--radius-lg': '4px', '--bant-h': '26px',
   '--bant-zemin': '#f6f8fa',
   '--shadow-color': 'transparent',
-  '--ribbon-strip-h': 'auto'
+  '--ribbon-strip-h': 'auto',
+  // Takoz kılavuzunun sahneleri (başlangıç sayfası, pencereler, aksonometrik
+  // çizim, sihirbaz, 3B'nin panelleri) — 2026-11-09. Eksen renkleri programınki
+  // (kırmızı X · yeşil Y · mavi Z, iki temada aynı); süreler 0 (belge durgun).
+  '--accent-tint-60': 'rgba(36,66,95,.60)',
+  '--dur-base': '0s', '--dur-enter': '0s', '--ease-out': 'linear',
+  '--eksen-x': '#ef4444', '--eksen-y': '#22c55e', '--eksen-z': '#3b82f6',
+  '--font-sans': "'Inter',system-ui,sans-serif",
+  '--leading-tight': '1.25',
+  '--mw3b-agac': '272px', '--mw3b-serit': '30px', '--mw3b-yan': '352px',
+  '--scrim': 'transparent', '--shadow-md': 'none',
+  '--z-canvas-ui': '40', '--z-modal': '4000',
+  '--fs-hero': '20px', '--fw3b-kart': '360px', '--isik': '#ffffff', '--radius-xl': '0'
 };
 
 // Tema bloğu ÇAPASI — bugün yalnız denetim için okunuyor (baskı paleti
@@ -299,6 +311,9 @@ var _GK_THEME_RE = /:root\s*,\s*\[data-theme\s*=\s*["']?slate["']?\]/;
 // Sahne kutusunun kendi payı: iki yandan 12 px dolgu + 1 px kenarlık.
 // `veGuideSceneCSS`'teki `.gk-sahne` kuralıyla AYNI sayı olmak zorunda.
 var _GK_SAHNE_CERCEVE = 26;
+// İşaretli sahnede dolgu 18 × 20 px (`.gk-sahne--isaret`): kenardaki hedefin
+// rozeti sahnenin kendi kaydırma kutusunda kırpılmasın.
+var _GK_SAHNE_CERCEVE_ISARET = 42;
 
 // Çalışan sayfadaki CSS metni. İki kaynak, çünkü iki dağıtım biçimi var: tek
 // dosya build'inde CSS satır içi <style>, modüler index.html'de <link>.
@@ -328,7 +343,13 @@ function _gkStyleText(){
 // kuralını her ekrana uygulanır hâle getirir: `.ve-rb` kurallarının bir kısmı
 // `@media (max-width:900px)` içinde ve o hoisting sessizce yanlış bir düğme
 // çizerdi. Bu yüzden derinlik sayılıyor.
-function _gkTopRules(css, prefixes){
+//
+// `icerir` (ops.): seçicinin HERHANGİ bir yerinde geçen önekler. Kılavuzun
+// kendi sahneleri için (`veGuideSceneCSS(_, ek)`): `table.ve-izgara td` ya da
+// `.ve-fp-sect .ve-ak-zem` baştan eşleşmez ama sahnenin öğesini çizer. Kapsanan
+// kural sahnede eşleşmeyen bir atayı (`.ve-node.selected …`) isterse hiçbir şeye
+// uymaz — zararsız.
+function _gkTopRules(css, prefixes, icerir){
   // YORUMLAR ÖNCE SİLİNİR. Bu deponun CSS'i yoğun yorumlu ve beşi süslü
   // parantez taşıyor (`[hidden]{display:none}` gibi kod alıntıları). Yorum
   // silinmezse parantez sayacı kayıyor ve ONDAN SONRAKİ kurallar sessizce
@@ -351,12 +372,14 @@ function _gkTopRules(css, prefixes){
     }
     var kap = css.indexOf('}', ac);
     if(kap < 0) break;
-    for(var p = 0; p < prefixes.length; p++){
-      if(sel.indexOf(prefixes[p]) === 0){
-        out.push({ sel: sel, body: css.slice(ac + 1, kap) });
-        break;
-      }
+    var al = false;
+    for(var p = 0; p < prefixes.length && !al; p++){
+      if(sel.indexOf(prefixes[p]) === 0) al = true;
     }
+    for(var q = 0; icerir && q < icerir.length && !al; q++){
+      if(sel.indexOf(icerir[q]) >= 0) al = true;
+    }
+    if(al) out.push({ sel: sel, body: css.slice(ac + 1, kap) });
     i = kap + 1;
   }
   return out;
@@ -391,9 +414,9 @@ function _gkThemeVars(css){
 // Belge ÜRETİLMEYE DEVAM EDER — eksik bir jetonun bedeli soluk bir renk, yanlış
 // bir sayı değil. Sessiz-yanlış doktrini sayılar içindir; burada gürültü
 // testte çıkar, kullanıcının elinde kılavuzsuz kalmasıyla değil.
-function veGuideSceneMissingTokens(reportCss){
+function veGuideSceneMissingTokens(reportCss, ek){
   if(reportCss === undefined) reportCss = _gkReportCssNow();
-  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL);
+  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL, ek);
   var metin = rules.map(function(r){ return r.body; }).join('\n');
   // `var(--x, yedek)` biçimi EKSİK SAYILMAZ: yedeğin kendisi tasarımın
   // cevabıdır — jeton tanımlanmamışsa kural yine çalışır. Yedeksiz kullanım
@@ -423,9 +446,12 @@ function _gkReportCssNow(){
   } catch(e){ return ''; }
 }
 
-function veGuideSceneCSS(reportCss){
+// `ek` (ops.): kılavuza özgü sahne önekleri — seçicinin herhangi bir yerinde
+// aranır (`_gkTopRules` → `icerir`). Ortak liste değişmez: FEAD kılavuzunun
+// sahneleri bugünkü kurallarla çizilmeye devam eder.
+function veGuideSceneCSS(reportCss, ek){
   if(reportCss === undefined) reportCss = _gkReportCssNow();
-  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL);
+  var rules = _gkTopRules(_gkStyleText(), VE_GUIDE_SCENE_SEL, ek);
   if(!rules.length)
     throw new Error('Sahne bileşen kuralları bulunamadı ('
       + VE_GUIDE_SCENE_SEL.join(' ') + ') — kılavuz programın kendi '
@@ -484,7 +510,246 @@ function veGuideSceneCSS(reportCss){
     + '@media print{.appfig{break-inside:auto;}'
     + ' .appfig .gk-sahne{overflow:visible; break-inside:auto;}'
     + ' .appfig figcaption{break-before:avoid;}}\n'
-    + rules.map(_gkScopeRule).join('\n');
+    // İŞARETİN HEDEFİ konum kabı olur — programın KURALLARINDAN ÖNCE: hedef
+    // programda mutlak konumluysa onun kuralı (sonra gelen, eşit seçicilik) kazanır.
+    + '.appfig .gk-hedef{position:relative;}\n'
+    + rules.map(_gkScopeRule).join('\n') + '\n'
+    + _GK_ISARET_CSS;
+}
+
+// ── İŞARETLER — şeklin üstünde numara, altında lejant, metinde aynı numara ──
+//
+// Kullanıcı isteği (2026-11-09): *"kullanıcı kılavuzunu baştan sona okuyan
+// birisi, programı açtığı andan itibaren ne yaptığını bilmeli … bol bol
+// görseller ile, yönlendirmeler ile, işaretler ile kullanıcı hep
+// bilgilendirilmeli."*
+//
+// İŞARET ÖĞEYE BAĞLANIR, KOORDİNATA DEĞİL. Rozet hedefin İÇİNDE mutlak konumlu
+// durur: yazı tipi, sayfa genişliği ya da ölçek (`zoom`) hedefi kaydırırsa rozet
+// onunla gider. Koordinat yazılsaydı her yerleşim rötuşunda numara boşluğa düşerdi.
+//
+// NUMARA DİZİDEKİ SIRADIR. Aynı dizi şeklin rozetlerini, lejantı ve metnin
+// içindeki numarayı (`veGuideNo`) besler — üçü tek kaynaktan.
+//
+// BULUNAMAYAN HEDEF SESSİZ DEĞİL. Lejant satırı yine yazılır (metin bilgisini
+// kaybetmez) ve kayıp `veGuideIsaretKayip()` listesine düşer; kılavuz testleri
+// o listenin boş olduğunu ölçer — program değişip öğe kaybolunca kapı kırmızı.
+//
+// Hedef tanımı (biri yeter):
+//   s      CSS seçici (ilk eşleşen; `sira` ile n'inci)
+//   bolum  bileşen penceresinin bölüm başlığı (`.ve-fp-sect > b`) → bölümün kartı
+//   metin  kendi yazısı tam bu olan en derin öğe (ops. `s` kapsamında)
+//   ust    bulunan öğenin bu seçiciye uyan atası (yazıdaki düğme: `ust: 'button'`)
+// Lejant: `ad` (kalın) · `not` (HTML). Rozetin yeri `yer`: sol (varsayılan) ·
+// sag · ic · ic-sag · sol-orta · sag-orta · alt · alt-sag.
+var VE_GUIDE_ISARET_YER = ['sol', 'sag', 'ic', 'ic-sag', 'sol-orta', 'sag-orta', 'alt', 'alt-sag'];
+
+// Rozetin rengi belgenin kendi paletinde değil: programın vurgusu (mavi)
+// zaten sahnenin içinde; işaret ondan ayrılmalı. Beyaz rakamla 5,2:1.
+var _GK_ISARET_CSS =
+    '.page{--gk-isaret:#c2410c; --gk-fs:10.5px; --gk-fs-metin:9.5px;}\n'
+  + '.gk-no{display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;'
+  + ' width:18px; height:18px; border-radius:50%; background:var(--gk-isaret,#c2410c); color:#fff;'
+  + ' font-family:\'Inter\',system-ui,-apple-system,"Segoe UI",sans-serif; font-weight:700;'
+  + ' font-size:var(--gk-fs); line-height:1;'
+  + ' font-variant-numeric:tabular-nums; letter-spacing:0; text-transform:none; white-space:nowrap;'
+  + ' vertical-align:middle; -webkit-print-color-adjust:exact; print-color-adjust:exact;}\n'
+  + '.gk-no--metin{width:16px; height:16px; font-size:var(--gk-fs-metin); margin:0 2px; vertical-align:1px;}\n'
+  + '.appfig .gk-sahne--isaret{padding:18px 20px;}\n'
+  + '.appfig .gk-sahne .gk-hedef{outline:2px solid var(--gk-isaret,#c2410c) !important;'
+  + ' outline-offset:2px !important; overflow:visible !important;}\n'
+  + '.appfig .gk-sahne .gk-hedef-ata{overflow:visible !important;}\n'
+  + '.appfig .gk-sahne span.gk-no{position:absolute !important; z-index:40 !important;'
+  + ' width:18px !important; height:18px !important; min-width:18px !important; margin:0 !important;'
+  + ' padding:0 !important; border:0 !important; transform:none !important; opacity:1 !important;'
+  + ' background:var(--gk-isaret,#c2410c) !important; color:#fff !important;'
+  + ' font-family:\'Inter\',system-ui,sans-serif !important; font-weight:700 !important;'
+  + ' font-size:var(--gk-fs) !important; line-height:18px !important; text-align:center !important;'
+  + ' box-shadow:0 0 0 2px #fff !important; top:auto; left:auto; right:auto; bottom:auto;}\n'
+  + '.appfig .gk-sahne .gk-no--sol{top:-13px !important; left:-13px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--sag{top:-13px !important; right:-13px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--ic{top:3px !important; left:3px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--ic-sag{top:3px !important; right:3px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--sol-orta{top:50% !important; left:-28px !important; margin-top:-9px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--sag-orta{top:50% !important; right:-28px !important; margin-top:-9px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--alt{bottom:-13px !important; left:-13px !important;}\n'
+  + '.appfig .gk-sahne .gk-no--alt-sag{bottom:-13px !important; right:-13px !important;}\n'
+  + '.gk-lejant{list-style:none; margin:10px 0 0; padding:0; display:grid;'
+  + ' grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 22px; text-align:left;'
+  + ' font-size:var(--gk-fs); line-height:1.45;}\n'
+  + '.gk-lejant--tek{grid-template-columns:minmax(0,1fr);}\n'
+  + '.gk-lejant li{display:flex; gap:8px; align-items:flex-start; margin:0; padding:0; break-inside:avoid;}\n'
+  + '.gk-lejant li > .gk-no{flex:0 0 18px; margin-top:-1px;}\n'
+  + '.gk-lejant b{font-weight:600;}\n'
+  + '.gk-ekran{position:relative; margin:0 auto; border:1px solid var(--line); line-height:0;}\n'
+  + '.gk-ekran img{display:block; width:100%; height:auto;}\n'
+  + '.gk-ekran .gk-cerceve{position:absolute; box-sizing:border-box;'
+  + ' border:2px solid var(--gk-isaret,#c2410c); pointer-events:none;}\n'
+  + '.gk-ekran .gk-no{position:absolute; transform:translate(-50%,-50%); box-shadow:0 0 0 2px #fff; line-height:1;}\n'
+  + '@media print{.gk-ekran{break-inside:avoid;} .gk-lejant{break-before:avoid;}}\n';
+
+var _gkIsaretKayipListe = [];
+function veGuideIsaretKayip(){ return _gkIsaretKayipListe.slice(); }
+
+// Metnin içinde şekildeki numara: "… (2) Yükle'ye basın".
+function veGuideNo(n){
+  return '<span class="gk-no gk-no--metin">' + _gkEsc(n) + '</span>';
+}
+
+var _GK_BOS_OGE = /^(INPUT|SELECT|TEXTAREA|IMG|BR|HR|CANVAS|VIDEO|IFRAME|OPTION|svg)$/i;
+
+// Kendi yazısı (çocuklarınınki dâhil) tam `metin` olan EN DERİN öğe.
+function _gkMetinle(kok, metin){
+  var hedef = String(metin).replace(/\s+/g, ' ').trim(), bulunan = null;
+  var hepsi = kok.querySelectorAll('*');
+  for(var i = 0; i < hepsi.length; i++){
+    var t = (hepsi[i].textContent || '').replace(/\s+/g, ' ').trim();
+    if(t === hedef) bulunan = hepsi[i];       // sonraki eşleşen daha derindir
+  }
+  return bulunan;
+}
+
+function _gkIsaretHedef(kok, i){
+  var kapsam = kok;
+  if(i.bolum){
+    var bas = kok.querySelectorAll('.ve-fp-sect > b');
+    for(var b = 0; b < bas.length; b++){
+      if((bas[b].textContent || '').trim() !== i.bolum) continue;
+      var sect = bas[b].parentNode;
+      var kart = sect.closest ? sect.closest('section') : null;
+      kapsam = kart || sect;
+      break;
+    }
+    if(kapsam === kok) return null;
+    if(!i.s && !i.metin) return kapsam;
+  }
+  var el = null;
+  if(i.metin) el = _gkMetinle(i.s ? (kapsam.querySelector(i.s) || kapsam) : kapsam, i.metin);
+  else if(i.s){
+    var l = kapsam.querySelectorAll(i.s);
+    el = l[i.sira || 0] || null;
+  }
+  // `ust`: bulunan öğenin bu seçiciye uyan atası (yazıdan bulunan düğmenin kendisi)
+  if(el && i.ust && el.closest) el = el.closest(i.ust) || el;
+  return el;
+}
+
+// Rozetin konağı: içine öğe alamayan (alan, liste, çizim) hedefte ebeveyni.
+// SVG'nin içindeki öğe de kendi HTML atasına bağlanır.
+function _gkIsaretKonak(el){
+  var k = el;
+  while(k && k.parentNode && (_GK_BOS_OGE.test(k.tagName || '')
+        || (k.namespaceURI && k.namespaceURI.indexOf('svg') >= 0))) k = k.parentNode;
+  return k;
+}
+
+// html'e işaretleri koy. Döner: { html, lejant: [{ no, ad, not, var }], kayip: [ad] }.
+function veGuideIsaretle(html, isaretler){
+  var liste = isaretler || [];
+  var sonuc = { html: String(html || ''), lejant: [], kayip: [] };
+  if(!liste.length || typeof document === 'undefined') return sonuc;
+  var tpl = document.createElement('template');
+  tpl.innerHTML = sonuc.html;
+  var kok = tpl.content;
+  liste.forEach(function(i, ix){
+    var no = ix + 1;
+    var el = _gkIsaretHedef(kok, i);
+    var konak = el ? _gkIsaretKonak(el) : null;
+    if(konak && konak.nodeType === 1){
+      konak.classList.add('gk-hedef');
+      konak.setAttribute('data-gk-no', String(no));
+      // Ataları taşanı kırpmasın: rozet hedefin köşesinin DIŞINDA durur ve
+      // `overflow:hidden` bir kap (aksonometrik çizimin kabı) onu siler.
+      for(var a = konak.parentNode; a && a.nodeType === 1; a = a.parentNode) a.classList.add('gk-hedef-ata');
+      var r = document.createElement('span');
+      // Bilinmeyen yer sessizce sol üst köşeye düşerdi: kayıp sayılır
+      if(i.yer && VE_GUIDE_ISARET_YER.indexOf(i.yer) < 0) sonuc.kayip.push((i.ad || ('#' + no)) + ' · yer: ' + i.yer);
+      var yer = VE_GUIDE_ISARET_YER.indexOf(i.yer) >= 0 ? i.yer : 'sol';
+      r.className = 'gk-no gk-no--' + yer;
+      r.setAttribute('aria-hidden', 'true');
+      r.textContent = String(no);
+      konak.appendChild(r);
+    } else {
+      sonuc.kayip.push(i.ad || ('#' + no));
+    }
+    sonuc.lejant.push({ no: no, ad: i.ad || '', not: i.not || '', var: !!konak });
+  });
+  var kap = document.createElement('div');
+  kap.appendChild(tpl.content.cloneNode(true));
+  sonuc.html = kap.innerHTML;
+  return sonuc;
+}
+
+function _gkLejant(satirlar){
+  if(!satirlar || !satirlar.length) return '';
+  var tek = satirlar.length < 4 || satirlar.some(function(s){ return String(s.not || '').length > 140; });
+  return '<ol class="gk-lejant' + (tek ? ' gk-lejant--tek' : '') + '">'
+    + satirlar.map(function(s){
+        return '<li><span class="gk-no">' + s.no + '</span><span><b>' + _gkEsc(s.ad) + '</b>'
+          + (s.not ? ' — ' + s.not : '') + '</span></li>';
+      }).join('')
+    + '</ol>';
+}
+
+// EKRAN GÖRÜNTÜSÜ ŞEKLİ — tuval ve 3B gibi HTML olarak çizilemeyen yüzeyler.
+// `resim`: { src, g, y, isaret: { anahtar: [x0, y0, x1, y1] } } — kutular resmin
+// oranı (0…1), görüntü alınırken DOM'dan ölçülür (tools/kilavuz-resim.js).
+// `isaretler`: [{ k: anahtar, ad, not, yer, cerceve }] — sıra numaradır.
+// `en`: gösterim genişliği (px); verilmezse sayfa ya da resim, küçüğü.
+function veGuideEkran(resim, isaretler, altyazi, en){
+  if(!resim || !resim.src) return '';
+  _gkSahneNo++;
+  var liste = isaretler || [];
+  var sayfa = _gkPageWidth() || 760;
+  // Görüntü büyütülmez: büyütülen ekran görüntüsü bulanıklaşır.
+  var w = Math.min(Number(en) || resim.g || sayfa, resim.g || sayfa, sayfa);
+  var H = w * resim.y / resim.g;
+  var y = function(v){ return (Math.round(v * 10000) / 100) + '%'; };   // makine: CSS yüzdesi
+  var h = '<figure class="appfig"><div class="gk-ekran" data-gk-sahne="' + _gkSahneNo
+    + '" style="max-width:' + Math.round(w) + 'px;">'
+    + '<img src="' + resim.src + '" alt="" width="' + resim.g + '" height="' + resim.y + '">';
+  var lejant = [];
+  liste.forEach(function(i, ix){
+    var no = ix + 1;
+    var k = resim.isaret ? resim.isaret[i.k] : null;
+    if(!k){
+      _gkIsaretKayipListe.push({ sekil: _gkSahneNo, ad: i.ad || i.k });
+    } else {
+      if(i.cerceve !== false){
+        h += '<span class="gk-cerceve" style="left:' + y(k[0]) + '; top:' + y(k[1])
+          + '; width:' + y(k[2] - k[0]) + '; height:' + y(k[3] - k[1]) + ';"></span>';
+      }
+      if(i.yer && VE_GUIDE_EKRAN_YER.indexOf(i.yer) < 0)
+        _gkIsaretKayipListe.push({ sekil: _gkSahneNo, ad: (i.ad || i.k) + ' · yer: ' + i.yer });
+      var t = _gkEkranYer(k, i.yer);
+      // Rozet (18 px) resmin içinde kalır: kenardaki öğenin numarası dışarı taşmaz.
+      var mx = 11 / w, my = 11 / H;
+      var bx = Math.min(Math.max(t[0] + t[2] / w, mx), 1 - mx);
+      var by = Math.min(Math.max(t[1] + t[3] / H, my), 1 - my);
+      h += '<span class="gk-no" data-gk-no="' + no + '" style="left:' + y(bx) + '; top:' + y(by) + ';">'
+        + no + '</span>';
+    }
+    lejant.push({ no: no, ad: i.ad || '', not: i.not || '', var: !!k });
+  });
+  return h + '</div>' + _gkLejant(lejant)
+    + '<figcaption><b>Şekil ' + _gkSahneNo + ' —</b> ' + (altyazi || '') + '</figcaption></figure>';
+}
+
+// EKRAN GÖRÜNTÜSÜNDE ROZETİN YERİ: öğenin kutusu k = [sol, üst, sağ, alt] (oran) →
+// [x, y, dx px, dy px] — rozetin merkezi. Köşe ve kenar ortası (varsayılan sol üst
+// köşe) canlı sahneninkilerle aynı adda; küçük yazıda rozet yazıyı örtmesin diye
+// dışarıda dört yer: 'ust' · 'ust-sag' (öğenin üstünde) · 'sol-dis' · 'sag-dis'.
+var VE_GUIDE_EKRAN_YER = ['sol', 'sag', 'ic', 'ic-sag', 'sol-orta', 'sag-orta', 'alt', 'alt-sag',
+  'ust', 'ust-sag', 'sol-dis', 'sag-dis'];
+function _gkEkranYer(k, yer){
+  var orta = (k[1] + k[3]) / 2;
+  var T = {
+    'sag': [k[2], k[1], 0, 0], 'ic-sag': [k[2], k[1], 0, 0], 'sag-orta': [k[2], orta, 0, 0],
+    'alt-sag': [k[2], k[3], 0, 0], 'alt': [k[0], k[3], 0, 0], 'sol-orta': [k[0], orta, 0, 0],
+    'ust': [k[0], k[1], 9, -11], 'ust-sag': [k[2], k[1], -9, -11],
+    'sol-dis': [k[0], orta, -11, 0], 'sag-dis': [k[2], orta, 11, 0]
+  };
+  return T[yer] || [k[0], k[1], 0, 0];
 }
 
 // Sayfanın içerik genişliği — raporun kendi `.page` kuralından. İkinci bir
@@ -646,7 +911,7 @@ function veGuideBtn(html){
 // Şekil sayacı — elle "Şekil 3" yazmak, araya bir sahne girdiğinde sessizce
 // kayardı (raporun tablo sayacındaki kuralın aynısı).
 var _gkSahneNo = 0;
-function veGuideSceneReset(){ _gkSahneNo = 0; }
+function veGuideSceneReset(){ _gkSahneNo = 0; _gkIsaretKayipListe = []; }
 function veGuideSceneCount(){ return _gkSahneNo; }
 
 // Bir bileşeni sahneye koy. `html` programın ÜRETİCİSİNDEN gelir; buraya elle
@@ -654,8 +919,18 @@ function veGuideSceneCount(){ return _gkSahneNo; }
 //
 // Kabuk raporun şekil kalıbıyla birebir: `<figure class="appfig">` +
 // `<figcaption><b>Şekil N —</b> …`.
-function veGuideScene(html, altyazi, dogalEn){
+//
+// `isaretler` (ops.): şeklin numaralı işaretleri (aşağıda, `veGuideIsaretle`);
+// lejant şeklin altında, altyazının üstünde.
+function veGuideScene(html, altyazi, dogalEn, isaretler){
   if(!html) return '';
+  var lejant = '', isaretli = !!(isaretler && isaretler.length);
+  if(isaretli){
+    var r = veGuideIsaretle(html, isaretler);
+    html = r.html;
+    lejant = _gkLejant(r.lejant);
+    r.kayip.forEach(function(ad){ _gkIsaretKayipListe.push({ sekil: _gkSahneNo + 1, ad: ad }); });
+  }
   _gkSahneNo++;
   // SIĞMAYAN İÇERİK ÖLÇEKLENİR, KIRPILMAZ. Kayış Tablosu doğal hâlinde
   // sayfadan geniş; yatay kaydırma ekranda çare, BASKIDA değil — A4'e basılan
@@ -669,7 +944,7 @@ function veGuideScene(html, altyazi, dogalEn){
     // karşılaştırılıyordu, oysa içerik sahnenin dolgusu ve kenarlığı İÇİNE
     // sığmak zorunda: Kayış Tablosu 49 px taşıyordu (baskıda, öge bazlı
     // ölçüldü — sağdaki sütun kırpılıyordu).
-    var sayfa = _gkPageWidth() - _GK_SAHNE_CERCEVE;
+    var sayfa = _gkPageWidth() - (isaretli ? _GK_SAHNE_CERCEVE_ISARET : _GK_SAHNE_CERCEVE);
     if(sayfa > 0 && en > sayfa){
       stil = ' style="zoom:' + (Math.floor(sayfa / en * 1000) / 1000) + '"';
     } else if(en > 0){
@@ -680,8 +955,9 @@ function veGuideScene(html, altyazi, dogalEn){
       stil = ' style="max-width:' + Math.round(en) + 'px; margin:0 auto;"';
     }
   }
-  return '<figure class="appfig"><div class="gk-sahne" data-gk-sahne="'
-    + _gkSahneNo + '"' + stil + '>' + _gkFlatten(html, _gkSahneNo) + '</div>'
+  return '<figure class="appfig"><div class="gk-sahne' + (isaretli ? ' gk-sahne--isaret' : '')
+    + '" data-gk-sahne="' + _gkSahneNo + '"' + stil + '>' + _gkFlatten(html, _gkSahneNo) + '</div>'
+    + lejant
     + '<figcaption><b>Şekil ' + _gkSahneNo + ' —</b> ' + (altyazi || '')
     + '</figcaption></figure>';
 }
@@ -902,6 +1178,10 @@ if (typeof module !== 'undefined' && module.exports) {
     _gkPageWidth: _gkPageWidth, _gkNaturalWidth: _gkNaturalWidth,
     veGuideSceneCSS: veGuideSceneCSS, veGuideScene: veGuideScene,
     veGuideSceneReset: veGuideSceneReset, veGuideSceneCount: veGuideSceneCount,
+    veGuideIsaretle: veGuideIsaretle, veGuideIsaretKayip: veGuideIsaretKayip,
+    veGuideNo: veGuideNo, veGuideEkran: veGuideEkran, _gkLejant: _gkLejant,
+    VE_GUIDE_ISARET_YER: VE_GUIDE_ISARET_YER,
+    VE_GUIDE_EKRAN_YER: VE_GUIDE_EKRAN_YER,
     veGuideBtn: veGuideBtn, veGuideCard: veGuideCard, _gkFlatten: _gkFlatten,
     veGuideSceneMissingTokens: veGuideSceneMissingTokens
   };
