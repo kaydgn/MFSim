@@ -253,6 +253,14 @@ if (fs.existsSync(belgeDir)) {
 console.log('  Belge sayfası göm: ' + Object.keys(BELGE).length + ' sayfa · ' +
   (Object.keys(BELGE).reduce(function(t, k) { return t + BELGE[k].length; }, 0) / 1024).toFixed(0) + ' KB base64');
 
+// ── 2c-6) KILAVUZUN EKRAN GÖRÜNTÜLERİ (2026-11-09) — assets/kilavuz/<ad>.webp +
+// kunye.json (tools/kilavuz-resim.js üretir; işaretlerin kutuları programın DOM'undan
+// ölçülü). Takoz kılavuzu HTML olarak çizilemeyen yüzeyleri (tuval, 3B, sihirbaz)
+// buradan gösterir; pencereler kılavuzda programın kendi üreticisinden çizilir.
+var KILAVUZ = require('./tools/kilavuz-resim.js').gomulecekler();
+console.log('  Kılavuz görüntüsü göm: ' + Object.keys(KILAVUZ).length + ' görüntü · ' +
+  (Object.keys(KILAVUZ).reduce(function(t, k) { return t + KILAVUZ[k].src.length; }, 0) / 1024).toFixed(0) + ' KB base64');
+
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
 // TEK <script> bloğu: aşağıdaki yapısal doğrulama "index.html'in script'leri + 1"
 // sayıyor; ikinci bir blok o aritmetiği kaydırırdı.
@@ -262,6 +270,7 @@ var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_DEGISIKLIK = ' + JSON.stringify(DEGISIKLIK).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_BELGE = ' + JSON.stringify(BELGE).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_KILAVUZ = ' + JSON.stringify(KILAVUZ).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
