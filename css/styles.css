@@ -7181,7 +7181,9 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    PENCERESİ*. */
 .ve-rb-dock{
   position:absolute; top:calc(100% + 4px); right:12px;
-  width:312px; max-width:calc(100vw - 16px);
+  /* Genişlik içerikten — sekmeler ve en uzun ad (Canlı Not 92); aynı sayfada
+     sekme değişince pencere oynamaz (sekmelerin şeridi en geniş öğe). */
+  width:max-content; max-width:calc(100vw - 16px);
   max-height:calc(100vh - var(--ribbon-strip-h) - 16px);
   display:none; flex-direction:column;
   background:var(--bg-secondary);
@@ -7215,7 +7217,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-body{
   flex:1 1 auto; min-height:0;
   display:flex; flex-direction:column;
-  padding:0 0 4px;
+  padding:0 0 3px;
   overflow-x:hidden; overflow-y:auto;
 }
 
@@ -7359,30 +7361,32 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   50%      { opacity: 0.65; transform: scale(0.85); }
 }
 
-/* ── Pencerenin içi: grup başlıklı, iki sütunlu liste ──
+/* ── Pencerenin içi: grup başlıklı, TEK SÜTUN liste ──
    Taban kurallar (büyük/küçük düğme, üç satırlı ızgara) kılavuzun sahnesinde
-   duruyor; pencerede her komut aynı satır: ikon + ad, 24 px, satırlar bitişik.
-   SIK (kullanıcı 2026-11-09, Canlı Not 88: *"butonlar arası çok açık olmuş …
-   daha estetik yapabiliriz"*): pencere 352 → 312 px (iki sütun en uzun adı —
-   "Otomatik düzenle", 99 px — kesmeden taşır), satır 28 + 2 → 24 px. */
+   duruyor; pencerede her komut aynı satır: ikon + ad, 22 px, satırlar bitişik.
+   TEK SÜTUN (kullanıcı 2026-11-09, Canlı Not 92: *"araları yine çok açık olmuş …
+   biraz daha daraltalım"*): iki sütunda sol sütun en uzun adın ("Otomatik
+   düzenle") genişliğindeydi, kısa adların yanında ~60 px boşluk kalıyordu —
+   pencere 312 → 185 px, satır 24 → 22 px. Önce Canlı Not 88: 352 → 312 px,
+   satır 28 + 2 → 24 px. */
 .ve-rb-dock .ve-rb-group{
-  display:block; padding:4px 6px; flex:none;
+  display:block; padding:3px 6px; flex:none;
 }
 .ve-rb-dock .ve-rb-group + .ve-rb-group{ border-top:1px solid var(--border-color); }
 .ve-rb-dock .ve-rb-group + .ve-rb-group::before{ content:none; }
 .ve-rb-dock .ve-rb-group-label{
-  text-align:left; padding:2px 8px; letter-spacing:var(--tracking-wider, 0.06em);
+  text-align:left; padding:1px 6px 2px; letter-spacing:var(--tracking-wider, 0.06em);
 }
 .ve-rb-dock .ve-rb-group-items,
 .ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm){
-  display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));
+  display:grid; grid-template-columns:minmax(0, 1fr);
   grid-template-rows:none; grid-auto-flow:row; align-content:start;
-  gap:0 4px;
+  gap:0;
 }
 .ve-rb-dock .ve-rb-btn,
 .ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm) .ve-rb-btn--lg{
   grid-row:auto; flex-direction:row; justify-content:flex-start; align-self:stretch;
-  width:auto; min-width:0; height:24px; min-height:24px; padding:0 8px; gap:8px;
+  width:auto; min-width:0; height:22px; min-height:22px; padding:0 14px 0 6px; gap:6px;
 }
 .ve-rb-dock .ve-rb-btn .ve-rb-ico{ width:14px; height:14px; }
 .ve-rb-dock .ve-rb-btn .ve-rb-lbl{
