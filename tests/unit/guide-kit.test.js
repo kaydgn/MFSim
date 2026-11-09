@@ -356,6 +356,30 @@ describe('İŞARETLER — şekil, lejant, metin aynı numarayı taşır', () => 
     expect(KIT.veGuideEkran(null, [], 'x')).toBe('');
   });
 
+  // Küçük yazıda köşedeki rozet ilk harfi örtüyordu (hızlı atamanın kartı): dışarıdaki
+  // yerler; yanlış yazılmış yer sessizce sol üst köşeye düşerdi.
+  test('ekran görüntüsü: rozet öğenin dışında durabilir, bilinmeyen yer kayıp, görüntü büyütülmez', () => {
+    KIT.veGuideSceneReset();
+    const resim = { src: 'data:image/webp;base64,AA', g: 400, y: 200, isaret: { a: [0.5, 0.5, 0.75, 0.6] } };
+    const h = KIT.veGuideEkran(resim, [
+      { k: 'a', ad: 'Üstte', yer: 'ust' },
+      { k: 'a', ad: 'Solda', yer: 'sol-dis' },
+      { k: 'a', ad: 'Yanlış', yer: 'sag-dıs' },
+    ], 'Küçük', 600);
+    expect(h).toContain('max-width:400px;');                                   // 400 px görüntü 600'e büyümez
+    expect(h).toContain('data-gk-no="1" style="left:52.25%; top:44.5%;"');     // +9 px, 11 px üstte
+    expect(h).toContain('data-gk-no="2" style="left:47.25%; top:55%;"');       // 11 px solda, ortada
+    expect(h).toContain('data-gk-no="3" style="left:50%; top:50%;"');
+    expect(KIT.veGuideIsaretKayip()).toEqual([{ sekil: 1, ad: 'Yanlış · yer: sag-dıs' }]);
+    KIT.veGuideSceneReset();
+    // canlı sahnenin yerleri ayrı liste: ekranınki orada bilinmeyen yerdir
+    const r = KIT.veGuideIsaretle(PANEL, [{ s: '.ve-fp-yurut', ad: 'Eylem satırı', yer: 'ust' }]);
+    expect(r.kayip).toEqual(['Eylem satırı · yer: ust']);
+    expect(r.html).toContain('gk-no gk-no--sol');
+    // canlı sahnenin her yeri ekranda da aynı adla
+    expect(KIT.VE_GUIDE_ISARET_YER.filter((y) => KIT.VE_GUIDE_EKRAN_YER.indexOf(y) < 0)).toEqual([]);
+  });
+
   test('sahne stili: hedefin konum kuralı programınkinden ÖNCE, rozet kuralları SONRA', () => {
     const st = document.createElement('style');
     st.textContent = '.ve-fp-card{position:absolute}.ve-ak-zem{fill:#fff}';

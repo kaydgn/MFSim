@@ -662,6 +662,8 @@ function veGuideIsaretle(html, isaretler){
       // `overflow:hidden` bir kap (aksonometrik çizimin kabı) onu siler.
       for(var a = konak.parentNode; a && a.nodeType === 1; a = a.parentNode) a.classList.add('gk-hedef-ata');
       var r = document.createElement('span');
+      // Bilinmeyen yer sessizce sol üst köşeye düşerdi: kayıp sayılır
+      if(i.yer && VE_GUIDE_ISARET_YER.indexOf(i.yer) < 0) sonuc.kayip.push((i.ad || ('#' + no)) + ' · yer: ' + i.yer);
       var yer = VE_GUIDE_ISARET_YER.indexOf(i.yer) >= 0 ? i.yer : 'sol';
       r.className = 'gk-no gk-no--' + yer;
       r.setAttribute('aria-hidden', 'true');
@@ -699,7 +701,9 @@ function veGuideEkran(resim, isaretler, altyazi, en){
   _gkSahneNo++;
   var liste = isaretler || [];
   var sayfa = _gkPageWidth() || 760;
-  var w = Math.min(Number(en) || resim.g || sayfa, sayfa);
+  // Görüntü büyütülmez: büyütülen ekran görüntüsü bulanıklaşır.
+  var w = Math.min(Number(en) || resim.g || sayfa, resim.g || sayfa, sayfa);
+  var H = w * resim.y / resim.g;
   var y = function(v){ return (Math.round(v * 10000) / 100) + '%'; };   // makine: CSS yüzdesi
   var h = '<figure class="appfig"><div class="gk-ekran" data-gk-sahne="' + _gkSahneNo
     + '" style="max-width:' + Math.round(w) + 'px;">'
@@ -715,13 +719,13 @@ function veGuideEkran(resim, isaretler, altyazi, en){
         h += '<span class="gk-cerceve" style="left:' + y(k[0]) + '; top:' + y(k[1])
           + '; width:' + y(k[2] - k[0]) + '; height:' + y(k[3] - k[1]) + ';"></span>';
       }
-      var px = { 'sag': k[2], 'ic-sag': k[2], 'sag-orta': k[2], 'alt-sag': k[2] }[i.yer];
-      var py = { 'alt': k[3], 'alt-sag': k[3], 'sol-orta': (k[1] + k[3]) / 2,
-                 'sag-orta': (k[1] + k[3]) / 2 }[i.yer];
+      if(i.yer && VE_GUIDE_EKRAN_YER.indexOf(i.yer) < 0)
+        _gkIsaretKayipListe.push({ sekil: _gkSahneNo, ad: (i.ad || i.k) + ' · yer: ' + i.yer });
+      var t = _gkEkranYer(k, i.yer);
       // Rozet (18 px) resmin içinde kalır: kenardaki öğenin numarası dışarı taşmaz.
-      var mx = 11 / w, my = 11 / (w * resim.y / resim.g);
-      var bx = Math.min(Math.max(px === undefined ? k[0] : px, mx), 1 - mx);
-      var by = Math.min(Math.max(py === undefined ? k[1] : py, my), 1 - my);
+      var mx = 11 / w, my = 11 / H;
+      var bx = Math.min(Math.max(t[0] + t[2] / w, mx), 1 - mx);
+      var by = Math.min(Math.max(t[1] + t[3] / H, my), 1 - my);
       h += '<span class="gk-no" data-gk-no="' + no + '" style="left:' + y(bx) + '; top:' + y(by) + ';">'
         + no + '</span>';
     }
@@ -729,6 +733,23 @@ function veGuideEkran(resim, isaretler, altyazi, en){
   });
   return h + '</div>' + _gkLejant(lejant)
     + '<figcaption><b>Şekil ' + _gkSahneNo + ' —</b> ' + (altyazi || '') + '</figcaption></figure>';
+}
+
+// EKRAN GÖRÜNTÜSÜNDE ROZETİN YERİ: öğenin kutusu k = [sol, üst, sağ, alt] (oran) →
+// [x, y, dx px, dy px] — rozetin merkezi. Köşe ve kenar ortası (varsayılan sol üst
+// köşe) canlı sahneninkilerle aynı adda; küçük yazıda rozet yazıyı örtmesin diye
+// dışarıda dört yer: 'ust' · 'ust-sag' (öğenin üstünde) · 'sol-dis' · 'sag-dis'.
+var VE_GUIDE_EKRAN_YER = ['sol', 'sag', 'ic', 'ic-sag', 'sol-orta', 'sag-orta', 'alt', 'alt-sag',
+  'ust', 'ust-sag', 'sol-dis', 'sag-dis'];
+function _gkEkranYer(k, yer){
+  var orta = (k[1] + k[3]) / 2;
+  var T = {
+    'sag': [k[2], k[1], 0, 0], 'ic-sag': [k[2], k[1], 0, 0], 'sag-orta': [k[2], orta, 0, 0],
+    'alt-sag': [k[2], k[3], 0, 0], 'alt': [k[0], k[3], 0, 0], 'sol-orta': [k[0], orta, 0, 0],
+    'ust': [k[0], k[1], 9, -11], 'ust-sag': [k[2], k[1], -9, -11],
+    'sol-dis': [k[0], orta, -11, 0], 'sag-dis': [k[2], orta, 11, 0]
+  };
+  return T[yer] || [k[0], k[1], 0, 0];
 }
 
 // Sayfanın içerik genişliği — raporun kendi `.page` kuralından. İkinci bir
@@ -1160,6 +1181,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veGuideIsaretle: veGuideIsaretle, veGuideIsaretKayip: veGuideIsaretKayip,
     veGuideNo: veGuideNo, veGuideEkran: veGuideEkran, _gkLejant: _gkLejant,
     VE_GUIDE_ISARET_YER: VE_GUIDE_ISARET_YER,
+    VE_GUIDE_EKRAN_YER: VE_GUIDE_EKRAN_YER,
     veGuideBtn: veGuideBtn, veGuideCard: veGuideCard, _gkFlatten: _gkFlatten,
     veGuideSceneMissingTokens: veGuideSceneMissingTokens
   };

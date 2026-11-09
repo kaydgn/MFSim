@@ -91,12 +91,16 @@ function _sayfaOlc(tanimlar, kirp) {
   return { isaret: out, yok: yok };
 }
 
+// Kırpma: `s` ilk görünen öğe, `hepsi` görünen öğelerin birleşimi; `pay` dört
+// yanda, `y` boyun tavanı (üstten).
 function _sayfaKirp(o) {
-  const tanim = o && o.s, pay = o && o.pay;
+  const tanim = o && (o.s || o.hepsi), pay = o && o.pay;
   if (!tanim) return null;
-  const e = [...document.querySelectorAll(tanim)].find((x) => x.getBoundingClientRect().width > 0);
-  if (!e) return null;
-  const r = e.getBoundingClientRect(), p = pay || 0;
+  const L = [...document.querySelectorAll(tanim)].map((x) => x.getBoundingClientRect()).filter((x) => x.width > 0);
+  if (!L.length) return null;
+  const r = o.hepsi ? { left: Math.min(...L.map((x) => x.left)), top: Math.min(...L.map((x) => x.top)),
+    right: Math.max(...L.map((x) => x.right)), bottom: Math.max(...L.map((x) => x.bottom)) } : L[0];
+  const p = pay || 0;
   const x = Math.max(0, Math.floor(r.left - p)), y = Math.max(0, Math.floor(r.top - p));
   const h = Math.min(innerHeight, Math.ceil(r.bottom + p)) - y;
   return { x: x, y: y, w: Math.min(innerWidth, Math.ceil(r.right + p)) - x, h: o.y ? Math.min(h, o.y) : h };
@@ -141,6 +145,8 @@ const DURAKLAR = [
       ornek: '#ve-mw-yan .ve-mw-ornek',
       ileri: '#ve-mw-eylem .ve-fw-btn-primary',
       kapat: '#ve-mw-title ~ .ve-settings-close',
+      talimat: '#ve-mw-nav .ve-mw-talimat > h3:nth-of-type(1)',
+      eksikler: '#ve-mw-nav .ve-mw-talimat > h3:nth-of-type(2)',
     },
     async kur(p) {
       await p.click('.ve-module-card[data-module="mount-analysis"]');
@@ -299,6 +305,43 @@ const DURAKLAR = [
     },
   },
   {
+    // HIZLI ATAMA (Canlı Not 94): dosya okununca ana roller verilmemişse kart sorar;
+    // satırlar GERÇEK tıkla seçilir (kartın yolu), Takoz adımında iki takoz seçili.
+    ad: '3b-hizli',
+    kirp: { hepsi: '#ve-mw-3b-agac, #ve-mw-3b-hizli', pay: 14, y: 300 },
+    isaret: {
+      kart: '#ve-mw-3b-hizli',
+      rol: '#ve-mw-3b-hizli .ve-mw-3b-hizli-rol',
+      say: '#ve-mw-3b-hizli .ve-mw-3b-hizli-say',
+      geri: '#ve-mw-3b-hizli [data-hizli="geri"]',
+      ileri: '#ve-mw-3b-hizli [data-hizli="ileri"]',
+      bitir: '#ve-mw-3b-hizli [data-hizli="bitir"]',
+      agacrol: { s: '#ve-mw-3b-agac', metin: 'Motor', ust: '.ve-mw-3b-agac-rol' },
+    },
+    async kur(p, ctx) {
+      // Örnekli tuvalden: 3D Görüntüleyici'nin penceresi dosyayı okur, 3B açılır
+      await p.evaluate(() => { if (typeof veMufettisKapat === 'function') veMufettisKapat(); });
+      const id = await dugumKimlik(p, 'mnt-viewer');
+      await p.dblclick('#' + id + ' .ve-node-box');
+      await p.locator('#ve-properties').waitFor();
+      const [fc] = await Promise.all([
+        p.waitForEvent('filechooser', { timeout: 8000 }),
+        p.locator('#ve-properties').getByText('STEP dosyası seç…').first().click(),
+      ]);
+      await fc.setFiles(ctx.step);
+      await p.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; }, null, { timeout: 120000 });
+      await p.locator('#ve-mw-3b-hizli:not([hidden])').waitFor({ timeout: 10000 });
+      const satir = (ad) => p.locator('#ve-mw-3b-agac .ve-mw-3b-agac-ad').filter({ hasText: new RegExp('^' + ad + '$') }).first();
+      for (const ad of ['Motor bloğu', 'Şanzıman gövdesi', 'Transfer gövdesi', 'Ön takoz', 'Sağ ön takoz']) {
+        await satir(ad).click();
+        await bekle(p, 250);
+      }
+      await p.evaluate(() => document.querySelectorAll('.ve-toast').forEach((t) => t.remove()));
+      await p.mouse.move(EKRAN.width / 2, EKRAN.height - 4);
+      await bekle(p, 400);
+    },
+  },
+  {
     ad: '3b',
     isaret: {
       agac: '#ve-mw-3b-agac',
@@ -313,25 +356,13 @@ const DURAKLAR = [
       eylem: '#ve-mw-3b-eylem',
       durum: '#ve-mw-3b-durum',
     },
-    async kur(p, ctx) {
-      // Örnekli tuvalden: 3D Görüntüleyici'nin penceresi dosyayı okur, 3B açılır
-      await p.evaluate(() => { if (typeof veMufettisKapat === 'function') veMufettisKapat(); });
-      const id = await dugumKimlik(p, 'mnt-viewer');
-      await p.dblclick('#' + id + ' .ve-node-box');
-      await p.locator('#ve-properties').waitFor();
-      const [fc] = await Promise.all([
-        p.waitForEvent('filechooser', { timeout: 8000 }),
-        p.locator('#ve-properties').getByText('STEP dosyası seç…').first().click(),
-      ]);
-      await fc.setFiles(ctx.step);
-      await p.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; }, null, { timeout: 120000 });
+    async kur(p) {
+      // Hızlı atamanın kartı Bitir'le kapanır; kalan takozlar ve hesap
+      await p.click('#ve-mw-3b-hizli [data-hizli="bitir"]');
+      await p.locator('#ve-mw-3b-hizli').waitFor({ state: 'hidden' });
       await p.evaluate(() => {
         const s = veMntWizStp(), A = s.sonuc.agac;
-        const bul = (ad) => A.findIndex((d) => d.ad === ad);
-        veMntWizStpRol(bul('Motor bloğu'), 'mnt-motor');
-        veMntWizStpRol(bul('Şanzıman gövdesi'), 'mnt-gearbox');
-        veMntWizStpRol(bul('Transfer gövdesi'), 'mnt-transfer');
-        A.forEach((d, i) => { if (/ takoz$/.test(d.ad)) veMntWizStpRol(i, 'mnt-mount'); });
+        A.forEach((d, i) => { if (/ takoz$/.test(d.ad) && s.roller[i] !== 'mnt-mount') veMntWizStpRol(i, 'mnt-mount'); });
         veMntWizStpHesapla();
       });
       await p.waitForFunction(() => { const s = veMntWizStp(); return s && s.coz && !s.hesapBekliyor; }, null, { timeout: 120000 });
@@ -354,6 +385,7 @@ const DURAKLAR = [
       suzgec: '#ve-mw-3b-menu [data-k="suzgec"]',
       olcu: '#ve-mw-3b-menu [data-k="olcu"]',
       kesit: '#ve-mw-3b-menu [data-k="kesit"]',
+      hizli: '#ve-mw-3b-menu [data-k="hizli"]',
     },
     async kur(p) {
       const bos = await p.evaluate(() => {

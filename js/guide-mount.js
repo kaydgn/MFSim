@@ -459,12 +459,12 @@ var _GM_RAPOR = [
 
 var _GM_KOMUT = [
   { k: 'dugme', ad: 'Komutlar', not: 'Ekranın sağ üst köşesi.', yer: 'sol-orta' },
-  { k: 'yeni', ad: 'Yeni proje', not: 'Boş bir proje açar.' },
-  { k: 'ac', ad: 'Proje aç', not: 'Kaydedilmiş .json dosyasını açar.', yer: 'sag' },
-  { k: 'kaydet', ad: 'Kaydet', not: 'Ctrl+S; proje .json olarak kaydedilir.' },
-  { k: 'geri', ad: 'Geri al', not: 'Ctrl+Z.' },
-  { k: 'ileri', ad: 'İleri al', not: 'Ctrl+Y.', yer: 'sag' },
-  { k: 'duzenle', ad: 'Otomatik düzenle', not: 'Tuvaldeki bileşenleri düzene sokar.' }
+  { k: 'yeni', ad: 'Yeni proje', not: 'Boş bir proje açar.', yer: 'sag-orta' },
+  { k: 'ac', ad: 'Proje aç', not: 'Kaydedilmiş .json dosyasını açar.', yer: 'sag-orta' },
+  { k: 'kaydet', ad: 'Kaydet', not: 'Ctrl+S; proje .json olarak kaydedilir.', yer: 'sag-orta' },
+  { k: 'geri', ad: 'Geri al', not: 'Ctrl+Z.', yer: 'sag-orta' },
+  { k: 'ileri', ad: 'İleri al', not: 'Ctrl+Y.', yer: 'sag-orta' },
+  { k: 'duzenle', ad: 'Otomatik düzenle', not: 'Tuvaldeki bileşenleri düzene sokar.', yer: 'sag-orta' }
 ];
 
 var _GM_PALET = [
@@ -543,7 +543,19 @@ var _GM_SIHIRBAZ = [
   { k: 'step', ad: 'STEP’ten başla', not: 'Modeli STEP dosyasından doldurur.', yer: 'sag' },
   { k: 'ornek', ad: 'Örnekten doldur', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
   { k: 'ileri', ad: 'İleri', not: 'Sonraki adım; son adımda Modeli kur.', yer: 'sol-orta' },
-  { k: 'kapat', ad: 'Kapat', not: 'Sihirbazı kapatır; tuval değişmez.', yer: 'sol-orta' }
+  { k: 'kapat', ad: 'Kapat', not: 'Sihirbazı kapatır; tuval değişmez.', yer: 'sol-orta' },
+  { k: 'talimat', ad: 'Talimat', not: 'Açık adımda yapılacaklar, sırayla.', yer: 'sag-orta' },
+  { k: 'eksikler', ad: 'Eksikler', not: 'Adımın eksik ve hatalı girdileri, sayısıyla; yoksa Eksik yok.', yer: 'sag-orta' }
+];
+
+var _GM_3B_HIZLI = [
+  { k: 'kart', ad: 'Hızlı atama', not: 'Sorulan rol, sırası ve ne yapılacağı.', cerceve: false, yer: 'ust' },
+  { k: 'rol', ad: 'Sorulan rol', not: 'Önünde sırası: beş rolün kaçıncısı.', cerceve: false, yer: 'ust' },
+  { k: 'say', ad: 'Seçili sayısı', not: 'Takoz ve braket adımında.', cerceve: false, yer: 'ust-sag' },
+  { k: 'geri', ad: 'Geri', not: 'Önceki rol.', yer: 'alt' },
+  { k: 'ileri', ad: 'Sonraki · Atla', not: 'Sıradaki rol; seçim yokken Atla.', yer: 'alt' },
+  { k: 'bitir', ad: 'Bitir', not: 'Kartı kapatır; Esc de kapatır.', yer: 'alt' },
+  { k: 'agacrol', ad: 'Verilen rol', not: 'Ağaçta satırın yanında, rolün renginde.', cerceve: false, yer: 'sol-dis' }
 ];
 
 var _GM_3B = [
@@ -568,7 +580,8 @@ var _GM_3B_MENU = [
   { k: 'zemin', ad: 'Arka plan', not: 'Tuvalin zemini.', yer: 'sol-orta' },
   { k: 'suzgec', ad: 'Seçim', not: 'Parça ya da Yüzey.', yer: 'sol-orta' },
   { k: 'olcu', ad: 'Ölçü', not: 'İki nokta arası uzaklık.', yer: 'sol-orta' },
-  { k: 'kesit', ad: 'Kesit', not: 'X, Y ya da Z düzlemiyle kesit.', yer: 'sol-orta' }
+  { k: 'kesit', ad: 'Kesit', not: 'X, Y ya da Z düzlemiyle kesit.', yer: 'sol-orta' },
+  { k: 'hizli', ad: 'Hızlı atama', not: 'Rolleri sırayla soran kartı açar ya da kapatır.', yer: 'sol-orta' }
 ];
 
 var _GM_PARAM = [
@@ -771,7 +784,7 @@ function _gmSec3(){
     'Tuvalin sol üstündeki düğme (' + _gmS('tuval') + ', ' + _gmN(_GM_TUVAL, 'geri') + ') ana topolojiye '
       + 'döner; Takoz kartı ana tuvalde kalır, karta çift tık modüle geri götürür.'
   ]);
-  h += _gmEkran('komut', 'komutlar', _GM_KOMUT, 'Komutlar penceresi.', 340);
+  h += _gmEkran('komut', 'komutlar', _GM_KOMUT, 'Komutlar penceresi.');
   return h;
 }
 
@@ -1331,6 +1344,10 @@ function _gmSec15(){
     _gmN(_GM_SIHIRBAZ, 'ileri') + ' <strong>İleri</strong> ile adımları sırayla doldurun. Soldaki '
       + _gmN(_GM_SIHIRBAZ, 'adimlar') + ' listede her adımın rozeti eksik sayısıdır; adıma tıklamak oraya '
       + 'gider.',
+    'Her adımda listenin altındaki ' + _gmN(_GM_SIHIRBAZ, 'talimat') + ' <strong>Talimat</strong>’ı izleyin: '
+      + 'o adımda yapılacaklar sırayla, denetimler ekrandaki adıyla. ' + _gmN(_GM_SIHIRBAZ, 'eksikler')
+      + ' <strong>Eksikler</strong> adımın eksik ve hatalı girdilerini sayısıyla listeler; eksik yoksa '
+      + '<em>Eksik yok.</em> yazar.',
     'Son adımda <strong>Modeli kur</strong>’a basın. Ekranda: sihirbaz kapanır, model tuvale kurulur; '
       + 'Ctrl+Z kurulumu tek adımda geri alır.'
   ]);
@@ -1358,8 +1375,10 @@ function _gmSec16(){
     'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'goruntuleyici') + ' tıklayın; penceresinde '
       + '<strong>STEP dosyası seç…</strong>’e basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',
     'Okunurken eylem satırında çubuk ve <strong>Vazgeç</strong> durur; okuma ekranı dondurmaz.',
-    'Dosya okununca 3B tam ekran açılır (' + _gmS('3b') + '). ' + _gmN(_GM_3B, 'kapat') + ' <strong>Kapat</strong> '
-      + 'ya da Esc yalnız 3B’yi kapatır; pencerenin <strong>3B’de aç</strong> düğmesi yeniden açar.'
+    'Dosya okununca 3B tam ekran açılır (' + _gmS('3b') + '). Dosyada henüz rol yoksa tuvalin sol üstünde '
+      + '<strong>Hızlı atama</strong> kartı açılır ve rolleri sırayla sorar (' + _gmB('3b-hizli') + ').',
+    _gmN(_GM_3B, 'kapat') + ' <strong>Kapat</strong> ya da Esc yalnız 3B’yi kapatır; pencerenin '
+      + '<strong>3B’de aç</strong> düğmesi yeniden açar.'
   ]);
   h += _gmEkran('3b', '3b', _GM_3B, '3B görüntüleyici: motor bloğu seçili, roller verilmiş, hesap yapılmış.');
   h += _gmAlanTablo('3D Görüntüleyici penceresi — bölümler', [
@@ -1419,8 +1438,8 @@ function _gmSec16(){
       'Komut seçimin hepsine; gizli parça çizilmez, seçilmez, ağaçta soluk; sağ tuşla sürüklemek kaydırır'],
     ['Boşluğa sağ tık', '<strong>Tümünü göster</strong>, <strong>Tümünü sığdır</strong>, <strong>Bakış</strong>, '
       + '<strong>Görünüş</strong>, <strong>Arka plan</strong> (Stüdyo · Düz beyaz · Beyaz–mavi · Beyaz–sıcak · Açık gri '
-      + 'geçiş), <strong>Seçim</strong> (Parça · Yüzey), <strong>Ölçü</strong>, <strong>Kesit</strong>',
-      'Açık kip işaretli; arka plan tercihi bu tarayıcıda kalır']
+      + 'geçiş), <strong>Seçim</strong> (Parça · Yüzey), <strong>Ölçü</strong>, <strong>Kesit</strong>, '
+      + '<strong>Hızlı atama</strong>', 'Açık kip işaretli; arka plan tercihi bu tarayıcıda kalır']
   ], ['Araç', 'Ne', 'Not']);
   h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
@@ -1428,6 +1447,31 @@ function _gmSec16(){
     + 'her birimin işareti çizilir; etiketi yalnız fare birimin işaretinin, parçasının ya da satırının üstündeyken ve '
     + 'birim seçiliyken görünür. Etiket birimin adını ve konumunu taşır; adın önündeki nokta birimin rol rengindedir, '
     + 'seçili birimin etiketi vurgu renginde dolu.</p>';
+  h += _gmH3('Hızlı atama', '3b-hizli');
+  h += '<p>Dosyada ana rollerin (motor, şanzıman, transfer kutusu, takoz, braket) hiçbiri verilmemişse 3B '
+    + 'açılınca tuvalin sol üstünde ' + _gmN(_GM_3B_HIZLI, 'kart') + ' <strong>Hızlı atama</strong> kartı açılır '
+    + '(' + _gmS('3b-hizli') + '). Kart rolleri sırayla sorar: <strong>Motor</strong> → <strong>Şanzıman</strong> → '
+    + '<strong>Transfer Kutusu</strong> → <strong>Takoz</strong> → <strong>Braket</strong>. 3B’de parçaya ya da '
+    + 'ağaçta satıra tek tık ' + _gmN(_GM_3B_HIZLI, 'rol') + ' sorulan rolü verir.</p>';
+  h += _gmAdimlar([
+    'Kartın sorduğu gövdeye — motor, şanzıman, transfer kutusu — 3B’de ya da ağaçta tıklayın. Ekranda: '
+      + 'satırın yanında ' + _gmN(_GM_3B_HIZLI, 'agacrol') + ' rol belirir, kart sıradaki role geçer. Aynı rol '
+      + 'başka düğümdeyse oradan kalkar.',
+    'Takoz adımında her takoza tek tek tıklayın: her tık bir tane ekler, ' + _gmN(_GM_3B_HIZLI, 'say')
+      + ' sayaç seçili sayısını yazar; aynı takoza ikinci tık rolü kaldırır. Bitince '
+      + _gmN(_GM_3B_HIZLI, 'ileri') + ' <strong>Sonraki</strong>’ye basın. Braket adımı aynıdır.',
+    'Dosyada olmayan rolü ' + _gmN(_GM_3B_HIZLI, 'ileri') + ' <strong>Atla</strong> ile geçin; '
+      + _gmN(_GM_3B_HIZLI, 'geri') + ' <strong>Geri</strong> önceki role döner.',
+    _gmN(_GM_3B_HIZLI, 'bitir') + ' <strong>Bitir</strong> ya da Esc kartı kapatır. Sonra '
+      + '<strong>Özellikler</strong>’in dibindeki <strong>Hesapla</strong> ile rollü birimleri ölçün ('
+      + _gmS('3b') + ', ' + _gmN(_GM_3B, 'eylem') + ').'
+  ]);
+  h += _gmEkran('3b-hizli', '3b-hizli', _GM_3B_HIZLI, 'Hızlı atama: motor, şanzıman ve transfer kutusu '
+    + 'verildi, Takoz adımında iki takoz seçili.');
+  h += _gmNot('Kart açıkken',
+      'Ctrl’li tık seçimdir, rol vermez. Yanlış verilen rol <strong>Özellikler</strong>’in <strong>Rol</strong> '
+    + 'listesinden düzeltilir; kart açık kalır. Boşluğa sağ tık menüsündeki ' + _gmN(_GM_3B_MENU, 'hizli')
+    + ' <strong>Hızlı atama</strong> (' + _gmS('3b-menu') + ') kartı yeniden açar.');
   h += _gmH3('Roller', '3b-rol');
   h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki ' + _gmN(_GM_3B, 'agac') + ' <strong>Ürün ağacı</strong>nda '
     + 'satıra tıklayıp ' + _gmN(_GM_3B, 'rol') + ' <strong>Özellikler</strong>’in <strong>Rol</strong> listesinden '
