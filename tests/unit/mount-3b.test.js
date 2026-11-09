@@ -24,6 +24,7 @@ eval(loadSource('cp-mount-3b.js'));
 eval(loadSource('cp-mount-3b-agac.js'));
 eval(loadSource('cp-mount-3b-arac.js'));
 eval(loadSource('cp-mount-3b-menu.js'));
+eval(loadSource('cp-mount-3b-hizli.js'));
 const CAD = require('../../js/cp-mount-cad.js');
 beforeEach(() => resetStubs(stubs));
 
@@ -882,8 +883,8 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
   test('BOŞLUĞUN MENÜSÜ: Tümünü göster · Tümünü sığdır · Bakış · Görünüş · Arka plan; geçerliler işaretli; arka plan tercihi tarayıcıda', () => {
     const s = oturum(), brk = ad2i(s, 'Arka braket');
     const L = veMntWiz3bMenuOgeleri(s, [brk], {}, { bos: true, gorunus: 'golge', zemin: 'beyaz' });
-    expect(kok(L)).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit', '-', 'temizle']);
-    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true }))).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit']);
+    expect(kok(L)).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit', 'hizli', '-', 'temizle']);
+    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true }))).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit', 'hizli']);
     expect(L.find((o) => o.k === 'bakis').alt.map((o) => o.ad)).toEqual(VE_MW_3B_BAKIS.map((b) => b.ad));
     expect(L.find((o) => o.k === 'gorunus').alt.filter((o) => o.secili).map((o) => o.k)).toEqual(['gorunus:golge']);
     const z = L.find((o) => o.k === 'zemin').alt;
@@ -1030,6 +1031,104 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     const Y = veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 300);
     expect(Y[0].sol).toBe(false);
     expect(veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 0)[0].sol).toBe(true);
+  });
+});
+
+// ── HIZLI ATAMA (kullanıcı 2026-11-09, Canlı Not 94) ────────────────────────
+// *"STEP dosyası yüklendiği anda, program kullanıcıya hızlı hızlı sorsun, kullanıcı da
+// tık tık hemen seçsin. Hata yaptıysa sağ taraftan gitsin düzeltsin."* Önce rol iki
+// adımdı (parçayı seç → Özellikler'in Rol listesinden rolü seç): beş rollük bir güç
+// grubu (motor · şanzıman · 4 takoz · braket) 14 tık. Şimdi kart sorar, tek tık verir: 7.
+describe('HIZLI ATAMA — kart sıradaki rolü sorar, tek tık verir', () => {
+  let eskiSec;
+  const kur = () => {
+    const s = oturum();
+    document.body.innerHTML = '<div id="ve-mw-3b-hizli" hidden></div>';
+    _mw3b = { s, secim: [], secili: -1, okuma: false };
+    return s;
+  };
+  const kart = () => document.getElementById('ve-mw-3b-hizli');
+  const soru = () => kart().hidden ? null : kart().querySelector('.ve-mw-3b-hizli-rol').textContent;
+  beforeEach(() => { eskiSec = veMntWiz3bSec; veMntWiz3bSec = jest.fn(() => true); });
+  afterEach(() => { veMntWiz3bSec = eskiSec; _mw3b = null; document.body.innerHTML = ''; });
+
+  test('rol yokken açılışta kendiliğinden açılır; sıra Motor → Şanzıman → Transfer Kutusu → Takoz → Braket', () => {
+    kur();
+    expect(VE_MW_3B_HIZLI.map((a) => a.tip)).toEqual(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-mount', 'mnt-bracket']);
+    expect(veMntWiz3bHizliOto()).toBe(true);
+    expect([soru(), kart().querySelector('.ve-mw-3b-hizli-sira').textContent]).toEqual([_mwAd('mnt-motor'), '1 / 5']);
+    expect(kart().querySelector('.ve-mw-3b-hizli-yon').textContent).toBe('Modelde ya da ağaçta motoru seçin.');
+    // ilk adımda Geri yok; Atla · Bitir var
+    expect([...kart().querySelectorAll('button')].map((b) => b.getAttribute('data-hizli'))).toEqual(['ileri', 'bitir']);
+  });
+
+  test('tek rol: tık verir, kart sonraki role geçer; başka düğümdeki aynı rol düşer; Geri ile dönülür', () => {
+    const s = kur();
+    veMntWiz3bHizliOto();
+    expect(veMntWiz3bHizliTik(ad2i(s, 'Şanzıman gövdesi'))).toBe(true);     // yanlış parça
+    expect(s.roller[ad2i(s, 'Şanzıman gövdesi')]).toBe('mnt-motor');
+    expect(soru()).toBe(_mwAd('mnt-gearbox'));
+    expect(veMntWiz3bHizliAdim(-1)).toBe(true);                             // Geri: Motor'u yeniden sor
+    expect(soru()).toBe(_mwAd('mnt-motor'));
+    veMntWiz3bHizliTik(ad2i(s, 'Motor bloğu'));                             // düzeltme
+    expect([s.roller[ad2i(s, 'Motor bloğu')], s.roller[ad2i(s, 'Şanzıman gövdesi')]]).toEqual(['mnt-motor', null]);
+    veMntWiz3bHizliTik(ad2i(s, 'Şanzıman gövdesi'));
+    expect(s.roller[ad2i(s, 'Şanzıman gövdesi')]).toBe('mnt-gearbox');
+    expect(soru()).toBe(_mwAd('mnt-transfer'));
+    expect(veMntWiz3bSec).toHaveBeenLastCalledWith(ad2i(s, 'Şanzıman gövdesi'), false);   // tıklanan seçili: sağda düzeltilir
+  });
+
+  test('çoklu rol: her tık ekler, aynı birime ikinci tık kaldırır; Sonraki ile geçilir; sonuncudan sonra kart kapanır', () => {
+    const s = kur(), tk = takozlar(s);
+    veMntWiz3bHizliOto();
+    veMntWiz3bHizliTik(ad2i(s, 'Motor bloğu'));
+    veMntWiz3bHizliTik(ad2i(s, 'Şanzıman gövdesi'));
+    expect(veMntWiz3bHizliAdim(1)).toBe(true);                              // Transfer Kutusu: Atla
+    expect(soru()).toBe(_mwAd('mnt-mount'));
+    expect(kart().querySelector('[data-hizli="ileri"]').textContent).toBe('Atla');
+    tk.forEach((i) => veMntWiz3bHizliTik(i));
+    expect(tk.map((i) => s.roller[i])).toEqual(tk.map(() => 'mnt-mount'));
+    expect(soru()).toBe(_mwAd('mnt-mount'));                                // çoklu rolde kart yerinde
+    expect(kart().querySelector('.ve-mw-3b-hizli-say').textContent).toBe('4 seçili');
+    veMntWiz3bHizliTik(tk[1]);                                               // ikinci tık kaldırır
+    expect(s.roller[tk[1]]).toBe(null);
+    expect(kart().querySelector('.ve-mw-3b-hizli-say').textContent).toBe('3 seçili');
+    veMntWiz3bHizliTik(tk[1]);
+    expect(kart().querySelector('[data-hizli="ileri"]').textContent).toBe('Sonraki');
+    veMntWiz3bHizliAdim(1);
+    expect(soru()).toBe(_mwAd('mnt-bracket'));
+    veMntWiz3bHizliTik(ad2i(s, 'Arka braket'));
+    expect(s.roller[ad2i(s, 'Arka braket')]).toBe('mnt-bracket');
+    veMntWiz3bHizliAdim(1);
+    expect([soru(), veMntWiz3bHizliAcik()]).toEqual([null, false]);
+    // 2 + 4 + 1 rol, 7 tık (önce her rol seç + listeden rol: 14)
+  });
+
+  test('rol verilmişse kendiliğinden açılmaz; menüden açılınca ilk eksik rolden başlar; Bitir · menü kapatır', () => {
+    const s = kur();
+    veMntWizStpRol(ad2i(s, 'Motor bloğu'), 'mnt-motor');
+    expect(veMntWiz3bHizliOto()).toBe(false);
+    expect(soru()).toBe(null);
+    expect(veMntWiz3bMenuUygula('hizli')).toBe(true);
+    expect(soru()).toBe(_mwAd('mnt-gearbox'));                             // motor verilmiş: şanzımandan
+    expect(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true, hizli: true }).find((o) => o.k === 'hizli').isaretli).toBe(true);
+    expect(veMntWiz3bMenuUygula('hizli')).toBe(true);                       // açıkken menü kapatır
+    expect(soru()).toBe(null);
+    veMntWiz3bHizliBasla();
+    expect(veMntWiz3bHizliBitir()).toBe(true);
+    expect([soru(), veMntWiz3bHizliBitir()]).toEqual([null, false]);
+  });
+
+  test('ağaçta tık: kart açıkken satırın tıkı rolü verir; Ctrl\'li tık seçimdir; boşluğa tık rol vermez', () => {
+    const s = kur();
+    veMntWiz3bHizliOto();
+    veMntWiz3bAgacTik(ad2i(s, 'Motor bloğu'), {});
+    expect(s.roller[ad2i(s, 'Motor bloğu')]).toBe('mnt-motor');
+    veMntWiz3bAgacTik(ad2i(s, 'Şanzıman gövdesi'), { ctrlKey: true });
+    expect(s.roller[ad2i(s, 'Şanzıman gövdesi')]).toBe(null);
+    expect(veMntWiz3bSec).toHaveBeenLastCalledWith(ad2i(s, 'Şanzıman gövdesi'), true, 'agac');
+    expect(veMntWiz3bHizliTik(-1)).toBe(false);
+    expect(soru()).toBe(_mwAd('mnt-gearbox'));
   });
 });
 
@@ -1477,10 +1576,14 @@ describe('TAM EKRAN ve İŞ KARTI — başlık bandı ve komut çubuğu yok, Kap
     expect([c.id, c.getAttribute('onclick'), c.textContent.trim()]).toEqual(['ve-mw-3b-kapat', 'veMntWiz3bKapat()', 'Kapat']);
     // Ağacın başlığı: ad · parça sayısı; Kapat ve kesitin kartı tuvalin içinde (görüntüleyici ve okuma)
     expect(kaynak).toMatch(/<div class="ve-mw-3b-dock-bas">' \+ _mw3bKimlikHTML\(s\)\s*\+ '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"><\/span><\/div>'/);
-    expect(kaynak).toMatch(/'<div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"><\/div>'\s*\+ _mw3bKapatHTML\(\)/);
+    // sol üstte bir sütun: kesit kartı, altında hızlı atamanın kartı (Canlı Not 94) — biri
+    // ötekine binmez (üst ortadaki kart kesit açıkken kesitin Ters düğmesini örtüyordu); Kapat sağda
+    expect(kaynak).toMatch(/'<div class="ve-mw-3b-solust"><div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"><\/div>'\s*\+ '<div class="ve-mw-3b-hizli" id="ve-mw-3b-hizli" role="group" aria-label="Hızlı atama" hidden><\/div><\/div>'\s*\+ _mw3bKapatHTML\(\)/);
+    expect(kural('.ve-mw-3b-solust')).toMatch(/position:absolute; left:12px; top:12px; z-index:3; display:flex; flex-direction:column;/);
+    expect(kural('.ve-mw-3b-hizli')).toMatch(/^\.ve-mw-3b-hizli\{ box-sizing:border-box; display:flex;/);   // konumsuz: yeri sütunun
     expect(kaynak).toMatch(/id="ve-mw-3b-tuval" data-durum="okunuyor">' \+ _mw3bKapatHTML\(\)/);
     expect(kural('.ve-mw-3b-kapat')).toMatch(/position:absolute; top:12px; right:12px/);
-    expect(kural('.ve-mw-3b-arac')).toMatch(/position:absolute; left:12px; top:12px/);
+    expect(kural('.ve-mw-3b-arac')).toMatch(/^\.ve-mw-3b-arac\{ max-width:100%; box-sizing:border-box; display:flex;/);   // konumsuz
     expect(kural('.ve-mw-3b-arac:empty')).toMatch(/display:none/);      // kesit kapalıyken kart yok
     expect(kural('.ve-mw-3b-dock-bas .ve-fw-dim')).toMatch(/flex:none; white-space:nowrap/);
     // Dosyanın kimliği Özellikler'in seçim kimliğiyle sınıf PAYLAŞMAZ (2026-11-05:

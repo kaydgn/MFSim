@@ -214,7 +214,8 @@ function veMntWiz3bAc(yer){
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
       + '<span class="ve-mw-3b-merkez" id="ve-mw-3b-merkez" aria-hidden="true"></span>'
-      + '<div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"></div>'
+      + '<div class="ve-mw-3b-solust"><div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"></div>'
+        + '<div class="ve-mw-3b-hizli" id="ve-mw-3b-hizli" role="group" aria-label="Hızlı atama" hidden></div></div>'
       + _mw3bKapatHTML()
       + '<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden></div></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
@@ -266,6 +267,8 @@ function veMntWiz3bAc(yer){
   _mw3bPanel();
   if(typeof _mw3bAracYaz === 'function') _mw3bAracYaz();
   _mw3bAgKur();
+  // HIZLI ATAMA (Canlı Not 94): ana rollerin hiçbiri verilmemişse kart kendiliğinden açılır
+  if(typeof veMntWiz3bHizliOto === 'function') veMntWiz3bHizliOto();
   return true;
 }
 // OKUMA: görüntüleyicinin ÇERÇEVESİ (tuvalin sağ üstünde Kapat), tuvalin zemini
@@ -519,7 +522,9 @@ function _mw3bEsc(V){
   var f = function(e){
     if(e.key !== 'Escape' || _mw3b !== V) return;
     e.stopImmediatePropagation(); e.preventDefault();
-    if(!veMntWiz3bNoktaBitir()) veMntWiz3bKapat();
+    if(veMntWiz3bNoktaBitir()) return;
+    if(typeof veMntWiz3bHizliBitir === 'function' && veMntWiz3bHizliBitir()) return;   // önce hızlı atamanın kartı
+    veMntWiz3bKapat();
   };
   document.addEventListener('keydown', f, true);
   V.sokucu.push(function(){ document.removeEventListener('keydown', f, true); });
@@ -557,6 +562,7 @@ function veMntWiz3bTazele(){
   if(V.nokta >= 0 && s.roller[V.nokta] !== 'mnt-mount') _mw3bNoktaKip(-1);
   if(V.ref && !veMntStpVs((s.yogunluk || {})[V.ref.birim], s.roller[V.ref.birim])) _mw3bRefKip(null);
   _mw3bPanel();
+  if(typeof _mw3bHizliYaz === 'function') _mw3bHizliYaz();   // rol sağdan değişince kartın sayacı
   if(!V.scene) return;
   _mw3bBoya();
   _mw3bSonucKur();
@@ -2146,8 +2152,10 @@ function _mw3bDinle(V){
       if(V.ref){ _mw3bRefTik(e); return; }
       if(V.olcu){ _mw3bOlcuTik(e); return; }
       if(V.suzgec === 'yuz'){ _mw3bYuzTik(e); return; }
-      var i = _mw3bIsabet(e.clientX, e.clientY);
-      veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1, e.ctrlKey || e.metaKey);
+      var i = _mw3bIsabet(e.clientX, e.clientY), td = i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1;
+      // HIZLI ATAMA (Canlı Not 94): kart açıkken tık sıradaki rolü verir; Ctrl'li tık seçimdir
+      if(V.hizli && td >= 0 && !(e.ctrlKey || e.metaKey) && typeof veMntWiz3bHizliTik === 'function'){ veMntWiz3bHizliTik(td); return; }
+      veMntWiz3bSec(td, e.ctrlKey || e.metaKey);
     }
     // SAĞ TIK (oynamadan): bağlam menüsü — sağ tuşla sürüklemek kaydırır (Canlı Not 8)
     if(b && !b.oynadi && b.tus === 2 && V.nokta < 0 && !V.ref && !V.olcu && typeof veMntWiz3bMenuAc === 'function'){

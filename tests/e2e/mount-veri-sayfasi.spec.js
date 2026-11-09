@@ -157,7 +157,7 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
     const sol = (q) => { const e = yan.querySelector(q); return e && Math.round(e.getBoundingClientRect().left); };
     return { buyuk: Object.keys(boy).filter((p) => parseFloat(p) > 14).map((p) => p + ' ' + boy[p].join(', ')),
       grup: px('.ve-mw-3b-grup-bas > span'), ad: px('.ve-mw-3b-birim-ad'), kg: px('.ve-mw-3b-birim-kg'),
-      kutleSol: sol('.ve-mw-3b-kaynak'), rolSol: sol('#ve-mw-3b-rol') };
+      kutleSol: sol('[data-ve-3b-kg-kaynak], .ve-mw-3b-kaynak'), rolSol: sol('#ve-mw-3b-rol') };   // veri sayfalı birimde liste (Canlı Not 77)
   });
   expect(yazi.buyuk).toEqual([]);
   expect([yazi.grup, yazi.ad, yazi.kg]).toEqual(['12px', '12px', '11px']);
