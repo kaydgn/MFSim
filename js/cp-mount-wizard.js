@@ -774,9 +774,13 @@ function _mwKaynakIsaret(r, alan){
 // ── 1 · BAŞLANGIÇ ─────────────────────────────────────────────────────────
 function _mwStepKaynak(c){
   var st = _mwState, h = '';
+  // "YÜKLENDİ" SATIRI YOK (kullanıcı 2026-11-09, Canlı Not 69: *"Şu 'yüklendi' açıklamasına
+  // gerek var mı? … altta olmasına gerek var mı?"*): örneğin adını listenin seçilisi, sırasını
+  // gezinme ("3 / 7") zaten söylüyor; tuvalin kartında başlık modeli adlandırır, satır yalnız
+  // sayılar. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
   if(st.seededFrom === 'tuval'){
-    h += _mwCard('Tuvaldeki model', '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>Tuvaldeki model</b> yüklendi '
-      + '<em>' + st.govdeler.length + ' gövde · ' + st.takozlar.length + ' takoz</em></div>');
+    h += _mwCard('Tuvaldeki model', '<div class="ve-fw-seeded">' + _mwIkon('check') + ' '
+      + st.govdeler.length + ' gövde · ' + st.takozlar.length + ' takoz</div>');
   }
   h += _mwCard('STEP\'ten başla', _mwStpKartHTML());
   var liste = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [];
@@ -797,9 +801,7 @@ function _mwStepKaynak(c){
     + '<button type="button" class="ve-fw-mini"' + (!yok && sira >= ids.length - 1 ? ' disabled' : '') + ' title="' + (yok ? 'İlk örnek' : 'Sonraki örnek') + '" onclick="veMntWizOrnekAdim(1)">' + _mwIkon('arrow-down') + '</button>'
     + '<span class="ve-fw-seednav-n">' + (sira >= 0 ? (sira + 1) + ' / ' + ids.length : '— / ' + ids.length) + '</span></div>' : '';
   var ex = (yuklu && typeof veMountCore !== 'undefined') ? veMountCore.getMountExample(yuklu) : null;
-  var durum = (yuklu === null) ? '' : '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>'
-    + _mwEsc(ex ? (ex.vehicle || ex.name) : 'Boş başla') + '</b> yüklendi</div>';
-  h += _mwCard('Örnekten doldur', '<label class="ve-fw-field"><span class="ve-fw-lbl">Örnek</span>' + sec + '</label>' + gez + durum);
+  h += _mwCard('Örnekten doldur', '<label class="ve-fw-field"><span class="ve-fw-lbl">Örnek</span>' + sec + '</label>' + gez);
   if(ex){
     var ih = ex.description ? '<div class="ve-fw-exnote">' + _mwEsc(ex.description) + '</div>' : '';
     if(ex.specs && ex.specs.length){

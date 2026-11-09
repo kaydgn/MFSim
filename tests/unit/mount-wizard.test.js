@@ -128,6 +128,30 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(kural('.ve-fw-yan .ve-mw-eylem .ve-mw-eylem-ileri')).toMatch(/flex:1 1 auto;/);
     expect(kural('.ve-fw-foot .ve-fw-btn')).toMatch(/height:22px/);                              // FEAD'in alt çubuğu değişmez
   });
+  // Canlı Not 69 (kullanıcı 2026-11-09): "Şu 'yüklendi' açıklamasına gerek var mı? Veya bunun
+  // altta olmasına gerek var mı?" Önce: Örnekten doldur kartının dibinde "ASFAT 8x8 Obüs yüklendi"
+  // — listenin seçilisini ve gezinmenin "3 / 7"sini tekrarlıyordu.
+  test('YÜKLENDİ YOK: örnek yüklenince kartta "yüklendi" satırı yok; adı listenin seçilisi söyler', () => {
+    W.veMntWizAc();
+    W.veMntWizOrnekSec('asfat');
+    const yan = document.getElementById('ve-mw-yan');
+    expect(yan.textContent).not.toMatch(/yüklendi/);
+    const sec = yan.querySelector('select[aria-label="Örnek"]');
+    expect(sec.value).toBe('asfat');
+    expect(sec.options[sec.selectedIndex].textContent).toMatch(/^ASFAT/);
+    expect(yan.querySelector('.ve-fw-seednav-n').textContent).toMatch(/^\d+ \/ \d+$/);
+    W.veMntWizOrnekSec('');                                              // Boş başla
+    expect(document.getElementById('ve-mw-yan').textContent).not.toMatch(/yüklendi/);
+    W.veMntWizKapat(true);
+    // tuvaldeki modelden: kartın başlığı adlandırır, satır yalnız sayılar
+    global.nodes = [{ id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },
+      { id: 't1', type: 'mnt-mount', x: 0, y: 0, data: { x: 0, y: 300, z: 500, kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } }];
+    global.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    W.veMntWizAc();
+    const tuval = document.getElementById('ve-mw-yan');
+    expect(tuval.textContent).not.toMatch(/yüklendi/);
+    expect(tuval.querySelector('.ve-fw-seeded').textContent.trim()).toBe('1 gövde · 1 takoz');
+  });
   test('boş durumun eksikleri gövde ve takoz adımında', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());
     expect(l.filter((s) => s.tur === 'err').map((s) => s.adim).sort()).toEqual(['govde', 'takoz']);
