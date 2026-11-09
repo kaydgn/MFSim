@@ -204,9 +204,13 @@ function veAvatarMenuAc() {
       ogeler[i].click();
     }
   });
+  // Esc'nin dinleyicisi HEMEN bağlanır: zamanlayıcıya bırakıldığında açılışla zamanlayıcı
+  // arasında gelen Esc menüyü kapatmıyor, alttaki katmana (müfettiş sütunu) iniyordu — ürün
+  // turu yük altında yakaladı (ust-bant.spec.js → TEK ESC TEK KATMAN). Dış tıkın dinleyicisi
+  // gecikmeli kalır: menüyü açan tıkı görmesin. Kapı: kimlik-menu.test.js.
+  document.addEventListener('keydown', _veAvatarEsc, true);
   setTimeout(function() {
-    document.addEventListener('mousedown', _veAvatarDisTik, true);
-    document.addEventListener('keydown', _veAvatarEsc, true);
+    if(_veAvatarMenu === m) document.addEventListener('mousedown', _veAvatarDisTik, true);
   }, 0);
 }
 
