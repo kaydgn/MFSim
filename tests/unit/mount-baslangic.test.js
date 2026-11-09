@@ -89,6 +89,7 @@ describe('İÇERİK — kapılar ve örnekler', () => {
       .toEqual([componentDefs['mount-analysis'].name]);
     expect([...d.querySelectorAll('.ve-bas-kapi b')].map((b) => b.textContent))
       .toEqual(['Sihirbazla kur', 'STEP\'ten başla', 'Boş kanvas']);
+    expect(d.querySelectorAll('.ve-bas-kapi-k')).toHaveLength(0);                // kapıda künye yok (Canlı Not 84)
     // Künye ve bandın adları VERİ: kısa ad, cümle noktalaması yok (uzantı dışında).
     const kisa = (t) => { expect(t).toMatch(/^(\.[a-z0-9]+|[^.!?:;…]+)$/); expect(t.split(/\s+/).length).toBeLessThanOrEqual(4); };
     d.querySelectorAll('.ve-bas-kapi-k > span').forEach((k) => kisa(k.textContent));
@@ -116,7 +117,7 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     const bas = (sk) => { const d = document.createElement('div'); d.innerHTML = K.veBasSayfaHTML(BS.veMntBaslangicSayfa(), undefined, sk); return d; };
     const sekme = (d) => [...d.querySelectorAll('.ve-bas-satir')].map((r) => r.getAttribute('data-v'));
     expect(sekme(bas(0)).concat(sekme(bas(1)))).toEqual(sira);
-    expect(sekme(bas())).toEqual(sekme(bas(0)));                 // varsayılan: açık satırın sekmesi (ilk satır)
+    expect(sekme(bas())).toEqual(sekme(bas(0)));                 // varsayılan: açık satır yok → ilk sekme
     [0, 1].forEach((sk) => expect([...bas(sk).querySelectorAll('.ve-bas-satir-yukle')].map((b) => [b.getAttribute('data-ey'), b.getAttribute('data-v')]))
       .toEqual(sekme(bas(sk)).map((k) => ['ornek', k])));
     expect(sekme(bas(undefined)).length).toBeGreaterThan(0);
@@ -264,22 +265,18 @@ describe('KİMLİK VE VERİ — adlar programdan, künye kaynağından; sayı ba
   // birim testi bunu görmezdi ve bant o satırı SESSİZCE düşürürdü.
   test('okunan her sabit tarayıcıda da var: üst seviye `var` ya da `function`', () => {
     const okunan = [...loadSource('cp-mount-baslangic.js').matchAll(/_mntBasG\('([A-Za-z_]+)', '\.\/([a-z0-9-]+\.js)'\)/g)];
-    expect(okunan.length).toBeGreaterThanOrEqual(4);
+    expect(okunan.length).toBeGreaterThanOrEqual(3);          // sihirbazın adımları kapıda okunmuyor (Canlı Not 84)
     okunan.forEach(([, ad, dosya]) => {
       expect(loadSource(dosya)).toMatch(new RegExp('^(var|function) ' + ad + '\\b', 'm'));
     });
   });
-  test('kapı künyesi: sihirbazın adımları · STEP\'in biçimi · boş kanvasın araçları', () => {
-    const [sih, step, bos] = BS.veMntBaslangicKapilar();
-    expect(W.VE_MW_STEPS[0].key).toBe('kaynak');              // ilk adım bu sayfanın kendisi
-    expect(sih.kunye).toEqual(W.VE_MW_STEPS.slice(1).map((s) => s.ad));
-    const kabul = loadSource('cp-mount-wizard.js').match(/ve-mw-stp-file" accept="([^"]+)"/)[1].split(',');
-    expect(step.kunye.filter((t) => t[0] === '.')).toEqual(kabul);
-    // Standardın adı okuyucunun başlık denetiminde (dosyadaki yazımı tireli).
-    step.kunye.filter((t) => t[0] !== '.')
-      .forEach((t) => expect(loadSource('step-p21.js')).toContain('\'' + t.replace(' ', '-') + '\''));
-    expect(bos.kunye).toEqual([cp.VE_MNT_ARAC_TIPLERI.length + ' araç']);
-    expect(bos.title).toBe(cp.VE_MNT_ARAC_TIPLERI.map((t) => componentDefs[t].name).join(' · '));
+  // KAPIDA KÜNYE YOK (kullanıcı 2026-11-09, Canlı Not 84: "Gereksiz açıklamaları kaldıralım."):
+  // önce adın altında sihirbazın adımları (4), STEP'in biçimi (5) ve "6 araç" yazıyordu.
+  test('KAPIDA KÜNYE YOK: kapı simge ve ad; boş kanvasın araçları yalnız title\'da', () => {
+    const K = BS.veMntBaslangicKapilar();
+    expect(K.map((k) => [k.ey, k.ad, k.kunye])).toEqual([['sihirbaz', 'Sihirbazla kur', undefined],
+      ['step', 'STEP\'ten başla', undefined], ['bos', 'Boş kanvas', undefined]]);
+    expect(K[2].title).toBe(cp.VE_MNT_ARAC_TIPLERI.map((t) => componentDefs[t].name).join(' · '));
   });
   test('Kılavuz: üretici yüklüyse düğme basılır ve tık modülün kılavuzunu açar', () => {
     const GK = require('../../js/guide-kit.js');
@@ -690,13 +687,18 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     ['js/cp-mount.js', 'js/cp-mount-3b-menu.js', 'js/mount-core.js', 'js/guide-mount.js'].forEach((f) => expect(D.test(f)).toBe(true));
     ['js/cp-fead.js', 'css/styles.css', 'tests/unit/mount-core.test.js', 'js/components.js'].forEach((f) => expect(D.test(f)).toBe(false));
   });
-  test('ilk açılışta ilk satır açık: ayrıntısı görünür, Yükle\'si dolu; ötekiler kapalı', () => {
+  // ÖRNEKLER KAPALI GELİR (kullanıcı 2026-11-09, Canlı Not 85: "Örneklerden biri açık geliyor.
+  // Kapalı gelsin"): önce ilk satır (BMC Siper) açık gelirdi.
+  test('ilk açılışta hiçbir satır açık değil; ad tıklanınca ayrıntı açılır', () => {
     BS.veMntBaslangicKapsam('mount-analysis');
+    expect(acik()).toEqual([]);
+    ['siper', 'tulga'].forEach((v) => {
+      expect(satir(v).querySelector('.ve-bas-satir-ac').getAttribute('aria-expanded')).toBe('false');
+      expect(satir(v).querySelector('.ve-bas-satir-detay').hidden).toBe(true);
+    });
+    satir('siper').querySelector('.ve-bas-satir-ac').click();
     expect(acik()).toEqual(['siper']);
-    expect(satir('siper').querySelector('.ve-bas-satir-ac').getAttribute('aria-expanded')).toBe('true');
     expect(satir('siper').querySelector('.ve-bas-satir-detay').hidden).toBe(false);
-    expect(satir('tulga').querySelector('.ve-bas-satir-ac').getAttribute('aria-expanded')).toBe('false');
-    expect(satir('tulga').querySelector('.ve-bas-satir-detay').hidden).toBe(true);
     expect([...satir('siper').querySelectorAll('.ve-bas-satir-blok h3')].map((h) => h.textContent)).toEqual(['Gövdeler', 'Takozlar']);
   });
   test('Yükle TEK TIKLA kurar; satırın adı yalnız açar/kapar, eylem ÇAĞRILMAZ', () => {
@@ -718,6 +720,7 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
   // kapılar yerinde; açık sekme görünüm durumu, sayfa yeniden açılınca yerinde.
   test('sekme: Kurgu satırları gelir, kapılar yerinde; açık sekme görünüm durumu', () => {
     BS.veMntBaslangicKapsam('mount-analysis');
+    satir('siper').querySelector('.ve-bas-satir-ac').click();          // açık satır sekmeler arasında korunur
     const kapi = el().querySelector('.ve-bas-kapi');
     const sek = (i) => el().querySelectorAll('.ve-bas-sekme')[i];
     const satirlar = () => [...el().querySelectorAll('.ve-bas-satir')].map((r) => r.getAttribute('data-v'));

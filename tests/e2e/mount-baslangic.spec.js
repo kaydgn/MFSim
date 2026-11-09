@@ -82,6 +82,9 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
       baslik: (document.querySelector('#ve-mnt-baslangic .ve-bas-kimlik h1') || {}).textContent,
       veri: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri').length,
       kunye: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
+      // CSS yüksekliği: açılış geçişi sayfayı kısa bir süre ölçekliyor, kutunun ölçüsü onunla küçülür
+      kapiBoy: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => parseFloat(getComputedStyle(b).height)),
+      dip: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-dip > button')].map((b) => parseFloat(getComputedStyle(b).height)),
       kilavuz: document.querySelector('#ve-mnt-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
       // ÇALIŞMA MASASI: sayfa açıkken ray yok; masada örneklerin dizini, resim yok
       ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width };
@@ -97,10 +100,12 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
   expect(o.satir).toBe(o.ornek);                         // açık sekme: araçlar
   expect(o.sekme).toEqual(['Araçlar' + o.ornek, 'Kurgu' + o.kurgu]);
   expect(o.cizim).toBe(0);
-  expect(o.acik).toEqual(['siper']);                     // ilk açılışta ilk satır açık
+  expect(o.acik).toEqual([]);                            // ilk açılışta hiçbir satır açık değil (Canlı Not 85; önce ilki)
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
   expect(o.veri).toBe(0);
-  expect(o.kunye).toEqual([4, 5, 1]);
+  expect(o.kunye).toEqual([]);                           // kapıda künye yok (Canlı Not 84; önce 4 · 5 · 1 ad)
+  expect(new Set(o.kapiBoy).size).toBe(1);               // üç kapı aynı boyda (önce 81 · 64 · 64 px)
+  expect(o.dip).toEqual([26, 26]);                       // Ana topoloji · Kılavuz (Canlı Not 86; önce 32 px)
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
   // Kılavuz düğmesi modülün kılavuzunu açar (pencere açmak yerine çağrı yakalanır).
@@ -334,7 +339,7 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
   await takozGir(page);
   const acik = () => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir')]
     .filter((r) => r.querySelector('.ve-bas-satir-detay').offsetHeight > 0).map((r) => r.getAttribute('data-v')));
-  expect(await acik()).toEqual(['siper']);
+  expect(await acik()).toEqual([]);                      // ilk açılışta hiçbiri (Canlı Not 85)
   // Kurgu örnekleri kendi sekmesinde (Canlı Not 6); sekme yalnız örnekleri yeniden basar.
   await page.click('#ve-mnt-baslangic .ve-bas-sekme[data-v="1"]');
   expect(await acik()).toEqual([]);

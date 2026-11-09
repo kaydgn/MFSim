@@ -200,8 +200,9 @@ function veBasSatirHTML(r, acik){
 //      bolumler:[{ baslik, sekme (masa — sekmenin adı), satirlar:[satır…] (masa) | karolar:[karo…] (sütun) }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Boş bölüm basılmaz.
 // Masa: panel (kimlik · kapılar · veri · örnekler · dönüş ve Kılavuz) · masa (son
-// değişiklikler); `acikV` açık satırın anahtarı — verilmezse ilk satır, '' hiçbiri;
-// `sekmeV` örneklerin açık sekmesi.
+// değişiklikler); `acikV` açık satırın anahtarı — verilmezse HİÇBİRİ (kullanıcı
+// 2026-11-09, Canlı Not 85: *"Örneklerden biri açık geliyor. Kapalı gelsin"* — önce ilk
+// satır açık gelirdi); `sekmeV` örneklerin açık sekmesi.
 // Sütun: kimlik · veri · kapılar · bölümler.
 // Sayfanın üst satırı, serbest başlığı (`baslik`), alt metni, bölüm notu ve
 // dipnotu YOK (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş
@@ -213,10 +214,6 @@ function _veBasBolumler(s){
   var alan = _veBasSutun(s) ? 'karolar' : 'satirlar';
   return ((s && (s.bolumler || (s.bolum ? [s.bolum] : []))) || [])
     .filter(function(b){ return b && b[alan] && b[alan].length; });
-}
-function _veBasIlkSatir(s){
-  var b = _veBasBolumler(s)[0];
-  return b ? b.satirlar[0] : null;
 }
 function _veBasSutunHTML(s){
   var h = '<div class="ve-bas-ic ve-bas-ic--sutun">'
@@ -233,8 +230,7 @@ function veBasSayfaHTML(s, acikV, sekmeV){
   s = s || {};
   if(_veBasSutun(s)) return _veBasSutunHTML(s);
   var bolumler = _veBasBolumler(s);
-  var ilk = _veBasIlkSatir(s);
-  var ac = (acikV === undefined || acikV === null) ? (ilk ? String(ilk.v) : '') : String(acikV);
+  var ac = (acikV === undefined || acikV === null) ? '' : String(acikV);
   var h = '<div class="ve-bas-ic ve-bas-ic--masa">'
     + '<aside class="ve-bas-panel">'
     +   veBasKimlikHTML(s.kimlik, false, true)
@@ -413,8 +409,8 @@ function _veBasSekmeSec(el, v){
   var o = el && el._veBasO, bolum = el && el.querySelector('.ve-bas-ornek');
   if(!o || typeof o.sayfa !== 'function' || !bolum) return false;
   _veBasSekme[el.id] = Number(v) || 0;
-  var s = o.sayfa() || {}, B = _veBasBolumler(s), ilk = _veBasIlkSatir(s);
-  var acikV = _veBasAcikSatir[el.id], ac = (acikV === undefined || acikV === null) ? (ilk ? String(ilk.v) : '') : String(acikV);
+  var s = o.sayfa() || {}, B = _veBasBolumler(s);
+  var acikV = _veBasAcikSatir[el.id], ac = (acikV === undefined || acikV === null) ? '' : String(acikV);
   var t = document.createElement('div');
   t.innerHTML = veBasOrnekHTML(B, ac, _veBasSekme[el.id]);
   bolum.parentNode.replaceChild(t.firstChild, bolum);
