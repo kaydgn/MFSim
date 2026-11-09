@@ -58,9 +58,20 @@ describe('Takoz bilgi bildirimi yalnız görünmeyen sonucu söyler', () => {
   });
 });
 
+// TEK İSTİSNA (kullanıcı 2026-11-09, Canlı Not 93: *"talimatları yazalım … Kullanıcıya referans
+// olur"*): Takoz Başlangıç Sihirbazı'nın TALİMAT bölümü — yalnız VE_MW_STEPS[].talimat'taki metinler.
+const TALIMAT = (() => {
+  const src = oku('js/cp-mount-wizard.js');
+  const blok = src.slice(src.indexOf('var VE_MW_STEPS = ['), src.indexOf('];', src.indexOf('var VE_MW_STEPS = [')) + 2);
+  const VE_MW_STEPS = new Function(blok + '\nreturn VE_MW_STEPS;')();
+  return new Set(VE_MW_STEPS.flatMap((s) => s.talimat || []));
+})();
+
 describe('Takoz dizgeleri tarif ve dosya yolu taşımaz', () => {
   test('tarif fiili ("… girin", "Takoz seçin…") ve "(js/…)" yok', () => {
+    expect(TALIMAT.size).toBeGreaterThan(10);
     const sapan = DOSYALAR.flatMap((f) => dizgeler(f)
+      .filter((d) => !(f === 'js/cp-mount-wizard.js' && TALIMAT.has(d.metin)))
       .filter((d) => TARIF.test(d.metin) || /\bjs\/[\w-]+\.js\b/.test(d.metin))
       .map((d) => f + ':' + d.satir + ' ' + d.metin.slice(0, 120)));
     expect(sapan).toEqual([]);

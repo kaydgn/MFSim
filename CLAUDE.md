@@ -626,6 +626,13 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
 - **Kalıp açıklama yuvası taşımaz.** Bir üretici (kit, kabuk, kart) `not`,
   `alt` ya da `aciklama` alanı açarsa her kullanan onu doldurur: başlangıç
   kitinin beş yuvası iki modülde 15 açıklama üretti.
+- **TEK İSTİSNA — Takoz Başlangıç Sihirbazı'nın TALİMAT bölümü** (kullanıcı
+  2026-11-09, Canlı Not 93: *"talimatları yazalım … Kullanıcıya referans olur.
+  Adım eksikliklerini de ekleyelim"*): adım listesinin altında açık adımın 3–4
+  maddelik talimatı (`VE_MW_STEPS[].talimat`, denetimler ekrandaki adıyla) ve
+  eksikleri (adımın sorun listesi; girdilerin sütununda ikinci kez yazılmaz).
+  Talimat başka yüzeye genişletilmez; metinleri tabanda kullanıcı kararıyla.
+  Kapı: `mount-wizard.test.js` → *TALİMAT*.
 - **Silinen bir bloğun yerine yönlendirme cümlesi konmaz.** 2026-08-31'de
   "Katalog Önerisi" kalkınca yerine böyle bir satır kondu. Yönlendirme
   yuvanın içeriğidir, kalkan bir bölümün yerini tutan not değil: yuvası yoksa

@@ -168,7 +168,8 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
   // aralığını ikiye katlıyordu (yerleşimi mount-sihirbaz.spec.js → BAŞLANGIÇ SÜTUNU ölçer).
   test('ADIMDA YALNIZ AD · YÖNLENDİRME DÜĞMENİN YANINDA · künye ile tablonun arası kartın aralığı', () => {
     W.veMntWizAc();
-    expect(W.VE_MW_STEPS.every((s) => Object.keys(s).join() === 'key,ad')).toBe(true);   // kalıpta açıklama yuvası yok
+    // adımın satırında yalnız ad; talimat (Canlı Not 93) satırda değil, listenin altındaki bölümde
+    expect(W.VE_MW_STEPS.every((s) => Object.keys(s).join() === 'key,ad,talimat')).toBe(true);
     expect(document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em')).toHaveLength(0);
     expect([...document.querySelectorAll('#ve-mw-nav .ve-fw-step-t')].map((t) => t.textContent)).toEqual(W.VE_MW_STEPS.map((s) => s.ad));
     const satir = document.querySelector('#ve-mw-yan .ve-fw-stp[data-ve-dropzone="step"] > .ve-fw-rowbtns');
@@ -179,6 +180,39 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(css).toMatch(/\n\.ve-fw-rowbtns > \.ve-fw-stp-yon\{ flex:1 1 0; min-width:0; margin:0; text-wrap:balance; \}/);
     expect(css).toMatch(/\n#ve-mw-yan \.ve-fw-exnote, #ve-mw-yan \.ve-fw-exspec\{ margin-bottom:0; \}/);
     expect(css).toMatch(/\n#ve-mw-nav \.ve-fw-step\{ align-items:center; \}/);
+  });
+  // TALİMAT VE EKSİKLER (kullanıcı 2026-11-09, Canlı Not 93: *"hangi adımdaysak neler yapılması
+  // gerektiğini talimat gibi yazsak … Adım eksikliklerini de ekleyelim. Yani güzel ayrı bir yapı
+  // olsun."*): adım listesinin altında açık adımın talimatı ve eksikleri. Önce eksikler girdilerin
+  // sütunundaydı (Başlangıç ve Özet'te hiç yoktu) ve talimat yoktu; şimdi tek yerde, beş adımda da.
+  test('TALİMAT: adım listesinin altında açık adımın talimatı ve eksikleri; eksikler sütunda ikinci kez yok', () => {
+    W.veMntWizAc();
+    W.VE_MW_STEPS.forEach((s) => {
+      expect([s.key, s.talimat.length >= 3 && s.talimat.length <= 4]).toEqual([s.key, true]);
+      s.talimat.forEach((t) => expect([t, /\.$/.test(t), t.split(/\s+/).length <= 12]).toEqual([t, true, true]));
+    });
+    W.VE_MW_STEPS.forEach((s, i) => {
+      W.veMntWizGoto(i);
+      const b = document.querySelector('#ve-mw-nav > .ve-mw-talimat');
+      expect(b).not.toBeNull();
+      expect(b.previousElementSibling.matches('ol.ve-fw-steps')).toBe(true);   // listenin hemen altında
+      expect([...b.querySelectorAll('.ve-mw-talimat-bas')].map((h) => h.firstChild.textContent.trim())).toEqual(['Talimat', 'Eksikler']);
+      expect([...b.querySelectorAll('.ve-mw-talimat-liste li')].map((l) => l.textContent)).toEqual(s.talimat);
+      const sorun = W.veMntWizIssues(W.veMntWizCoz(W.veMntWizDefault()), i);
+      const eksik = [...b.querySelectorAll('.ve-mw-eksik-liste .ve-mw-eksik')];
+      expect(eksik.map((e) => e.textContent)).toEqual(sorun.map((x) => x.m));
+      expect(eksik.map((e) => e.className.replace('ve-mw-eksik ve-mw-eksik-', ''))).toEqual(sorun.map((x) => x.tur));
+      if (!sorun.length) expect(b.querySelector('.ve-mw-eksik-ok').textContent).toBe('Eksik yok.');
+      expect(document.getElementById('ve-mw-issue')).toBeNull();        // girdilerin sütununda ikinci kopya yok
+    });
+    // boş modelde gövde adımı eksik söyler; örnek doldurulunca eksik kalmaz (canlı yama rayı tazeler)
+    W.veMntWizGoto(1);
+    expect(document.querySelectorAll('#ve-mw-nav .ve-mw-eksik-err').length).toBeGreaterThan(0);
+    const ilk = core.getMountExampleList()[0].id;
+    W.veMntWizOrnek(ilk);
+    W.veMntWizGoto(1);
+    expect(document.querySelectorAll('#ve-mw-nav .ve-mw-eksik-err')).toHaveLength(0);
+    W.veMntWizKapat(true);
   });
   test('boş durumun eksikleri gövde ve takoz adımında', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());

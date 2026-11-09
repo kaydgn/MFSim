@@ -7728,6 +7728,41 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Takoz'da adımın satırı yalnız ad (Canlı Not 83): daire, ad ve rozet aynı eksende. */
 #ve-mw-nav .ve-fw-step{ align-items:center; }
 
+/* TALİMAT VE EKSİKLER (kullanıcı 2026-11-09, Canlı Not 93): adım listesinin altında açık
+   adımın talimatı ve eksikleri — rayın zemininde, üstünde tek ince çizgi; başlıklar
+   Komutlar'ın grup başlığı dilinde. Dar ekranda ray yatay şerit olur, bölüm çizilmez. */
+.ve-mw-talimat{
+  margin:10px 12px 0; padding-top:8px; border-top:1px solid var(--border-color);
+  display:flex; flex-direction:column; gap:6px;
+}
+.ve-mw-talimat-bas{
+  margin:2px 0 0; display:flex; align-items:center; gap:6px;
+  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wider, 0.06em);
+  text-transform:uppercase; color:var(--text-muted);
+}
+.ve-mw-talimat-n{ font-variant-numeric:tabular-nums; color:var(--text-secondary); }
+.ve-mw-talimat-liste, .ve-mw-eksik-liste{
+  list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;
+}
+.ve-mw-talimat-liste{ counter-reset:ve-mwt; }
+.ve-mw-talimat-liste li{
+  counter-increment:ve-mwt; display:grid; grid-template-columns:14px minmax(0, 1fr); gap:4px;
+  font-size:var(--fs-body); line-height:1.4; color:var(--text-secondary);
+}
+.ve-mw-talimat-liste li::before{
+  content:counter(ve-mwt) "."; color:var(--text-muted); font-variant-numeric:tabular-nums;
+}
+.ve-mw-eksik{
+  display:grid; grid-template-columns:14px minmax(0, 1fr); gap:4px; align-items:start;
+  font-size:var(--fs-body); line-height:1.4;
+}
+.ve-mw-eksik .mf-ico{ width:12px; height:12px; margin-top:2px; }
+.ve-mw-eksik-err{ color:var(--ink-danger); }
+.ve-mw-eksik-warn{ color:var(--ink-warning); }
+.ve-mw-eksik-ok{ color:var(--ink-success); }
+.ve-mw-nw{ white-space:nowrap; }
+@media (max-width: 900px){ .ve-mw-talimat{ display:none; } }
+
 /* Rozet HER ADIMDA var: tamamlanmışta ✓, aksi hâlde eksik/uyarı SAYISI.
    Yalnız hata varken çizilseydi "tamam" hâli sessiz kalırdı — kullanıcının
    bildirdiği eksiklik buydu. */
