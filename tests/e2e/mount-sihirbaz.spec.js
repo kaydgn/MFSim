@@ -197,7 +197,10 @@ test('EYLEM ŞERİDİ: Geri · İleri girdilerin sütununun dibinde, 32 px; kıs
 // Önce (10 Ton TTA, 1920×952): Seçilen örnek'te künye ile tablonun arası 20 px (kartın aralığı
 // 10 px, künyenin alt payı onu ikiye katlıyordu); STEP kartının yönlendirmesi düğmenin altında,
 // ayrı satırda; adımların satırı 62 px (ad + iki satırlık açıklama).
-test('BAŞLANGIÇ SÜTUNU: künye ile tablo arası kartın aralığı; yönlendirme düğmenin yanında; adımda yalnız ad', async ({ page }) => {
+// Canlı Not 96 (kullanıcı 2026-11-09: *"bu başlıklarda neler girildiği yazılsın. Böylesi de çok
+// sade olmuş."*): adın altında adımda girilenlerin adları geri geldi — kısa ad listesi, satır
+// en çok iki satırlık (adım ≤ 64 px), sözcük bölünmez.
+test('BAŞLANGIÇ SÜTUNU: künye ile tablo arası kartın aralığı; yönlendirme düğmenin yanında; adımda ad ve girilenler', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
@@ -214,15 +217,16 @@ test('BAŞLANGIÇ SÜTUNU: künye ile tablo arası kartın aralığı; yönlendi
       yonYanda: yon.left >= btn.right && yon.top < btn.bottom && yon.bottom > btn.top,
       yonOrtasi: Math.round((yon.top + yon.bottom) / 2 - (btn.top + btn.bottom) / 2),
       stpKart: Math.round(stp.height),
-      aciklama: document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em').length,
+      girdi: [...document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em')].map((e) => Math.round(r(e).height / parseFloat(getComputedStyle(e).lineHeight))),
       adimBoy: [...document.querySelectorAll('#ve-mw-nav .ve-fw-step')].map((li) => Math.round(r(li).height)),
     };
   });
   expect(o.arasi).toBe(10);
   expect(o.yonYanda).toBe(true);
   expect(Math.abs(o.yonOrtasi)).toBeLessThanOrEqual(1);
-  expect(o.aciklama).toBe(0);
-  expect(o.adimBoy.every((h) => h <= 40)).toBe(true);
+  expect(o.girdi.length).toBe(5);                                     // beş adımın beşinde
+  expect(o.girdi.every((n) => n >= 1 && n <= 2)).toBe(true);          // en çok iki satır
+  expect(o.adimBoy.every((h) => h <= 64)).toBe(true);
   expect(hatalar).toEqual([]);
 });
 

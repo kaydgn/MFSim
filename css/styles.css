@@ -7725,20 +7725,20 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-step-t{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .ve-fw-step-t b{ font-size:var(--fs-md); font-weight:600; color:var(--text-primary); }
 .ve-fw-step-t em{ font-size:var(--fs-micro); font-style:normal; color:var(--text-muted); line-height:1.4; }
-/* Takoz'da adımın satırı yalnız ad (Canlı Not 83): daire, ad ve rozet aynı eksende. */
-#ve-mw-nav .ve-fw-step{ align-items:center; }
 
 /* TALİMAT VE EKSİKLER (kullanıcı 2026-11-09, Canlı Not 93): adım listesinin altında açık
-   adımın talimatı ve eksikleri — rayın zemininde, üstünde tek ince çizgi; başlıklar
-   Komutlar'ın grup başlığı dilinde. Dar ekranda ray yatay şerit olur, bölüm çizilmez. */
+   adımın talimatı ve eksikleri — rayın zemininde, üstünde tek ince çizgi. Talimatın başlığı
+   yok; Eksikler'in başlığı KALIN ve başlık renginde (Canlı Not 95: *"Eksikler başlığı kalın
+   olsun biraz. Başlık olduğu belli olsun."* — soluk 10 px'lik etiketti). Dar ekranda ray
+   yatay şerit olur, bölüm çizilmez. */
 .ve-mw-talimat{
   margin:10px 12px 0; padding-top:8px; border-top:1px solid var(--border-color);
   display:flex; flex-direction:column; gap:6px;
 }
 .ve-mw-talimat-bas{
-  margin:2px 0 0; display:flex; align-items:center; gap:6px;
-  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wider, 0.06em);
-  text-transform:uppercase; color:var(--text-muted);
+  margin:6px 0 0; display:flex; align-items:center; gap:6px;
+  font-size:var(--fs-tiny); font-weight:700; letter-spacing:var(--tracking-wider, 0.06em);
+  text-transform:uppercase; color:var(--text-heading);
 }
 .ve-mw-talimat-n{ font-variant-numeric:tabular-nums; color:var(--text-secondary); }
 .ve-mw-talimat-liste, .ve-mw-eksik-liste{
