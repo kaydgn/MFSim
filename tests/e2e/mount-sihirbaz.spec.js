@@ -192,6 +192,40 @@ test('EYLEM ŞERİDİ: Geri · İleri girdilerin sütununun dibinde, 32 px; kıs
   expect(hatalar).toEqual([]);
 });
 
+// Canlı Not 81 · 82 · 83 (kullanıcı 2026-11-09): "Arada bir boşluk var. Fazla satırlı bir boşluk
+// o." · "Açıklamayı yana alalım." · "Açıklamaları düzeltelim, gereksiz açıklamaları kaldıralım."
+// Önce (10 Ton TTA, 1920×952): Seçilen örnek'te künye ile tablonun arası 20 px (kartın aralığı
+// 10 px, künyenin alt payı onu ikiye katlıyordu); STEP kartının yönlendirmesi düğmenin altında,
+// ayrı satırda; adımların satırı 62 px (ad + iki satırlık açıklama).
+test('BAŞLANGIÇ SÜTUNU: künye ile tablo arası kartın aralığı; yönlendirme düğmenin yanında; adımda yalnız ad', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { veMntWizAc(); veMntWizOrnek('tta10'); });
+  await page.waitForFunction(() => document.querySelector('#ve-mw-yan .ve-fw-exspec'), null, { timeout: 20000 });
+  const o = await page.evaluate(() => {
+    const r = (el) => el.getBoundingClientRect();
+    const not = r(document.querySelector('#ve-mw-yan .ve-fw-exnote')), tab = r(document.querySelector('#ve-mw-yan .ve-fw-exspec'));
+    const kart = r(document.querySelector('#ve-mw-yan .ve-fw-exspec').closest('.ve-fw-card'));
+    const btn = r(document.querySelector('#ve-mw-yan .ve-fw-stp-sec')), yon = r(document.querySelector('#ve-mw-yan .ve-fw-stp-yon'));
+    const stp = r(document.querySelector('#ve-mw-yan .ve-fw-stp').closest('.ve-fw-card'));
+    return {
+      arasi: Math.round(tab.top - not.bottom), dip: Math.round(kart.bottom - tab.bottom),
+      yonYanda: yon.left >= btn.right && yon.top < btn.bottom && yon.bottom > btn.top,
+      yonOrtasi: Math.round((yon.top + yon.bottom) / 2 - (btn.top + btn.bottom) / 2),
+      stpKart: Math.round(stp.height),
+      aciklama: document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em').length,
+      adimBoy: [...document.querySelectorAll('#ve-mw-nav .ve-fw-step')].map((li) => Math.round(r(li).height)),
+    };
+  });
+  expect(o.arasi).toBe(10);
+  expect(o.yonYanda).toBe(true);
+  expect(Math.abs(o.yonOrtasi)).toBeLessThanOrEqual(1);
+  expect(o.aciklama).toBe(0);
+  expect(o.adimBoy.every((h) => h <= 40)).toBe(true);
+  expect(hatalar).toEqual([]);
+});
+
 test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüye binmez; kılavuz kısa, kesişmez; boyanan gövde ışının en yakını', async ({ page }) => {
   await bootApp(page);
   await page.setViewportSize({ width: 1500, height: 856 });

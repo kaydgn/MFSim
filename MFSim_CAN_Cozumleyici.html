@@ -8135,6 +8135,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-step-t{ display:flex; flex-direction:column; gap:1px; min-width:0; }
 .ve-fw-step-t b{ font-size:var(--fs-md); font-weight:600; color:var(--text-primary); }
 .ve-fw-step-t em{ font-size:var(--fs-micro); font-style:normal; color:var(--text-muted); line-height:1.4; }
+/* Takoz'da adımın satırı yalnız ad (Canlı Not 83): daire, ad ve rozet aynı eksende. */
+#ve-mw-nav .ve-fw-step{ align-items:center; }
 
 /* Rozet HER ADIMDA var: tamamlanmışta ✓, aksi hâlde eksik/uyarı SAYISI.
    Yalnız hata varken çizilseydi "tamam" hâli sessiz kalırdı — kullanıcının
@@ -8436,6 +8438,9 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-mini:hover:not(:disabled){ border-color:var(--accent-primary); color:var(--ink-accent); }
 .ve-fw-mini:disabled{ opacity:.35; cursor:not-allowed; }
 .ve-fw-rowbtns{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+/* Yönlendirme düğmenin yanında (Takoz'un STEP kartı, Canlı Not 82): satırın kalanını
+   alır, sığmazsa kendi kutusunda kırılır. */
+.ve-fw-rowbtns > .ve-fw-stp-yon{ flex:1 1 0; min-width:0; margin:0; text-wrap:balance; }
 .ve-fw-dim{ font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-fw-dim b{ color:var(--text-secondary); }
 
@@ -9322,6 +9327,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fw-exspec dt, .ve-fw-exspec dd{ padding:3px 0; border-bottom:1px dotted var(--border-light); }
 .ve-fw-exspec dt{ color:var(--text-muted); white-space:nowrap; }
 .ve-fw-exspec dd{ margin:0; color:var(--text-primary); }
+/* TAKOZ: künye ile tablonun arası kartın aralığı (kullanıcı 2026-11-09, Canlı Not 81:
+   *"Arada bir boşluk var. Fazla satırlı bir boşluk o."*) — kartın gövdesi esnek sütun,
+   aralığı 10 px; künyenin ve tablonun alt payı onu ikiye katlıyordu (20 px; dipte 22). */
+#ve-mw-yan .ve-fw-exnote, #ve-mw-yan .ve-fw-exspec{ margin-bottom:0; }
 
 
 /* Kol yönü alanı: giriş + seçici düğmesi yan yana, alanın tamamını kaplar. */
