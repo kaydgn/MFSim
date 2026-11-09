@@ -142,6 +142,15 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(yan.querySelector('.ve-fw-seednav-n').textContent).toMatch(/^\d+ \/ \d+$/);
     W.veMntWizOrnekSec('');                                              // Boş başla
     expect(document.getElementById('ve-mw-yan').textContent).not.toMatch(/yüklendi/);
+    // GEZİNME LİSTENİN SATIRINDA (Canlı Not 78: "Şu butonları da yukarı taşıyalım. Bir satır aşağıda
+    // olmasının bir anlamı yok."): ↑ ↓ ve sayaç listeyle aynı kapta, alanın kendisi etiket değil
+    // (düğmeler etiketin içinde kalmasın); önce gezinme alanın ARDINDA ayrı bir satırdı
+    const alan = document.querySelector('#ve-mw-yan .ve-mw-ornek');
+    expect([alan.tagName, alan.querySelectorAll('.ve-mw-ornek-d > select[aria-label="Örnek"] + .ve-fw-seednav .ve-fw-mini').length]).toEqual(['DIV', 2]);
+    expect(document.querySelectorAll('#ve-mw-yan .ve-fw-card-b > .ve-fw-seednav')).toHaveLength(0);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-fw-yan \.ve-fw-card-b > \.ve-fw-field\.ve-mw-ornek\{ grid-template-columns:auto minmax\(0, 1fr\); \}/);
+    expect(css).toMatch(/\.ve-mw-ornek-d > \.ve-fw-seednav\{ flex:none; margin-top:0; \}/);
     W.veMntWizKapat(true);
     // tuvaldeki modelden: kartın başlığı adlandırır, satır yalnız sayılar
     global.nodes = [{ id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },

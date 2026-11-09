@@ -9068,6 +9068,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 
 .ve-fw-seednav{ display:flex; align-items:center; gap:4px; margin-top:6px; }
+/* Takoz sihirbazının Örnekten doldur'u (Canlı Not 78): gezinme listenin satırında; ad sütunu
+   adın kendisi kadar, liste kalan genişliği alır */
+.ve-fw-yan .ve-fw-card-b > .ve-fw-field.ve-mw-ornek{ grid-template-columns:auto minmax(0, 1fr); }
+.ve-mw-ornek-d{ display:flex; align-items:center; gap:4px; min-width:0; }
+.ve-mw-ornek-d > select.ve-fw-inp{ flex:1 1 auto; min-width:0; width:auto; }
+.ve-mw-ornek-d > .ve-fw-seednav{ flex:none; margin-top:0; }
 /* Denklem: KaTeX gelmeden ÖNCE de okunur dursun — yedek metin matematiksel
    bir dizgiyle yazılır, ham `p = c − a·(...)` gibi görünmez. */
 .ve-fw-tex{ font-size:var(--fs-tiny); letter-spacing:0.2px; }

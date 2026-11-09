@@ -150,6 +150,13 @@ test('EYLEM ŞERİDİ: Geri · İleri girdilerin sütununun dibinde, 32 px; kıs
       dugme: [...e.querySelectorAll('button')].map((b) => [b.textContent.trim(), Math.round(b.getBoundingClientRect().height)]),
       foot: !!document.getElementById('ve-mw-foot'), adim: document.querySelector('#ve-mw-nav .ve-fw-step.on .ve-fw-step-no').textContent };
   });
+  // Canlı Not 78: Örnekten doldur'un gezinmesi listenin satırında (önce bir satır altta, 26 px)
+  const gez = await page.evaluate(() => {
+    const s = document.querySelector('#ve-mw-yan select[aria-label="Örnek"]').getBoundingClientRect();
+    const n = document.querySelector('#ve-mw-yan .ve-fw-seednav').getBoundingClientRect();
+    return { dikey: Math.round((n.top + n.bottom) / 2 - (s.top + s.bottom) / 2), sagda: n.left >= s.right };
+  });
+  expect(gez).toEqual({ dikey: 0, sagda: true });
   // Başlangıç: Geri yok, İleri satırın tamamı; şerit sütunun dibinde; alt çubuk yok
   let o = await olc();
   expect(o).toMatchObject({ son: true, ust: true, foot: false, adim: '1' });
