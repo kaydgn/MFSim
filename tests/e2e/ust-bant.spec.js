@@ -147,6 +147,8 @@ const pencereOlc = () => {
     satir: sat.length,
     // her komut TEK SATIR (ikon + ad) ve adı kesilmiyor
     yuksek: Math.max(0, ...sat.map((b) => b.getBoundingClientRect().height)),
+    // TEK SÜTUN (Canlı Not 92): bütün komutlar aynı sol kenarda
+    sol: [...new Set(sat.map((b) => Math.round(b.getBoundingClientRect().left)))],
     kesik: sat.filter((b) => { const l = b.querySelector('.ve-rb-lbl'); return l.scrollWidth > l.clientWidth + 0.5; })
       .map((b) => b.textContent.trim()),
     grup: [...document.querySelectorAll('#ve-rb-body .ve-rb-group-label')].map((g) => g.textContent.trim()),
@@ -172,24 +174,29 @@ test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAM
   expect(r.pencere.y).toBeGreaterThanOrEqual(r.bant.b);
   expect(r.pencere.y - r.bant.b).toBeLessThanOrEqual(6);
   expect(Math.abs(r.pencere.r - r.dugme.r)).toBeLessThanOrEqual(1);
-  expect(r.pencere.w).toBeLessThanOrEqual(320);                 // Canlı Not 88: 352 → 312 px
+  expect(r.pencere.w).toBeLessThanOrEqual(200);                 // Canlı Not 92: 312 → 185 px (88: 352 → 312)
   // sekmeler pencerenin başında; açılınca odak seçili sekmede
   expect(r.sekme).toEqual(expect.arrayContaining(['Giriş', 'Görünüm', 'Araçlar']));
   expect(r.aktif).toBe('Giriş');
   expect(r.odak).toBe('Giriş');
   expect(r.grup.length).toBeGreaterThan(2);
   expect(r.satir).toBeGreaterThan(8);
-  expect(r.yuksek).toBeLessThanOrEqual(24);                     // Canlı Not 88: satır 28 + 2 → 24 px
+  expect(r.yuksek).toBeLessThanOrEqual(22);                     // Canlı Not 92: satır 24 → 22 px (88: 28 + 2 → 24)
+  expect(r.sol).toHaveLength(1);                                // tek sütun: iki sütunun arası ~60 px boştu
   expect(r.kesik).toEqual([]);
   // İKİ TEMADA okunur ve yazı kutusuna sığar (ortak ölçüler)
   await kontrastKur(page);
   await yerlesimKur(page);
-  const kotu = [];
+  const kotu = [], enler = new Set();
   for (const tema of ['acik', 'koyu']) {
     await page.evaluate((t) => changeTheme(t), tema);
     for (const sekme of ['giris', 'gorunum', 'araclar']) {
       await page.click(`#ve-rb-tabs [data-rb-tab="${sekme}"]`);
       await page.waitForTimeout(120);
+      // genişlik içerikten ama sekme değişince pencere OYNAMAZ (sekmeler tık altında kalır)
+      enler.add(await page.evaluate(() => Math.round(document.getElementById('ve-rb-dock').getBoundingClientRect().width)));
+      const ks = await page.evaluate(pencereOlc);
+      expect([sekme, ks.sol.length, ks.kesik]).toEqual([sekme, 1, []]);
       const k = await page.evaluate(() => window.__kontrast('#ve-rb-dock'));
       expect(k.olculen).toBeGreaterThan(8);
       kontrastOzet(k.kotu).forEach((x) => kotu.push(`${tema}/${sekme} · ${x}`));
@@ -198,6 +205,7 @@ test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAM
     }
   }
   expect(kotu).toEqual([]);
+  expect(enler.size).toBe(1);
 });
 
 test('KOMUTLARIN PENCERESİ — sekme değişir; komut, Esc ve dışarı tık kapatır', async ({ page }) => {
