@@ -2952,19 +2952,21 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   flex:1 0 16px;
 }
 /* Birincil eylem: kesiğin tek dolu yüzeyi — vurgu zemininde kesiğin
-   renginde yazı (iki temada aynı). */
+   renginde yazı (iki temada aynı). İNCE (kullanıcı 2026-11-09, Canlı Not 67:
+   *"Şu buton çok kalın olmuş"*): 36 px — modül satırının (58 px) altında;
+   kapı welcome-screen.test.js → *İNCE BİRİNCİL DÜĞME*. */
 .ve-welcome-open{
   flex:none;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap:10px;
   width:280px;
   max-width:100%;
-  height:52px;
-  padding:0 18px 0 20px;
+  height:36px;
+  padding:0 14px 0 16px;
   font-family:var(--font-sans);
-  font-size:var(--fs-lg);
+  font-size:var(--fs-md);
   font-weight:600;
   color:var(--sinema-bant);
   background:var(--sinema-vurgu);
@@ -2978,11 +2980,11 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 .ve-welcome-open-ad{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
 }
 .ve-welcome-open .mf-ico{
-  width:19px;
-  height:19px;
+  width:16px;
+  height:16px;
 }
 .ve-welcome-links{
   flex:none;

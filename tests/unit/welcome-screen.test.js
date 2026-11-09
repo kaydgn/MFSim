@@ -382,6 +382,23 @@ describe('KESİK — renk temadan bağımsız', () => {
     expect(oran(bant, hex('--sinema-vurgu-yazi'))).toBeGreaterThanOrEqual(4.5);
   });
 
+  // İNCE BİRİNCİL DÜĞME (kullanıcı 2026-11-09, Canlı Not 67: *"Şu buton çok kalın
+  // olmuş. Bu butonu biraz daha inceltebilir miyiz?"*): 52 px'lik dolu düğme
+  // modül satırları kadar iriydi. Kural: ≤ 36 px ve kısa ekranın modül satırından
+  // (48 px) bile ince; yazı ve ikon boyla birlikte küçülür.
+  test('İNCE BİRİNCİL DÜĞME — ≤ 36 px, modül satırından ince; yazı 13 px, ikon 16 px', () => {
+    const d = kural(CSS_WELCOME, '.ve-welcome-open');
+    const boy = parseFloat(d.match(/(?:^|;|\s)height:(\d+)px/)[1]);
+    expect(boy).toBeLessThanOrEqual(36);
+    const satir = parseFloat(kural(CSS_WELCOME, '.ve-module-card').match(/(?:^|;|\s)height:(\d+)px/)[1]);
+    expect(boy).toBeLessThan(satir);
+    expect(boy).toBeLessThan(48);                                        // kısa ekranın satırı
+    expect(d).toContain('font-size:var(--fs-md)');
+    const ik = kural(CSS_WELCOME, '.ve-welcome-open .mf-ico');
+    expect(ik).toContain('width:16px');
+    expect(ik).toContain('height:16px');
+  });
+
   test('üstüne gelinen satırın zemininde yazı ≥ 4,5:1', () => {
     // --kesik-kabar = yazının %7'si + kesik; jetonun kendisinden okunur.
     const p = parseFloat(jeton('--kesik-kabar').match(/(\d+(?:\.\d+)?)%/)[1]) / 100;
