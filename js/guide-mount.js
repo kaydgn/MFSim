@@ -536,7 +536,7 @@ var _GM_GORUNUM = [
 ];
 
 var _GM_SIHIRBAZ = [
-  { k: 'adimlar', ad: 'Adımlar', not: 'Rozet adımın eksik sayısı; yeşil onay tamam.', yer: 'alt' },
+  { k: 'adimlar', ad: 'Adımlar', not: 'Adın altında adımda girilenler; rozet eksik sayısı, yeşil onay tamam.', yer: 'alt' },
   { k: 'masa', ad: 'Önizleme', not: 'Modelin aksonometrik çizimi, adım adım dolar.', cerceve: false, yer: 'alt' },
   { k: 'durum', ad: 'Çözülebilirlik', not: 'Çözülüyor ya da Çözülemiyor; toplam kütle, takoz sayısı.' },
   { k: 'gorunus', ad: '3B · Üstten · Yandan · Önden', not: 'Önizlemenin bakışı.', yer: 'sag' },
@@ -544,8 +544,8 @@ var _GM_SIHIRBAZ = [
   { k: 'ornek', ad: 'Örnekten doldur', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
   { k: 'ileri', ad: 'İleri', not: 'Sonraki adım; son adımda Modeli kur.', yer: 'sol-orta' },
   { k: 'kapat', ad: 'Kapat', not: 'Sihirbazı kapatır; tuval değişmez.', yer: 'sol-orta' },
-  { k: 'talimat', ad: 'Talimat', not: 'Açık adımda yapılacaklar, sırayla.', yer: 'sag-orta' },
-  { k: 'eksikler', ad: 'Eksikler', not: 'Adımın eksik ve hatalı girdileri, sayısıyla; yoksa Eksik yok.', yer: 'sag-orta' }
+  { k: 'talimat', ad: 'Talimat', not: 'Açık adımda yapılacaklar, sırayla.', cerceve: false, yer: 'sag-dis' },
+  { k: 'eksikler', ad: 'Eksikler', not: 'Adımın eksik ve hatalı girdileri, sayısıyla; yoksa Eksik yok.', cerceve: false, yer: 'sag-orta' }
 ];
 
 var _GM_3B_HIZLI = [
@@ -1344,8 +1344,8 @@ function _gmSec15(){
     _gmN(_GM_SIHIRBAZ, 'ileri') + ' <strong>İleri</strong> ile adımları sırayla doldurun. Soldaki '
       + _gmN(_GM_SIHIRBAZ, 'adimlar') + ' listede her adımın rozeti eksik sayısıdır; adıma tıklamak oraya '
       + 'gider.',
-    'Her adımda listenin altındaki ' + _gmN(_GM_SIHIRBAZ, 'talimat') + ' <strong>Talimat</strong>’ı izleyin: '
-      + 'o adımda yapılacaklar sırayla, denetimler ekrandaki adıyla. ' + _gmN(_GM_SIHIRBAZ, 'eksikler')
+    'Her adımda listenin altındaki ' + _gmN(_GM_SIHIRBAZ, 'talimat') + ' talimatı izleyin: o adımda '
+      + 'yapılacaklar sırayla, denetimler ekrandaki adıyla. ' + _gmN(_GM_SIHIRBAZ, 'eksikler')
       + ' <strong>Eksikler</strong> adımın eksik ve hatalı girdilerini sayısıyla listeler; eksik yoksa '
       + '<em>Eksik yok.</em> yazar.',
     'Son adımda <strong>Modeli kur</strong>’a basın. Ekranda: sihirbaz kapanır, model tuvale kurulur; '

@@ -145,8 +145,8 @@ const DURAKLAR = [
       ornek: '#ve-mw-yan .ve-mw-ornek',
       ileri: '#ve-mw-eylem .ve-fw-btn-primary',
       kapat: '#ve-mw-title ~ .ve-settings-close',
-      talimat: '#ve-mw-nav .ve-mw-talimat > h3:nth-of-type(1)',
-      eksikler: '#ve-mw-nav .ve-mw-talimat > h3:nth-of-type(2)',
+      talimat: '#ve-mw-nav .ve-mw-talimat-liste',
+      eksikler: '#ve-mw-nav .ve-mw-talimat > h3.ve-mw-talimat-bas',
     },
     async kur(p) {
       await p.click('.ve-module-card[data-module="mount-analysis"]');
