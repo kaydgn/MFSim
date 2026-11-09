@@ -25,9 +25,9 @@ test.beforeAll(() => {
 });
 test.setTimeout(420000);
 
-const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS']];
+const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS'], ['tta10', '4500 SP']];
 
-test('Takoz raporu: çizgi yazıyı kesmiyor, yazı yazıya binmiyor, sözcük bölünmüyor, küçük yazı yok — üç örnek', async ({ page, browser }) => {
+test('Takoz raporu: çizgi yazıyı kesmiyor, yazı yazıya binmiyor, sözcük bölünmüyor, küçük yazı yok — dört örnek', async ({ page, browser }) => {
   await page.setViewportSize({ width: 1920, height: 1032 });
   page.on('dialog', (d) => d.accept());
   await page.goto('file://' + BUILD);

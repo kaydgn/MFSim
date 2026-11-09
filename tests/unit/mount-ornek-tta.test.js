@@ -16,11 +16,20 @@
  *     ağırlık merkezinden alıyor, Wt'ye (530 kg) ise PTO, pompa ve kardan payını
  *     da katıyor — grubun ağırlık merkeziyle L3 596,3, Mr 1.143,0. Kalan 9,6 N·m
  *     arka kulakların (11 kg, düzlemin arkasında) ve g'nin (9,81 ↔ 9,806) payı.
- *   · KAYIT — JSON ile kayıt defteri birebir; rapor §8.18 sınırsız.
+ *   · TORK — belgelerden (tests/fixtures/belge-tta-tork.js — dondurulmuş):
+ *     FR20317 (ISME385 30), iSCAAN 497-A392175-1 (TC541 · 4500 SP · rölanti) ve
+ *     ISM11 veri sayfası D353029BX03 (bloğun arka yüzü sınırı 1.350 N·m). Tork
+ *     zinciri programın yöntemi (Te azami × stall oranı × vites): iSCAAN'ın stall
+ *     noktasının %20,6 üstünde; arka takozun çekmeye geçtiği tork (~5 kN·m) ikisinin
+ *     de altında. Kriterler: 1b dışında hepsi uygun (baş-kıç 8,49 Hz bantta).
+ *   · ZARF — hareket zarfı (statik konuma göre) ve takoz sehim zarfı, rapor §8.19;
+ *     uç değerler durumların q'sundan bağımsız kinematikle yeniden üretilir.
+ *   · KAYIT — JSON ile kayıt defteri birebir; rapor §8.18 sınırlı, uygunluğun 5. satırı.
  */
 const fs = require('fs');
 const path = require('path');
 const X = require('../fixtures/excel-tta-askisiz.js');
+const BELGE = require('../fixtures/belge-tta-tork.js');
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
 global.veMntSignals = require('../../js/mount-signals.js');
@@ -213,7 +222,7 @@ describe('MFSİM ↔ EXCEL — statik (1 g)', () => {
   });
   test('bloğun arka yüzünde moment: 1.152,6 N·m; Excel 992,7 — farkın 150,3\'ü L3, kalan 9,6\'sı arka kulaklar ve g', () => {
     const st = R.baglanti.satirlar.find((r) => r.name === 'Static');
-    expect(R.baglanti).toMatchObject({ S: [428.5, -0.58, 493.96], a: [1, 0, 0], sinir: null });
+    expect(R.baglanti).toMatchObject({ S: [428.5, -0.58, 493.96], a: [1, 0, 0], sinir: BELGE.ism11.rfobMb });
     expect([st.m, st.takoz]).toEqual([541, 2]);                       // şanzıman grubu + iki arka kulak · iki arka takoz
     expect(+st.egilme.toFixed(1)).toBe(1152.6);
     // düzlemin arkası serbest cisim (düşey kuvvetlerle): takozların yatay kuvvetinin payı < 1 N·m
@@ -251,8 +260,13 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       expect([d.mass, d.cgx, d.cgy, d.cgz, d.Ixx, d.Iyy, d.Izz, d.Ixy, d.Ixz, d.Iyz, !!d.pointMass])
         .toEqual([c.mass].concat(c.cg, [c.Ixx, c.Iyy, c.Izz, c.Ixy, c.Ixz, c.Iyz, !!c.pointMass]));
       expect([d.bagX, d.bagY, d.bagZ]).toEqual(c.bag || [undefined, undefined, undefined]);
-      expect(d.egSinir).toBeUndefined();
+      expect(d.egSinir).toBe(c.egSinir);
+      Object.keys(c.veri || {}).forEach((k) => expect([c.name, k, d[k]]).toEqual([c.name, k, c.veri[k]]));
     });
+    // tork alanları yalnız motor ve şanzımanda
+    const alan = ['Te', 'TeRpm', 'Pmax', 'idleRpm', 'cylinders', 'g1', 'gR', 'Rstall', 'iTransfer'];
+    B.filter((n) => !['mnt-motor', 'mnt-gearbox'].includes(n.type))
+      .forEach((n) => alan.forEach((k) => expect([n.customName, k, n.data[k]]).toEqual([n.customName, k, undefined])));
     expect(T.map((n) => n.customName)).toEqual(M.mounts.map((m) => m.name));
     T.forEach((n, i) => {
       const m = M.mounts[i], d = n.data;
@@ -260,12 +274,6 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
     });
     expect(+TOPO.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(M.cozucu.zeta);
     expect(TOPO.nodes.find((n) => n.type === 'mnt-example').data.exampleKey).toBe('tta10');
-  });
-  test('TORK YOK — Excel tork, vites ve rölanti vermez; uydurma değer sızmaz', () => {
-    expect(M.torque).toBeUndefined();
-    const alan = ['Te', 'TeRpm', 'Pmax', 'idleRpm', 'cylinders', 'g1', 'gR', 'Rstall', 'iTransfer'];
-    govdeler().forEach((n) => alan.forEach((k) => expect([n.customName, k, n.data[k]]).toEqual([n.customName, k, undefined])));
-    expect(R.allCases.map((c) => c.name)).not.toContain('Forward Torque');
   });
   test('programatik kurucu (JSON\'suz yol) bağlantı yüzünü de kurar', () => {
     jest.useFakeTimers();
@@ -278,7 +286,9 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       cp._mntLoadExampleFromModel(null, 'tta10');
       const s = global.nodes.find((n) => n.type === 'mnt-gearbox').data;
       expect([s.bagX, s.bagY, s.bagZ]).toEqual([428.5, -0.58, 493.96]);
-      expect('egSinir' in s).toBe(false);
+      expect([s.egSinir, s.g1, s.gR, s.Rstall]).toEqual([1350, 4.695, -5.552, 1.897]);
+      const mo = global.nodes.find((n) => n.type === 'mnt-motor').data;
+      expect([mo.Te, mo.idleRpm, mo.cylinders]).toEqual([1835, 700, 6]);
       expect(global.nodes.filter((n) => componentDefs[n.type].isMountBody)).toHaveLength(11);
     } finally {
       jest.clearAllTimers();
@@ -286,15 +296,156 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       delete global.createNode;
     }
   });
-  test('rapor §8.18: bloğun arka yüzünde Statik 1.153 N·m, sınır yok — hüküm sütunu ve uygunluğun 5. satırı yok', () => {
+  test('rapor §8.18: bloğun arka yüzünde Statik 1.153 N·m, sınır 1.350 (ISM11 veri sayfası) — %85,4 uygun; uygunluğun 5. satırı', () => {
     global._veMntLast = coz();
     const el = document.createElement('div');
     el.innerHTML = rep._mntRepSection8(global._veMntLast);
     const tablo = Array.from(el.querySelectorAll('table')).find((t) => /kesit momenti/.test((t.querySelector('caption') || {}).textContent || ''));
-    expect(tablo.querySelector('caption').textContent).not.toContain('sınır');
+    expect(tablo.querySelector('caption').textContent).toContain('sınır 1.350 N·m (veri sayfası, statik)');
     const st = Array.from(tablo.querySelectorAll('tr')).find((tr) => tr.cells[0].textContent === 'Statik (yerçekimi)');
-    expect(Array.from(st.cells).map((c) => c.textContent).slice(2, 4)).toEqual(['2', '1.153']);
-    expect(st.cells).toHaveLength(5);
-    expect(rep.veMntUygunluk(global._veMntLast).satirlar.map((s) => s.no)).toEqual(['1', '1a', '1b', '2', '3', '4']);
+    expect(Array.from(st.cells).map((c) => c.textContent)).toEqual(['Statik (yerçekimi)', '541', '2', '1.153', '113', '%85,4', '✓ Uygun']);
+    const U = rep.veMntUygunluk(global._veMntLast);
+    expect(U.satirlar.map((s) => s.no)).toEqual(['1', '1a', '1b', '2', '3', '4', '5']);
+    expect(U.satirlar[6]).toMatchObject({ kisa: 'Bağlantı yüzü', st: 'ok', hedef: '≤ 1.350 N·m (veri sayfası)' });
+  });
+});
+
+describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () => {
+  const motor = () => govdeler().find((n) => n.type === 'mnt-motor').data;
+  const sanz = () => govdeler().find((n) => n.type === 'mnt-gearbox').data;
+  const durum = (Rx, ad) => Rx.allCases.concat(Rx.gearCases, Rx.designCases).find((c) => c.name === ad);
+  const dz = (rc, i) => rc.res.perMount[i].delta[2] * 1000;
+  test('motor FR20317 (1.835 N·m @ 1.200 · 283 kW @ 1.900 · 6 silindir), rölanti iSCAAN 700; şanzıman iSCAAN (TC541 1,897 · 4500 SP)', () => {
+    const F = BELGE.fr20317, I = BELGE.iscaan, m = motor(), s = sanz();
+    expect([m.Te, m.TeRpm, m.Pmax, m.PmaxRpm, m.cylinders]).toEqual([F.TeMax, F.TeRpm, F.Pmax, F.PmaxRpm, F.silindir]);
+    expect(I.tepe).toEqual({ Te: F.TeMax, rpm: F.TeRpm });
+    expect(m.cylinders).toBe(BELGE.ism11.silindir);
+    expect(m.idleRpm).toBe(I.rolanti);
+    expect(m.idleRpm).toBeGreaterThanOrEqual(F.rolantiMin);
+    expect(m.idleRpm).toBeLessThanOrEqual(F.rolantiMax);
+    expect([s.g1, s.g2, s.g3, s.g4, s.g5, s.g6]).toEqual(I.vites.slice(0, 6).map((v) => v[1]));
+    expect(s.gR).toBe(-I.vites[6][1]);
+    expect(s.Rstall).toBe(I.stall.TR);
+    expect(s.egSinir).toBe(BELGE.ism11.rfobMb);
+    // transfer kutusu güç grubunda değil: reaksiyon şanzıman çıkışının torku
+    expect(TOPO.nodes.filter((n) => n.type === 'mnt-transfer')).toHaveLength(0);
+    expect(s.iTransfer).toBeUndefined();
+    expect(M.torque).toEqual({ Te: 1835, Rstall: 1.897, iTransfer: 1, fwd: { iGear: 4.695, phiAxle: 1 },
+      rev: { iGear: -5.552, phiAxle: 1 }, derate: 1, idleRpm: 700, cylinders: 6 });
+  });
+  test('zincir: 1. vites 1.835 × 1,897 × 4,695 = 16.343,3 N·m, geri 19.326,5; Çözücü\'nün varsayılan yönüyle Tx = −T; kayıt defteri JSON\'la aynı', () => {
+    const ileri = 1835 * 1.897 * 4.695, geri = 1835 * 1.897 * -5.552;
+    expect(ileri).toBeCloseTo(16343.27, 2);
+    expect(geri).toBeCloseTo(-19326.48, 2);
+    const T = (Rx, ad) => durum(Rx, ad).loadCase.T;
+    expect(T(R, 'Forward Torque')[0]).toBeCloseTo(-ileri, 9);
+    expect(T(R, 'Reverse Torque')[0]).toBeCloseTo(-geri, 9);
+    ['Forward Torque', 'Reverse Torque'].forEach((ad) => expect(M.loadCases.find((c) => c.name === ad).T)
+      .toEqual(T(R, ad).map((v) => expect.closeTo(v, 9))));
+    expect(R.gearCases.map((c) => [c.name, +c.loadCase.Tshaft.toFixed(1)])).toEqual([
+      ['1. Vites', 16343.3], ['2. Vites', 7703.4], ['3. Vites', 5322.4], ['4. Vites', 3481], ['5. Vites', 2663],
+      ['6. Vites', 2339.2], ['Geri Vites', -19326.5]]);
+  });
+  test('iSCAAN\'ın stall noktası: şanzıman çıkışı = türbin × oran × verim (0,96–1); programın zinciri F1\'de %20,6, R1\'de %23,6 üstte', () => {
+    const I = BELGE.iscaan;
+    I.vites.forEach(([ad, i, Tc]) => {
+      const verim = Tc / (I.stall.Tturbin * i);
+      expect([ad, verim > 0.96 && verim <= 1]).toEqual([ad, true]);
+    });
+    expect(I.stall.Te).toBeLessThan(BELGE.fr20317.TeMax);            // stall 1.560 d/dk'da net tork, azami değil
+    const zincir = (i) => 1835 * 1.897 * i;
+    expect(zincir(4.695) / I.vites[0][2]).toBeCloseTo(1.206, 3);
+    expect(zincir(5.552) / I.vites[6][2]).toBeCloseTo(1.236, 3);
+  });
+  test('çekme: 1.–3. viteste sol arka, geride sağ arka takoz; 4.–6. viteste üçü de basıda; boşalma torku ileri ~5,1 · geri ~4,7 kN·m — iSCAAN\'ın stall torkunun da altında', () => {
+    const cekme = (ad) => durum(R, ad).res.perMount.map((p) => p.tension);
+    expect(['1. Vites', '2. Vites', '3. Vites'].map(cekme)).toEqual([[false, false, true], [false, false, true], [false, false, true]]);
+    expect(['4. Vites', '5. Vites', '6. Vites'].map(cekme)).toEqual([[false, false, false], [false, false, false], [false, false, false]]);
+    expect(cekme('Geri Vites')).toEqual([false, true, false]);
+    // lineer: δz(T) = δz(Statik) + T · eğim → δz = 0'daki tork
+    const st = durum(R, 'Static'), g1 = durum(R, '1. Vites'), gR = durum(R, 'Geri Vites');
+    const bos = (rc, i) => -dz(st, i) / ((dz(rc, i) - dz(st, i)) / Math.abs(rc.loadCase.Tshaft));
+    expect(bos(g1, 2)).toBeCloseTo(5124, -1);
+    expect(bos(gR, 1)).toBeCloseTo(4695, -1);
+    expect(bos(g1, 2)).toBeLessThan(BELGE.iscaan.vites[0][2]);
+    expect(bos(gR, 1)).toBeLessThan(BELGE.iscaan.vites[6][2]);
+    // 1. viteste sol arka +6,35 mm (çekme), sağ arka −11,91; geride sağ arka +8,29, sol arka −13,84
+    expect([dz(g1, 1), dz(g1, 2), dz(gR, 1), dz(gR, 2)].map((v) => +v.toFixed(2))).toEqual([-11.91, 6.35, 8.29, -13.84]);
+  });
+  test('kriterler: 1 · 1a · 2 · 3 · 4 · 5 uygun, 1b değil — baş-kıç 8,49 Hz 8–10 Hz bandında; f_ateş 35 Hz', () => {
+    expect(R.modes.map((m) => [+m.f_Hz.toFixed(2), m.label])).toEqual([[5.11, 'lateral+yaw'], [5.7, 'fore-aft'],
+      [6.53, 'yaw+lateral'], [8.49, 'pitch'], [10.79, 'bounce'], [15.47, 'roll']]);
+    const U = rep.veMntUygunluk(R);
+    expect(U.satirlar.map((s) => [s.no, s.st])).toEqual([['1', 'ok'], ['1a', 'ok'], ['1b', 'no'], ['2', 'ok'], ['3', 'ok'], ['4', 'ok'], ['5', 'ok']]);
+    const duz = (no) => U.satirlar.find((s) => s.no === no).bulgu.replace(/<[^>]+>/g, '');
+    expect(duz('1')).toContain('sınır 17,5 Hz');
+    expect(duz('1b')).toContain('mod 4 8,49 Hz');
+    expect(duz('2')).toMatch(/fateş 35 Hz .* T=%10,3/);
+    expect(duz('3')).toContain('30,47 kN (Geri · Sol arka takoz · 57RS313773)');
+  });
+});
+
+describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
+  const mm = (v) => +(v * 1000).toFixed(2);
+  const durumlar = () => R.allCases.concat(R.gearCases, R.designCases).filter((c) => c.res);
+  test('güç grubunun bütün noktaları, statik konuma göre: X −28,56 / +9,56 · Y ±30,78 · Z −10,18 / +8,72 mm; belirleyen nokta ve durum', () => {
+    const Z = R.zarf.toplam;
+    expect(Z.min.map(mm)).toEqual([-28.56, -30.78, -10.18]);
+    expect(Z.max.map(mm)).toEqual([9.56, 30.78, 8.72]);
+    expect(Z.minAt).toEqual([
+      { durum: 'Pothole Braking', nokta: [-1, -1, 1], govde: 'Motor — Cummins ISM' },
+      { durum: 'Kerb Strike L', nokta: 'ag', govde: 'Kardan mili payı' },
+      { durum: 'Pothole Braking', nokta: [-1, -1, -1], govde: 'Motor — Cummins ISM' }]);
+    expect(Z.maxAt).toEqual([
+      { durum: 'Acceleration', nokta: [-1, -1, 1], govde: 'Motor — Cummins ISM' },
+      { durum: 'Kerb Strike R', nokta: 'ag', govde: 'Kardan mili payı' },
+      { durum: 'Reverse Torque', nokta: 'ag', govde: 'Sağ arka kulak' }]);
+    const mo = R.zarf.govde.find((g) => g.name === 'Motor — Cummins ISM');
+    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-28.56, -20.25, -10.18], [9.56, 20.25, 6.32]]);
+  });
+  test('hakem: her gövdenin zarfı durumların q\'sundan bağımsız kinematikle (Δu + Δθ × r, kutu ataletten) aynı', () => {
+    const G0 = R.mp.cg, q0 = R.qStatic;
+    govdeler().forEach((n) => {
+      const d = n.data, c = [d.cgx, d.cgy, d.cgz].map((v) => v / 1000);
+      const p = [c];
+      if (!d.pointMass) {
+        const a = [6 * (d.Iyy + d.Izz - d.Ixx), 6 * (d.Ixx + d.Izz - d.Iyy), 6 * (d.Ixx + d.Iyy - d.Izz)].map((v) => Math.sqrt(v / d.mass) / 2);
+        [-1, 1].forEach((i) => [-1, 1].forEach((j) => [-1, 1].forEach((k) => p.push([c[0] + i * a[0], c[1] + j * a[1], c[2] + k * a[2]]))));
+      }
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      durumlar().forEach((rc) => {
+        const u = [0, 1, 2].map((i) => rc.res.q[i] - q0[i]), t = [3, 4, 5].map((i) => rc.res.q[i] - q0[i]);
+        p.forEach((P) => {
+          const r = [P[0] - G0[0], P[1] - G0[1], P[2] - G0[2]];
+          const dd = [u[0] + t[1] * r[2] - t[2] * r[1], u[1] + t[2] * r[0] - t[0] * r[2], u[2] + t[0] * r[1] - t[1] * r[0]];
+          dd.forEach((v, i) => { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v); });
+        });
+      });
+      const z = R.zarf.govde.find((g) => g.name === n.customName);
+      [0, 1, 2].forEach((i) => {
+        expect([n.customName, i, z.min[i]]).toEqual([n.customName, i, expect.closeTo(lo[i], 12)]);
+        expect([n.customName, i, z.max[i]]).toEqual([n.customName, i, expect.closeTo(hi[i], 12)]);
+      });
+    });
+    expect(R.zarf.govde).toHaveLength(11);
+  });
+  test('rapor §8.19: dört tablo; aynı yükün iki adı tek satırda; takoz sehim zarfı yüksüz konumdan ve çekme işaretli', () => {
+    const el = document.createElement('div');
+    el.innerHTML = rep._mntRepZarf(R);
+    expect(el.querySelector('h3').textContent).toBe('8.19 Hareket zarfı');
+    const tablolar = Array.from(el.querySelectorAll('table'));
+    expect(tablolar.map((t) => t.querySelector('caption').textContent.replace(/^Tablo \d+ — /, ''))).toEqual([
+      'Gövde başına hareket zarfı, statik konuma göre [mm]', 'Güç grubunun zarfını belirleyen nokta ve durum',
+      'Birleşik ağırlık merkezinin ötelemesi ve dönmesi, statik konuma göre', 'Takoz sehim zarfı, yüksüz konumdan [mm]']);
+    const hucre = (t, i) => Array.from(tablolar[t].querySelectorAll('tr')).slice(1).map((tr) => tr.cells[i].textContent);
+    expect(hucre(0, 0).slice(-1)).toEqual(['Güç grubu (bütün noktalar)']);
+    expect(Array.from(tablolar[0].rows).slice(-1)[0].cells[3].textContent).toBe('−30,78');
+    expect(hucre(2, 0)).toContain('İleri tork · 1. Vites');
+    expect(hucre(2, 0)).toContain('Tümsek (3,5g) · 3,5g Düşey');
+    expect(hucre(2, 0)).toHaveLength(durumlar().length - 1 - 4);    // Statik yok; dört ad ikiz
+    const sehim = Array.from(tablolar[3].rows).slice(1).map((tr) => Array.from(tr.cells).map((c) => c.textContent));
+    expect(sehim).toHaveLength(9);
+    expect(sehim[2]).toEqual(['δz', '−12,67', 'Çukur + fren (3,5g)', '+2,69', 'Azami geri esneme (droop) · çekme']);
+    expect(sehim[8]).toEqual(['δz', '−13,84', 'Geri tork', '+6,35', 'İleri tork · çekme']);
   });
 });

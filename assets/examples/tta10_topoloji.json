@@ -21,7 +21,13 @@
         "Ixy": 0.19,
         "Ixz": -4.88,
         "Iyz": -0.39,
-        "pointMass": false
+        "pointMass": false,
+        "Te": 1835,
+        "TeRpm": 1200,
+        "Pmax": 283,
+        "PmaxRpm": 1900,
+        "idleRpm": 700,
+        "cylinders": 6
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -199,7 +205,16 @@
         "pointMass": false,
         "bagX": 428.5,
         "bagY": -0.58,
-        "bagZ": 493.96
+        "bagZ": 493.96,
+        "egSinir": 1350,
+        "g1": 4.695,
+        "g2": 2.213,
+        "g3": 1.529,
+        "g4": 1,
+        "g5": 0.765,
+        "g6": 0.672,
+        "gR": -5.552,
+        "Rstall": 1.897
       },
       "mirrored": false,
       "isMasterWheel": false,

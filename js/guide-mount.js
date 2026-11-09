@@ -641,6 +641,10 @@ function _gmSec12(){
     + 'bileşeni burulmadır. Tablo torksuz bütün yük durumlarını verir; tork durumları tabloda yoktur. '
     + 'Sınır statik duruma uygulanır ve uygunluk tablosunun 5. satırıdır. Şanzıman tarafında takoz yoksa '
     + 'moment konsolunkidir: şanzımanın ağırlığı × ağırlık merkezinin bağlantı yüzüne uzaklığı.</p>';
+  h += '<p>Güç grubunun <strong>hareket zarfı</strong> raporun <strong>§8.19</strong> bölümündedir: her gövdenin ağırlık '
+    + 'merkezi ve eşdeğer kutusunun köşeleri bütün yük durumlarında, vites durumlarında ve tasarım yük koşullarında '
+    + 'statik konuma göre ne kadar yer değiştiriyor — ±X, ±Y, ±Z, belirleyen nokta ve durumla. Aynı bölümde '
+    + '<strong>takoz sehim zarfı</strong> vardır: her takozun her eksendeki en küçük ve en büyük sehimi, yüksüz konumdan.</p>';
   h += _gmUyari('Rapor çözümün fotoğrafıdır',
       'Rapor üretildikten sonra değişen alan rapora <strong>girmez</strong>. Değişiklik için '
     + 'yeniden çözün ve raporu yeniden üretin.');
