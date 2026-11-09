@@ -269,3 +269,45 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
   });
 });
 
+
+// GÖVDENİN ÇERÇEVESİ (kullanıcı 2026-11-09, Canlı Not 79: "Üstten-Yandan-Önden görünüşlerde en
+// azından komponentlerin bir çerçevesi çıksın. Yani dikdörtgen, kare falan şekiller çıksın ki,
+// neyin nerede olduğu anlaşılsın. Sanki 3B'ya yandan üstten bakıyormuş gibi olsun.") Önce: düz
+// görünüş yalnız ağırlık merkezinin dairesini çiziyordu. Şimdi atalet taşıyan her gövdenin eşdeğer
+// kutusu (3B'nin kutusu) izdüşümüyle; nokta kütle yalnız dairesiyle.
+describe('DÜZ GÖRÜNÜŞTE GÖVDENİN ÇERÇEVESİ (Canlı Not 79)', () => {
+  const EKS = { x: 0, y: 1, z: 2 };
+  test.each(['ust', 'yan', 'on'])('Tulga · %s: kutusu olan her gövdeye bir çerçeve, ölçüsü kutunun izdüşümü, ağırlık merkezi ortasında', (g) => {
+    const c = tulga();
+    const G = cp.VE_MNT2D_GORUNUS[g];
+    const kutulu = c.veri.comps.filter((x) => x.kutu);
+    expect(kutulu.length).toBeGreaterThanOrEqual(2);
+    expect(c.veri.comps.filter((x) => !x.kutu).length).toBeGreaterThan(0);              // nokta kütleler
+    const d = div(cp.veMnt2DGorunusSVG(c.veri, 1000, 700, { gorunus: g, secim: true }));
+    const rect = [...d.querySelectorAll('.ve-mnt2d-kutu > rect')];
+    expect(rect).toHaveLength(kutulu.length);
+    // ölçek: iki çerçevenin genişlik oranı kutuların oranı; ağırlık merkezi çerçevenin ortasında
+    const r = (i) => ({ x: +rect[i].getAttribute('x'), y: +rect[i].getAttribute('y'), w: +rect[i].getAttribute('width'), h: +rect[i].getAttribute('height') });
+    const s = r(0).w / kutulu[0].kutu[EKS[G.h]];
+    kutulu.forEach((k, i) => {
+      expect(r(i).w / k.kutu[EKS[G.h]]).toBeCloseTo(s, 1);
+      expect(r(i).h / k.kutu[EKS[G.v]]).toBeCloseTo(s, 1);
+      const cer = rect[i].parentNode.getAttribute('data-mnt-sec');
+      const daire = [...d.querySelectorAll('[data-mnt-sec="' + cer + '"] circle')][0];
+      expect(Math.abs(+daire.getAttribute('cx') - (r(i).x + r(i).w / 2))).toBeLessThan(0.6);
+      expect(Math.abs(+daire.getAttribute('cy') - (r(i).y + r(i).h / 2))).toBeLessThan(0.6);
+    });
+    // çerçeveler işaretlerin altında: ilk takozdan önce çizilir
+    const html = d.innerHTML;
+    expect(html.indexOf('ve-mnt2d-kutu')).toBeLessThan(html.indexOf('data-mnt-sec="takoz:'));
+  });
+  test('seçili gövdenin çerçevesi vurgu; göstergede Gövde', () => {
+    const c = tulga();
+    const i = c.veri.comps.findIndex((x) => x.kutu);
+    const d = div(cp.veMnt2DGorunusSVG(c.veri, 1000, 700, { gorunus: 'yan', secim: true, secili: { tur: 'govde', i } }));
+    expect(d.querySelector('[data-mnt-sec="govde:' + i + '"].ve-mnt2d-kutu > rect').getAttribute('stroke')).toBe('var(--accent-primary)');
+    W.veMntWizGorunus('yan');
+    expect([...document.querySelectorAll('#ve-mw-masa .ve-fw-lj')].map((e) => e.textContent)).toEqual(['Gövde', 'Takoz', 'Gövde CG', 'Birleşik CG']);
+    expect(CSS).toMatch(/\.ve-mw-lj-kutu\{[^}]*border:1px solid var\(--text-secondary\)/);
+  });
+});

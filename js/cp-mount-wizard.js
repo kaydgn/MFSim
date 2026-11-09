@@ -2391,8 +2391,10 @@ function _mwMasaHTML(k, c){
       + '</div>';
   }
   // 3B'nin göstergesi modelden (braket · nokta kütle var mı): çizimle _mwMasaCiz doldurur
+  // düz görünüşte gövde eşdeğer kutusunun çerçevesiyle (Canlı Not 79)
   var lejant = (tur === 'figur' && !uc)
-    ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
+    ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-kutu"></i>Gövde</span>'
+      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
       + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde CG</span>'
       + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
     : '';
