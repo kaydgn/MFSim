@@ -1159,6 +1159,51 @@ var veMountCore = (function() {
     return { M, egilme:Math.hypot(Mb[0], Mb[1], Mb[2]), burulma:Math.abs(tor), m, takoz };
   }
 
+  // ═══════════════════ Hareket zarfı (2026-11-09) ═══════════════════
+  // Yük durumunun çözümü q = [u; θ] birleşik ağırlık merkezinde (G); gövdenin P
+  // noktası d = u + θ × (P − G) kadar yer değiştirir (makeA'nın kinematiği, küçük
+  // dönme). Zarf STATİK konuma göre: Δd = d(durum) − d(Statik) — yerleşim statik
+  // konumda çizilir. Noktalar her gövdenin ağırlık merkezi ve nokta kütle olmayan
+  // gövdenin eşdeğer kutusunun (equivalentBox, köşegen atalet, global eksenler —
+  // raporun mod şekilleriyle aynı) sekiz köşesi.
+  // components: SI ({name, mass, cg [m], I, pointMass}); cases: [{name, res}];
+  // cg: birleşik ağırlık merkezi [m]; qRef: Statik çözümün q'su (yoksa sıfır).
+  // Döner (m): { govde:[{ name, min:[3], max:[3], minAt:[3], maxAt:[3] }], toplam:{…} }
+  // — ...At: { durum, nokta, govde }; nokta 'ag' (ağırlık merkezi) ya da [±1,±1,±1]
+  // (köşenin yönü) | null
+  function motionEnvelope(components, cases, cg, qRef){
+    if(!Array.isArray(cg) || !Array.isArray(cases)) return null;
+    const q0 = (Array.isArray(qRef) && qRef.length === 6) ? qRef : [0,0,0,0,0,0];
+    const durumlar = cases.filter(c => c && c.res && Array.isArray(c.res.q) && c.res.q.length === 6)
+      .map(c => ({ name:c.name, dq:c.res.q.map((v, i) => v - q0[i]) }));
+    if(!durumlar.length) return null;
+    const yer = (dq, r) => [dq[0] + dq[4]*r[2] - dq[5]*r[1],
+                            dq[1] + dq[5]*r[0] - dq[3]*r[2],
+                            dq[2] + dq[3]*r[1] - dq[4]*r[0]];
+    const bos = () => ({ min:[Infinity, Infinity, Infinity], max:[-Infinity, -Infinity, -Infinity],
+                         minAt:[null, null, null], maxAt:[null, null, null] });
+    const isle = (z, d, at) => { for(let i=0;i<3;i++){
+      if(d[i] < z.min[i]){ z.min[i]=d[i]; z.minAt[i]=at; }
+      if(d[i] > z.max[i]){ z.max[i]=d[i]; z.maxAt[i]=at; } } };
+    const toplam = bos(), govde = [];
+    (components || []).forEach(c => {
+      if(!c || !Array.isArray(c.cg)) return;
+      const nokta = [{ nokta:'ag', p:c.cg }];
+      const I = c.I || [[0,0,0],[0,0,0],[0,0,0]];
+      const kutu = equivalentBox(c.mass, [[I[0][0],0,0],[0,I[1][1],0],[0,0,I[2][2]]], c.pointMass);
+      if(kutu) [-1, 1].forEach(sx => [-1, 1].forEach(sy => [-1, 1].forEach(sz => nokta.push({ nokta:[sx, sy, sz],
+        p:[c.cg[0] + sx*kutu[0]/2, c.cg[1] + sy*kutu[1]/2, c.cg[2] + sz*kutu[2]/2] }))));
+      const z = bos();
+      nokta.forEach(n => {
+        const r = [n.p[0]-cg[0], n.p[1]-cg[1], n.p[2]-cg[2]];
+        durumlar.forEach(d => { const at = { durum:d.name, nokta:n.nokta, govde:c.name }, dd = yer(d.dq, r);
+          isle(z, dd, at); isle(toplam, dd, at); });
+      });
+      govde.push(Object.assign({ name:c.name }, z));
+    });
+    return { govde, toplam };
+  }
+
   // Takoz başına viskoz sönüm katsayıları. shares (kg) mountLoadShares'ten;
   // verilmezse/0 ise o takozun c'si 0 çıkar (yük payı bilinmeden sönüm türetilemez).
   // Dönüş: [{ name, mShare (kg), zeta, c:[cx,cy,cz] (N·s/m) }]
@@ -2188,6 +2233,18 @@ var veMountCore = (function() {
     loadCases: defaultLoadCases()
   };
 
+  // Tork durumları tork zincirinden TÜRETİLİR (elle yazılmaz): Çözücü'nün
+  // varsayılan tork yönüyle (−X) Tx = −T_shaft. Gerçek örnek (10 Ton TTA) ve
+  // kurgu örnekler ortak kullanır.
+  const _torkDurumlari = (t) => {
+    const chain = d => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:d.iGear,
+                                     iTransfer:t.iTransfer, phiAxle:d.phiAxle, derate:t.derate });
+    const T = { 'Forward Torque': -chain(t.fwd), 'Reverse Torque': -chain(t.rev) };
+    return defaultLoadCases().map(c => (c.name in T) ? Object.assign({}, c, { T:[T[c.name],0,0] }) : c);
+  };
+  const _torkIleri = (t) => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:t.fwd.iGear,
+                                          iTransfer:t.iTransfer, phiAxle:t.fwd.phiAxle, derate:t.derate });
+
   // ── 10 Ton TTA — şanzıman askısız (Cummins ISM · Allison 4500 SP) ──────────
   // Kaynak: kullanıcının çalışma kitabı (22.10.2026) — "Front Support" (motorun
   // ön destek + volan muhafazası askısında reaksiyon ve bloğun arka yüzünde
@@ -2205,17 +2262,28 @@ var veMountCore = (function() {
   //     ön 57RS313774, arka 57RS313773, ASR-SR-116 değerleri; ζ = 0,02 aynı belgeden.
   //   bağlantı yüzü → bloğun arka yüzü (Excel'in Mr düzlemi; kullanıcı kararı
   //     2026-11-06), krank ekseninde: X 428,5 (L1 ve L3'ün ikisi de verir), Y/Z
-  //     Allison satırından (CG 47,0 mm eksenin altında). Sınır YOK: ISM'in
-  //     bloğun arka yüzü sınırı programda değil — rapor momenti yazar, hüküm vermez.
-  //   TORK YOK: Excel tork, vites ve rölanti vermez (ASFAT'la aynı gerekçe).
+  //     Allison satırından (CG 47,0 mm eksenin altında). Sınır 1.350 N·m: ISM11
+  //     veri sayfası D353029BX03 ("maximum static mounting surface bending moment
+  //     at rear face of block").
+  //   tork → FR20317 (ISME385 30: 1.835 N·m @ 1.200, 283 kW @ 1.900 d/dk) ve
+  //     iSCAAN A392175 (6X6 TTA: TC541 stall tork oranı 1,897; 4500 SP vitesleri;
+  //     rölanti 700 d/dk). Transfer kutusu güç grubunda değil (şasiye bağlı):
+  //     reaksiyon şanzıman çıkışının torku, iTransfer = 1. Zincir Te azami × stall
+  //     oranı × vites (programın yöntemi) → 1. viteste 16.343 N·m; iSCAAN'ın stall
+  //     noktası (motor 1.560 d/dk, net 1.571,8 N·m) F1 çıkışında 13.551,3 N·m —
+  //     zincir %20,6 üstte. Kapı: tests/unit/mount-ornek-tta.test.js → TORK.
   // EXCEL'İN Mr'I 992,7 N·m, BU MODELİN 1.152,6: Excel L3'ü (563) yalnız 4500 SP
   // gövdesinin CG'sinden alıyor ama Wt'ye (530 kg) PTO, pompa ve kardan payını
   // da katıyor — grubun CG'si RFOB + 596,3. Kapı: tests/unit/mount-ornek-tta.test.js.
   const TTA10_RFOB = 428.5;
+  const TTA10_TORQUE = { Te:1835, Rstall:1.897, iTransfer:1,
+                         fwd:{iGear:4.695, phiAxle:1}, rev:{iGear:-5.552, phiAxle:1},
+                         derate:1, idleRpm:700, cylinders:6 };
   const TTA10_EXAMPLE = {
     g: 9.81,
     components: [
-      {name:'Motor — Cummins ISM',        mass:1136, cg:[ -82.548,  -0.711, 675.091], Ixx:90.46, Iyy:184.32, Izz:135.33, Ixy:0.19, Ixz:-4.88, Iyz:-0.39, pointMass:false, kind:'mnt-motor',      at:[335,331]},
+      {name:'Motor — Cummins ISM',        mass:1136, cg:[ -82.548,  -0.711, 675.091], Ixx:90.46, Iyy:184.32, Izz:135.33, Ixy:0.19, Ixz:-4.88, Iyz:-0.39, pointMass:false, kind:'mnt-motor',      at:[335,331],
+       veri:{ Te:1835, TeRpm:1200, Pmax:283, PmaxRpm:1900, idleRpm:700, cylinders:6 }},
       {name:'Alternatör grubu',           mass:36.1, cg:[-626.54,  273.58,  791.24], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-alternator', at:[265,229]},
       {name:'Klima kompresörü',           mass:10,   cg:[-543.89, -323.46,  973.4 ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-ac',         at:[225,433]},
       {name:'Direksiyon pompası',         mass:10,   cg:[-406.62, -276.32,  398.27], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[365,433]},
@@ -2223,7 +2291,8 @@ var veMountCore = (function() {
       {name:'Sağ arka kulak',             mass:5.5,  cg:[ 513.06,  319.6,   584   ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket',    at:[505,229]},
       {name:'Sol arka kulak',             mass:5.5,  cg:[ 511.82, -320.4,   584   ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket',    at:[505,433]},
       {name:'Şanzıman — Allison 4500 SP', mass:474,  cg:[ 991.5,    -1.18,  446.96], Ixx:12.08, Iyy:33.65, Izz:31.5, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[657.5,331],
-       bag:[TTA10_RFOB, -0.58, 493.96]},
+       bag:[TTA10_RFOB, -0.58, 493.96], egSinir:1350,
+       veri:{ g1:4.695, g2:2.213, g3:1.529, g4:1, g5:0.765, g6:0.672, gR:-5.552, Rstall:1.897 }},
       {name:'PTO',                        mass:18,   cg:[ 825.58, -257.03,  395.3 ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pto',        at:[625,433]},
       {name:'Pompa',                      mass:18,   cg:[1063.66, -288.7,   396.78], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[735,433]},
       {name:'Kardan mili payı',           mass:20,   cg:[1957.13,   -3.25,  510.02], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft',      at:[855.5,331]}
@@ -2233,8 +2302,9 @@ var veMountCore = (function() {
       {name:'Sağ arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,   398.6,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,137]},
       {name:'Sol arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,  -399.4,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,533]}
     ],
+    torque: TTA10_TORQUE,
     cozucu: { zeta:0.02 },
-    loadCases: defaultLoadCases()
+    loadCases: _torkDurumlari(TTA10_TORQUE)
   };
 
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
@@ -2291,14 +2361,7 @@ var veMountCore = (function() {
   //
   // Gövdenin `veri`si JSON topolojisindeki düğüm alanlarıdır (rölanti, silindir,
   // vites dizisi): programatik yükleyici (TTAR biçimi) onları taşımaz, JSON taşır.
-  const _torkDurumlari = (t) => {
-    const chain = d => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:d.iGear,
-                                     iTransfer:t.iTransfer, phiAxle:d.phiAxle, derate:t.derate });
-    const T = { 'Forward Torque': -chain(t.fwd), 'Reverse Torque': -chain(t.rev) };
-    return defaultLoadCases().map(c => (c.name in T) ? Object.assign({}, c, { T:[T[c.name],0,0] }) : c);
-  };
-  const _torkIleri = (t) => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:t.fwd.iGear,
-                                          iTransfer:t.iTransfer, phiAxle:t.fwd.phiAxle, derate:t.derate });
+  // Tork durumları _torkDurumlari'ndan (10 Ton TTA'nın önünde tanımlı).
 
   // ── Analitik kutu — kapalı form ──
   // Tek prizma gövde (1100 × 700 × 800 mm, 1.200 kg → I = m·(b² + c²)/12 …),
@@ -2488,12 +2551,16 @@ var veMountCore = (function() {
       name: '10 Ton TTA Takoz Analizi',
       vehicle: '10 Ton TTA',
       subtitle: '11 kütle · 3 takoz güç grubu',
-      description: 'Cummins ISM · Allison 4500 SP + PTO · şanzıman askısız',
+      description: 'Cummins ISM 385 · Allison 4500 SP + PTO · şanzıman askısız',
       specs: [
         ['Kütle gövdesi', String(TTA10_EXAMPLE.components.length)],
         ['Takoz', String(TTA10_EXAMPLE.mounts.length) + ' · ön 1 · arka 2'],
         ['Toplam kütle', _toplamKg(TTA10_EXAMPLE)],
-        ['Bağlantı yüzü', 'bloğun arka yüzü · X ' + _sayi(TTA10_RFOB, 1) + ' mm'],
+        ['Motor torku', _sayi(TTA10_TORQUE.Te) + ' N·m @ ' + _sayi(TTA10_EXAMPLE.components[0].veri.TeRpm) + ' d/dk'],
+        ['Rölanti · silindir', _sayi(TTA10_TORQUE.idleRpm) + ' d/dk · ' + _sayi(TTA10_TORQUE.cylinders) + ' → f_ateş '
+          + _sayi(TTA10_TORQUE.idleRpm / 60 * TTA10_TORQUE.cylinders / 2) + ' Hz'],
+        ['Bağlantı yüzü', 'bloğun arka yüzü · X ' + _sayi(TTA10_RFOB, 1) + ' mm · sınır '
+          + _sayi(TTA10_EXAMPLE.components[7].egSinir) + ' N·m'],
         ['Sönüm oranı ζ', _sayi(TTA10_EXAMPLE.cozucu.zeta, 2)],
         ['Takoz statik (Z)', (function(){
           var z = TTA10_EXAMPLE.mounts.map(function(m){ return m.kstat[2]; });
@@ -2825,7 +2892,7 @@ var veMountCore = (function() {
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency, frfGrid,
-    mountLoadShares, mountDamping, sectionMoment,
+    mountLoadShares, mountDamping, sectionMoment, motionEnvelope,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,

@@ -161,7 +161,7 @@ describe('RAPOR — §8.18 ve uygunluğun 5. satırı', () => {
     const el = document.createElement('div');
     el.innerHTML = rep._mntRepSection8(R);
     const h = Array.from(el.querySelectorAll('h3')).map((x) => x.textContent);
-    expect(h[h.length - 1]).toBe('8.18 Bağlantı yüzünde statik eğilme momenti');
+    expect(h.slice(-2)).toEqual(['8.18 Bağlantı yüzünde statik eğilme momenti', '8.19 Hareket zarfı']);
     const tablo = Array.from(el.querySelectorAll('table')).filter((t) => /kesit momenti/.test((t.querySelector('caption') || {}).textContent || ''))[0];
     expect(tablo.querySelector('caption').textContent).toContain('sınır 3.500 N·m');
     const st = Array.from(tablo.querySelectorAll('tr')).filter((tr) => tr.cells[0].textContent === 'Statik (yerçekimi)')[0];

@@ -5253,6 +5253,12 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   // okunmalı; ±15 mm durdurucu boşluğu da yüksüz konumdan ölçülür.
   R.qStatic    = (stat && stat.res) ? stat.res.q : null;
   R.components = prep.si.components;                       // modal enerji gövde dağılımı için
+  // ── Hareket zarfı (2026-11-09) — gövdelerin ve eşdeğer kutularının köşelerinin
+  // STATİK konuma göre yer değiştirmesi, yük durumları + vitesler + tasarım durumları
+  // (çekirdek motionEnvelope). Static çözülemediyse zarf yok: referans konum bilinmez.
+  R.zarf = (R.qStatic && C.motionEnvelope)
+    ? C.motionEnvelope(prep.si.components, (allCases||[]).concat(gearCases||[], designCases||[]), prep.mp.cg, R.qStatic)
+    : null;
   // ── Sönümlü modal + modal enerji ──────────────────────────────────────────
   // Modları üreten AYNI M6/K ile hesaplanır (prep.solveModes bunları saklar).
   // Farklı bir K kullanılırsa k_gen/m_gen = ω² özdeşliği bozulur ve modal enerji

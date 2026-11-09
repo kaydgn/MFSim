@@ -552,6 +552,107 @@ function _mntRepSection8(R, opts){
   h+=_mntRepModeShapes(R);
   h+=_mntRepSensitivity(R, opts);
   h+=_mntRepBaglanti(R);
+  h+=_mntRepZarf(R);
+  return h;
+}
+
+// §8.19 — Hareket zarfı (2026-11-09). Her durumun çözümü q = [u; θ] birleşik
+// ağırlık merkezinde; gövde noktası d = u + θ × (P − G) kadar yer değiştirir ve
+// zarf STATİK konuma göre (çekirdek motionEnvelope: gövdelerin ağırlık merkezi
+// + eşdeğer kutunun köşeleri; yük durumları + vitesler + tasarım koşulları).
+// Takoz sehim zarfı yüksüz konumdan: δ'nın en küçüğü ve en büyüğü.
+function _mntRepZarfNokta(at){
+  if(!at) return '—';
+  if(at.nokta==='ag') return 'ağırlık merkezi';
+  var s=function(v, e){ return (v<0 ? '−' : '+')+e; };
+  return 'kutu köşesi '+s(at.nokta[0], 'X')+' '+s(at.nokta[1], 'Y')+' '+s(at.nokta[2], 'Z');
+}
+function _mntRepZarfDurumlari(R){
+  return (R.allCases||[]).concat(R.gearCases||[], R.designCases||[]).filter(function(rc){ return rc && rc.res; });
+}
+function _mntRepZarf(R){
+  var Z=R.zarf;
+  if(!Z || !Z.toplam || !Z.govde || !Z.govde.length) return '';
+  var mm=function(v){ return _rFs(v*1000, 2); };
+  var eks=['X', 'Y', 'Z'];
+  var h='<h3>8.19 Hareket zarfı</h3>';
+  h+='<p>Güç grubunun her durumdaki konumu statik konumla karşılaştırılır. Birleşik ağırlık merkezinin ötelemesi ve dönmesi '
+    +'statik çözüme göre \\( \\Delta\\mathbf q=\\mathbf q-\\mathbf q_{\\text{statik}}=[\\Delta\\mathbf u;\\Delta\\boldsymbol\\theta] \\) '
+    +'gövdenin her P noktasını küçük dönme varsayımıyla taşır:</p>';
+  h+='$$ \\Delta\\mathbf d(P)=\\Delta\\mathbf u+\\Delta\\boldsymbol\\theta\\times(\\mathbf P-\\mathbf G) $$';
+  h+='<p>Noktalar her gövdenin ağırlık merkezi ve nokta kütle olmayan gövdenin eşdeğer kutusunun (§8.16, köşegen atalet) '
+    +'sekiz köşesidir. Durumlar §8.5\'in yük durumları'+((R.gearCases||[]).length ? ', vites durumları (§8.9)' : '')
+    +' ve tasarım yük koşulları (§8.10); hepsi ±15 mm durdurucu modeliyle çözülür. Değerler statik konuma göredir, '
+    +'işaret modelin ekseniyle.</p>';
+  // ── Gövde başına zarf
+  h+='<table><caption>Tablo '+_rTbl()+' — Gövde başına hareket zarfı, statik konuma göre [mm]</caption>';
+  h+='<tr><th>Gövde</th><th>−X</th><th>+X</th><th>−Y</th><th>+Y</th><th>−Z</th><th>+Z</th></tr>';
+  var satir=function(ad, z, kalin){
+    var td='';
+    for(var i=0;i<3;i++) td+='<td>'+mm(Math.min(0, z.min[i]))+'</td><td>'+mm(Math.max(0, z.max[i]))+'</td>';
+    return '<tr'+(kalin ? ' style="font-weight:600;"' : '')+'><td class="l">'+ad+'</td>'+td+'</tr>';
+  };
+  Z.govde.forEach(function(g){ h+=satir(_rEsc(g.name), g, false); });
+  h+=satir('Güç grubu (bütün noktalar)', Z.toplam, true);
+  h+='</table>';
+  // ── Belirleyici nokta ve durum
+  h+='<table><caption>Tablo '+_rTbl()+' — Güç grubunun zarfını belirleyen nokta ve durum</caption>';
+  h+='<tr><th>Yön</th><th>Yer değiştirme [mm]</th><th>Gövde</th><th>Nokta</th><th>Durum</th></tr>';
+  for(var i=0;i<3;i++){
+    [['−', Z.toplam.min[i], Z.toplam.minAt[i]], ['+', Z.toplam.max[i], Z.toplam.maxAt[i]]].forEach(function(r){
+      var at=r[2];
+      h+='<tr><td class="l">'+r[0]+eks[i]+'</td><td>'+mm(r[1])+'</td>'
+        +'<td class="l">'+(at ? _rEsc(at.govde) : '—')+'</td><td class="l">'+_mntRepZarfNokta(at)+'</td>'
+        +'<td class="l">'+(at ? _rEsc(_mntRepCaseTr(at.durum)) : '—')+'</td></tr>';
+    });
+  }
+  h+='</table>';
+  // ── Birleşik ağırlık merkezinin hareketi (statik konuma göre)
+  var q0=R.qStatic || [0,0,0,0,0,0], der=180/Math.PI;
+  // Aynı yükün iki adı (İleri tork = 1. vites, Tümsek = 3,5g düşey …) tek satırda
+  var durumlar=[], anahtar={};
+  _mntRepZarfDurumlari(R).forEach(function(rc){
+    if(rc.name==='Static') return;
+    var lc=rc.loadCase||{}, k=(lc.n||[]).join(';')+'|'+(lc.T||[]).join(';');
+    if(anahtar[k]) anahtar[k].adlar.push(_mntRepCaseTr(rc.name));
+    else durumlar.push(anahtar[k]={ res:rc.res, adlar:[_mntRepCaseTr(rc.name)] });
+  });
+  if(durumlar.length){
+    h+='<table><caption>Tablo '+_rTbl()+' — Birleşik ağırlık merkezinin ötelemesi ve dönmesi, statik konuma göre</caption>';
+    h+='<tr><th>Durum</th><th>Δu<sub>x</sub> [mm]</th><th>Δu<sub>y</sub> [mm]</th><th>Δu<sub>z</sub> [mm]</th>'
+      +'<th>Δθ<sub>x</sub> [°]</th><th>Δθ<sub>y</sub> [°]</th><th>Δθ<sub>z</sub> [°]</th></tr>';
+    durumlar.forEach(function(rc){
+      var q=rc.res.q;
+      h+='<tr><td class="l">'+rc.adlar.map(_rEsc).join(' · ')+'</td>'
+        +[0,1,2].map(function(k){ return '<td>'+mm(q[k]-q0[k])+'</td>'; }).join('')
+        +[3,4,5].map(function(k){ return '<td>'+_rFs((q[k]-q0[k])*der, 2)+'</td>'; }).join('')+'</tr>';
+    });
+    h+='</table>';
+  }
+  // ── Takoz sehim zarfı (yüksüz konumdan)
+  var tum=_mntRepZarfDurumlari(R);
+  if(tum.length && (R.mounts||[]).length){
+    h+='<table><caption>Tablo '+_rTbl()+' — Takoz sehim zarfı, yüksüz konumdan [mm]</caption>';
+    h+='<tr><th>Takoz</th><th>Eksen</th><th>En küçük δ</th><th>Durum</th><th>En büyük δ</th><th>Durum</th></tr>';
+    var not=function(pm){ return (pm.clamped ? ' · durdurucu' : '')+(pm.tension ? ' · çekme' : ''); };
+    R.mounts.forEach(function(mnt, mi){
+      for(var e=0;e<3;e++){
+        var lo=null, hi=null;
+        tum.forEach(function(rc){
+          var pm=rc.res.perMount && rc.res.perMount[mi]; if(!pm) return;
+          var d=pm.delta[e];
+          if(!lo || d<lo.d) lo={ d:d, rc:rc, pm:pm };
+          if(!hi || d>hi.d) hi={ d:d, rc:rc, pm:pm };
+        });
+        if(!lo) continue;
+        h+='<tr>'+(e===0 ? '<td class="l" rowspan="3">'+_rEsc(mnt.name||('Takoz '+(mi+1)))+'</td>' : '')
+          +'<td class="c">δ<sub>'+eks[e].toLowerCase()+'</sub></td>'
+          +'<td>'+mm(lo.d)+'</td><td class="l">'+_rEsc(_mntRepCaseTr(lo.rc.name))+(e===2 ? not(lo.pm) : '')+'</td>'
+          +'<td>'+mm(hi.d)+'</td><td class="l">'+_rEsc(_mntRepCaseTr(hi.rc.name))+(e===2 ? not(hi.pm) : '')+'</td></tr>';
+      }
+    });
+    h+='</table>';
+  }
   return h;
 }
 
@@ -671,6 +772,9 @@ function _mntRepCritical(R){
   h+=row('Çekme / lift-off', liftC.length ? '<b style="color:var(--warn);">var</b> — '+liftC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz gerilmeye geçer)' : 'yok — tüm takozlar basıda');
   h+=row('Lineerlik (±10 mm)', overC.length ? '<b style="color:var(--warn);">aşım</b> — '+overC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (nonlineer bölge)' : 'tüm sehimler bantta');
   h+=row('Durdurucu (±15 mm metal-metal)', clampC.length ? '<b style="color:var(--warn);">devrede</b> — '+clampC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz dibe oturur; yük yeniden dağılır)' : 'hiçbir takoz durdurucuya oturmadı');
+  var Z=R.zarf && R.zarf.toplam;
+  if(Z) h+=row('Hareket zarfı (statik konuma göre)', ['X','Y','Z'].map(function(e, i){
+    return e+' '+_rFs(Math.min(0, Z.min[i])*1000, 1)+' / '+_rFs(Math.max(0, Z.max[i])*1000, 1); }).join(' · ')+' mm (§8.19)');
   if(modes.length) h+=row('Modal bant', 'en düşük '+_rF(modes[0].f_Hz,2)+' Hz · en yüksek '+_rF(modes[modes.length-1].f_Hz,2)+' Hz ('+modes.length+' rijit gövde modu)');
   h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü.</div>';
   h+='</div>';
@@ -2500,6 +2604,7 @@ if(typeof module!=='undefined' && module.exports){
     _MNT_REP_AKSO_CSS: _MNT_REP_AKSO_CSS,
     _MNT_REP_AKSO_O: _MNT_REP_AKSO_O,
     _mntRepSection8: _mntRepSection8,
+    _mntRepZarf: _mntRepZarf,
     _mntRepMassTable: _mntRepMassTable,
     _mntRepMountTable: _mntRepMountTable,
     _mntRepFigure: _mntRepFigure,
