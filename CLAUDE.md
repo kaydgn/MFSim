@@ -638,10 +638,12 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
 - **TEK İSTİSNA — Takoz Başlangıç Sihirbazı'nın TALİMAT bölümü** (kullanıcı
   2026-11-09, Canlı Not 93: *"talimatları yazalım … Kullanıcıya referans olur.
   Adım eksikliklerini de ekleyelim"*): adım listesinin altında açık adımın 3–4
-  maddelik talimatı (`VE_MW_STEPS[].talimat`, denetimler ekrandaki adıyla) ve
-  eksikleri (adımın sorun listesi; girdilerin sütununda ikinci kez yazılmaz).
-  Talimat başka yüzeye genişletilmez; metinleri tabanda kullanıcı kararıyla.
-  Kapı: `mount-wizard.test.js` → *TALİMAT*.
+  maddelik talimatı (`VE_MW_STEPS[].talimat`, denetimler ekrandaki adıyla; BAŞLIKSIZ —
+  Canlı Not 95) ve eksikleri (adımın sorun listesi; girdilerin sütununda ikinci kez
+  yazılmaz; "Eksikler" başlığı kalın). Talimat başka yüzeye genişletilmez; metinleri
+  tabanda kullanıcı kararıyla. Adımın adının altında adımda girilenlerin ADLARI
+  (`VE_MW_STEPS[].girdi`, Canlı Not 96 — cümle değil, ' · ' ayraçlı < 8 sözcük).
+  Kapı: `mount-wizard.test.js` → *TALİMAT* · *ADIMDA AD VE GİRİLENLER*.
 - **Silinen bir bloğun yerine yönlendirme cümlesi konmaz.** 2026-08-31'de
   "Katalog Önerisi" kalkınca yerine böyle bir satır kondu. Yönlendirme
   yuvanın içeriğidir, kalkan bir bölümün yerini tutan not değil: yuvası yoksa
