@@ -6,10 +6,10 @@
  *   node tools/takoz-gorsel.js --kuru     # yalnız listeyi ve hedefleri yaz
  *
  * Kaynak üreticinin sitesi (mecanocaucho.com → cdn.amcsa.es, 2026-11-10): tipin
- * ÖLÇÜLÜ ÇİZİMİ (SVG) ve ailenin ürün/uygulama fotoğrafları (JPG/PNG). Hidrolik
- * konilerin sitede çizimi yok; çizimleri AMC genel kataloğunun (cauchometal_en.pdf)
- * 35. sayfasından kırpılır (pdftoppm gerekir; yoksa o kalem atlanır, eldeki dosya
- * korunur).
+ * ÖLÇÜLÜ ÇİZİMİ (SVG) — programdaki tek takoz görseli (Canlı Not 111: ürün ve
+ * uygulama fotoğrafları kalktı). Hidrolik konilerin sitede çizimi yok; çizimleri
+ * AMC genel kataloğunun (cauchometal_en.pdf) 35. sayfasından kırpılır (pdftoppm
+ * gerekir; yoksa o kalem atlanır, eldeki dosya korunur).
  *
  * Çıktı `assets/takoz/amc/<ad>.webp` + `assets/takoz/amc/kunye.json` (ad → kaynak,
  * ölçü, bayt). Klasör ELLE DÜZENLENMEZ; derleme gömer (build.js → __MFSIM_TAKOZ),
@@ -47,29 +47,13 @@ const HIDROLIK = {
   'hid-31': [43, 91, 291, 210], 'hid-32': [291, 91, 539, 210], 'hid-70': [43, 230, 291, 349],
   'hid-71': [291, 230, 539, 349], 'hid-72': [43, 369, 291, 488]
 };
-// Fotoğraf: ailenin ürün fotoğrafı (beyaz zemin) + uygulama fotoğrafları (araçta).
-const FOTO = {
-  'urun-masif': 'small/conos_solidos.jpg', 'urun-kesikli': 'small/Conos_con_alveolos.jpg',
-  'urun-flansli': 'small/Cono_Base_Fijacion.jpg', 'urun-hidrolik': 'small/conos_hidraulicos.jpg',
-  'urun-dsm': 'small/DSM_small.jpg',
-  'uyg-masif-1': 'more/cono_solido1.jpg', 'uyg-masif-2': 'more/cono_solido2.jpg', 'uyg-masif-3': 'more/cono_solido3.jpg',
-  'uyg-masif-4': 'more/cono_31.jpg', 'uyg-masif-5': 'more/cono31_02.jpg', 'uyg-masif-6': 'more/cono_33.jpg',
-  'uyg-masif-7': 'more/cono_70.jpg', 'uyg-masif-8': 'more/Cono_mount0.jpg', 'uyg-masif-9': 'more/Cono_mount10.jpg',
-  'uyg-kesikli-1': 'more/Cono_38.jpg', 'uyg-kesikli-2': 'more/Mount2.2.jpg', 'uyg-kesikli-3': 'more/alveol1.jpg',
-  'uyg-kesikli-4': 'more/alveol2.jpg', 'uyg-kesikli-5': 'more/conos_alveolos_1.jpg', 'uyg-kesikli-6': 'more/conos_con_alveolos_1.jpg',
-  'uyg-flansli-1': 'more/cono_con_base_fijacion.jpg', 'uyg-flansli-2': 'more/cono_con_base_fijacion2.jpg',
-  'uyg-flansli-3': 'more/cono_con_base_fijacion3.jpg', 'uyg-flansli-4': 'more/cono_con_base_fijacion4.jpg',
-  'uyg-flansli-5': 'more/cono_con_base_fijacion5.jpg', 'uyg-flansli-6': 'more/f10_be75e6c4-dc1e-40fb-bb9a-8b8cdb1a3d01.jpg'
-};
 const CIZIM_EN = 640;          // çizimin genişliği (px)
-const FOTO_EN = 800;           // fotoğrafın uzun kenarı (px)
 const KALITE = 0.82;
 
 function listesi() {
   const L = [];
   Object.keys(CIZIM).forEach((k) => L.push({ ad: 'cizim-' + k, url: CDN + 'drawings/' + CIZIM[k] + '.svg', tur: 'svg', en: CIZIM_EN }));
   Object.keys(HIDROLIK).forEach((k) => L.push({ ad: 'cizim-' + k, url: KATALOG, tur: 'pdf', sayfa: 37, kutu: HIDROLIK[k], en: CIZIM_EN }));
-  Object.keys(FOTO).forEach((k) => L.push({ ad: k, url: CDN + FOTO[k], tur: 'foto', en: FOTO_EN }));
   return L;
 }
 
@@ -87,7 +71,10 @@ async function main() {
   if (kuru) { L.forEach((x) => console.log(x.ad.padEnd(22), x.url)); return; }
   fs.mkdirSync(HEDEF, { recursive: true });
   const kunyeYol = path.join(HEDEF, 'kunye.json');
-  const kunye = fs.existsSync(kunyeYol) ? JSON.parse(fs.readFileSync(kunyeYol, 'utf8')) : {};
+  // Listede olmayan eski kalem (kalkan fotoğraflar) künyeye geri yazılmaz.
+  const adlar = new Set(L.map((x) => x.ad)), kunye = {};
+  const eski = fs.existsSync(kunyeYol) ? JSON.parse(fs.readFileSync(kunyeYol, 'utf8')) : {};
+  Object.keys(eski).filter((k) => adlar.has(k)).forEach((k) => { kunye[k] = eski[k]; });
   const { chromium } = require('playwright');
   const tarayici = await chromium.launch(CHROMIUM ? { executablePath: CHROMIUM } : {});
   const sayfa = await tarayici.newPage();
@@ -107,25 +94,23 @@ async function main() {
         kaynakDosya = onek + '.png'; mime = 'image/png';
       } else {
         kaynakDosya = indir(x.url);
-        mime = x.tur === 'svg' ? 'image/svg+xml' : (/\.png$/i.test(x.url) ? 'image/png' : 'image/jpeg');
+        mime = 'image/svg+xml';
       }
     } catch (e) {
       console.warn('  atlandı ' + x.ad + ': ' + String(e.message).split('\n')[0]); atlanan++; continue;
     }
     const b64 = fs.readFileSync(kaynakDosya).toString('base64');
-    const sonuc = await sayfa.evaluate(async ({ b64, mime, tur, en, kalite }) => {
+    const sonuc = await sayfa.evaluate(async ({ b64, mime, en, kalite }) => {
       const im = new Image();
       im.src = 'data:' + mime + ';base64,' + b64;
       await im.decode();
-      let w = im.naturalWidth, h = im.naturalHeight;
-      if (tur === 'foto') { const s = Math.min(1, en / Math.max(w, h)); w = Math.round(w * s); h = Math.round(h * s); }
-      else { const s = en / w; w = en; h = Math.round(h * s); }
+      const w = en, h = Math.round(im.naturalHeight * en / im.naturalWidth);
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const g = c.getContext('2d');
       g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);                // sabit renk: çizimin kâğıdı (şeffaf SVG)
       g.drawImage(im, 0, 0, w, h);
       return { w, h, url: c.toDataURL('image/webp', kalite) };
-    }, { b64, mime, tur: x.tur, en: x.en, kalite: KALITE });
+    }, { b64, mime, en: x.en, kalite: KALITE });
     const buf = Buffer.from(sonuc.url.split(',')[1], 'base64');
     fs.writeFileSync(path.join(HEDEF, x.ad + '.webp'), buf);
     kunye[x.ad] = { kaynak: x.url + (x.tur === 'pdf' ? '#page=' + x.sayfa : ''), en: sonuc.w, boy: sonuc.h, bayt: buf.length };
@@ -140,4 +125,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { listesi, CIZIM, HIDROLIK, FOTO };
+module.exports = { listesi, CIZIM, HIDROLIK };

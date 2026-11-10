@@ -278,9 +278,9 @@ async function takozTuru(page, olc) {
   await page.evaluate(() => veMntWizKapat(false));
   const p = await pencereler(page, olc);
   expect(p.olculen).toBeGreaterThan(300);
-  // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — ölçülü çizim, ürün
-  // ve uygulama fotoğrafları, veri tablosu; tam tip (Cone 38 60 ShA) ve radyali boş tip
-  // (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz; tur onu açıyordu.
+  // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — veri tablosu (görsel yok,
+  // Canlı Not 111) ve Tip satırının (i) düğmesinin penceresi (teknik resim); tam tip (Cone 38
+  // 60 ShA) ve radyali boş tip (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz.
   for (const k of ['amc137963', 'amc137961']) {
     await page.evaluate((kk) => {
       const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
@@ -296,6 +296,13 @@ async function takozTuru(page, olc) {
       await page.evaluate(([ss, B]) => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = ss * (ic.clientHeight - B); }, [s, SAYFA_BINDIRME]);
       await page.waitForTimeout(100);
       await olc('#ve-properties', 'Takoz Özellikleri · ' + k + (s ? ' ↓' + (s + 1) : ''));
+    }
+    if (k === 'amc137963') {
+      await page.evaluate(() => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = 0; });
+      await page.click('#ve-properties .mntlib-bilgi');
+      await page.waitForFunction(() => { const i = document.querySelector('#ve-bas-buyuk-perde img'); return i && i.complete; }, null, { timeout: 10000 });
+      await olc('#ve-bas-buyuk-perde', 'Takoz Özellikleri · teknik resim');
+      await page.keyboard.press('Escape');
     }
     await page.evaluate(() => veTogglePropertiesPanel(false));
   }

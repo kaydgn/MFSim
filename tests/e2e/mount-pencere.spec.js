@@ -92,6 +92,55 @@ test('Başlangıç Sihirbazı bileşeni: tek tık sihirbazı açar, pencere açm
   expect(await page.evaluate(() => document.getElementById('ve-properties-overlay').classList.contains('visible'))).toBe(false);
 });
 
+// TAKOZ ÖZELLİKLERİ (kullanıcı 2026-11-10): Canlı Not 111 — *"takoz resimlerini kaldıralım. Sadece
+// teknik resmi kalsa yeter … (i) butonu … pop-up pencere"*: pencerede görsel yok, (i) Tip satırının
+// sonunda ve teknik resmi pencere ailesinin penceresinde açar. Canlı Not 112 — *"tabloyu tekrar
+// açtığımda, tablonun en başına geliyor"*: liste her açılışta seçili tipin satırında.
+test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili satırda açılır', async ({ page }) => {
+  await bootApp(page);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  await page.evaluate(() => {
+    const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
+    n.data = n.data || {}; n.data._selKey = 'amc137982';
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
+  });
+  await page.waitForSelector('#ve-properties .mntlib-bilgi', { timeout: 10000 });
+  const satir = await page.evaluate(() => {
+    const P = document.getElementById('ve-properties'), r = (e) => e.getBoundingClientRect();
+    const tr = P.querySelector('.mntlib-tip .mntlib-trigger'), bi = P.querySelector('.mntlib-tip .mntlib-bilgi'), ek = P.querySelector('.mntlib-add');
+    return { img: P.querySelectorAll('img').length, bilgi: [Math.round(r(bi).width), Math.round(r(bi).height)],
+      ayniSatir: Math.abs(r(bi).top - r(tr).top) < 0.5, solunda: r(tr).right <= r(bi).left, sagKenar: Math.abs(r(bi).right - r(ek).right) < 0.5 };
+  });
+  expect(satir).toEqual({ img: 0, bilgi: [26, 26], ayniSatir: true, solunda: true, sagKenar: true });
+  for (let tur = 0; tur < 2; tur++) {
+    await page.click('#ve-properties .mntlib-trigger');
+    const L = await page.evaluate(() => {
+      const P = document.getElementById('ve-properties'), list = P.querySelector('.mntlib-list'), sel = list.querySelector('.mntlib-opt.sel');
+      const a = list.getBoundingClientRect(), b = sel.getBoundingClientRect();
+      return { kaydi: list.scrollTop > 0, gorunur: b.top >= a.top - 0.5 && b.bottom <= a.bottom + 0.5, ad: sel.textContent,
+        genislik: Math.abs(P.querySelector('.mntlib-dd').getBoundingClientRect().width - P.querySelector('.mntlib-tip').getBoundingClientRect().width) < 0.5 };
+    });
+    expect([L.kaydi, L.gorunur, L.genislik]).toEqual([true, true, true]);   // liste satırın tamamına açılır
+    expect(L.ad).toContain('AMC 137982');
+    await page.evaluate(() => { document.querySelector('#ve-properties .mntlib-list').scrollTop = 0; });
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#ve-properties .mntlib-dd').hidden, null, { timeout: 5000 });
+  }
+  await page.click('#ve-properties .mntlib-bilgi');
+  await page.waitForFunction(() => { const i = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 10000 });
+  const pen = await page.evaluate(() => {
+    const p = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere').getBoundingClientRect();
+    return { baslik: document.getElementById('ve-bas-buyuk-baslik').textContent, en: document.querySelector('#ve-bas-buyuk-perde img').naturalWidth,
+      sigar: p.left >= 0 && p.top >= 0 && p.right <= innerWidth && p.bottom <= innerHeight,
+      kapat: !!document.querySelector('#ve-bas-buyuk-perde .ve-settings-header .ve-settings-close .mf-ico-x') };
+  });
+  expect(pen).toEqual({ baslik: 'Cone 39 · teknik resim', en: 640, sigar: true, kapat: true });
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => [!!document.getElementById('ve-bas-buyuk-perde'),
+    !!(document.activeElement && document.activeElement.classList.contains('mntlib-bilgi')),
+    document.getElementById('ve-properties-overlay').classList.contains('visible')])).toEqual([false, true, true]);
+});
+
 // Tam ekranda düz görünüşler YOK (2026-10-16); işaretler adlarıyla, koordinat
 // üçlüsü işaretin bilgisinde (fare üstü) "(x; y; z) mm".
 test('Görünümler tam ekran: düz görünüş yok, yerleşim temiz, koordinat ayracı "; "', async ({ page }) => {

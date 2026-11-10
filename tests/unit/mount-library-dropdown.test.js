@@ -13,6 +13,12 @@
  * MARKA (kullanıcı 2026-11-10, Canlı Not 106): liste yalnız SEÇİLİ MARKANIN
  * tiplerini taşır — marka Marka listesinde seçilir; grup başlığı ve sayaç yok.
  * Katalog tipleri bu yüzden seçili tipin markası üzerinden aranır.
+ *
+ * SEÇİLİ SATIR (kullanıcı 2026-11-10, Canlı Not 112: *"tabloyu tekrar açtığımda,
+ * tablonun en başına geliyor. Seçtiğim yere gelmiyor"*): liste açılınca seçili
+ * tipin satırı listenin ortasına kayar; yalnız listenin kaydırması oynar.
+ * jsdom'da yerleşim yok — satırların ölçüsü elle verilir; gerçek yerleşim
+ * tests/e2e/mount-pencere.spec.js → *Takoz Özellikleri*.
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -137,6 +143,48 @@ describe('aç / kapa', () => {
     document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(onDoc).toHaveBeenCalledTimes(1);              // ölü liste olayı yutmadı
     document.removeEventListener('keydown', onDoc);
+  });
+});
+
+describe('SEÇİLİ SATIR — liste açılınca seçili tipe kayar (Canlı Not 112)', () => {
+  const SATIR = 24, ARA = 4, BOY = 200;
+  // Yerleşimin elle ölçüsü: liste 100 px'te, satırlar 24 px, dolgu 4 px; kaydırma satırları yukarı taşır.
+  function olcuVer(el) {
+    Object.defineProperty(el.list, 'clientHeight', { value: BOY, configurable: true });
+    el.list.getBoundingClientRect = () => ({ top: 100, height: BOY });
+    const opts = Array.from(el.list.querySelectorAll('.mntlib-opt'));
+    opts.forEach((o, j) => { o.getBoundingClientRect = () => ({ top: 100 + ARA + j * SATIR - el.list.scrollTop, height: SATIR }); });
+    return opts;
+  }
+  test('seçili satır listenin ortasında açılır; kapatıp yeniden açmak aynı yere getirir', () => {
+    const el = mountPanel(libNode([], 'amc137982'));            // notun tipi: Cone 39 50 ShA
+    const opts = olcuVer(el);
+    const i = opts.findIndex((o) => o.classList.contains('sel'));
+    expect(opts[i].textContent).toContain('AMC 137982');
+    expect(i).toBeGreaterThan(10);                              // listenin başında değil
+    const beklenen = Math.round(ARA + i * SATIR - (BOY - SATIR) / 2);
+    el.trigger.click();
+    expect(el.dd.hidden).toBe(false);
+    expect(el.list.scrollTop).toBe(beklenen);
+    el.list.scrollTop = 0;                                      // kullanıcı başa kaydırıp kapatır
+    el.trigger.click();
+    expect(el.dd.hidden).toBe(true);
+    el.trigger.click();
+    expect(el.list.scrollTop).toBe(beklenen);                   // yeniden açılış yine seçili satırda
+    const host = document.getElementById('host');
+    expect(host.scrollTop).toBe(0);                             // pencerenin kaydırması oynamaz
+  });
+  test('ilk satır seçiliyse ya da seçili satır yoksa liste başta kalır', () => {
+    const el = mountPanel(libNode());                           // ilk gömülü tip seçili
+    olcuVer(el);
+    expect(el.list.querySelector('.mntlib-opt').classList.contains('sel')).toBe(true);
+    el.trigger.click();
+    expect(el.list.scrollTop).toBe(0);
+    el.trigger.click();
+    el.list.querySelector('.mntlib-opt.sel').classList.remove('sel');
+    el.list.scrollTop = 30;
+    el.trigger.click();
+    expect(el.list.scrollTop).toBe(30);                         // seçili satır yok: kaydırma olduğu gibi
   });
 });
 

@@ -35,9 +35,10 @@
 //     eksik tip, Takoz Özellikleri'nden girilir, taramaya aday olmaz.
 //   • DSM çift rijitlikli (ön sıkıştırma · statik · dinamik bölge): yük–sehim
 //     eğrisi doğrusal değil, kz YAZILMADI.
-//   • GÖRSELLER — tipin ölçülü çizimi ve ailenin fotoğrafları, üreticinin
-//     sitesinden: assets/takoz/amc/ (tools/takoz-gorsel.js üretir, elle
-//     düzenlenmez); derleme gömer (build.js → __MFSIM_TAKOZ).
+//   • GÖRSEL — yalnız tipin TEKNİK RESMİ (ölçülü çizim), üreticinin sitesinden:
+//     assets/takoz/amc/ (tools/takoz-gorsel.js üretir, elle düzenlenmez);
+//     derleme gömer (build.js → __MFSIM_TAKOZ). Ürün ve uygulama fotoğrafları
+//     YOK (kullanıcı 2026-11-10, Canlı Not 111: "Sadece teknik resmi kalsa yeter").
 //
 // ANAHTAR 'amc' + kod — kayıtlı projeler takozu node.data.libKey ile bağlar,
 // DEĞİŞMEZ. Ad: "<ürün> <sertlik> ShA (AMC <kod>)"; sertliği yazılmayan üründe
@@ -47,13 +48,13 @@
 var VE_MNT_AMC = (function() {
   'use strict';
 
-  // aile → [üreticinin aile adı, ürün fotoğrafı, uygulama fotoğrafı sayısı]
+  // aile → [üreticinin aile adı]
   var AILE = {
-    masif:    ['Solid cone', 'urun-masif', 9],
-    kesikli:  ['Cone with cutouts', 'urun-kesikli', 6],
-    flansli:  ['Cone with fixation flange', 'urun-flansli', 6],
-    hidrolik: ['Hydraulic cone', 'urun-hidrolik', 0],
-    dsm:      ['DSM (dual stiffness mount)', 'urun-dsm', 0]
+    masif:    ['Solid cone'],
+    kesikli:  ['Cone with cutouts'],
+    flansli:  ['Cone with fixation flange'],
+    hidrolik: ['Hydraulic cone'],
+    dsm:      ['DSM (dual stiffness mount)']
   };
   // tip → [aile, ürün adı, çizim, sıkma torku maks. (N·m), ağırlık (g)] — sitedeki tablo
   var TIP = {
@@ -329,14 +330,12 @@ var VE_MNT_AMC = (function() {
     var G = (typeof window !== 'undefined' && window.__MFSIM_TAKOZ) || null;
     return (G && G[rel]) || ('assets/' + rel);
   }
-  // Künye: Takoz Özellikleri'nin gösterdiği veri ve görseller.
+  // Künye: Takoz Özellikleri'nin gösterdiği veri ve tipin teknik resmi.
   function kunye(kod) {
     var k = KOD[kod]; if (!k) return null;
-    var t = TIP[k[0]], a = AILE[t[0]], e = girdi(kod), uyg = [];
-    for (var i = 1; i <= a[2]; i++) uyg.push(gorsel('uyg-' + t[0] + '-' + i));
+    var t = TIP[k[0]], a = AILE[t[0]], e = girdi(kod);
     return { kod: kod, ad: e.name, urun: t[1], aile: a[0], sh: k[1], maxLoad: k[2], tork: t[3], gr: t[4],
-             cizim: gorsel('cizim-' + t[2]), foto: gorsel(a[1]), uyg: uyg,
-             kaynak: KAYNAK[e.amc.kzKaynak] || null };
+             cizim: gorsel('cizim-' + t[2]), kaynak: KAYNAK[e.amc.kzKaynak] || null };
   }
   return { MARKA: MARKA, AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, ESKI: ESKI, KAYNAK: KAYNAK,
            ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye };
