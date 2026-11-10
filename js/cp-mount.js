@@ -499,11 +499,13 @@ var MNT_ILERI = '-x', MNT_KALDIRIM_G = 1.55, MNT_KALDIRIM_YON = 'ters', MNT_TORK
 // İLERİ YÖNÜN ÖNERİSİ — güç grubunun dizilişinden (F048, 2026-11-10). Motorun
 // önü (kasnak tarafı) şanzımanın (yoksa transfer kutusunun) karşı yanındadır;
 // öneri motorun önü aracın önüne bakar varsayımıyla: motor şanzımandan −X
-// taraftaysa ileri −X. Motorun önü geriye bakan araçta (TTAR) öneri tutmaz —
-// bu yüzden öneri yalnız önerir: Çözücü'de onaylanmamış yön durumla söylenir.
-// Onay `d.ileri`dir (iki değer de yazılır); onaysız modelde etkin yön öneri,
-// öneri yoksa varsayılan −X. Komşusu tork yönüdür (F049) ve ileri yönden
-// türetilmez. Kapı: mount-ileri-oneri.test.js.
+// taraftaysa ileri −X. YÖN KENDİLİĞİNDEN BELİRLENİR (kullanıcı 2026-11-10, Canlı Not
+// 121: *"manuel olarak girdiğimizde de otomatik olarak belirlensin ve bu kısım
+// kalksın"*): Çözücü'de Araç ekseni bölümü ve onay YOK. Etkin yön projede yazılıysa
+// o (örnekler kendi Adams analizinin yönünü taşır — Siper +X, motorun önü geriye
+// bakan araç), değilse dizilişin önerisi, o da yoksa −X; yük kitabının künyesi
+// yazar. Komşusu tork yönüdür (F049): ileri yönden türetilmez; projede yazılıysa o,
+// değilse −X. Kapı: mount-ileri-oneri.test.js · mount-arac-ekseni.test.js.
 var MNT_ILERI_ESIK = 1;   // mm — motor ile şanzımanın X farkı bunun altındaysa öneri yok
 function _mntIleriOnerisi(liste){
   var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes) ? nodes : []);
@@ -4684,9 +4686,11 @@ function _mntGatherForSolver(solver, liste){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  var sd=solver && solver.data;
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, _mntIleriOnerisi(L)),
-           ileriOnay:_mntIleriOnayli(sd), baglanti:baglanti };
+  var sd=solver && solver.data, oneri=_mntIleriOnerisi(L);
+  // ileriKaynak: yönün nereden geldiği — 'proje' (yazılı) · 'dizilis' (öneri) · 'varsayilan' (−X); rapor söyler.
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, oneri),
+           ileriOnay:_mntIleriOnayli(sd), ileriKaynak:_mntIleriOnayli(sd) ? 'proje' : (oneri ? 'dizilis' : 'varsayilan'),
+           baglanti:baglanti };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
@@ -4960,24 +4964,15 @@ function _mntCozucuDurumGovde(node){
       + sayi(n[0])+sayi(n[1])+sayi(n[2])
       + '<td'+(T[0]===0 ? ' class="sf"' : '')+'>'+(T[0]===0 ? '0' : _mntS(T[0]/1000,1))+'</td></tr>';
   });
-  var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok');
+  var Y=_mntYonAyari(node.data, _mntIleriOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
+  var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok')
+    + ' · ileri '+eks(Y.ileri)+' · tork '+eks(Y.torkYon);
   return _mntCozucuYonGovde(node)
     + '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
 }
-// ARACIN İLERİ YÖNÜ · KALDIRIM DARBESİ · TORK YÖNÜ — yük kitabının girdisi
-// (_mntYonAyari); kitap hemen altında değeri izler. Varsayılan seçim alan yazmaz.
-function _mntCozucuIleriNot(node){
-  var d=node.data||{}, O=_mntIleriOnerisi(), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
-  var ic='', ton='';
-  if(!_mntIleriOnayli(d)){
-    ton='warn';
-    ic='<b>Onaylanmadı.</b> '+(O ? 'Diziliş önerisi '+eks(O.ileri)+'.' : 'Varsayılan −X.')
-      + ' <button type="button" class="ve-fp-dugme" onclick="veMntIleriOnayla(\''+node.id+'\')">Onayla</button>';
-  } else if(O && O.ileri!==d.ileri){
-    ic='Diziliş önerisi '+eks(O.ileri)+'.';
-  }
-  return '<div id="ve-mnt-ileri-not-'+node.id+'" data-tazele>'+(ic ? _mntNot(ic, ton) : '')+'</div>';
-}
+// KALDIRIM DARBESİ — yük kitabının girdisi (_mntYonAyari); kitap hemen altında
+// değeri izler. Varsayılan seçim alan yazmaz. İleri yön ve tork yönü kendiliğinden
+// (Canlı Not 121 — yukarıda F048): Araç ekseni bölümü yok, künyesi yük kitabında.
 function _mntCozucuYonGovde(node){
   var Y=_mntYonAyari(node.data, _mntIleriOnerisi());
   var secici=function(alan, etiket, deger, secenekler, degis){
@@ -4986,13 +4981,7 @@ function _mntCozucuYonGovde(node){
     secenekler.forEach(function(o){ h+='<option value="'+o[0]+'"'+(deger===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; });
     return h+'</select></label>';
   };
-  var eksen=[['-x','−X'], ['+x','+X']];
-  return _mntBolum('Araç ekseni', '',
-      _mntIzgara(2,
-        secici('ileri', 'İleri yön', Y.ileri, eksen, 'veMntSetYon(\''+node.id+'\',\'ileri\',this.value)')
-      + secici('torkYon', 'Tork yönü', Y.torkYon, eksen, 'veMntSetYon(\''+node.id+'\',\'torkYon\',this.value)'))
-      + _mntCozucuIleriNot(node))
-    + _mntBolum('Kaldırım darbesi', 'yanal',
+  return _mntBolum('Kaldırım darbesi', 'yanal',
       _mntIzgara(2,
         _mntVarsayilanAlan(node, 'kaldirimG', 'İvme <u>[g]</u>', MNT_KALDIRIM_G, 'genel araç yük kitabı',
           'veMntSetYon(\''+node.id+'\',\'kaldirimG\',this.value)')
@@ -5187,11 +5176,6 @@ function veMntSetYon(nodeId, key, val){
   if(typeof saveState==='function') saveState();
 }
 
-// İleri yönün onayı: etkin yön (öneri ya da varsayılan) alana yazılır.
-function veMntIleriOnayla(nodeId){
-  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
-  veMntSetYon(nodeId, 'ileri', _mntYonAyari(node.data, _mntIleriOnerisi()).ileri);
-}
 
 // Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
 // seçim bir sonraki ▶ Hesapla'da uygulanır (hesap butona kilitli).
@@ -5312,7 +5296,7 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           yon:prep.gather.yon || _mntYonAyari(),
           // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
-          ileriOnay:prep.gather.ileriOnay,
+          ileriOnay:prep.gather.ileriOnay, ileriKaynak:prep.gather.ileriKaynak,
           imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti, prep.gather.yon) };
   // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
   // (çekirdek sectionMoment); hüküm raporda, Statik durumda sınıra göre
@@ -5639,7 +5623,7 @@ if(typeof module!=='undefined' && module.exports){
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
     _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntIleriOnayli: _mntIleriOnayli,
-    veMntIleriOnayla: veMntIleriOnayla, _mntCozucuIleriNot: _mntCozucuIleriNot, _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
+    _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
     _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
     veMntSetYon: veMntSetYon,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,

@@ -252,7 +252,9 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
     const svg = document.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso');
     expect([...svg.querySelectorAll(':scope > g[data-ak]')].filter((g) => g.querySelector('text') && !g.classList.contains('ve-ak-cip'))).toEqual([]);
   });
-  test('işarete tık satırı seçer; seçili perdesiz vurgulu', () => {
+  // SEÇİLİ ÖNDE (kullanıcı 2026-11-10, Canlı Not 119: *"Takoz seçildiğinde … öne doğru çıksın,
+  // belirginleşsin … arka tarafta kalmış"*): seçili perdenin ÜSTÜNDE, kalan model gölgede.
+  test('SEÇİLİ ÖNDE: işarete tık satırı seçer; seçili perdenin üstünde, kalan model altında', () => {
     tulga();
     W.veMntWizGoto(OZET);
     const st = W.veMntWizState();
@@ -262,7 +264,13 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
     expect(W._mwMasa3BSec(tk)).toBe(true);                                              // takoz adımına geçer
     const svg = document.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso');
     expect(svg.querySelector('g.ve-ak-t[data-sec]').getAttribute('data-ak')).toBe(tk);
-    expect(svg.querySelector('.ve-ak-perde')).toBeNull();
+    const perde = svg.querySelector(':scope > rect.ve-ak-perde'), odak = svg.querySelector(':scope > g.ve-ak-odak');
+    expect(perde).not.toBeNull();
+    expect(odak.querySelector('g.ve-ak-t[data-sec]').getAttribute('data-ak')).toBe(tk);      // seçili perdenin üstünde
+    expect(perde.compareDocumentPosition(odak) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.getElementById(W.VE_MW_AKSO).getAttribute('data-perde')).toBe('1');
+    W.veMntWizGoto(OZET);                                                               // özette seçim yok: perde de yok
+    expect(document.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso .ve-ak-perde')).toBeNull();
     // konumu eksik takoz çizilmez (düz görünüşün kuralı)
     t.x = '';
     expect(W._mwAksoDugumler(st).some((n) => n.key === t.key)).toBe(false);

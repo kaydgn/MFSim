@@ -215,32 +215,33 @@ describe('İMZA — ayar sonucu bayatlatır', () => {
 
 describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
   const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
-  test('Araç ekseni ve Kaldırım darbesi bölümleri yük kitabının üstünde; seçili değer modelden', () => {
+  test('Kaldırım darbesi bölümü yük kitabının üstünde; Araç ekseni bölümü yok (Canlı Not 121); seçili değer modelden', () => {
     kur('siper');
     const n = cozucu();
     ac(n);
     const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
-    expect(bolumler).toEqual(['Araç ekseni', 'Kaldırım darbesi', 'Yük kitabı']);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id).value).toBe('+x');
-    expect(document.getElementById('ve-mnt-torkYon-' + n.id).value).toBe('-x');
+    expect(bolumler).toEqual(['Kaldırım darbesi', 'Yük kitabı']);
+    expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
+    expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
     expect(document.getElementById('ve-mnt-kaldirimYon-' + n.id).value).toBe('ayni');
     expect(document.getElementById('ve-mnt-kaldirimG-' + n.id).value).toBe('3.5');
     expect(document.querySelector('[data-mnt-vars="ve-mnt-kaldirimG-' + n.id + '"]').getAttribute('data-kaynak')).toBe('elle');
+    expect(document.querySelector('#ve-mnt-cdur-' + n.id + ' .ve-fp-sect em').textContent).toMatch(/ · ileri \+X · tork −X$/);
   });
 
   test('ayar değişince yük kitabı YERİNDE tazelenir; seçici kurulmaz', () => {
     kur('tulga');
     const n = cozucu();
     ac(n);
-    const sec = document.getElementById('ve-mnt-ileri-' + n.id);
+    const sec = document.getElementById('ve-mnt-kaldirimYon-' + n.id);
     const ad = rep._mntRepCaseTr('Braking');
     const fren = () => [...document.querySelectorAll('#ve-mnt-cdur-' + n.id + ' tbody tr')]
       .find((tr) => tr.firstChild && tr.firstChild.getAttribute('title') === ad);
     const nx = () => fren().children[1].textContent;
     const once = nx();
-    cp.veMntSetYon(n.id, 'ileri', '+x');
+    cp.veMntSetYon(n.id, 'ileri', '+x');                                // projede yazılı yön (programın yazıcısı)
     expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBe(sec);
+    expect(document.getElementById('ve-mnt-kaldirimYon-' + n.id)).toBe(sec);
     expect(nx()).not.toBe(once);
   });
 
