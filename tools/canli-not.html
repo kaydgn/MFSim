@@ -161,8 +161,32 @@ button, textarea, input { font: inherit; color: inherit; }
 }
 .cn-liste-bas h2 { margin: 0; font-family: var(--dar); font-weight: 600; font-size: var(--fs-3); }
 .cn-ozet { flex: 1 1 auto; font-size: var(--fs-1); color: var(--soluk); font-variant-numeric: tabular-nums; }
-.cn-notlar { list-style: none; margin: 0; padding: 10px; overflow-y: auto; display: grid; gap: 8px; align-content: start; flex: 1 1 auto; }
+.cn-notlar { margin: 0; padding: 0 0 10px; overflow-y: auto; flex: 1 1 auto; }
 .cn-bos { margin: 0; padding: 18px 14px; color: var(--soluk); display: grid; gap: 4px; }
+/* Kategoriler: notun durumundan türeyen bölümler (çekirdek: kategorile). Başlık
+   yapışkan, tıklanınca bölüm kapanır; boş kategori başlığıyla kalır (sayı 0). */
+.cn-kat-bas { position: sticky; top: 0; z-index: 1; margin: 0; background: var(--kagit); border-bottom: 1px solid var(--cizgi); }
+.cn-kat-bas button {
+  width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px 14px 8px 12px;
+  border: 0; background: transparent; cursor: pointer; text-align: left;
+  font-family: var(--dar); font-weight: 600; font-size: var(--fs-3); color: var(--murekkep);
+}
+.cn-kat-bas button::before {
+  content: ""; width: 6px; height: 6px; flex: none; transform: rotate(45deg) translate(-1px, -1px);
+  border-right: 1.7px solid currentColor; border-bottom: 1.7px solid currentColor;
+}
+.cn-kat[data-kapali="1"] .cn-kat-bas button::before { transform: rotate(-45deg); }
+.cn-kat-bas button:hover:not(:disabled) { background: var(--pafta); }
+.cn-kat-bas button:disabled { cursor: default; color: var(--soluk); }
+.cn-kat-bas button:disabled::before { opacity: .35; }
+.cn-kat-say { margin-left: auto; min-width: 22px; padding: 1px 6px; border-radius: 2px; text-align: center;
+  font-family: var(--veri); font-weight: 400; font-size: var(--fs-0); background: var(--pafta); color: var(--soluk); }
+.cn-kat[data-bos="0"][data-kat="girdi"] .cn-kat-say { background: var(--mor-zemin); color: var(--mor); }
+.cn-kat[data-bos="0"][data-kat="uygulaniyor"] .cn-kat-say { background: var(--mavi-zemin); color: var(--mavi); }
+.cn-kat[data-bos="0"][data-kat="uygulanacak"] .cn-kat-say { background: var(--amber-zemin); color: var(--amber); }
+.cn-kat[data-bos="0"][data-kat="uygulanan"] .cn-kat-say { background: var(--yesil-zemin); color: var(--yesil); }
+.cn-kat-liste { list-style: none; margin: 0; padding: 10px; display: grid; gap: 8px; }
+.cn-kat[data-bos="1"] .cn-kat-liste, .cn-kat[data-kapali="1"] .cn-kat-liste { display: none; }
 .cn-not {
   display: grid; gap: 6px; padding: 9px 10px 10px;
   background: var(--pafta); border: 1px solid var(--cizgi); border-left: 3px solid var(--amber);
@@ -174,11 +198,6 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-not[data-durum="iptal"] .cn-not-metin { color: var(--soluk); text-decoration: line-through; }
 .cn-not-bas { display: flex; align-items: center; gap: 8px; }
 .cn-not-bas .cn-no { font-size: var(--fs-2); }
-.cn-cip { font-size: var(--fs-0); font-weight: 600; padding: 1px 6px; border-radius: 2px; background: var(--amber-zemin); color: var(--amber); }
-.cn-cip[data-durum="uygulaniyor"] { background: var(--mavi-zemin); color: var(--mavi); }
-.cn-cip[data-durum="uygulandi"] { background: var(--yesil-zemin); color: var(--yesil); }
-.cn-cip[data-durum="soru"] { background: var(--mor-zemin); color: var(--mor); }
-.cn-cip[data-durum="iptal"] { background: var(--kagit); color: var(--soluk); }
 .cn-not-bas time { margin-left: auto; font-family: var(--veri); font-size: var(--fs-0); color: var(--soluk); }
 .cn-not-yer { margin: 0; font-size: var(--fs-1); color: var(--soluk); }
 .cn-not-metin { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -281,7 +300,7 @@ button, textarea, input { font: inherit; color: inherit; }
         <button class="cn-arac" type="button" id="cn-liste-kapat" aria-label="Kapat" title="Kapat">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
-      <ol class="cn-notlar" id="cn-notlar"></ol>
+      <div class="cn-notlar" id="cn-notlar"></div>
       <p class="cn-bos" id="cn-bos"><span>Not yok.</span><span>Kalemle ekranda bir yeri işaretleyin.</span></p>
     </aside>
 
@@ -742,6 +761,7 @@ button, textarea, input { font: inherit; color: inherit; }
       // Liste satırı yorumun çapası: anlık görüntü gelmeden çizilir.
       if (!notlar.some(function (n) { return n.id === id; })) {
         var kopya = JSON.parse(JSON.stringify(not)); kopya.id = id;
+        kapali.uygulanacak = false; kapaliYaz();      // yeni not kuyrukta: o bölüm açık görünsün
         notlar.push(kopya); listeCiz();
       }
       kartKapat(); aracSec('imlec');
@@ -808,7 +828,7 @@ button, textarea, input { font: inherit; color: inherit; }
   function notSatiri(n) {
     var li = document.createElement('li');
     li.className = 'cn-not'; li.id = 'not-' + n.id;
-    li.innerHTML = '<div class="cn-not-bas"><span class="cn-no"></span><span class="cn-cip"></span><time></time></div>' +
+    li.innerHTML = '<div class="cn-not-bas"><span class="cn-no"></span><time></time></div>' +
       '<p class="cn-not-yer"></p><p class="cn-not-metin"></p>' +
       '<div class="cn-cevap" hidden><b>Claude</b><p></p></div>' +
       '<button class="cn-sonuc" type="button" data-is="buyut" hidden><img alt="" loading="lazy" decoding="async"></button>' +
@@ -841,8 +861,6 @@ button, textarea, input { font: inherit; color: inherit; }
   function notGuncelle(li, n) {
     li.setAttribute('data-durum', n.durum);
     li.querySelector('.cn-no').textContent = n.no;
-    var cip = li.querySelector('.cn-cip');
-    cip.textContent = CN.DURUMLAR[n.durum] || n.durum; cip.setAttribute('data-durum', n.durum);
     var t = li.querySelector('time'); t.textContent = saat(n.zaman); t.setAttribute('datetime', n.zaman || '');
     li.querySelector('.cn-not-yer').textContent = n.yer || '';
     li.querySelector('.cn-not-metin').textContent = n.metin + (n.yanit ? '\n— ' + n.yanit : '');
@@ -865,30 +883,68 @@ button, textarea, input { font: inherit; color: inherit; }
     if (n.pr) iz.push('#' + n.pr);
     li.querySelector('.cn-iz').textContent = iz.join(' · ');
   }
+  // ── kategoriler ─────────────────────────────────────────────────────────
+  // Notlar listesi notun durumundan türeyen bölümlere ayrılır (kullanıcı
+  // 2026-11-10: "uygulanan · uygulanıyor · uygulanacak · girdi bekleniyor gibi
+  // kategoriler"; çekirdek: KATEGORILER · kategorile). Başlığa tıklanınca bölüm
+  // kapanır; kapalı olanlar tarayıcıda hatırlanır (bu görünümün kolaylığı).
+  var KAT = {}, kapali = {}, KAPALI_ANAHTAR = 'cn-kat-kapali';
+  try { (JSON.parse(localStorage.getItem(KAPALI_ANAHTAR) || '[]') || []).forEach(function (k) { kapali[k] = true; }); } catch (e) { /* kayıt yok */ }
+  function kapaliYaz() {
+    try { localStorage.setItem(KAPALI_ANAHTAR, JSON.stringify(Object.keys(kapali).filter(function (k) { return kapali[k]; }))); } catch (e) { /* kayıt yok */ }
+  }
+  function kategoriDurum(kod) {
+    var b = KAT[kod], bos = b.liste.children.length === 0;
+    b.bolum.setAttribute('data-bos', bos ? '1' : '0');
+    b.bolum.setAttribute('data-kapali', !bos && kapali[kod] ? '1' : '0');
+    b.dugme.disabled = bos;
+    b.dugme.setAttribute('aria-expanded', !bos && !kapali[kod] ? 'true' : 'false');
+  }
+  function kategoriKur() {
+    var kap = $('cn-notlar');
+    CN.KATEGORILER.forEach(function (k) {
+      var s = document.createElement('section');
+      s.className = 'cn-kat'; s.setAttribute('data-kat', k.kod); s.setAttribute('data-bos', '1');
+      s.innerHTML = '<h3 class="cn-kat-bas"><button type="button" aria-expanded="false"><span class="cn-kat-ad"></span>' +
+        '<span class="cn-kat-say">0</span></button></h3><ol class="cn-kat-liste"></ol>';
+      s.querySelector('.cn-kat-ad').textContent = k.ad;
+      var ol = s.querySelector('ol'), b = s.querySelector('button');
+      ol.id = 'cn-kat-' + k.kod; b.setAttribute('aria-controls', ol.id);
+      b.addEventListener('click', function () { kapali[k.kod] = !kapali[k.kod]; kapaliYaz(); kategoriDurum(k.kod); });
+      kap.appendChild(s);
+      KAT[k.kod] = { bolum: s, dugme: b, say: s.querySelector('.cn-kat-say'), liste: ol };
+    });
+  }
+  kategoriKur();
+
   function listeCiz() {
-    var ol = $('cn-notlar');
-    var sirali = CN.yenidenEskiye(notlar);           // en yeni not en üstte
+    var kat = CN.kategorile(notlar);                 // her kategoride en yeni not en üstte
     var varolan = {};
-    Array.prototype.forEach.call(ol.children, function (li) { varolan[li.id] = li; });
-    sirali.forEach(function (n, i) {
-      var li = varolan['not-' + n.id] || notSatiri(n);
-      delete varolan['not-' + n.id];
-      notGuncelle(li, n);
-      if (ol.children[i] !== li) ol.insertBefore(li, ol.children[i] || null);
-      var eski = oncekiDurum[n.id];
-      if (!ilkListe && eski && eski !== n.durum && n.durum !== 'bekliyor') bildir('Not ' + n.no + ' · ' + (CN.DURUMLAR[n.durum] || n.durum));
-      oncekiDurum[n.id] = n.durum;
+    Array.prototype.forEach.call($('cn-notlar').querySelectorAll('.cn-not'), function (li) { varolan[li.id] = li; });
+    kat.forEach(function (k) {
+      var ol = KAT[k.kod].liste;
+      k.notlar.forEach(function (n, i) {
+        var li = varolan['not-' + n.id] || notSatiri(n);
+        delete varolan['not-' + n.id];
+        notGuncelle(li, n);
+        if (ol.children[i] !== li) ol.insertBefore(li, ol.children[i] || null);   // başka kategoriden gelen satır TAŞINIR
+        var eski = oncekiDurum[n.id];
+        if (!ilkListe && eski && eski !== n.durum && n.durum !== 'bekliyor') bildir('Not ' + n.no + ' · ' + (CN.DURUMLAR[n.durum] || n.durum));
+        oncekiDurum[n.id] = n.durum;
+      });
     });
     Object.keys(varolan).forEach(function (k) { varolan[k].remove(); });
+    kat.forEach(function (k) {
+      var b = KAT[k.kod];
+      b.say.textContent = k.notlar.length;
+      b.bolum.hidden = !!k.bosGizli && !k.notlar.length;
+      kategoriDurum(k.kod);
+    });
     ilkListe = false;
-    $('cn-bos').hidden = sirali.length > 0;
-    var say = {};
-    sirali.forEach(function (n) { say[n.durum] = (say[n.durum] || 0) + 1; });
-    var bekleyen = (say.bekliyor || 0) + (say.uygulaniyor || 0);
+    $('cn-bos').hidden = notlar.length > 0;
     var sayac = $('cn-sayac');
-    sayac.textContent = sirali.length; sayac.setAttribute('data-bekleyen', bekleyen);
-    $('cn-ozet').textContent = ['bekliyor', 'uygulaniyor', 'soru', 'uygulandi'].filter(function (d) { return say[d]; })
-      .map(function (d) { return say[d] + ' ' + CN.DURUMLAR[d].toLocaleLowerCase('tr'); }).join(' · ');
+    sayac.textContent = notlar.length; sayac.setAttribute('data-bekleyen', notlar.filter(CN.acikNot).length);
+    $('cn-ozet').textContent = '';
     if (!kart.hidden) $('cn-kart-no').textContent = 'Not ' + sonrakiNo();
   }
 

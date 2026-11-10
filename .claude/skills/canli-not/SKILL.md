@@ -118,7 +118,12 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
 ## 2 · Uyanış ve sıra
 
 Sayfanın **Notlar** listesi YENİDEN ESKİYE (kullanıcı 2026-11-05: *"en son güncellemeler en
-tepeden başlasın"*); iş kuyruğu eskiden yeniye kalır — notlar sırayla uygulanır.
+tepeden başlasın"*); iş kuyruğu eskiden yeniye kalır — notlar sırayla uygulanır. Liste
+durumdan türeyen **kategorilere** ayrılır (kullanıcı 2026-11-10: *"'uygulanan' 'uygulanıyor'
+'uygulanacak' 'girdi bekleniyor' gibi kategoriler koyalım. Notları takip ederiz."*):
+Girdi bekleniyor (`soru`) · Uygulanıyor · Uygulanacak (`bekliyor`) · Uygulanan (`uygulandi`)
+· İptal, her bölümde yeniden eskiye; başlık bölümü kapatır, sayaç açık notları sayar.
+Tanım çekirdekte (`KATEGORILER` · `kategorile`); kapı `canli-not.test.js` → *KATEGORİ*.
 
 Uyandıran yorum yalnız işarettir; iş KAYITTAN okunur ve bütün bekleyenler sırayla
 işlenir (aynı anda gelen iki yorum iki uyanış demek; ikincisi boş kuyruk bulur).

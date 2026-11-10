@@ -188,6 +188,38 @@
     return siraliNotlar(liste).reverse();
   }
 
+  // KATEGORİLER (kullanıcı 2026-11-10: *"Notlar içine 'uygulanan' 'uygulanıyor'
+  // 'uygulanacak' 'girdi bekleniyor' gibi kategoriler koyalım. Notları takip
+  // ederiz."*): Notlar listesi notun DURUMUNDAN türeyen kategorilere ayrılır.
+  // Sıra dikkat sırası — önce kullanıcının girdisini bekleyenler, sonra işlenen,
+  // sonra kuyruktakiler, en sonda biten; her kategoride yeniden eskiye. Durumların
+  // adı (DURUMLAR) bildirimde ve araçta aynı kalır. Tanınmayan durum SESSİZCE
+  // düşmez: `diger` kategorisinde görünür.
+  var KATEGORILER = [
+    { kod: 'girdi', ad: 'Girdi bekleniyor', durumlar: ['soru'] },
+    { kod: 'uygulaniyor', ad: 'Uygulanıyor', durumlar: ['uygulaniyor'] },
+    { kod: 'uygulanacak', ad: 'Uygulanacak', durumlar: ['bekliyor'] },
+    { kod: 'uygulanan', ad: 'Uygulanan', durumlar: ['uygulandi'] },
+    { kod: 'iptal', ad: 'İptal', durumlar: ['iptal'], bosGizli: true },
+    { kod: 'diger', ad: 'Diğer', durumlar: [], bosGizli: true }
+  ];
+  function kategorile(liste) {
+    var sirali = yenidenEskiye(liste || []);
+    var bilinen = {};
+    KATEGORILER.forEach(function (k) { k.durumlar.forEach(function (d) { bilinen[d] = true; }); });
+    return KATEGORILER.map(function (k) {
+      return {
+        kod: k.kod, ad: k.ad, bosGizli: !!k.bosGizli,
+        notlar: sirali.filter(function (n) { return k.kod === 'diger' ? !bilinen[n.durum] : k.durumlar.indexOf(n.durum) >= 0; })
+      };
+    });
+  }
+  // Açık not: kuyrukta, işlenirken ya da kullanıcının girdisini beklerken —
+  // Notlar düğmesinin sayacındaki kehribar işaret.
+  function acikNot(n) {
+    return !!n && (n.durum === 'bekliyor' || n.durum === 'uygulaniyor' || n.durum === 'soru');
+  }
+
   // ── yayın: programın güncellemesi ────────────────────────────────────────
   // Kullanıcı 2026-11-05: *"artifaktı otomatik olarak yenileme … güncelleme
   // geldiğinde uyarı popup çıkar, oradan güncelle dediğimde HTML'i yenilersin."*
@@ -246,6 +278,7 @@
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,
+    KATEGORILER: KATEGORILER, kategorile: kategorile, acikNot: acikNot,
     yayinDogrula: yayinDogrula, programKaynagi: programKaynagi, guncellemeVar: guncellemeVar,
     noAraligi: noAraligi, sonucYolu: sonucYolu
   };
