@@ -180,10 +180,11 @@ var VE_MNT_AP = (function() {
     '1220643004': ["gl-2", "hard", 70, 42000, 16, null, null, null, null, 2625, null, null],
   };
   var SINIF_SIRA = ['very soft', 'soft', 'middle soft', 'medium', 'middle hard', 'hard'];
+  // Belgenin tarihiyle (ay yıl) — yıl tek başına sayı okunurdu (Türkçe sayı kapısı).
   var KAYNAK = {
-    konus: 'A+P föyü 2015 · e-mağaza 2026', h: 'A+P föyü 2018 · e-mağaza 2026',
-    marine: 'A+P e-mağaza 2026 · föy 2017', gen: 'A+P e-mağaza 2026 · katalog 2017',
-    fea: 'BMC FEA raporu · 2018–2019'
+    konus: 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026', h: 'A+P föyü Haziran 2018 · e-mağaza 10.11.2026',
+    marine: 'A+P e-mağaza 10.11.2026 · föy Şubat 2017', gen: 'A+P e-mağaza 10.11.2026 · katalog Ekim 2017',
+    fea: 'BMC FEA raporu · 02.10.2018 · 12.02.2019'
   };
   // Programın BMC girdileri → katalog eşi (gövde). Yalnız ölçüsü belgeli olan.
   var ESLES = { 'lmt1433-00-40sh': '026-s1', 'lmt1433-00-55sh': '026-s1', 'lmt1433-00-70sh': '026-s1' };

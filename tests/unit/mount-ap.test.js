@@ -169,7 +169,7 @@ describe('KÜNYE — Takoz Özellikleri', () => {
       .toEqual(['assets/takoz/ap/cizim-k-026-s1.webp', 'assets/takoz/ap/urun-026-s1.webp']);
     expect(satirlar(k)).toEqual([['Kod', 'A+P 12.2140.2503'], ['Ürün ailesi', 'APSOvib® Conical bearing'], ['Tip', '026 S 1'],
       ['Sertlik', 'medium · ~60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'],
-      ['Kaynak', 'A+P föyü 2015 · e-mağaza 2026']]);
+      ['Kaynak', 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026']]);
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|2\.550 N|259,9/i);
   });
   test('H-takoz toleransı, marine ağırlığı; LMT-1433-00\'da katalog eşi, "Mount 1"de künye yok', () => {
@@ -177,7 +177,7 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(satirlar(kunye('ap1221440440').querySelector('.ve-mnt-amc'))).toContainEqual(['Ağırlık', '337 g']);
     const es = kunye('lmt1433-00-55sh').querySelector('.ve-mnt-amc');
     expect(satirlar(es)).toEqual([['Üretici kodu', 'LMT-1433-00'], ['Katalog eşi', 'APSOvib® Conical bearing 026 S 1'],
-      ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'], ['Kaynak', 'BMC FEA raporu · 2018–2019']]);
+      ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'], ['Kaynak', 'BMC FEA raporu · 02.10.2018 · 12.02.2019']]);
     expect(kunye('bmc-mount1-55sh').querySelector('.ve-mnt-amc')).toBeNull();
   });
 });

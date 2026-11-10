@@ -991,7 +991,7 @@ function _mntBolum(baslik, em, ic, opt){
   opt=opt||{};
   return '<section class="ve-fp-card"'+(opt.id?' id="'+opt.id+'"':'')+(opt.tazele?' data-tazele':'')+(opt.cozum?' data-cozum-durumu':'')+'>'
     + '<div class="ve-fp-sect"><b>'+baslik+'</b>'
-    + ((em||opt.emId) ? '<em'+(opt.emId?' id="'+opt.emId+'" data-tazele':'')+'>'+(em||'')+'</em>' : '')
+    + ((em||opt.emId) ? '<em'+(opt.emId?' id="'+opt.emId+'" data-tazele':'')+(opt.emTam?' title="'+_mntEsc(opt.emTam)+'"':'')+'>'+(em||'')+'</em>' : '')
     + '</div>'+ic+'</section>';
 }
 function _mntIzgara(k, ic){ return '<div class="ve-fp-grid" style="--fp-k:'+k+';">'+ic+'</div>'; }
@@ -4048,7 +4048,8 @@ function _mntLibRijitlikHTML(node, e, setter){
         ? 'Din./stat. oranı yayılımı '+_mntS(O.yayilim,2)+' · sınır '+sinir
         : 'Altı rijitlik eksik')+'">'
     + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
-  return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi);
+  // Künye tipin adı: uzun ad (A+P) sütunda kesilir, tamamı ipucunda (yerleşim kapısı)
+  return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi, { emTam:'[N/mm] · '+e.name });
 }
 // Grafiğin göstergesi — çizilen eksen grupları (renk), statik (düz), dinamik
 // (kesikli) ve ölçüm noktaları. Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
@@ -4210,7 +4211,7 @@ function _mntLibForceChart(e, axis){ return _mntLibGrafik(e, axis).svg; }
 function _mntLibEgriHTML(node, e){
   var G=_mntLibGrafik(e);
   var h=_mntBolum('Kuvvet–sehim', _mntEsc(e.name),
-    '<div class="ve-mnt-kroki" id="ve-mnt-lib-gr-'+node.id+'" data-tazele>'+G.svg+_mntLibLejant(G)+'</div>');
+    '<div class="ve-mnt-kroki" id="ve-mnt-lib-gr-'+node.id+'" data-tazele>'+G.svg+_mntLibLejant(G)+'</div>', { emTam:e.name });
   // Katalog tipinde diyagramın altında not YOK (kullanıcı 2026-11-06, Canlı Not 66):
   // salt okunurluk kılavuzda (7.1).
   if(!e.builtin) h+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key) || e);

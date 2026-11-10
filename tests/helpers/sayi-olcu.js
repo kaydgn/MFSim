@@ -32,7 +32,7 @@ const TIRE_EKSI = /(?<![\p{L}\d_\-−.,])-\d[\d.,]*/gu;
 const SABIT = '(?:1000|3600|9549|9550|50000|60000)';
 const AD = [
   ['şanzıman modeli', /Allison|\bSP\b|\d{4}SP|8L90|8HP|ZF|Aile:|Ailesi/],
-  ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}|E9843|AG00976|LMT-|ASR-SR/],
+  ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}|E9843|AG00976|LMT-|ASR-SR|A\+P|APSOvib|bearing|H-Mount|Marine mount/],
   ['motor ön ayarı', /Duramax|ISX|ISB|ISL|ISM|ISG|I6\b|\d\.\dL|Nm&|\(\d{4} Nm\) \|/],
   ['kompresör ön ayarı', /Wabco|Knorr|bar\b/],
   ['telif yılı', /©|\(c\)/],
