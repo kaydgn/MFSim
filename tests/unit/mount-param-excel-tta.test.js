@@ -29,7 +29,10 @@ global.veDurumIkon = global.veDurumIkon || require('../../js/ikon.js').veDurumIk
 const R = require('../../js/xlsx-read.js');
 const K = global.veMntKatalog;
 
-const TOPO = H.ornek('tta10');
+// ONAY: Canlı Not'ta onaylanan Excel (R12) 10 Ton TTA'nın ilk kitabındaki üç takozlu
+// kurulumdan üretildi; örnek 2026-11-10'da föyün altı takozuna geçti (Canlı Not 68).
+// Onaylanan sayılar o kurulumun — dondurulmuş topolojisiyle koşar.
+const TOPO = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../fixtures/tta10-uc-nokta-topoloji.json'), 'utf8'));
 let Hz, ent, bayt, wb, NODES;
 beforeAll(async () => {
   global.nodes = JSON.parse(JSON.stringify(TOPO.nodes));

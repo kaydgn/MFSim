@@ -330,7 +330,7 @@ var veMntAkso = (function(){
   var BALON_BOY = [10, 16, 24, 34, 46, 60, 78, 100, 126, 156];   // eğik kolun boyu, px
   var BALON = { omuz:8, ara:3, ic:14, baska:90, kendi:40, yapis:4, kalBoy:80, kay:24, adim:12 };
   var BALON_SUZ = [0.35, 0.2, 0.1, 0];   // işaret noktasının kare başına adımı (hedefe oranı)
-  function balonYerlestir(liste, sinir, dolu0, yazilar, pol, onceki, surukle){
+  function balonYerlestir(liste, sinir, dolu0, yazilar, pol, onceki, surukle, oncelik){
     var yer=[], kalan=[];
     var ici=function(x, y, P){ var a=false; for(var i=0, j=P.length-1;i<P.length;j=i++){ var xi=P[i][0], yi=P[i][1], xj=P[j][0], yj=P[j][1]; if(((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) a=!a; } return a; };
     // çipin [başka gövde, kendi gövdesi] altında kalan payı (4 × 3 örnek)
@@ -371,6 +371,31 @@ var veMntAkso = (function(){
       return { b:k, s:[[A0[0], A0[1], E[0], E[1]]], kirik:[A0, E], A:A, qi:qi, L:L };
     };
     var sirali=liste.slice().sort(function(a, b){ return (b.pri||0)-(a.pri||0); }), ara=[];
+    // 2 · ARANAN: dört çeyrek × on boy (yeri olmayan kalana)
+    var ara2=function(e){
+      var ok=onceki && onceki[yerAnahtar(e)], en=null;
+      BALON_CEYREK.forEach(function(q, qi){
+        for(var bi=0; bi<BALON_BOY.length; bi++){
+          var c=aday(e, qi, BALON_BOY[bi], ok), k=c.b;
+          if(!serbest(k) || !temiz(c.s, k)) continue;
+          var kp=kapla(k, e.k), cx=(k.l+k.r)/2-e.x, cy=(k.t+k.b)/2-e.y;
+          c.skor=BALON_BOY[bi]+kp[0]*BALON.baska+kp[1]*BALON.kendi
+            +(ok ? Math.hypot(cx-ok[0], cy-ok[1])*BALON.yapis : qi*3);
+          if(!en || c.skor<en.skor) en=c;
+          if(!kp[0] && !kp[1] && !ok) break;      // boşta: daha uzunu yalnız pahalı
+        }
+      });
+      if(!en){ kalan.push(e); return; }
+      yer.push({ e:e, b:en.b, s:en.s, kirik:en.kirik, A:en.A, qi:en.qi, L:en.L });
+    };
+    // 0 · ÖNCE YER BULAMAYANLAR (yeniden deneme turu, `oncelik`): kalabalık
+    // yerde açgözlü sıra bir çipi yersiz bırakınca o çip ÖNCE aranır, ötekiler
+    // ona göre yerleşir (kullanıcı 2026-11-10, Canlı Not 68: 10 Ton TTA'nın yan
+    // yana iki ön takozu önden bakışta eski yerleştiriciye kalıyordu).
+    if(oncelik && oncelik.length){
+      sirali=sirali.filter(function(e){ return oncelik.indexOf(e)<0; });
+      oncelik.forEach(ara2);
+    }
     // 1 · YERİNDE KALAN: çip bir önceki karenin çeyreğinde, kılavuzu boyunca
     // KAYARAK önceki boyuna en yakın serbest yere oturur (±BALON.kay px) —
     // dönen modelde işaret ya da başka çip yaklaşınca zıplamaz, kayar;
@@ -398,24 +423,42 @@ var veMntAkso = (function(){
       }
       ara.push(e);
     });
-    // 2 · ARANAN: dört çeyrek × on boy
-    ara.forEach(function(e){
-      var ok=onceki && onceki[yerAnahtar(e)], en=null;
-      BALON_CEYREK.forEach(function(q, qi){
-        for(var bi=0; bi<BALON_BOY.length; bi++){
-          var c=aday(e, qi, BALON_BOY[bi], ok), k=c.b;
-          if(!serbest(k) || !temiz(c.s, k)) continue;
-          var kp=kapla(k, e.k), cx=(k.l+k.r)/2-e.x, cy=(k.t+k.b)/2-e.y;
-          c.skor=BALON_BOY[bi]+kp[0]*BALON.baska+kp[1]*BALON.kendi
-            +(ok ? Math.hypot(cx-ok[0], cy-ok[1])*BALON.yapis : qi*3);
-          if(!en || c.skor<en.skor) en=c;
-          if(!kp[0] && !kp[1] && !ok) break;      // boşta: daha uzunu yalnız pahalı
+    ara.forEach(ara2);
+    // 3 · ONARIM: yer bulamayan çip için en yakın dört yerleşmiş çipten biri
+    // geçici kaldırılır; kalan önce, kaldırılan sonra aranır — ikisi de yer
+    // bulursa tutulur, bulamazsa ikisi eski hâline döner.
+    if(kalan.length && !surukle){
+      var kal=kalan.splice(0, kalan.length);
+      kal.forEach(function(f){
+        var komsu=yer.slice().sort(function(a, b){ return Math.hypot(a.e.x-f.x, a.e.y-f.y)-Math.hypot(b.e.x-f.x, b.e.y-f.y); }).slice(0, 4);
+        for(var i=0;i<komsu.length;i++){
+          var y=komsu[i], ix=yer.indexOf(y);
+          yer.splice(ix, 1);
+          var n0=yer.length, k0=kalan.length;
+          ara2(f);
+          if(yer.length>n0){
+            ara2(y.e);
+            if(yer.length>n0+1) return;              // ikisi de yerleşti
+            yer.splice(n0, 1);                        // kaldırılan yer bulamadı: geri al
+          }
+          kalan.length=k0;
+          yer.splice(ix, 0, y);
         }
+        kalan.push(f);
       });
-      if(!en){ kalan.push(e); return; }
-      yer.push({ e:e, b:en.b, s:en.s, kirik:en.kirik, A:en.A, qi:en.qi, L:en.L });
-    });
+    }
     return { out:yer.map(function(y){ return Object.assign({}, y.e, { kutu:y.b, cizgi:null, kirik:y.kirik, ax:y.A[0], ay:y.A[1], ceyrek:y.qi, boy:y.L }); }), kalan:kalan };
+  }
+  // Yer bulamayan çip kalırsa tur yeniden koşar: kalanlar ÖNCE aranır (en çok iki
+  // tur); kalanı en az olan tur seçilir — eşitlikte ilk tur (yeri olan sahnede
+  // çizim birebir eski).
+  function balonYerlestirTur(liste, sinir, dolu0, yazilar, pol, onceki, surukle){
+    var en=balonYerlestir(liste, sinir, dolu0, yazilar, pol, onceki, surukle, null);
+    for(var tur=0; tur<2 && en.kalan.length && !surukle; tur++){
+      var r=balonYerlestir(liste, sinir, dolu0, yazilar, pol, onceki, surukle, en.kalan);
+      if(r.kalan.length<en.kalan.length) en=r; else break;
+    }
+    return en;
   }
 
   // ── Çizim parçaları ─────────────────────────────────────────────────────
@@ -740,10 +783,11 @@ var veMntAkso = (function(){
     // yerine katılır, ayrı işaret değildir.
     // levhaK: parçaların sarıcı kutusu — yazının yeri ve örtülme sınaması (CG
     // gövdenin yüzünde olabilir: Tulga'nın ön kaidesi motorun alt yüzünde)
-    var levhaP={}, levhaK={}, takozBr={};
+    var levhaP={}, levhaK={}, takozBr={}, levhaT={};
     nok.forEach(function(g){
       if(!(g.levha && m.takoz.some(function(t){ return t.k===g.levha.takoz; }))) return;
       var pp=levhaP[g.k]=levhaParca(g.levha, hm), lo=[Infinity, Infinity, Infinity], hi=[-Infinity, -Infinity, -Infinity];
+      levhaT[g.k]=g.levha.takoz;
       pp.forEach(function(q){ for(var i=0;i<3;i++){ lo[i]=Math.min(lo[i], q.c[i]-q.h[i]); hi[i]=Math.max(hi[i], q.c[i]+q.h[i]); } });
       levhaK[g.k]={ c:[0, 1, 2].map(function(i){ return (lo[i]+hi[i])/2; }), h:[0, 1, 2].map(function(i){ return (hi[i]-lo[i])/2; }) };
       (takozBr[g.levha.takoz]=takozBr[g.levha.takoz]||[]).push(g);
@@ -758,7 +802,10 @@ var veMntAkso = (function(){
         var r=3.6*ik, q2=P(s.p), iz=s.g ? { l:q2[0]-r, t:q2[1]-r, r:q2[0]+r, b:q2[1]+r } : kutu2B(s.p, [hm, hm, hm]);
         (s.br || []).forEach(function(g){ var k2=levha2B(g); iz={ l:Math.min(iz.l, k2.l), t:Math.min(iz.t, k2.t), r:Math.max(iz.r, k2.r), b:Math.max(iz.b, k2.b) }; });
         var lo=-1, hi=kutSira.length, taban=0, d=K.derin(s.p);
-        s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); });
+        // başka takozun braketi de örter (10 Ton TTA'nın arka çiftinde arkadaki
+        // takoz öndekinin kaidesinin ardında kalır; Canlı Not 68) — kendi braketi değil
+        s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); })
+          || Object.keys(levhaP).some(function(gk){ return levhaT[gk]!==s.k && levhaP[gk].some(function(q){ return kutuOrter(K, s.p, q, false); }); });
         kutSira.forEach(function(q, j){
           if(K.derin(q.c)<d) taban++;
           if(!ortusur(iz, kb[j])) return;
@@ -1198,7 +1245,7 @@ var veMntAkso = (function(){
       var Li=yerlestir(ets.filter(function(e){ return !e.balon; }), engel, sinir, o.yer || null);
       var tamE=engel.filter(function(e){ return (e.a==null ? 1 : e.a)>=0.5; }).map(function(e){ return { l:e.l, t:e.t, r:e.r, b:e.b }; })
         .concat(Li.map(function(e){ return e.kutu; }));
-      var Lb=balonYerlestir(ets.filter(function(e){ return e.balon; }), sinir, tamE, Li.map(function(e){ return e.kutu; }), polG, o.yer || null, !!o.surukle);
+      var Lb=balonYerlestirTur(ets.filter(function(e){ return e.balon; }), sinir, tamE, Li.map(function(e){ return e.kutu; }), polG, o.yer || null, !!o.surukle);
       L=Li.concat(Lb.out);
       if(Lb.kalan.length){
         var kilE=[];
@@ -1231,7 +1278,7 @@ var veMntAkso = (function(){
   return {
     IZ:IZ, ANA_PAY:ANA_PAY, EL_SINIR:EL_SINIR, kamera:kamera, kamYon:kamYon, kamAci:kamAci, kamB:kamB, bakisAdi:bakisAdi, yuzler:yuzler, ciz:ciz, hareketIci:hareketIci,
     modDelta:modDelta, modOlcek:modOlcek, cokmeDelta:cokmeDelta, yerlestir:yerlestir, tahmin:tahmin, koord:koord,
-    ICICE_ENAZ:ICICE_ENAZ, kutuParcala:kutuParcala, kutuSirala:kutuSirala
+    ICICE_ENAZ:ICICE_ENAZ, kutuParcala:kutuParcala, kutuSirala:kutuSirala, levhaParca:levhaParca
   };
 })();
 

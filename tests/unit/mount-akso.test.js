@@ -961,6 +961,11 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
       const kendi = {}; m.govde.forEach((g) => { if (g.levha) kendi[g.k] = g.levha.takoz; });
       BAK.forEach((kam) => {
         const K = AK.kamera('dim', null, AK.kamYon(kam)), r = ciz(m, kam);
+        // braketin parçaları (kaide · köşebent) da katı: ışını keser — takozun kendi
+        // braketi hariç (10 Ton TTA'nın arka çiftinde arkadaki takoz öndekinin
+        // kaidesinin ardında kalır; Canlı Not 68). Küpün yarı boyu çizimin ölçeğinden.
+        const LV = m.govde.filter((g) => g.levha && m.takoz.some((t) => t.k === g.levha.takoz))
+          .flatMap((g) => AK.levhaParca(g.levha, 4.4 / r.sc).map((q) => ({ k: g.k, takoz: g.levha.takoz, c: q.c, h: q.h })));
         document.body.innerHTML = r.svg;
         const sira = [...document.querySelector('.ve-ak-hareket').querySelectorAll('g.ve-ak-g, g.ve-ak-t[data-ak], circle.ve-ak-nokta')];
         const yuz = sira.map((e) => (e.matches('g.ve-ak-g') ? [...e.querySelectorAll('path')].map((x) => cokgen(x.getAttribute('d'))) : null));
@@ -974,7 +979,7 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
             (yuz[j] || []).forEach((P) => { if (icte(q, P)) { if (kenarda(q, P, 0.6)) belirsiz = true; else ustte = false; } });
           }
           if (ustte && belirsiz) return;
-          const gizli = sakli(s.p, B, K);
+          const gizli = sakli(s.p, B.concat(LV.filter((q) => q.takoz !== s.k)), K);
           say.durum++; if (gizli) say.sakli++;
           if (B.some((b) => icinde(s.p, b, 0.01))) (icerideki[ad + ' ' + s.k] = icerideki[ad + ' ' + s.k] || new Set()).add(gizli);
           if (gizli && ustte) hata.push(`${ad} ${s.k} @${kam.az}/${kam.el}: arkada ama görünüyor`);
