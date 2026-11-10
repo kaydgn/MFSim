@@ -140,6 +140,41 @@ describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () =>
   });
 });
 
+// YÖN AYARI (2026-11-10, Tulga'nın Excel'i Adams'la denetlenirken bulundu): taramanın
+// hazırlığı toplayıcıyı Çözücü'nün yön ayarı (ileri · kaldırım · tork yönü) olmadan
+// kuruyordu ve yük durumları varsayılana iniyordu — Tulga'da (tork +X) iki tork durumu
+// ters (Adams'tan RMS 17,28 mm), Siper'de (ileri +X, kaldırım 3,5 g aynı) g durumları
+// ayna. Taramanın her yük durumu, her takozda, her eksende Çözücü'nün aynısı.
+describe('TEK YOL — Çözücü\'nün yön ayarıyla (tork · ileri · kaldırım)', () => {
+  [['tulga', { torkYon: '+x' }], ['siper', { ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni' }]].forEach(([ad, yon]) => {
+    test(ad + ': mevcut tasarımın ve iki kütüphane kombinasyonunun her yük durumu Çözücü\'yle birebir', () => {
+      const topo = modelKur(ad);
+      const cz = topo.nodes.find((n) => n.type === 'mnt-solver').data;
+      Object.keys(yon).forEach((k) => expect([k, cz[k]]).toEqual([k, yon[k]]));    // örnek varsayılanda değil
+      const Hz = P._mntParamHazirlik({ id: 'pa', type: 'mnt-parametric', data: {} });
+      const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
+      const A = Hz.aday;
+      const say = { vaka: 0, tork: 0 };
+      [Hz.M.G.map(() => null), Hz.M.G.map((g, i) => A[(3 + 5 * i) % A.length].key), Hz.M.G.map((g, i) => (i % 2 ? 'TK035' : 'TK040'))]
+        .forEach((tipler) => {
+          const t = O.tam(tipler);
+          const R = tipler.every((x) => !x) ? H.coz(topo) : uygulaCoz(topo, Hz, tipler);
+          expect(R && !R.error).toBe(true);
+          expect(t.vakalar.map((v) => v.ad)).toEqual(R.allCases.map((c) => c.name));
+          t.vakalar.forEach((v, q) => {
+            const c = R.allCases[q];
+            say.vaka++; if (/Torque/.test(v.ad)) say.tork++;
+            v.d.forEach((d, i) => d.forEach((x, a) => {
+              expect([v.ad, i, a, Math.abs(x - c.res.perMount[i].delta[a] * 1000) < 1e-9]).toEqual([v.ad, i, a, true]);
+            }));
+          });
+        });
+      expect(say.vaka).toBeGreaterThanOrEqual(3 * 12);
+      if (ad === 'tulga') expect(say.tork).toBe(3 * 2);
+    });
+  });
+});
+
 describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçümü Çözücü\'nün sayısından', () => {
   test('sürünme: E7 sehimi = max(|δx|, |δy|, |δz + c·δz,s|), c = %30 varsayılan; E6 sürünmesiz', () => {
     const topo = modelKur('kutu');                         // düşey sehim yataydan büyük: sürünme yolu gerçekten sınanır
