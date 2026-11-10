@@ -956,6 +956,64 @@ describe('rozet çiziciye SÖYLENİYOR — sağ üst köşe ayrılıyor', () => 
       .toMatch(/kord/);
   });
 
+  // ROZET GEOMETRİYE BİNMEZ (kullanıcı 2026-11-10, Canlı Not 101: *"Şurası modelin
+  // üstünde kalıyor, güzel değil."*): yazılar rozetten kaçıyordu ama kasnak ve kayış
+  // kaçmıyordu (AG00976'da Klima Kompresörü rozetin altında). Ölçüt çizilen
+  // geometrinin kendisi: kasnağın kayışı dişleriyle (rPitch·s + 7) ve açıklıklar,
+  // rozetin kutusuyla; bütün örnekler × kartın iki varsayılanı ve dar kart.
+  test('ROZET GEOMETRİYE BİNMEZ — kartın kendi çiziminde kasnak ve kayış rozetin kutusuna değmez (Canlı Not 101)', () => {
+    const yk = fead.veFeadYaziK();
+    const degiyor = (svg, build, roz) => {
+      const xf = (svg.match(/data-fead-xf="([^"]+)"/) || [])[1];
+      const vb = (svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/) || []);
+      if (!xf || !vb[1]) return null;
+      const W = +vb[1];
+      const [sc, ox, oy, mx, my] = xf.split(/[\s,]+/).map(Number);
+      const tx = (x) => ox + (x - mx) * sc, ty = (y) => oy + (my - y) * sc;
+      const k = { x0: W - roz.w, x1: W, y0: 0, y1: roz.h };
+      const g = geomOf(build);
+      const daire = g.pulleys.some((p) => {
+        const X = tx(p.c[0]), Y = ty(p.c[1]), R = p.rPitch * sc + 7;     // kayış + dişler
+        const nx = Math.min(Math.max(X, k.x0), k.x1), ny = Math.min(Math.max(Y, k.y0), k.y1);
+        return (nx - X) ** 2 + (ny - Y) ** 2 < R * R;
+      });
+      const acik = (g.spans || []).some((sp) => {
+        for (let i = 0; i <= 40; i++) {
+          const x = tx(sp.Pi[0] + (sp.Pj[0] - sp.Pi[0]) * i / 40), y = ty(sp.Pi[1] + (sp.Pj[1] - sp.Pi[1]) * i / 40);
+          if (x > k.x0 - 3 && y < k.y1 + 3) return true;
+        }
+        return false;
+      });
+      return daire || acik;
+    };
+    let say = 0, degenEski = 0;
+    const kusur = [];
+    M.veFeadExampleKeysAll().forEach((key) => {
+      const { build, layout, run } = kur(key);
+      [[layout, 640, 500], [run, 440, 650], [run, 440, 500], [run, 340, 458]].forEach(([n, w, h]) => {
+        if (!n) return;
+        n.width = w; n.height = h;
+        const html = fead.veFeadLayoutCardHTML(n);
+        const svg = (html.match(/<svg[^>]*data-fead-xf[\s\S]*?<\/svg>/) || [])[0] || '';
+        const r = fead.veFeadRozetKutu(build, 'mean', w);
+        if (!svg || !r) return;
+        const roz = { w: r.w / yk, h: r.h / yk };
+        const d = degiyor(svg, build, roz);
+        if (d === null) return;
+        say++;
+        if (d) kusur.push(`${key} ${w}×${h}`);
+        // Kapı BOŞ DEĞİL: aynı ölçüde payı bilmeyen çizimde geometri rozetin altına düşüyor.
+        const vb = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+        const paysiz = fead.veFeadLayoutSVG(build, +vb[1], +vb[2],
+          { nodeId: n.id, posMode: 'mean', edit: true, inline: true, siraNo: fead.veFeadTabloAcik(n) });
+        if (degiyor(paysiz, build, roz)) degenEski++;
+      });
+    });
+    expect(say).toBeGreaterThan(30);
+    expect(degenEski).toBeGreaterThan(0);
+    expect(kusur).toEqual([]);
+  });
+
   test('UYDURMA PAY YOK SAYILIR — çizimin üçte birinden büyük şerit engel olamaz', () => {
     const { build } = kur();
     const W = 440, H = 400;

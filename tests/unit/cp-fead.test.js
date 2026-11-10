@@ -40,6 +40,7 @@ global.componentDefs = componentDefs;
 // Tersi de: components.js eski ölçüyü yükseltirken kartın TABLOSUNU cp-fead.js'e
 // soruyor (Pafta — tablolu kart geniş). Tarayıcıda ikisi de üst-seviye.
 global.veFeadKartVarsayilanW = fead.veFeadKartVarsayilanW;
+global.veFeadKartVarsayilanH = fead.veFeadKartVarsayilanH;
 eval(loadSource('fead-belts.js'));
 eval(loadSource('fead-duty.js'));
 // GLOBAL'E YAZILMASI ŞART: cp-fead.js `require` ile yükleniyor, dolayısıyla
@@ -1438,6 +1439,33 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
                   data: { katOn: 'isletme' } };
     expect(veFeadNormalizeLayoutSize(isl)).toBe(true);
     expect(isl.width).toBe(VE_FEAD_LAYOUT_W);
+    expect(isl.height).toBe(VE_FEAD_LAYOUT_DAR_H);
+  });
+
+  // TABLOSUZ KART UZUN (kullanıcı 2026-11-10, Canlı Not 100: Çalışma Noktası kartı
+  // *"bu kadar uzun gelmiyor … bu şekilde gelsin"*): boy da tabloyu izler — tablolu
+  // 640 × 500, tablosuz 440 × 650; Canlı Not 100'den önceki 440 × 500 dokunulmamış
+  // kart iki yönde de bugünün ölçüsüne yükselir, elle verilmiş ölçü korunur.
+  test('TABLOSUZ KART UZUN — boy tabloyu izler; eski 440×500 yükselir (Canlı Not 100)', () => {
+    expect(VE_FEAD_LAYOUT_DAR_H).toBeGreaterThan(VE_FEAD_LAYOUT_H);
+    expect(fead.veFeadKartVarsayilanH({ type: 'fead-layout', data: {} })).toBe(VE_FEAD_LAYOUT_H);
+    expect(fead.veFeadKartVarsayilanH({ type: 'fead-layout', data: { katOn: 'isletme' } }))
+      .toBe(VE_FEAD_LAYOUT_DAR_H);
+    const isl = { type: 'fead-layout', width: 440, height: 500, data: { katOn: 'isletme' } };
+    expect(veFeadNormalizeLayoutSize(isl)).toBe(true);
+    expect([isl.width, isl.height]).toEqual([VE_FEAD_LAYOUT_W, VE_FEAD_LAYOUT_DAR_H]);
+    const geo = { type: 'fead-layout', width: 440, height: 500, data: {} };
+    expect(veFeadNormalizeLayoutSize(geo)).toBe(true);
+    expect([geo.width, geo.height]).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_H]);
+    // Bugünün iki ölçüsü değişmez (açılış her seferinde "değişti" saymaz).
+    expect(veFeadNormalizeLayoutSize({ type: 'fead-layout', width: 440, height: VE_FEAD_LAYOUT_DAR_H,
+      data: { katOn: 'isletme' } })).toBe(false);
+    expect(veFeadNormalizeLayoutSize({ type: 'fead-layout', width: 640, height: 500, data: {} })).toBe(false);
+    // Elle verilmiş ölçü: dokunulmaz.
+    const elle = { type: 'fead-layout', width: 440, height: 600, data: { katOn: 'isletme' } };
+    expect(veFeadNormalizeLayoutSize(elle)).toBe(false);
+    expect(fead.veFeadKartTabloOlcu(elle, [elle])).toBe(false);
+    expect(elle.height).toBe(600);
   });
 
   // Kart ölçüsü 420×340 → 440×500 büyüdüğünde, bugüne kadar kaydedilmiş HER
@@ -1456,8 +1484,8 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     // tablosuz): olursa göç kendi kendini sonsuza kadar "değişti" sayar ve
     // saveState her açılışta kirlenirdi.
     VE_FEAD_LAYOUT_LEGACY.forEach((e) => {
-      [VE_FEAD_LAYOUT_W, VE_FEAD_PAFTA_W].forEach((w) =>
-        expect(e.w === w && e.h === VE_FEAD_LAYOUT_H).toBe(false));
+      [[VE_FEAD_LAYOUT_W, VE_FEAD_LAYOUT_DAR_H], [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_H]].forEach(([w, h]) =>
+        expect(e.w === w && e.h === h).toBe(false));
     });
   });
 
@@ -1466,7 +1494,7 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     // hem genişlik (tablolu kart) hem yükseklik güncel ölçü olurdu ve
     // "korunuyor" iddiası yanlış sebepten geçerdi.
     const n = { type: 'fead-layout', width: 700, height: 420 };
-    expect(VE_FEAD_LAYOUT_LEGACY.concat([{ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H },
+    expect(VE_FEAD_LAYOUT_LEGACY.concat([{ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_DAR_H },
                                          { w: VE_FEAD_PAFTA_W, h: VE_FEAD_LAYOUT_H }])
       .some((e) => e.w === n.width || e.h === n.height)).toBe(false);
     expect(veFeadNormalizeLayoutSize(n)).toBe(false);
@@ -2231,7 +2259,7 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
     delete global.createNode; delete global.veArrangeModuleBase;
 
     // Kanvas yuvaları: tablolu kart GENİŞ, tablosuz kart dar (Pafta).
-    const kanvasYuva = yakalanan.filter((a) => a && a.h === T('fead-layout').defaultHeight
+    const kanvasYuva = yakalanan.filter((a) => a && [VE_FEAD_LAYOUT_H, VE_FEAD_LAYOUT_DAR_H].includes(a.h)
                                                && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w));
     expect(kanvasYuva).toHaveLength(2);
     expect(kanvasYuva.map((a) => a.w)).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W]);
@@ -2280,7 +2308,7 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
     // yalnız büyük kartlara yazılıyor (veArrangeModuleBase onları 65×60 sayarsa
     // grubu yanlış ortalıyor).
     const buyuk = yakalanan.filter((a) => a && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w)
-                                            && a.h === T('fead-layout').defaultHeight);
+                                            && [VE_FEAD_LAYOUT_H, VE_FEAD_LAYOUT_DAR_H].includes(a.h));
     expect(buyuk).toHaveLength(2);
     expect(buyuk[0].ly).toBe(buyuk[1].ly);                       // YAN YANA
     expect(Math.abs(buyuk[1].lx - buyuk[0].lx)).toBeGreaterThanOrEqual(buyuk[0].w);

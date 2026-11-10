@@ -1029,6 +1029,12 @@ var VE_MODULE_LEGACY_H = 66;
 // %12.4 → %8.4, yani büyüme SVG'ye orantısından FAZLA geçiyor.
 var VE_FEAD_LAYOUT_W = 440;
 var VE_FEAD_LAYOUT_H = 500;
+// TABLOSUZ KART UZUN (kullanıcı 2026-11-10, Canlı Not 100: Çalışma Noktası kartı
+// için *"FEAD modülü açıldığında bu pencere bu kadar uzun gelmiyor … bu şekilde
+// gelsin. Böyle daha uygun ve estetik."* — kullanıcının elle verdiği ölçü ≈ 440 ×
+// 650). Tablolu kart 640 × 500'de kalır: kartın boyu da TABLOYU İZLER
+// (cp-fead.js → veFeadKartVarsayilanH).
+var VE_FEAD_LAYOUT_DAR_H = 650;
 // PAFTA (2026-09-26): KAYIŞ TABLOSU KARTIN İÇİNDE, çizimin altında — ve tablolu
 // kart GENİŞ. Kullanıcı: *"o tablonun olduğu kanvas, diğer kanvasa göre daha
 // geniş olsun… daha rahat okunsun tablodakiler."* Genişlik tablonun
@@ -1044,7 +1050,9 @@ var VE_FEAD_PAFTA_W = 640;
 // kartın ilk ölçüsü. İkincisi listeye alınmasaydı bugüne kadar kaydedilmiş
 // HER proje eski küçük kartla açılır, yeni ölçü yalnız yeni kartlarda görünür
 // ve aynı sürümde iki farklı kart ölçüsü dolaşırdı.
-var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 } ];
+// 440×500 tablosuz kartın Canlı Not 100'den önceki ölçüsü (tablolu kart onu
+// 640'a genişletirdi): dokunulmamış her eski kart bugünün ölçüsüne yükselir.
+var VE_FEAD_LAYOUT_LEGACY = [ { w: 60, h: 56 }, { w: 420, h: 340 }, { w: 440, h: 500 } ];
 
 
 // Geriye dönük adlar (dışarıdan okuyan bir yer kalırsa bozulmasın).
@@ -1108,10 +1116,12 @@ function veFeadLayoutSizeFor(node) {
     if(!def || !def[kartlar[i].flag]) continue;
     for(j = 0; j < kartlar[i].legacy.length; j++) {
       if(w === kartlar[i].legacy[j].w && h === kartlar[i].legacy[j].h)
-        // Genişlik KARTIN TABLOSUNDAN (Pafta): tablolu kart geniş, tablosuz dar.
+        // Ölçü KARTIN TABLOSUNDAN (Pafta): tablolu kart geniş, tablosuz dar ve
+        // uzun (Canlı Not 100).
         return { w: (typeof veFeadKartVarsayilanW === 'function')
                       ? veFeadKartVarsayilanW(node) : kartlar[i].w,
-                 h: kartlar[i].h, changed: true };
+                 h: (typeof veFeadKartVarsayilanH === 'function')
+                      ? veFeadKartVarsayilanH(node) : kartlar[i].h, changed: true };
     }
   }
   // TABANIN ALTINDA KAYITLI KART YÜKSELTİLİR. Taban yalnız sürüklemeye

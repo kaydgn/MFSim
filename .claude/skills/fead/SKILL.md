@@ -209,9 +209,13 @@ olurdu.
       tek tipi kuralı). Düğme kartın alanını yazar; ön ayarın söylediğine dönen değer
       alanı SİLER; ön ayar uygulamak alanı temizler. Görünüm durumu değil
       model: kaydedilir, geri alınır.
-    - **KART ÖLÇÜSÜ TABLOYU İZLER**: tablolu kart `VE_FEAD_PAFTA_W` (640),
-      tablosuz 440 — yalnız VARSAYILAN ölçüdeki kart (kullanıcının ölçüsüne
-      dokunulmaz); aynı satırda sağdaki kartlar fark kadar kayar. 640'ta
+    - **KART ÖLÇÜSÜ TABLOYU İZLER**: tablolu kart `VE_FEAD_PAFTA_W` ×
+      `VE_FEAD_LAYOUT_H` (640 × 500), tablosuz `VE_FEAD_LAYOUT_W` ×
+      `VE_FEAD_LAYOUT_DAR_H` (440 × 650 — kullanıcı 2026-11-10, Canlı Not 100:
+      Çalışma Noktası kartı *"bu kadar uzun gelmiyor … bu şekilde gelsin"*;
+      eski 440 × 500 dokunulmamış kart yükselir) — yalnız VARSAYILAN ölçüdeki
+      kart (kullanıcının ölçüsüne dokunulmaz); aynı satırda sağdaki kartlar
+      fark kadar kayar. Kapı: `cp-fead.test.js` → *"TABLOSUZ KART UZUN"*. 640'ta
       KASNAK sütunu 194 px. Eski kayıt şema 7 → 8 göçüyle büyür
       (`veFeadMigratePafta`); göç DOM'a dokunmaz — alt topolojinin
       kimlikleri ana tuvaldekilerle çakışabiliyor.
@@ -405,6 +409,12 @@ olurdu.
     yazılara da uygulandı (ölçülmüştü: 68 yazı çubuğun altında, görünmüyordu).
     Pay yalnız kartta; rapor ve küçük resim değişmez. Kapı:
     `fead-card-design.test.js` → *"yüzen çubuğun altında yazı yok"*.
+    **ROZET GEOMETRİYE DE BİNMEZ** (kullanıcı 2026-11-10, Canlı Not 101: *"Şurası
+    modelin üstünde kalıyor"*): kasnak (kayışı dişleriyle), açıklık ya da kol
+    rozetin kutusuna değiyorsa çizim üstten pay alır (`ROZPAY`, yarım rozet
+    adımıyla, tavan kartın dörtte biri); değmeyen çizim birebir eski. 11 örnek ×
+    dört kart ölçüsünde rozetin altına düşen geometri 9 → 0. Kapı:
+    `fead-card-design.test.js` → *"ROZET GEOMETRİYE BİNMEZ"*.
     **SAĞ ÜST DURUM ROZETİ DE AYNI KURALA GİRDİ** (`ustPay`, 2026-10-02 —
     kullanıcı ekran görüntüsünde kırmızıyla çizdi: *"yazılar birbirine
     girmiş"*). Rozet çizimin üstünde yüzen bir HTML katmanı; çizici onu ancak
