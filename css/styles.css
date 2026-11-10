@@ -11649,6 +11649,27 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-ed-xyz .ve-fw-inp{ padding:0 6px; }
 /* Not, tekli satırların kutusuyla aynı sütunda başlar (78 px etiket + 8 ara). */
 .ve-mw-not{ font-size:var(--fs-micro); line-height:1.45; color:var(--ink-warning); padding-left:86px; }
+/* SEÇİLİ GÖVDE · SEÇİLİ TAKOZ BÖLÜMLÜ (Canlı Not 117 · 118: *"Başlıklar yok, bold yazılar yok.
+   Neyin ne olduğu belli olmadığı için karışık duruyor"*): bölüm başlığı Özet adımının dilinde
+   (küçük, büyük harf), bölümler ince çizgiyle ayrık, alanın etiketi kalın; üçlünün her kutusu
+   kendi eksenini solunda taşır (kutu dolunca yer tutucu kayboluyordu). */
+.ve-fw-ed.ve-mw-ed{ gap:10px; }
+.ve-mw-ed-bolum{ display:flex; flex-direction:column; gap:7px; }
+.ve-mw-ed-bolum + .ve-mw-ed-bolum{ padding-top:10px; border-top:1px solid var(--border-light); }
+.ve-mw-ed-bas{
+  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  color:var(--text-secondary);
+}
+.ve-mw-ed-bas u{ text-decoration:none; text-transform:none; letter-spacing:normal; font-weight:600; color:var(--text-muted); }
+.ve-mw-ed .ve-fw-ed-alan > span:first-child{ font-weight:600; color:var(--text-primary); }
+.ve-mw-ed .ve-fw-ed-alan > span:first-child u{ text-decoration:none; font-weight:400; color:var(--text-muted); }
+.ve-mw-eks{ position:relative; display:block; min-width:0; }
+.ve-mw-eks > i{
+  position:absolute; left:7px; top:50%; transform:translateY(-50%); pointer-events:none;
+  font-style:normal; font-size:var(--fs-micro); font-weight:600; color:var(--text-muted);
+}
+.ve-mw-ed-xyz .ve-mw-eks .ve-fw-inp{ padding-left:20px; }
+.ve-mw-ed-xyz .ve-mw-eks--iki .ve-fw-inp{ padding-left:26px; }
 .ve-mw-lj{ flex:none; display:inline-block; width:11px; height:11px; box-sizing:border-box; background:var(--bg-primary); }
 /* 3B (Canlı Not 37): Görünümler'in çizimi masada yalın — kenarsız; masanın
    ızgarası düz görünüşlerin (3B'nin kendi zemini ve tabanı var) */
