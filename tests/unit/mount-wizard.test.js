@@ -593,7 +593,7 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
   // duruyor … Temel metodolojiye de uygun olsun.") Önce: 11 gövde hattın sırasında (kulaklar, PTO
   // ve aksesuarlar motorla şanzımanın arasında, hat çizgisi içlerinden geçiyordu) ve 31 mm yandaki
   // ön takoz sağ takozların sırasındaydı (şasiye çapraz yay).
-  test('TEMEL YERLEŞİM: 10 Ton TTA — hat ortada, braket ve aksesuar üstte/altta, ön takoz hattın solunda, yan takozlar dışta', () => {
+  test('TEMEL YERLEŞİM: 10 Ton TTA — hat ortada, braket ve aksesuar üstte/altta, iki ön takoz hattın solunda, yan takozlar dışta', () => {
     W.veMntWizAc();
     const cozucu = global._mntResolveTopology;
     delete global._mntResolveTopology;                                     // çekirdeğin kaydından (eşzamanlı)
@@ -605,17 +605,21 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     expect(hat.map((n) => mrk(n))).toEqual(hat.map(() => hm));                                // hat çizgisi yatay
     expect(govde.filter((n) => mrk(n) === hm)).toHaveLength(3);                                // motor · şanzıman · kardan payı (11 → 3)
     govde.filter((n) => !HAT.includes(n.type)).forEach((n) => expect([n.customName, n.ly]).toEqual([n.customName, n.data.cgy > 0 ? 220 : 420]));
-    // ön takoz (y = 31 mm) hattın sırasında ve ortasında, şasinin çerçevesinin dışında (çerçeve
-    // gövdeleri adlarıyla sarar + 26 px); adı altta ve çerçeveye değmez (dış yanında zeminin
-    // taraması); yan takozlar dış sıralarda
-    const on = L.find((n) => n.rol === 'takoz' && /Ön/.test(n.customName));
-    expect([mrk(on), on.adYer]).toEqual([hm, 'bottom']);
+    // iki ön takoz (y = −49 · +53 mm, föyün Mount 1 · 2'si — Canlı Not 68) hattın sırasında,
+    // şasinin çerçevesinin dışında yan yana (çerçeve gövdeleri adlarıyla sarar + 26 px); adları
+    // altta ve çerçeveye değmez (dış yanında zeminin taraması); yan takozlar dış sıralarda
+    const onler = L.filter((n) => n.rol === 'takoz' && /^Ön /.test(n.customName));
+    expect(onler.map((n) => n.customName)).toEqual(['Ön sol takoz · 57RS313774', 'Ön sağ takoz · 57RS313774']);
     const cerceveSol = Math.min(...govde.map((n) => { const w = veNodeDefaultSize(n.type).w, g = Math.max(60, n.customName.length * 7.8);
       return n.lx + Math.min(0, w / 2 - g / 2); })) - 26;
-    const tw = veNodeDefaultSize('mnt-mount').w, tg = Math.max(60, on.customName.length * 7.8);
-    expect(on.lx + tw).toBeLessThanOrEqual(cerceveSol - 20);                                        // yay payı
-    expect(on.lx + tw / 2 + tg / 2).toBeLessThanOrEqual(cerceveSol - 4);                             // ad çerçeveye değmez
-    L.filter((n) => n.rol === 'takoz' && n !== on).forEach((n) => expect([n.customName, n.ly]).toEqual([n.customName, n.data.y > 0 ? 130 : 510]));
+    const tw = veNodeDefaultSize('mnt-mount').w;
+    onler.forEach((on) => {
+      const tg = Math.max(60, on.customName.length * 7.8);
+      expect([on.customName, mrk(on), on.adYer]).toEqual([on.customName, hm, 'bottom']);
+      expect(on.lx + tw).toBeLessThanOrEqual(cerceveSol - 20);                                      // yay payı
+      expect(on.lx + tw / 2 + tg / 2).toBeLessThanOrEqual(cerceveSol - 4);                           // ad çerçeveye değmez
+    });
+    L.filter((n) => n.rol === 'takoz' && !onler.includes(n)).forEach((n) => expect([n.customName, n.ly]).toEqual([n.customName, n.data.y > 0 ? 130 : 510]));
     // hiçbir kutu (adıyla) ötekine binmez
     // kutu ve adı: yan ad yanda (7 px payla), alttaki ad kutunun ortasında; ad 12 px · harf başına ≤ 7,2 px
     const kutu = (n) => {

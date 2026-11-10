@@ -2,16 +2,25 @@
  * mount-ornek-tta.test.js — 10 TON TTA ÖRNEĞİ: KULLANICININ ÇALIŞMA KİTABINA KARŞI
  * ─────────────────────────────────────────────────────────────────────────
  * Örnek (assets/examples/tta10_topoloji.json · MOUNT_EXAMPLES.tta10) kullanıcının
- * Excel'inden kuruldu (tests/fixtures/excel-tta-askisiz.js — dondurulmuş):
+ * iki kitabından kuruldu (ikisi de dondurulmuş): gövdeler ilk kitaptan
+ * (tests/fixtures/excel-tta-askisiz.js, 22.10.2026), takozlar ve rölanti "6X6 YENİ
+ * KABİN" föyünden (tests/fixtures/excel-tta-yeni-kabin.js, Canlı Not 68). İlk
+ * kitabın üç takozlu kurulumu (ön destek + iki volan muhafazası takozu) da
+ * dondurulmuş (tests/fixtures/tta10-uc-nokta-topoloji.json) — Front Support'un
+ * statiği onunla karşılaştırılır:
  *
  *   · EXCEL — Front Support'un formülleri Excel'in hücrelerindeki sonucu verir;
  *     ağırlık kırılımının grup toplamları ve iletilebilirlik eğrisi de.
  *   · GÖVDELER — örneğin on bir gövdesi kırılımın iki grubunu birebir verir;
  *     motorun ataleti ISM11 veri sayfası + motora katılan parçaların nokta kütle
  *     payı, 4500 SP'ninki Allison 4000 §11.
- *   · TAKOZLAR — X Front Support'tan (L2 · L4 + L7), Y/Z kulaklardan, rijitlik
- *     ASFAT'ın takozlarından (kullanıcı kararı 2026-11-06).
- *   · MFSİM ↔ EXCEL — statik reaksiyon ve bloğun arka yüzündeki moment. Excel'in
+ *   · YENİ KABİN — altı takoz föyün Mount 1–6'sı (4 · 6'nın X'i sol eşlerinin:
+ *     föyde 1.105,67 mm geride yazılı, resimde aynı hizada), rijitlik ASFAT'ın
+ *     takozları; föyün ağırlıkları, ağırlık merkezleri, ataletleri ve vitesleri
+ *     örneğinkiyle aynı; rölanti föyün 800 d/dk'sı.
+ *   · ÜÇ NOKTA — ilk kitabın takozları: X Front Support'tan (L2 · L4 + L7), Y/Z
+ *     kulaklardan, rijitlik ASFAT'ın takozlarından (kullanıcı kararı 2026-11-06).
+ *   · MFSİM ↔ EXCEL (üç nokta) — statik reaksiyon ve bloğun arka yüzündeki moment. Excel'in
  *     Mr'ı 992,7 N·m, programın 1.152,6: Excel L3'ü (563) 4500 SP gövdesinin
  *     ağırlık merkezinden alıyor, Wt'ye (530 kg) ise PTO, pompa ve kardan payını
  *     da katıyor — grubun ağırlık merkeziyle L3 596,3, Mr 1.143,0. Kalan 9,6 N·m
@@ -20,8 +29,9 @@
  *     FR20317 (ISME385 30), iSCAAN 497-A392175-1 (TC541 · 4500 SP · rölanti) ve
  *     ISM11 veri sayfası D353029BX03 (bloğun arka yüzü sınırı 1.350 N·m). Tork
  *     zinciri programın yöntemi (Te azami × stall oranı × vites): iSCAAN'ın stall
- *     noktasının %20,6 üstünde; arka takozun çekmeye geçtiği tork (~5 kN·m) ikisinin
- *     de altında. Kriterler: 1b dışında hepsi uygun (baş-kıç 8,49 Hz bantta).
+ *     noktasının %20,6 üstünde; arka takozların çekmeye geçtiği tork (~4,5 kN·m)
+ *     ikisinin de altında. Kriterler: 1 ve 1b uygun değil — yalpalama 21,07 Hz
+ *     sınırın (800 d/dk'da 20 Hz) üstünde, 3. mod 8,73 Hz 8–10 Hz bandında.
  *   · ZARF — hareket zarfı (statik konuma göre) ve takoz sehim zarfı, rapor §8.19;
  *     uç değerler durumların q'sundan bağımsız kinematikle yeniden üretilir.
  *   · KAYIT — JSON ile kayıt defteri birebir; rapor §8.18 sınırlı, uygunluğun 5. satırı.
@@ -29,6 +39,7 @@
 const fs = require('fs');
 const path = require('path');
 const X = require('../fixtures/excel-tta-askisiz.js');
+const Y = require('../fixtures/excel-tta-yeni-kabin.js');
 const BELGE = require('../fixtures/belge-tta-tork.js');
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -45,6 +56,8 @@ global.veSayi = require('../../js/sayi.js').veSayi;
 const VS = require('../../js/mount-veri-sayfasi.js');
 
 const TOPO = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tta10_topoloji.json'), 'utf8'));
+// İlk kitabın üç takozlu kurulumu (Canlı Not 68'den önceki örnek), dondurulmuş
+const TOPO3 = JSON.parse(fs.readFileSync(path.join(__dirname, '../fixtures/tta10-uc-nokta-topoloji.json'), 'utf8'));
 const EX = core.getMountExample('tta10');
 const M = EX.model;
 const F = X.frontSupport, Gi = F.girdi;
@@ -65,8 +78,8 @@ const grup = (satir) => {
 const MOTOR_G = grup(X.agirlik.motor), SANZ_G = grup(X.agirlik.sanziman);
 const RFOB = MOTOR_G.cg[0] + Gi.L1;                                  // 428,53 — L3'ten 428,5
 
-function coz(degis) {
-  const t = JSON.parse(JSON.stringify(TOPO));
+function coz(degis, kaynak) {
+  const t = JSON.parse(JSON.stringify(kaynak || TOPO));
   if (degis) degis(t);
   global.nodes = t.nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
   global.connections = [];
@@ -74,10 +87,12 @@ function coz(degis) {
   return cp._mntComputeResults(global.nodes.find((n) => n.type === 'mnt-solver').id);
 }
 const R = coz();
+const R3 = coz(null, TOPO3);
 const statik = (Rx) => Rx.allCases.find((c) => c.name === 'Static');
 const dusey = (Rx) => statik(Rx).res.perMount.map((p) => -p.f[2] / G);   // kgf
 const govdeler = () => TOPO.nodes.filter((n) => componentDefs[n.type].isMountBody);
 const takozlar = () => TOPO.nodes.filter((n) => n.type === 'mnt-mount');
+const takozlar3 = () => TOPO3.nodes.filter((n) => n.type === 'mnt-mount');
 
 beforeEach(() => resetStubs(stubs));
 
@@ -172,10 +187,66 @@ describe('GÖVDELER — kırılımın satırları', () => {
   });
 });
 
-describe('TAKOZLAR — X Front Support\'tan, Y/Z kulaklardan, rijitlik ASFAT\'ın takozlarından', () => {
+// Kullanıcı 2026-11-09 (Canlı Not 68): "10 TON TTA örneği sanırım şanzıman tarafından
+// yukarıya doğru askılı …" → föy: "6X6 YENİ KABİN - ISM TAKOZ KONUMLARI - ŞANZIMAN
+// ASKISIZ" ("Gerçi bu da askısız"). Örnek föyün altı takozuyla ve rölantisiyle yeniden
+// kuruldu; askılı varyantın verisi iki kitapta da yok.
+describe('YENİ KABİN — altı takoz ve rölanti föyden', () => {
+  test('konum: föyün Mount 1–6\'sı; 4 · 6\'nın X\'i sol eşlerinin (föyde 1.105,67 mm geride, resimde aynı hizada)', () => {
+    const T = takozlar().map((n) => n.data);
+    expect(T).toHaveLength(6);
+    const X46 = { 3: Y.takoz[2][1], 5: Y.takoz[4][1] };            // Mount 4 → 3'ün X'i, 6 → 5'in
+    expect(T.map((d) => [d.x, d.y, d.z])).toEqual(Y.takoz.map(([, x, y, z], i) => [i in X46 ? X46[i] : x, y, z]));
+    // föyün yazımı: sağ çiftin ikisi de sol eşinden TAM 1.105,67 mm geride
+    expect(+(Y.takoz[3][1] - Y.takoz[2][1]).toFixed(2)).toBe(1105.67);
+    expect(+(Y.takoz[5][1] - Y.takoz[4][1]).toFixed(2)).toBe(1105.67);
+    // önde yan yana iki, arkada her yanda çift; ad Y'nin işaretiyle (sağ +Y)
+    expect(takozlar().map((n) => n.customName)).toEqual(['Ön sol takoz · 57RS313774', 'Ön sağ takoz · 57RS313774',
+      'Sol ön takoz · 57RS313773', 'Sağ ön takoz · 57RS313773', 'Sol arka takoz · 57RS313773', 'Sağ arka takoz · 57RS313773']);
+    T.forEach((d, i) => expect(/Sağ|sağ/.test(takozlar()[i].customName)).toBe(d.y > 0));
+  });
+  test('rijitlik: önde 57RS313774, arkada 57RS313773 — kütüphanenin ASR-SR-116 girdileri (föy rijitlik vermiyor)', () => {
+    const L = cp.VE_MOUNT_LIBRARY;
+    const uc = (e) => [e.sx, e.sy, e.sz, e.dx, e.dy, e.dz];
+    const tk = (n) => [n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd];
+    takozlar().forEach((n, i) => expect([n.customName, tk(n)]).toEqual([n.customName, uc(L[i < 2 ? '57RS313774-sr116' : '57RS313773-sr116'])]));
+    expect(+TOPO.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(0.02);
+  });
+  test('föyün ağırlıkları, ağırlık merkezleri, ataletleri ve vitesleri örneğinkiyle aynı; rölanti föyün 800 d/dk\'sı', () => {
+    const SANZ = ['Şanzıman — Allison 4500 SP', 'PTO', 'Pompa', 'Kardan mili payı'];
+    const satir = (n) => ['', n.customName, n.data.mass, n.data.cgx, n.data.cgy, n.data.cgz];
+    const m = grup(govdeler().filter((n) => !SANZ.includes(n.customName)).map(satir));
+    const s = grup(govdeler().filter((n) => SANZ.includes(n.customName)).map(satir));
+    expect(Math.abs(m.m - Y.agirlik.motor)).toBeLessThan(1);             // 1.209,1 ↔ 1.210
+    expect(s.m).toBe(Y.agirlik.sanziman);
+    m.cg.forEach((v, i) => expect(Math.abs(v - Y.cg.motor[i])).toBeLessThan(0.01));
+    s.cg.forEach((v, i) => expect(Math.abs(v - Y.cg.sanziman[i])).toBeLessThan(0.1));
+    // motorun ataleti föyde ISM11 veri sayfasınınki; 4500 SP'ninki birebir
+    const ism = VS.VE_MNT_VERI_SAYFASI.find((v) => v.k === 'cummins-ism11');
+    expect([ism.atalet.x, ism.atalet.y, ism.atalet.z]).toEqual(Y.atalet.motor);
+    const sz = govdeler().find((n) => n.type === 'mnt-gearbox').data, mo = govdeler().find((n) => n.type === 'mnt-motor').data;
+    expect([sz.Ixx, sz.Iyy, sz.Izz]).toEqual(Y.atalet.sanziman);
+    [sz.g1, sz.g2, sz.g3, sz.g4, sz.g5, sz.g6].forEach((g, i) => expect(Math.abs(g - Y.vites[i])).toBeLessThan(0.01));
+    expect(Math.abs(sz.gR - Y.geri)).toBeLessThan(0.01);
+    expect(Math.abs(sz.Rstall - Y.stall)).toBeLessThan(0.005);
+    expect([mo.Te, mo.TeRpm, mo.Pmax, mo.PmaxRpm]).toEqual([Y.motor.TeMax, Y.motor.TeRpm, Y.motor.Pmax, Y.motor.PmaxRpm]);
+    expect(mo.idleRpm).toBe(Y.motor.rolanti);
+    expect(M.torque.idleRpm).toBe(Y.motor.rolanti);
+  });
+  test('statik: altı düşey reaksiyon toplam ağırlığı taşır; sol ve sağ çift birbirine ±%5', () => {
+    expect(R.error).toBeUndefined();
+    expect(R.solvedNL).toBe(false);
+    const d = dusey(R);
+    expect(d.map((v) => +v.toFixed(1))).toEqual([246.6, 245.4, 316.7, 305.8, 317.7, 306.8]);
+    expect(d.reduce((a, b) => a + b, 0)).toBeCloseTo(1739.1, 6);
+    [[0, 1], [2, 3], [4, 5]].forEach(([a, b]) => expect(Math.abs(d[a] - d[b]) / d[a]).toBeLessThan(0.05));
+  });
+});
+
+describe('ÜÇ NOKTA — ilk kitabın takozları (dondurulmuş): X Front Support\'tan, Y/Z kulaklardan', () => {
   const kulak = (ad) => govdeler().find((n) => n.customName === ad).data;
   test('konum: ön RFOB − L2, arka RFOB + L4 + L7; ön kulağın Y/Z\'si, arka kulağın Y\'si + L8 dışa', () => {
-    const [on, sag, sol] = takozlar().map((n) => n.data);
+    const [on, sag, sol] = takozlar3().map((n) => n.data);
     expect([on.x, sag.x, sol.x]).toEqual([428.5 - Gi.L2, 428.5 + Gi.L4 + Gi.L7, 428.5 + Gi.L4 + Gi.L7]);
     expect([on.y, on.z]).toEqual([kulak('Ön kulak').cgy, kulak('Ön kulak').cgz]);
     expect(sag.y).toBeCloseTo(kulak('Sağ arka kulak').cgy + Gi.L8, 9);
@@ -186,24 +257,31 @@ describe('TAKOZLAR — X Front Support\'tan, Y/Z kulaklardan, rijitlik ASFAT\'ı
     const L = cp.VE_MOUNT_LIBRARY;
     const uc = (e) => [e.sx, e.sy, e.sz, e.dx, e.dy, e.dz];
     const tk = (n) => [n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd];
-    const [on, sag, sol] = takozlar();
+    const [on, sag, sol] = takozlar3();
     expect(tk(on)).toEqual(uc(L['57RS313774-sr116']));
     expect(tk(sag)).toEqual(uc(L['57RS313773-sr116']));
     expect(tk(sol)).toEqual(uc(L['57RS313773-sr116']));
-    expect(+TOPO.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(0.02);
+    expect(+TOPO3.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(0.02);
+  });
+  test('gövdeler örneğinkiyle aynı; tek fark takozlar ve rölanti (700, iSCAAN)', () => {
+    const g = (T) => T.nodes.filter((n) => componentDefs[n.type].isMountBody).map((n) => [n.type, n.customName, n.data]);
+    const a = g(TOPO3), b = g(TOPO);
+    expect(a.map((x) => x[1])).toEqual(b.map((x) => x[1]));
+    a.forEach((x, i) => expect([x[1], Object.assign({}, x[2], { idleRpm: undefined })]).toEqual([b[i][1], Object.assign({}, b[i][2], { idleRpm: undefined })]));
+    expect(TOPO3.nodes.find((n) => n.type === 'mnt-motor').data.idleRpm).toBe(BELGE.iscaan.rolanti);
   });
 });
 
-describe('MFSİM ↔ EXCEL — statik (1 g)', () => {
+describe('MFSİM ↔ EXCEL — statik (1 g), ilk kitabın üç takozuyla', () => {
   test('çözüm lineer ve hatasız; düşey reaksiyonlar ön 493,0 · sağ arka 595,7 · sol arka 650,4 kgf', () => {
-    expect(R.error).toBeUndefined();
-    expect(R.solvedNL).toBe(false);
-    const [on, sag, sol] = dusey(R);
+    expect(R3.error).toBeUndefined();
+    expect(R3.solvedNL).toBe(false);
+    const [on, sag, sol] = dusey(R3);
     expect([+on.toFixed(1), +sag.toFixed(1), +sol.toFixed(1)]).toEqual([493.0, 595.7, 650.4]);
     expect(on + sag + sol).toBeCloseTo(1739.1, 6);
   });
   test('reaksiyon Excel\'in formülüyle, L3 grubun ağırlık merkezinden: ±0,5 kgf; Excel\'in L3\'üyle 14,8 kgf fark', () => {
-    const [on, sag, sol] = dusey(R);
+    const [on, sag, sol] = dusey(R3);
     const t = cummins(Object.assign({}, Gi, { We: MOTOR_G.m, L3: SANZ_G.cg[0] - 428.5 }));
     expect(Math.abs(on - t.R1)).toBeLessThan(0.5);
     expect(Math.abs(sag + sol - t.R2)).toBeLessThan(0.5);
@@ -211,22 +289,22 @@ describe('MFSİM ↔ EXCEL — statik (1 g)', () => {
     expect(sag + sol - F.sonuc.R2).toBeCloseTo(13.9, 1);
   });
   test('rijitlikten bağımsız: A26 ve TK050 takozlarıyla düşey reaksiyonlar ±%0,5', () => {
-    const baz = dusey(R);
+    const baz = dusey(R3);
     [['57RS313774', '57RS313773'], ['TK050', 'TK050']].forEach(([a, b]) => {
       const Rx = coz((t) => t.nodes.filter((n) => n.type === 'mnt-mount').forEach((n, i) => {
         const e = cp.VE_MOUNT_LIBRARY[i === 0 ? a : b];
         Object.assign(n.data, { kxs: e.sx, kys: e.sy, kzs: e.sz, kxd: e.dx, kyd: e.dy, kzd: e.dz });
-      }));
+      }), TOPO3);
       dusey(Rx).forEach((v, i) => expect(Math.abs(v - baz[i]) / baz[i]).toBeLessThan(0.005));
     });
   });
   test('bloğun arka yüzünde moment: 1.152,6 N·m; Excel 992,7 — farkın 150,3\'ü L3, kalan 9,6\'sı arka kulaklar ve g', () => {
-    const st = R.baglanti.satirlar.find((r) => r.name === 'Static');
-    expect(R.baglanti).toMatchObject({ S: [428.5, -0.58, 493.96], a: [1, 0, 0], sinir: BELGE.ism11.rfobMb });
+    const st = R3.baglanti.satirlar.find((r) => r.name === 'Static');
+    expect(R3.baglanti).toMatchObject({ S: [428.5, -0.58, 493.96], a: [1, 0, 0], sinir: BELGE.ism11.rfobMb });
     expect([st.m, st.takoz]).toEqual([541, 2]);                       // şanzıman grubu + iki arka kulak · iki arka takoz
     expect(+st.egilme.toFixed(1)).toBe(1152.6);
     // düzlemin arkası serbest cisim (düşey kuvvetlerle): takozların yatay kuvvetinin payı < 1 N·m
-    const [, sag, sol] = dusey(R);
+    const [, sag, sol] = dusey(R3);
     const arka = govdeler().filter((n) => n.data.cgx > 428.5);
     const elle = (arka.reduce((t, n) => t + n.data.mass * (n.data.cgx - 428.5), 0) - (sag + sol) * (Gi.L4 + Gi.L7)) * G / 1000;
     expect(Math.abs(st.egilme - elle)).toBeLessThan(1);
@@ -288,7 +366,7 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       expect([s.bagX, s.bagY, s.bagZ]).toEqual([428.5, -0.58, 493.96]);
       expect([s.egSinir, s.g1, s.gR, s.Rstall]).toEqual([1350, 4.695, -5.552, 1.897]);
       const mo = global.nodes.find((n) => n.type === 'mnt-motor').data;
-      expect([mo.Te, mo.idleRpm, mo.cylinders]).toEqual([1835, 700, 6]);
+      expect([mo.Te, mo.idleRpm, mo.cylinders]).toEqual([1835, 800, 6]);
       expect(global.nodes.filter((n) => componentDefs[n.type].isMountBody)).toHaveLength(11);
     } finally {
       jest.clearAllTimers();
@@ -296,14 +374,14 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       delete global.createNode;
     }
   });
-  test('rapor §8.18: bloğun arka yüzünde Statik 1.153 N·m, sınır 1.350 (ISM11 veri sayfası) — %85,4 uygun; uygunluğun 5. satırı', () => {
+  test('rapor §8.18: bloğun arka yüzünde Statik 1.169 N·m (dört arka takoz düzlemin arkasında), sınır 1.350 (ISM11 veri sayfası) — %86,6 uygun; uygunluğun 5. satırı', () => {
     global._veMntLast = coz();
     const el = document.createElement('div');
     el.innerHTML = rep._mntRepSection8(global._veMntLast);
     const tablo = Array.from(el.querySelectorAll('table')).find((t) => /kesit momenti/.test((t.querySelector('caption') || {}).textContent || ''));
     expect(tablo.querySelector('caption').textContent).toContain('sınır 1.350 N·m (veri sayfası, statik)');
     const st = Array.from(tablo.querySelectorAll('tr')).find((tr) => tr.cells[0].textContent === 'Statik (yerçekimi)');
-    expect(Array.from(st.cells).map((c) => c.textContent)).toEqual(['Statik (yerçekimi)', '541', '2', '1.153', '113', '%85,4', '✓ Uygun']);
+    expect(Array.from(st.cells).map((c) => c.textContent)).toEqual(['Statik (yerçekimi)', '541', '4', '1.169', '28', '%86,6', '✓ Uygun']);
     const U = rep.veMntUygunluk(global._veMntLast);
     expect(U.satirlar.map((s) => s.no)).toEqual(['1', '1a', '1b', '2', '3', '4', '5']);
     expect(U.satirlar[6]).toMatchObject({ kisa: 'Bağlantı yüzü', st: 'ok', hedef: '≤ 1.350 N·m (veri sayfası)' });
@@ -315,12 +393,13 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
   const sanz = () => govdeler().find((n) => n.type === 'mnt-gearbox').data;
   const durum = (Rx, ad) => Rx.allCases.concat(Rx.gearCases, Rx.designCases).find((c) => c.name === ad);
   const dz = (rc, i) => rc.res.perMount[i].delta[2] * 1000;
-  test('motor FR20317 (1.835 N·m @ 1.200 · 283 kW @ 1.900 · 6 silindir), rölanti iSCAAN 700; şanzıman iSCAAN (TC541 1,897 · 4500 SP)', () => {
+  test('motor FR20317 (1.835 N·m @ 1.200 · 283 kW @ 1.900 · 6 silindir), rölanti föyün 800\'ü (iSCAAN 700, FR20317 600–800); şanzıman iSCAAN (TC541 1,897 · 4500 SP)', () => {
     const F = BELGE.fr20317, I = BELGE.iscaan, m = motor(), s = sanz();
     expect([m.Te, m.TeRpm, m.Pmax, m.PmaxRpm, m.cylinders]).toEqual([F.TeMax, F.TeRpm, F.Pmax, F.PmaxRpm, F.silindir]);
     expect(I.tepe).toEqual({ Te: F.TeMax, rpm: F.TeRpm });
     expect(m.cylinders).toBe(BELGE.ism11.silindir);
-    expect(m.idleRpm).toBe(I.rolanti);
+    expect(m.idleRpm).toBe(Y.motor.rolanti);
+    expect(I.rolanti).toBe(700);
     expect(m.idleRpm).toBeGreaterThanOrEqual(F.rolantiMin);
     expect(m.idleRpm).toBeLessThanOrEqual(F.rolantiMax);
     expect([s.g1, s.g2, s.g3, s.g4, s.g5, s.g6]).toEqual(I.vites.slice(0, 6).map((v) => v[1]));
@@ -331,7 +410,7 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
     expect(TOPO.nodes.filter((n) => n.type === 'mnt-transfer')).toHaveLength(0);
     expect(s.iTransfer).toBeUndefined();
     expect(M.torque).toEqual({ Te: 1835, Rstall: 1.897, iTransfer: 1, fwd: { iGear: 4.695, phiAxle: 1 },
-      rev: { iGear: -5.552, phiAxle: 1 }, derate: 1, idleRpm: 700, cylinders: 6 });
+      rev: { iGear: -5.552, phiAxle: 1 }, derate: 1, idleRpm: 800, cylinders: 6 });
   });
   test('zincir: 1. vites 1.835 × 1,897 × 4,695 = 16.343,3 N·m, geri 19.326,5; Çözücü\'nün varsayılan yönüyle Tx = −T; kayıt defteri JSON\'la aynı', () => {
     const ileri = 1835 * 1.897 * 4.695, geri = 1835 * 1.897 * -5.552;
@@ -357,41 +436,50 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
     expect(zincir(4.695) / I.vites[0][2]).toBeCloseTo(1.206, 3);
     expect(zincir(5.552) / I.vites[6][2]).toBeCloseTo(1.236, 3);
   });
-  test('çekme: 1.–3. viteste sol arka, geride sağ arka takoz; 4.–6. viteste üçü de basıda; boşalma torku ileri ~5,1 · geri ~4,7 kN·m — iSCAAN\'ın stall torkunun da altında', () => {
+  // Takoz sırası föyün: 0 ön sol · 1 ön sağ · 2 sol ön · 3 sağ ön · 4 sol arka · 5 sağ arka
+  test('çekme: 1.–3. viteste soldaki iki arka, geride sağdaki iki arka takoz; 4.–6. viteste hepsi basıda; boşalma torku ileri ~4,6 · geri ~4,45 kN·m — iSCAAN\'ın stall torkunun da altında', () => {
     const cekme = (ad) => durum(R, ad).res.perMount.map((p) => p.tension);
-    expect(['1. Vites', '2. Vites', '3. Vites'].map(cekme)).toEqual([[false, false, true], [false, false, true], [false, false, true]]);
-    expect(['4. Vites', '5. Vites', '6. Vites'].map(cekme)).toEqual([[false, false, false], [false, false, false], [false, false, false]]);
-    expect(cekme('Geri Vites')).toEqual([false, true, false]);
+    const sol = [false, false, true, false, true, false], yok = [false, false, false, false, false, false];
+    expect(['1. Vites', '2. Vites', '3. Vites'].map(cekme)).toEqual([sol, sol, sol]);
+    expect(['4. Vites', '5. Vites', '6. Vites'].map(cekme)).toEqual([yok, yok, yok]);
+    expect(cekme('Geri Vites')).toEqual([false, false, false, true, false, true]);
     // lineer: δz(T) = δz(Statik) + T · eğim → δz = 0'daki tork
     const st = durum(R, 'Static'), g1 = durum(R, '1. Vites'), gR = durum(R, 'Geri Vites');
     const bos = (rc, i) => -dz(st, i) / ((dz(rc, i) - dz(st, i)) / Math.abs(rc.loadCase.Tshaft));
-    expect(bos(g1, 2)).toBeCloseTo(5124, -1);
-    expect(bos(gR, 1)).toBeCloseTo(4695, -1);
-    expect(bos(g1, 2)).toBeLessThan(BELGE.iscaan.vites[0][2]);
-    expect(bos(gR, 1)).toBeLessThan(BELGE.iscaan.vites[6][2]);
-    // 1. viteste sol arka +6,35 mm (çekme), sağ arka −11,91; geride sağ arka +8,29, sol arka −13,84
-    expect([dz(g1, 1), dz(g1, 2), dz(gR, 1), dz(gR, 2)].map((v) => +v.toFixed(2))).toEqual([-11.91, 6.35, 8.29, -13.84]);
+    expect(bos(g1, 2)).toBeCloseTo(4604, -1);
+    expect(bos(g1, 4)).toBeCloseTo(4621, -1);
+    expect(bos(gR, 3)).toBeCloseTo(4448, -1);
+    expect(bos(gR, 5)).toBeCloseTo(4460, -1);
+    [2, 4].forEach((i) => expect(bos(g1, i)).toBeLessThan(BELGE.iscaan.vites[0][2]));
+    [3, 5].forEach((i) => expect(bos(gR, i)).toBeLessThan(BELGE.iscaan.vites[6][2]));
+    // 1. viteste soldaki arka takozlar +3,60 · +3,59 mm (çekme), sağdakiler −6,37 · −6,38; geride tersi
+    expect([2, 3, 4, 5].map((i) => +dz(g1, i).toFixed(2))).toEqual([3.6, -6.37, 3.59, -6.38]);
+    expect([2, 3, 4, 5].map((i) => +dz(gR, i).toFixed(2))).toEqual([-7.34, 4.56, -7.34, 4.56]);
   });
-  test('kriterler: 1 · 1a · 2 · 3 · 4 · 5 uygun, 1b değil — baş-kıç 8,49 Hz 8–10 Hz bandında; f_ateş 35 Hz', () => {
-    expect(R.modes.map((m) => [+m.f_Hz.toFixed(2), m.label])).toEqual([[5.11, 'lateral+yaw'], [5.7, 'fore-aft'],
-      [6.53, 'yaw+lateral'], [8.49, 'pitch'], [10.79, 'bounce'], [15.47, 'roll']]);
+  test('kriterler (rölanti 800 → f_ateş 40 Hz, sınır 20 Hz): 1 değil — yalpalama 21,07 Hz; 1b değil — 3. mod 8,73 Hz bantta; 1a · 2 · 3 · 4 · 5 uygun', () => {
+    expect(R.modes.map((m) => [+m.f_Hz.toFixed(2), m.label])).toEqual([[7.18, 'lateral+yaw'], [7.95, 'fore-aft'],
+      [8.73, 'yaw+lateral'], [12.22, 'pitch'], [15.27, 'bounce'], [21.07, 'roll']]);
     const U = rep.veMntUygunluk(R);
-    expect(U.satirlar.map((s) => [s.no, s.st])).toEqual([['1', 'ok'], ['1a', 'ok'], ['1b', 'no'], ['2', 'ok'], ['3', 'ok'], ['4', 'ok'], ['5', 'ok']]);
+    expect(U.satirlar.map((s) => [s.no, s.st])).toEqual([['1', 'no'], ['1a', 'ok'], ['1b', 'no'], ['2', 'ok'], ['3', 'ok'], ['4', 'ok'], ['5', 'ok']]);
     const duz = (no) => U.satirlar.find((s) => s.no === no).bulgu.replace(/<[^>]+>/g, '');
-    expect(duz('1')).toContain('sınır 17,5 Hz');
-    expect(duz('1b')).toContain('mod 4 8,49 Hz');
-    expect(duz('2')).toMatch(/fateş 35 Hz .* T=%10,3/);
-    expect(duz('3')).toContain('30,47 kN (Geri · Sol arka takoz · 57RS313773)');
+    expect(duz('1')).toContain('mod 6 21,07 Hz');
+    expect(duz('1')).toContain('= 20 Hz');
+    expect(duz('1b')).toContain('mod 3 8,73 Hz');
+    expect(duz('2')).toMatch(/fateş 40 Hz .* T=%16,6/);
+    expect(duz('3')).toContain('16,16 kN (Geri · Sol arka takoz · 57RS313773)');
+    // ilk kitabın üç takozuyla (rölanti 700) yalpalama 15,47 Hz, sınır 17,5 Hz — uygundu
+    expect(+R3.modes[5].f_Hz.toFixed(2)).toBe(15.47);
+    expect(rep.veMntUygunluk(R3).satirlar.find((x) => x.no === '1').st).toBe('ok');
   });
 });
 
 describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
   const mm = (v) => +(v * 1000).toFixed(2);
   const durumlar = () => R.allCases.concat(R.gearCases, R.designCases).filter((c) => c.res);
-  test('güç grubunun bütün noktaları, statik konuma göre: X −28,56 / +9,56 · Y ±30,78 · Z −10,18 / +8,72 mm; belirleyen nokta ve durum', () => {
+  test('güç grubunun bütün noktaları, statik konuma göre: X −14,78 / +4,95 · Y ±15,33 · Z −5,64 / +5,19 mm; belirleyen nokta ve durum', () => {
     const Z = R.zarf.toplam;
-    expect(Z.min.map(mm)).toEqual([-28.56, -30.78, -10.18]);
-    expect(Z.max.map(mm)).toEqual([9.56, 30.78, 8.72]);
+    expect(Z.min.map(mm)).toEqual([-14.78, -15.33, -5.64]);
+    expect(Z.max.map(mm)).toEqual([4.95, 15.33, 5.19]);
     expect(Z.minAt).toEqual([
       { durum: 'Pothole Braking', nokta: [-1, -1, 1], govde: 'Motor — Cummins ISM' },
       { durum: 'Kerb Strike L', nokta: 'ag', govde: 'Kardan mili payı' },
@@ -401,7 +489,7 @@ describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
       { durum: 'Kerb Strike R', nokta: 'ag', govde: 'Kardan mili payı' },
       { durum: 'Reverse Torque', nokta: 'ag', govde: 'Sağ arka kulak' }]);
     const mo = R.zarf.govde.find((g) => g.name === 'Motor — Cummins ISM');
-    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-28.56, -20.25, -10.18], [9.56, 20.25, 6.32]]);
+    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-14.78, -12.88, -5.64], [4.95, 11.18, 3.79]]);
   });
   test('hakem: her gövdenin zarfı durumların q\'sundan bağımsız kinematikle (Δu + Δθ × r, kutu ataletten) aynı', () => {
     const G0 = R.mp.cg, q0 = R.qStatic;
@@ -439,13 +527,14 @@ describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
       'Birleşik ağırlık merkezinin ötelemesi ve dönmesi, statik konuma göre', 'Takoz sehim zarfı, yüksüz konumdan [mm]']);
     const hucre = (t, i) => Array.from(tablolar[t].querySelectorAll('tr')).slice(1).map((tr) => tr.cells[i].textContent);
     expect(hucre(0, 0).slice(-1)).toEqual(['Güç grubu (bütün noktalar)']);
-    expect(Array.from(tablolar[0].rows).slice(-1)[0].cells[3].textContent).toBe('−30,78');
+    expect(Array.from(tablolar[0].rows).slice(-1)[0].cells[3].textContent).toBe('−15,33');
     expect(hucre(2, 0)).toContain('İleri tork · 1. Vites');
     expect(hucre(2, 0)).toContain('Tümsek (3,5g) · 3,5g Düşey');
     expect(hucre(2, 0)).toHaveLength(durumlar().length - 1 - 4);    // Statik yok; dört ad ikiz
     const sehim = Array.from(tablolar[3].rows).slice(1).map((tr) => Array.from(tr.cells).map((c) => c.textContent));
-    expect(sehim).toHaveLength(9);
-    expect(sehim[2]).toEqual(['δz', '−12,67', 'Çukur + fren (3,5g)', '+2,69', 'Azami geri esneme (droop) · çekme']);
-    expect(sehim[8]).toEqual(['δz', '−13,84', 'Geri tork', '+6,35', 'İleri tork · çekme']);
+    expect(sehim).toHaveLength(18);                                  // altı takoz × üç eksen
+    expect(sehim[2]).toEqual(['δz', '−6,97', 'Çukur + fren (3,5g)', '+1,34', 'Azami geri esneme (droop) · çekme']);
+    expect(sehim[8]).toEqual(['δz', '−7,34', 'Geri tork', '+3,6', 'İleri tork · çekme']);
+    expect(sehim[17]).toEqual(['δz', '−6,38', 'İleri tork', '+4,56', 'Geri tork · çekme']);
   });
 });

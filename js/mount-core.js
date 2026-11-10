@@ -2245,8 +2245,18 @@ var veMountCore = (function() {
   const _torkIleri = (t) => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:t.fwd.iGear,
                                           iTransfer:t.iTransfer, phiAxle:t.fwd.phiAxle, derate:t.derate });
 
-  // ── 10 Ton TTA — şanzıman askısız (Cummins ISM · Allison 4500 SP) ──────────
-  // Kaynak: kullanıcının çalışma kitabı (22.10.2026) — "Front Support" (motorun
+  // ── 10 Ton TTA — 6x6 yeni kabin, şanzıman askısız (Cummins ISM · Allison 4500 SP)
+  // TAKOZLAR VE RÖLANTİ (kullanıcı 2026-11-09, Canlı Not 68 — "6X6 YENİ KABİN - ISM
+  // TAKOZ KONUMLARI - ŞANZIMAN ASKISIZ" föyü, tests/fixtures/excel-tta-yeni-kabin.js):
+  // altı takoz, önde yan yana iki, arkada her yanda çift (ASFAT'ın düzeni); konumlar
+  // föyün Mount 1–6'sı. Föy Mount 4 · 6'nın X'ini sol eşlerinden (3 · 5) 1.105,67 mm
+  // geride yazıyor, föyün resminde aynı hizadalar — yazım hatası: sol eşlerinin X'i.
+  // Föy rijitlik vermiyor: ASFAT'ın takozları (önceki kararın aynısı). Rölanti föyün
+  // 800 d/dk'sı (FR20317'nin 600–800 aralığında). Askılı varyantın verisi yok.
+  // ÖNCEKİ ÜÇ TAKOZ (ön destek + iki volan muhafazası takozu, ilk kitabın Front
+  // Support'u) dondurulmuş: tests/fixtures/tta10-uc-nokta-topoloji.json — ilk kitabın
+  // statik karşılaştırması ve onaylanan Excel çıktısı (R12) onunla koşar.
+  // GÖVDELER: kullanıcının çalışma kitabı (22.10.2026) — "Front Support" (motorun
   // ön destek + volan muhafazası askısında reaksiyon ve bloğun arka yüzünde
   // eğilme momenti) ve "AĞIRLIK_KIRILIMI" (parça başına kütle ve ağırlık merkezi).
   //   gövdeler → AĞIRLIK_KIRILIMI'nın O · P · Q · R sütunları, birebir. Tipi
@@ -2255,10 +2265,7 @@ var veMountCore = (function() {
   //     motorun ataleti ISM11 veri sayfası (veri sayfası kataloğu, cummins-ism11)
   //     + o parçaların nokta kütle payı. 4500 SP'nin ataleti Allison 4000 §11
   //     (6 vites · PTO · retardersiz).
-  //   takoz X'i → Front Support: ön L2 (RFOB − 1.066), arka L4 + L7 (RFOB + 160);
-  //     Y ve Z KULAKLARDAN (kullanıcı kararı 2026-11-06): ön takoz ön kulağın
-  //     Y/Z'si, arka takoz arka kulağın Y'si + L8 (79 mm dışa) ve Z'si.
-  //   rijitlik → Excel'de YOK; ASFAT'ın takozları (kullanıcı kararı 2026-11-06):
+  //   rijitlik → iki kitapta da YOK; ASFAT'ın takozları (kullanıcı kararı 2026-11-06):
   //     ön 57RS313774, arka 57RS313773, ASR-SR-116 değerleri; ζ = 0,02 aynı belgeden.
   //   bağlantı yüzü → bloğun arka yüzü (Excel'in Mr düzlemi; kullanıcı kararı
   //     2026-11-06), krank ekseninde: X 428,5 (L1 ve L3'ün ikisi de verir), Y/Z
@@ -2267,7 +2274,7 @@ var veMountCore = (function() {
   //     at rear face of block").
   //   tork → FR20317 (ISME385 30: 1.835 N·m @ 1.200, 283 kW @ 1.900 d/dk) ve
   //     iSCAAN A392175 (6X6 TTA: TC541 stall tork oranı 1,897; 4500 SP vitesleri;
-  //     rölanti 700 d/dk). Transfer kutusu güç grubunda değil (şasiye bağlı):
+  //     iSCAAN'ın rölantisi 700, föyünki 800 d/dk). Transfer kutusu güç grubunda değil (şasiye bağlı):
   //     reaksiyon şanzıman çıkışının torku, iTransfer = 1. Zincir Te azami × stall
   //     oranı × vites (programın yöntemi) → 1. viteste 16.343 N·m; iSCAAN'ın stall
   //     noktası (motor 1.560 d/dk, net 1.571,8 N·m) F1 çıkışında 13.551,3 N·m —
@@ -2278,12 +2285,12 @@ var veMountCore = (function() {
   const TTA10_RFOB = 428.5;
   const TTA10_TORQUE = { Te:1835, Rstall:1.897, iTransfer:1,
                          fwd:{iGear:4.695, phiAxle:1}, rev:{iGear:-5.552, phiAxle:1},
-                         derate:1, idleRpm:700, cylinders:6 };
+                         derate:1, idleRpm:800, cylinders:6 };
   const TTA10_EXAMPLE = {
     g: 9.81,
     components: [
       {name:'Motor — Cummins ISM',        mass:1136, cg:[ -82.548,  -0.711, 675.091], Ixx:90.46, Iyy:184.32, Izz:135.33, Ixy:0.19, Ixz:-4.88, Iyz:-0.39, pointMass:false, kind:'mnt-motor',      at:[335,331],
-       veri:{ Te:1835, TeRpm:1200, Pmax:283, PmaxRpm:1900, idleRpm:700, cylinders:6 }},
+       veri:{ Te:1835, TeRpm:1200, Pmax:283, PmaxRpm:1900, idleRpm:800, cylinders:6 }},
       {name:'Alternatör grubu',           mass:36.1, cg:[-626.54,  273.58,  791.24], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-alternator', at:[265,229]},
       {name:'Klima kompresörü',           mass:10,   cg:[-543.89, -323.46,  973.4 ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-ac',         at:[225,433]},
       {name:'Direksiyon pompası',         mass:10,   cg:[-406.62, -276.32,  398.27], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[365,433]},
@@ -2297,10 +2304,14 @@ var veMountCore = (function() {
       {name:'Pompa',                      mass:18,   cg:[1063.66, -288.7,   396.78], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[735,433]},
       {name:'Kardan mili payı',           mass:20,   cg:[1957.13,   -3.25,  510.02], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft',      at:[855.5,331]}
     ],
+    // Föyün sırası (Mount 1–6); 4 · 6'nın X'i sol eşlerinin (yukarıdaki yazım hatası).
     mounts: [
-      {name:'Ön takoz · 57RS313774',       pos:[TTA10_RFOB - 1066,   30.92, 356.29], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,331]},
-      {name:'Sağ arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,   398.6,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,137]},
-      {name:'Sol arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,  -399.4,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,533]}
+      {name:'Ön sol takoz · 57RS313774',   pos:[-636.668,  -48.971, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,389]},
+      {name:'Ön sağ takoz · 57RS313774',   pos:[-636.471,   52.629, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,273]},
+      {name:'Sol ön takoz · 57RS313773',   pos:[ 532,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,533]},
+      {name:'Sağ ön takoz · 57RS313773',   pos:[ 532,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,137]},
+      {name:'Sol arka takoz · 57RS313773', pos:[ 642,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,533]},
+      {name:'Sağ arka takoz · 57RS313773', pos:[ 642,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,137]}
     ],
     torque: TTA10_TORQUE,
     cozucu: { zeta:0.02 },
@@ -2569,11 +2580,11 @@ var veMountCore = (function() {
       id: 'tta10',
       name: '10 Ton TTA Takoz Analizi',
       vehicle: '10 Ton TTA',
-      subtitle: '11 kütle · 3 takoz güç grubu',
+      subtitle: '11 kütle · 6 takoz güç grubu',
       description: 'Cummins ISM 385 · Allison 4500 SP + PTO · şanzıman askısız',
       specs: [
         ['Kütle gövdesi', String(TTA10_EXAMPLE.components.length)],
-        ['Takoz', String(TTA10_EXAMPLE.mounts.length) + ' · ön 1 · arka 2'],
+        ['Takoz', String(TTA10_EXAMPLE.mounts.length) + ' · ön 2 · arka 4'],
         ['Toplam kütle', _toplamKg(TTA10_EXAMPLE)],
         ['Motor torku', _sayi(TTA10_TORQUE.Te) + ' N·m @ ' + _sayi(TTA10_EXAMPLE.components[0].veri.TeRpm) + ' d/dk'],
         ['Rölanti · silindir', _sayi(TTA10_TORQUE.idleRpm) + ' d/dk · ' + _sayi(TTA10_TORQUE.cylinders) + ' → f_ateş '
