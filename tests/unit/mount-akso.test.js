@@ -1471,7 +1471,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
 
   test('döndürürken çip parçasıyla yürür: dört örnek × tam tur (3°), sürüklemenin karesi — 20 px\'ten büyük sıçrama ‰10\'un altında', () => {
     const olc = (surukle) => {
-      let kare = 0, sicrama = 0;
+      let kare = 0, sicrama = 0, eski = 0;
       ['siper', 'tulga', 'asfat', 'tta10'].forEach((ad) => {
         yukle(ad);
         const m = cp._mntAksoModel(), isaret = {};
@@ -1480,19 +1480,26 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
         for (let az = 0; az < 360; az += 3) {
           const kam = { az, el: 25 }, r = AK.ciz(m, sihirbaz(kam, { balon: true, ortu: ORTU, yer, surukle: surukle && az > 0 })), K = AK.kamera('dim', null, AK.kamYon(kam));
           yer = r.yer;
+          if (!(surukle && az > 0)) r.etiket.forEach((e) => { if (e.k !== 'G' && !e.kirik) eski++; });
           const bu = {};
           r.etiket.forEach((e) => { if (!isaret[e.k]) return; const q = K.P(isaret[e.k]); bu[e.k] = [(e.kutu.l + e.kutu.r) / 2 - (r.F.ox + q[0] * r.F.sc), (e.kutu.t + e.kutu.b) / 2 - (r.F.oy + q[1] * r.F.sc)]; });
           if (onceki) Object.keys(bu).forEach((k) => { if (!onceki[k]) return; kare++; if (Math.hypot(bu[k][0] - onceki[k][0], bu[k][1] - onceki[k][1]) > 20) sicrama++; });
           onceki = bu;
         }
       });
-      return { kare, oran: sicrama / Math.max(1, kare) };
+      return { kare, eski, oran: sicrama / Math.max(1, kare) };
     };
     const s = olc(true);
     expect(s.kare).toBeGreaterThan(1500);
     expect(s.oran).toBeLessThan(0.01);
     // kapı düşebilir: sürükleme karesi olmadan (her kare tam yerleşim) sıçrama çok daha sık
-    expect(olc(false).oran).toBeGreaterThan(s.oran * 2);
+    const tam = olc(false);
+    expect(tam.oran).toBeGreaterThan(s.oran * 2);
+    // YENİDEN DENEME TURU (Canlı Not 68): önceki karenin yeriyle tam yerleşimde yer
+    // bulamayan çip önce sıraya alınır, sonra tur yeniden dener — eski yerleştiriciye
+    // (kılavuzsuz yazı) çip düşmez. Tursuz ya da öncelik adımsız (adım 0) yerleştirici bu
+    // zincirde 6 çip bırakıyordu.
+    expect(tam.eski).toBe(0);
   });
 
   test('gövdenin kılavuzu GÖRÜNEN yerine iner (ışın orada o gövdeye çarpar), ucunda nokta; çipsiz çizim birebir eski', () => {

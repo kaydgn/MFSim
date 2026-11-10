@@ -2279,9 +2279,11 @@ var veMountCore = (function() {
   //     oranı × vites (programın yöntemi) → 1. viteste 16.343 N·m; iSCAAN'ın stall
   //     noktası (motor 1.560 d/dk, net 1.571,8 N·m) F1 çıkışında 13.551,3 N·m —
   //     zincir %20,6 üstte. Kapı: tests/unit/mount-ornek-tta.test.js → TORK.
-  // EXCEL'İN Mr'I 992,7 N·m, BU MODELİN 1.152,6: Excel L3'ü (563) yalnız 4500 SP
-  // gövdesinin CG'sinden alıyor ama Wt'ye (530 kg) PTO, pompa ve kardan payını
-  // da katıyor — grubun CG'si RFOB + 596,3. Kapı: tests/unit/mount-ornek-tta.test.js.
+  // EXCEL'İN Mr'I 992,7 N·m, BU MODELİN 1.168,6 (§8.18, altı takoz; dondurulmuş üç
+  // takozlu kurulumda 1.152,6 — tests/fixtures/tta10-uc-nokta-topoloji.json): Excel
+  // L3'ü (563) yalnız 4500 SP gövdesinin CG'sinden alıyor ama Wt'ye (530 kg) PTO,
+  // pompa ve kardan payını da katıyor — grubun CG'si RFOB + 596,3. Kapı:
+  // tests/unit/mount-ornek-tta.test.js.
   const TTA10_RFOB = 428.5;
   const TTA10_TORQUE = { Te:1835, Rstall:1.897, iTransfer:1,
                          fwd:{iGear:4.695, phiAxle:1}, rev:{iGear:-5.552, phiAxle:1},
