@@ -34,9 +34,13 @@ const KAYNAKLI = { '57RS313773': 'A26', '57RS313774': 'A26', '57RS313773-sr116':
 // ad = ürün + (parça no). Liste veri modülünden (js/mount-amc.js → KOD[k][1] === null).
 const AMC = require('../../js/mount-amc.js');
 const SERTLIKSIZ = Object.keys(AMC.KOD).filter((k) => AMC.KOD[k][1] === null).map((k) => 'amc' + k);
-const ADLI = Object.keys(L).filter((k) => !KAYNAKLI[k] && SERTLIKSIZ.indexOf(k) < 0);
-// ürün + sertlik + isteğe bağlı (parça no): büyük harf ve rakam, üretici önekiyle ("AMC 137963")
-const BICIM = /^(\S+(?: \S+)*?) (\d{2}) ShA(?: \(((?:AMC )?[0-9A-Z]+)\))?$/;
+// Shore değerini üreticinin yazmadığı A+P H-takozları: ad = ürün + sertlik SINIFI + (parça no)
+// (js/mount-ap.js → KOD[k][2] === null).
+const AP = require('../../js/mount-ap.js');
+const SINIFLI = Object.keys(AP.KOD).filter((k) => AP.KOD[k][2] === null).map((k) => 'ap' + k);
+const ADLI = Object.keys(L).filter((k) => !KAYNAKLI[k] && SERTLIKSIZ.indexOf(k) < 0 && SINIFLI.indexOf(k) < 0);
+// ürün + sertlik + isteğe bağlı (parça no), üretici önekiyle: "AMC 137963" · "A+P 12.2140.2503"
+const BICIM = /^(\S+(?: \S+)*?) (\d{2}) ShA(?: \(((?:AMC |A\+P )?[0-9A-Z.]+)\))?$/;
 
 describe('AD KURALI — ürün + sertlik + (parça no)', () => {
   test('her ad biçimde: proje, rapor ya da not yok', () => {
@@ -48,6 +52,11 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
   test('sertliği yazılmayan AMC ürünü: ad = ürün + (AMC kod) — Cone 100 A/B/C, Cone 200 A/B', () => {
     expect(SERTLIKSIZ.sort()).toEqual(['amc137213', 'amc137214', 'amc137215', 'amc137437', 'amc137438']);
     SERTLIKSIZ.forEach((k) => expect(L[k].name).toMatch(/^Cone (100|200) [ABC] \(AMC 1\d{5}\)$/));
+  });
+
+  test('Shore yazılmayan A+P H-takozu: ad = ürün + sertlik sınıfı + (A+P parça no)', () => {
+    expect(SINIFLI).toHaveLength(32);
+    SINIFLI.forEach((k) => expect(L[k].name).toMatch(/^H-Mount (I|II|III) \d{3}-\d{3}-\d{3} (soft|middle soft|middle hard|hard) \(A\+P 12\.2147\.\d{4}\)$/));
   });
 
   test('istisna yalnız 57RS çiftleri: ad = kod (kaynak)', () => {

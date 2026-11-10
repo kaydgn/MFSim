@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 /**
- * takoz-gorsel.js — AMC Mecanocaucho® konik takozlarının GÖRSELLERİ
+ * takoz-gorsel.js — takoz veritabanlarının GÖRSELLERİ (AMC Mecanocaucho® · Angst+Pfister APSOvib®)
  *
- *   node tools/takoz-gorsel.js            # indir (önbellek) + üret
+ *   node tools/takoz-gorsel.js            # indir (önbellek) + üret, iki üretici
+ *   node tools/takoz-gorsel.js --ap       # yalnız Angst+Pfister (--amc: yalnız AMC)
  *   node tools/takoz-gorsel.js --kuru     # yalnız listeyi ve hedefleri yaz
+ *
+ * ANGST+PFISTER (2026-11-10): tipin e-mağaza fotoğrafı (apsoparts.com, 500 px) ve
+ * ölçülü çizimi — konik yatak, marine ve jeneratör yatağı genel katalogun (2017)
+ * sayfasından kırpılır (çizimin vektör nesnelerinin kutusu + 6 pt pay), H-takozun
+ * üç şekli föyün (2018) 2. sayfasındaki görüntülerden. Çıktı assets/takoz/ap/.
  *
  * Kaynak üreticinin sitesi (mecanocaucho.com → cdn.amcsa.es, 2026-11-10): tipin
  * ÖLÇÜLÜ ÇİZİMİ (SVG) ve ailenin ürün/uygulama fotoğrafları (JPG/PNG). Hidrolik
@@ -25,6 +31,7 @@ const { execFileSync } = require('child_process');
 
 const KOK = path.join(__dirname, '..');
 const HEDEF = path.join(KOK, 'assets', 'takoz', 'amc');
+const HEDEF_AP = path.join(KOK, 'assets', 'takoz', 'ap');
 const ONBELLEK = path.join(KOK, '.takoz-gorsel');
 const CDN = 'https://cdn.amcsa.es/images/families/';
 const KATALOG = 'https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf';
@@ -61,6 +68,41 @@ const FOTO = {
   'uyg-flansli-3': 'more/cono_con_base_fijacion3.jpg', 'uyg-flansli-4': 'more/cono_con_base_fijacion4.jpg',
   'uyg-flansli-5': 'more/cono_con_base_fijacion5.jpg', 'uyg-flansli-6': 'more/f10_be75e6c4-dc1e-40fb-bb9a-8b8cdb1a3d01.jpg'
 };
+// ── Angst+Pfister ──────────────────────────────────────────────────────────
+const AP_KATALOG = 'https://www.angst-pfister.com/dam/jcr:30dd96db-9069-46e5-a91e-42e6c9991de9/APSOvib-Antivibration-Technology-General-Catalogue-EN_comp1.pdf';
+const AP_HFOY = 'https://www.apsoparts.com/media/downloads/asset//std.lang.all/s_/en/APSOvib%20H-Mounts_EN.pdf';
+// Çizim (js/mount-ap.js → TIP[].çizim): katalog sayfası (s), kutu (k: x0, üst, x1, alt pt) — çizimin
+// vektör nesneleri + ölçü yazıları (F etiketleri dâhil), sayfa çizgisi hariç, 6 pt pay — ve kutuya
+// düşen metin bloğu sözcüklerinin örtüsü (m, beyaz). H-takoz: föyün 2. sayfasındaki şekil görüntüleri.
+const AP_CIZIM = {
+  'k-021': { s: 8, k: [51, 428, 318, 811], m: [[243.9, 428.1, 275.2, 436.1], [274.9, 428.1, 292.8, 436.1], [292.7, 428.1, 311.5, 436.1], [311.4, 428.1, 333.9, 436.1]] },
+  'k-021-s1': { s: 9, k: [59, 475, 339, 812], m: [[132.5, 484.9, 137.8, 494.6], [243.9, 484.5, 275.2, 492.5], [274.9, 484.5, 292.8, 492.5], [292.7, 484.5, 311.5, 492.5], [311.4, 484.5, 333.9, 492.5], [243.9, 475.8, 272, 483.8], [272.2, 475.8, 281.5, 483.8]] },
+  'k-025': { s: 10, k: [51, 430, 309, 812], m: [[243.9, 428.1, 275.2, 436.1], [274.9, 428.1, 292.8, 436.1], [292.7, 428.1, 311.5, 436.1]] },
+  'k-025-s1': { s: 11, k: [62, 475, 317, 812], m: [[243.9, 475.8, 272, 483.8], [272.2, 475.8, 281.5, 483.8], [243.9, 484.5, 275.2, 492.5], [274.9, 484.5, 292.8, 492.5], [292.7, 484.5, 311.5, 492.5], [311.4, 484.5, 333.9, 492.5]] },
+  'k-026-s1': { s: 12, k: [52, 459, 339, 809], m: [[243.9, 456.2, 272, 464.2], [272.2, 456.2, 281.5, 464.2], [243.9, 464.9, 275.2, 472.9], [274.9, 464.9, 292.8, 472.9], [292.7, 464.9, 311.5, 472.9], [311.4, 464.9, 333.9, 472.9]] },
+  'k-026-s3': { s: 13, k: [49, 475, 339, 811], m: [[243.9, 475.8, 272, 483.8], [272.2, 475.8, 281.5, 483.8], [243.9, 484.5, 275.2, 492.5], [274.9, 484.5, 292.8, 492.5], [292.7, 484.5, 311.5, 492.5], [311.4, 484.5, 333.9, 492.5], [136.3, 485.3, 141.6, 495.2]] },
+  'k-027-s5': { s: 14, k: [47, 427, 318, 812], m: [[243.9, 428.1, 275.2, 436.1], [274.9, 428.1, 292.8, 436.1], [292.7, 428.1, 311.5, 436.1], [311.4, 428.1, 333.9, 436.1]] },
+  'k-030': { s: 15, k: [45, 430, 326, 810], m: [[243.9, 428.1, 275.2, 436.1], [274.9, 428.1, 292.8, 436.1], [292.7, 428.1, 311.5, 436.1], [311.4, 428.1, 333.9, 436.1]] },
+  'k-05719': { s: 16, k: [39, 426, 315, 812], m: [[243.9, 419.4, 272, 427.4], [272.2, 419.4, 281.5, 427.4], [243.9, 428.1, 275.2, 436.1], [274.9, 428.1, 292.8, 436.1], [292.7, 428.1, 311.5, 436.1], [311.4, 428.1, 333.9, 436.1]] },
+  'k-hd-1': { s: 17, k: [56, 466, 326, 807], m: [[243.9, 466.1, 273.3, 474.1], [273, 466.1, 276.9, 474.1], [276.6, 466.1, 294.5, 474.1], [294.4, 466.1, 313.2, 474.1], [313.1, 466.1, 335.6, 474.1]] },
+  'k-hd-2': { s: 18, k: [52, 428, 326, 801], m: [[243.9, 428.1, 273.3, 436.1], [273, 428.1, 276.9, 436.1], [276.6, 428.1, 294.5, 436.1], [294.4, 428.1, 313.2, 436.1], [313.1, 428.1, 335.6, 436.1]] },
+  'm-1': { s: 20, k: [40, 446, 230, 670] },
+  'm-2': { s: 21, k: [40, 466, 230, 676] },
+  'm-3': { s: 22, k: [40, 446, 230, 669] },
+  'g-1': { s: 23, k: [39, 452, 230, 743] },
+  'g-2': { s: 24, k: [40, 451, 230, 711] },
+  'h-1': { b: AP_HFOY, s: 2, k: [45, 451, 177, 589], en: 300 }, 'h-2': { b: AP_HFOY, s: 2, k: [204, 451, 338, 589], en: 300 },
+  'h-3': { b: AP_HFOY, s: 2, k: [365, 451, 483, 589], en: 300 }
+};
+// Fotoğraf: tip → e-mağazanın görsel numarası (js/mount-ap.js → TIP[].foto).
+function apFotoUrl(no) { return 'https://www.apsoparts.com/media/catalog/product/std.lang.all/' + no.slice(2, 4) + '/' + no.slice(4, 6) + '/' + no + '.jpg'; }
+function listesiAp() {
+  const P = require('../js/mount-ap.js'), L = [];
+  const ciz = new Set(Object.keys(P.TIP).map((t) => P.TIP[t][3]));
+  [...ciz].forEach((c) => { const z = AP_CIZIM[c]; L.push({ ad: 'cizim-' + c, url: z.b || AP_KATALOG, tur: 'pdf', sayfa: z.s, kutu: z.k, maske: z.m || [], en: z.en || CIZIM_EN, hedef: HEDEF_AP }); });
+  Object.keys(P.TIP).forEach((t) => L.push({ ad: 'urun-' + t, url: apFotoUrl(P.TIP[t][4]), tur: 'foto', en: FOTO_EN, hedef: HEDEF_AP }));
+  return L;
+}
 const CIZIM_EN = 640;          // çizimin genişliği (px)
 const FOTO_EN = 800;           // fotoğrafın uzun kenarı (px)
 const KALITE = 0.82;
@@ -83,11 +125,14 @@ function indir(url) {
 async function main() {
   const argv = process.argv.slice(2);
   const kuru = argv.includes('--kuru');
-  const L = listesi();
+  const L = (argv.includes('--ap') ? [] : listesi().map((x) => Object.assign({ hedef: HEDEF }, x)))
+    .concat(argv.includes('--amc') ? [] : listesiAp());
   if (kuru) { L.forEach((x) => console.log(x.ad.padEnd(22), x.url)); return; }
-  fs.mkdirSync(HEDEF, { recursive: true });
-  const kunyeYol = path.join(HEDEF, 'kunye.json');
-  const kunye = fs.existsSync(kunyeYol) ? JSON.parse(fs.readFileSync(kunyeYol, 'utf8')) : {};
+  const kunyeler = {};
+  const kunyeAl = (h) => {
+    if (!kunyeler[h]) { fs.mkdirSync(h, { recursive: true }); const y = path.join(h, 'kunye.json'); kunyeler[h] = fs.existsSync(y) ? JSON.parse(fs.readFileSync(y, 'utf8')) : {}; }
+    return kunyeler[h];
+  };
   const { chromium } = require('playwright');
   const tarayici = await chromium.launch(CHROMIUM ? { executablePath: CHROMIUM } : {});
   const sayfa = await tarayici.newPage();
@@ -113,7 +158,7 @@ async function main() {
       console.warn('  atlandı ' + x.ad + ': ' + String(e.message).split('\n')[0]); atlanan++; continue;
     }
     const b64 = fs.readFileSync(kaynakDosya).toString('base64');
-    const sonuc = await sayfa.evaluate(async ({ b64, mime, tur, en, kalite }) => {
+    const sonuc = await sayfa.evaluate(async ({ b64, mime, tur, en, kalite, kutu, maske }) => {
       const im = new Image();
       im.src = 'data:' + mime + ';base64,' + b64;
       await im.decode();
@@ -124,20 +169,29 @@ async function main() {
       const g = c.getContext('2d');
       g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);                // sabit renk: çizimin kâğıdı (şeffaf SVG)
       g.drawImage(im, 0, 0, w, h);
+      if (kutu && maske && maske.length) {                         // metin bloğunun kutuya düşen sözcükleri
+        const f = w / (kutu[2] - kutu[0]);
+        g.fillStyle = '#fff';                                       // sabit renk: çizimin kâğıdı
+        maske.forEach((r) => g.fillRect((r[0] - kutu[0]) * f, (r[1] - kutu[1]) * f, (r[2] - r[0]) * f, (r[3] - r[1]) * f));
+      }
       return { w, h, url: c.toDataURL('image/webp', kalite) };
-    }, { b64, mime, tur: x.tur, en: x.en, kalite: KALITE });
+    }, { b64, mime, tur: x.tur, en: x.en, kalite: KALITE, kutu: x.kutu || null, maske: x.maske || null });
     const buf = Buffer.from(sonuc.url.split(',')[1], 'base64');
-    fs.writeFileSync(path.join(HEDEF, x.ad + '.webp'), buf);
-    kunye[x.ad] = { kaynak: x.url + (x.tur === 'pdf' ? '#page=' + x.sayfa : ''), en: sonuc.w, boy: sonuc.h, bayt: buf.length };
+    const ku = kunyeAl(x.hedef);
+    fs.writeFileSync(path.join(x.hedef, x.ad + '.webp'), buf);
+    ku[x.ad] = { kaynak: x.url + (x.tur === 'pdf' ? '#page=' + x.sayfa : ''), en: sonuc.w, boy: sonuc.h, bayt: buf.length };
     yazilan++;
   }
   await tarayici.close();
-  const sirali = {};
-  Object.keys(kunye).sort().forEach((k) => { sirali[k] = kunye[k]; });
-  fs.writeFileSync(kunyeYol, JSON.stringify(sirali, null, 1) + '\n');
-  const toplam = Object.values(sirali).reduce((t, k) => t + k.bayt, 0);
-  console.log('yazılan ' + yazilan + ' · atlanan ' + atlanan + ' · klasör ' + (toplam / 1024).toFixed(0) + ' KB');
+  Object.keys(kunyeler).forEach((h) => {
+    const kunye = kunyeler[h], sirali = {};
+    Object.keys(kunye).sort().forEach((k) => { sirali[k] = kunye[k]; });
+    fs.writeFileSync(path.join(h, 'kunye.json'), JSON.stringify(sirali, null, 1) + '\n');
+    const toplam = Object.values(sirali).reduce((t, k) => t + k.bayt, 0);
+    console.log(path.relative(KOK, h) + ': klasör ' + (toplam / 1024).toFixed(0) + ' KB');
+  });
+  console.log('yazılan ' + yazilan + ' · atlanan ' + atlanan);
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { listesi, CIZIM, HIDROLIK, FOTO };
+module.exports = { listesi, listesiAp, CIZIM, HIDROLIK, FOTO, AP_CIZIM };

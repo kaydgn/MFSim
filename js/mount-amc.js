@@ -35,6 +35,9 @@
 //     eksik tip, Takoz Özellikleri'nden girilir, taramaya aday olmaz.
 //   • DSM çift rijitlikli (ön sıkıştırma · statik · dinamik bölge): yük–sehim
 //     eğrisi doğrusal değil, kz YAZILMADI.
+//   • BMC TEKNİK RESİMLERİ (kullanıcı 2026-11-10, dokuz resim): AMC'nin kendi
+//     çizimi + kodun veri kutusu (RESIM tablosu, aşağıda). Grafik kz'si resmin
+//     Z'siyle beş kodun beşinde birebir — sayısallaştırmanın bağımsız doğrulaması.
 //   • GÖRSELLER — tipin ölçülü çizimi ve ailenin fotoğrafları, üreticinin
 //     sitesinden: assets/takoz/amc/ (tools/takoz-gorsel.js üretir, elle
 //     düzenlenmez); derleme gömer (build.js → __MFSIM_TAKOZ).
@@ -104,7 +107,7 @@ var VE_MNT_AMC = (function() {
     'hid-32':    ['hidrolik', 'Hydraulic Cone 32', 'hid-32', null, null],
     'hid-70':    ['hidrolik', 'Hydraulic Cone 70', 'hid-70', null, null],
     'hid-71':    ['hidrolik', 'Hydraulic Cone 71', 'hid-71', null, null],
-    'hid-72':    ['hidrolik', 'Hydraulic Cone 72', 'hid-72', null, null],
+    'hid-72':    ['hidrolik', 'Hydraulic Cone 72', 'hid-72', 170, 3034],   // tork · ağırlık: AMC çizimi (BMC teknik resmi)
     'dsm-22':    ['dsm', 'DSM 22', 'dsm-22', 113, 850],
     'dsm-83':    ['dsm', 'DSM 83', 'dsm-83', 71, 2000],
     'dsm-141':   ['dsm', 'DSM 141', 'dsm-141', 245, 1039]
@@ -283,12 +286,49 @@ var VE_MNT_AMC = (function() {
     '177296': [[1090, 1090, 650], [2180, 2180, 1300]],
     '137829': [[3150, 3150, 1075], [4605, 4605, 1755]]
   };
+  // BMC TEKNİK RESİMLERİ (kullanıcı 2026-11-10; dokuz resim, CATIA V6, A3).
+  // Her resim AMC'nin kendi çizimini (CONE 31 · 38 · 39 SUPPORT, HYDROCONE 72 SUPPORT;
+  // 2019–2023) ve kodun veri kutusunu taşıyor: statik [x, y, z] N/mm (kutuda kN/mm),
+  // dinamik/statik oran, sönüm. Resmin kendisi programa GİRMEZ (BMC'nin hakları,
+  // program Pages'te yayımlanıyor); sayılar girer. BMC parça numarası ne ekranda ne
+  // kodda yazılır (kullanıcı 2026-11-10: "BMC parça no kısmını eklemeyelim").
+  //   • 137963 · 137964 · 177296: kutu = AMC-EO (üç eksen ve oran birebir).
+  //   • 137061 · 137062 · 137961: X · Y YENİ → tam tip. 137061/137062 oran yazmıyor
+  //     (yalnız sönüm): oran NF grafiğinin (Sh+20)/50'si (KOD'un din'i). 137961'in
+  //     dinamik kutusu (1,44 · 0,936 · 0,54) = statik × 1,2.
+  //   • 137961: Z BASMA EĞRİSİ (resimde gömülü grafik, 1531 × 733 px): ızgaradan
+  //     kalibrasyon (artık < 0,6 px = 0,006 mm · 11 N), çizginin koyuluk ağırlıklı
+  //     ortası, 4. derece polinom (orijinden; RMS 23 N, en büyük 68 N), 0,5 mm adım.
+  //     Maks. yükte (300 kg) sekant 449,7 N/mm (tablo 450); orijin eğimi 409 N/mm.
+  //     Geri-gelme tarafı resimde yok: eğri δ = 0'da biter, çekirdek ötesini uç
+  //     eğimle doğrusal sürer (doğrusal takozun aynı varsayımı).
+  //   • 137962: resmin başlığı Cone 38 50 ShA ama veri kutusu 137963'ün (60 ShA)
+  //     kopyası (650 kg · 1,8 · 1,21 · 1,15 · 1,6) — YAZILMADI, tip eksik kalır.
+  //   • 137981 · 137982: resimde yalnız ailenin yük tablosu (tabloyla aynı).
+  //   • Resmin ağırlığı sitedekinden büyük (Cone 31 1,242 kg ↔ 1.188 g · Cone 38
+  //     1,926 ↔ 1.438 · Cone 39 1,938 ↔ 1.438): sitenin değeri tutuldu; hidrolik 72'de
+  //     sitede yok, resimden (3,034 kg).
+  // sonum: kutunun "Damping"i — ζ montaj genelinde Çözücü'de; künyede veri.
+  var RESIM = {
+    '137061': { s: [2470, 2470, 900], sonum: 0.06 },
+    '137062': { s: [2750, 2750, 1600], sonum: 0.08 },
+    '137963': { s: [1800, 1210, 1150], din: 1.6 },
+    '137964': { s: [2770, 1990, 1900], din: 1.8 },
+    '177296': { s: [1090, 1090, 650], din: 2 },
+    '137961': { s: [1200, 780, 450], din: 1.2, sonum: 0.03,
+                // basma: [δ mm, F N], δ > 0 basma (resmin ekseni)
+                egriZ: [[0.5, 204], [1, 407], [1.5, 609], [2, 811], [2.5, 1013], [3, 1218], [3.5, 1427],
+                        [4, 1642], [4.5, 1866], [5, 2101], [5.5, 2352], [6, 2622], [6.5, 2915], [7, 3236],
+                        [7.5, 3590], [8, 3982], [8.5, 4418], [9, 4905], [9.5, 5448], [10, 6055], [10.5, 6733],
+                        [11, 7490], [11.5, 8335], [12, 9275], [12.5, 10319], [12.75, 10884]] }
+  };
   // Kütüphanedeki eski sıra (ilk 24 girdinin sırası taramanın kombinasyon sırasıdır).
   var ESKI = ['137963', '137964', '137731', '137981', '137982', '137983', '137830', '137833', '177296', '137829'];
   var KAYNAK = {
     w3: 'AMC yük–sehim grafiği · Rev. 3', w2: 'AMC yük–sehim grafiği · Rev. 2',
     k2: 'AMC genel kataloğu · s. 36–37', f18: 'AMC föyü · 2018',
-    eo: 'AMC-EO · 24.11.2025', bmc: 'AMC hesabı 13948 · çalışma noktası'
+    eo: 'AMC-EO · 24.11.2025', bmc: 'AMC hesabı 13948 · çalışma noktası',
+    resim: 'AMC çizimi · BMC teknik resmi'
   };
   var AILE_SIRA = ['masif', 'kesikli', 'flansli', 'hidrolik', 'dsm'];
 
@@ -302,16 +342,23 @@ var VE_MNT_AMC = (function() {
   var MARKA = 'AMC Mecanocaucho';
   function girdi(kod) {
     var k = KOD[kod]; if (!k) return null;
-    var t = TIP[k[0]], eo = EO[kod], kz = k[3], din = k[4];
+    var t = TIP[k[0]], eo = EO[kod], kz = k[3], din = k[4], r = RESIM[kod] || null, rs = r && r.s;
     var e = { marka: MARKA, name: ad(kod), maxLoad: k[2] };
     if (eo) {
       e.sx = eo[0][0]; e.sy = eo[0][1]; e.sz = eo[0][2]; e.dx = eo[1][0]; e.dy = eo[1][1]; e.dz = eo[1][2];
+    } else if (rs) {
+      var dn = (r.din != null) ? r.din : din;
+      e.sx = rs[0]; e.sy = rs[1]; e.sz = rs[2];
+      e.dx = Math.round(rs[0] * dn); e.dy = Math.round(rs[1] * dn); e.dz = Math.round(rs[2] * dn);
     } else {
       e.sx = null; e.sy = null; e.sz = (kz != null ? kz : null);
       e.dx = null; e.dy = null; e.dz = (kz != null && din != null) ? Math.round(kz * din) : null;
     }
+    // Eğri model konvansiyonunda (δ < 0 = BASMA): [−δ, −F] … [0, 0].
+    if (r && r.egriZ) e.curves = { z: r.egriZ.slice().reverse().map(function(p) { return [-p[0], -p[1]]; }).concat([[0, 0]]) };
     e.amc = { kod: kod, tip: k[0], aile: t[0], sh: k[1], tork: t[3], gr: t[4],
-              kzKaynak: eo ? (kod === '137829' ? 'bmc' : 'eo') : k[5], kzGrafik: kz, din: din };
+              kzKaynak: eo ? (kod === '137829' ? 'bmc' : 'eo') : (rs ? 'resim' : k[5]), kzGrafik: kz, din: din,
+              sonum: (r && r.sonum != null) ? r.sonum : null };
     return e;
   }
   // Bütün kodlar, ailenin/tipin/sertliğin sırasıyla (eski 10 kod da yerinde).
@@ -336,9 +383,9 @@ var VE_MNT_AMC = (function() {
     for (var i = 1; i <= a[2]; i++) uyg.push(gorsel('uyg-' + t[0] + '-' + i));
     return { kod: kod, ad: e.name, urun: t[1], aile: a[0], sh: k[1], maxLoad: k[2], tork: t[3], gr: t[4],
              cizim: gorsel('cizim-' + t[2]), foto: gorsel(a[1]), uyg: uyg,
-             kaynak: KAYNAK[e.amc.kzKaynak] || null };
+             kaynak: KAYNAK[e.amc.kzKaynak] || null, sonum: e.amc.sonum, egriZ: !!e.curves };
   }
-  return { MARKA: MARKA, AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, ESKI: ESKI, KAYNAK: KAYNAK,
+  return { MARKA: MARKA, AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, RESIM: RESIM, ESKI: ESKI, KAYNAK: KAYNAK,
            ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye };
 })();
 

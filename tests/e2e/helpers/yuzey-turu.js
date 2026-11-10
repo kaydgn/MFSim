@@ -281,7 +281,8 @@ async function takozTuru(page, olc) {
   // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — ölçülü çizim, ürün
   // ve uygulama fotoğrafları, veri tablosu; tam tip (Cone 38 60 ShA) ve radyali boş tip
   // (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz; tur onu açıyordu.
-  for (const k of ['amc137963', 'amc137961']) {
+  // A+P (2026-11-10): konik yatak, H-takoz (tolerans satırı) ve LMT-1433-00'ın katalog eşi.
+  for (const k of ['amc137963', 'amc137961', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh']) {
     await page.evaluate((kk) => {
       const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
       n.data = n.data || {}; n.data._selKey = kk;

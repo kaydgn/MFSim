@@ -214,13 +214,15 @@ describe('kütüphaneden uygulama', () => {
     expect(node.data.maxLoad).toBeUndefined();
   });
 
-  test('gömülü katalogda kapasite YALNIZ üreticinin tablosundan: AMC girdileri sitenin "Max. Load"u, ötekiler boş', () => {
+  test('gömülü katalogda kapasite YALNIZ üreticinin tablosundan: AMC sitenin "Max. Load"u, A+P statik Fz/9,81, ötekiler boş', () => {
     // Öteki kaynak dokümanlarımız kapasite vermiyor; makul bir sayı uydurulursa
     // kullanıcı onu üreticinin verisi sanır. AMC'nin tablosu veriyor (js/mount-amc.js).
     const AMC = require('../../js/mount-amc.js');
+    const AP = require('../../js/mount-ap.js');                      // A+P: e-mağazanın statik yükü (js/mount-ap.js)
     Object.keys(cp.VE_MOUNT_LIBRARY).forEach((k) => {
       const e = cp.VE_MOUNT_LIBRARY[k];
       if (e.amc) expect([k, e.maxLoad]).toEqual([k, AMC.KOD[e.amc.kod][2]]);
+      else if (e.ap) expect([k, Math.abs(e.maxLoad - AP.KOD[e.ap.kod][3] / 9.81) < 0.06]).toEqual([k, true]);
       else expect([k, e.maxLoad]).toEqual([k, undefined]);
     });
     // AMC'nin kendi tablosundan birkaç çivi (mecanocaucho.com, 2026-11-10)

@@ -13,6 +13,11 @@
 //   KOŞUCU   — dilim dilim, ilerleme eylem satırında; eskimiş taramadan Excel üretilmez
 const H = require('../helpers/takoz-dogrulama.js');
 const { cp, rp } = H.kur();
+// KATALOG ONAY ANINDAKİ 24 TİP: tarama testleri kütüphanenin ilk 24 girdisiyle (2026-11-10'a
+// dek tam tiplerin hepsi) koşar — beklenen sayılar ve onaylı Excel o kümenin. Teknik
+// resimlerle tamamlanan AMC kodları (137061 · 137062 · 137961) adayları 27'ye çıkarır;
+// o sayı mount-amc.test.js → PARAMETRİK'te kilitli.
+Object.keys(cp.VE_MOUNT_LIBRARY).slice(24).forEach((k) => { delete cp.VE_MOUNT_LIBRARY[k]; });
 Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
 Object.keys(rp).forEach((k) => { if (global[k] === undefined) global[k] = rp[k]; });
 global.veMntKatalog = require('../../js/mount-katalog.js');

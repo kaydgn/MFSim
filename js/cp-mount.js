@@ -257,6 +257,11 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // Takoz Özellikleri'nden tamamlanır, taramaya aday olmaz (_mntLibTam).
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
+// ── ANGST+PFISTER APSOvib® — js/mount-ap.js (86 kod: konik · HD konik · H-takoz ·
+// marine · jeneratör). Dinamik rijitlik yayımlanmıyor: dx/dy/dz boş, tip EKSİK
+// (Takoz Özellikleri'nden tamamlanır); girdiler AMC'nin ardına, ailenin sırasıyla.
+var _MNT_AP = (typeof VE_MNT_AP !== 'undefined') ? VE_MNT_AP
+  : ((typeof require === 'function') ? require('./mount-ap.js') : null);
 // ── MARKA (kullanıcı 2026-11-10, Canlı Not 106: *"Takoz tiplerini markalarına
 // göre kategorize edelim. Kullanıcı marka seçsin, ona göre seçeneklerini
 // seçsin."*) ───────────────────────────────────────────────────────────────
@@ -321,17 +326,18 @@ var VE_MOUNT_LIBRARY = {
 };
 // AMC girdileri: eski 10 kod TK050'nin ardındaki yerine (sözlüğün sırası korunur),
 // kalan kodlar sona — ailenin, tipin, sertliğin sırasıyla.
-(function(L, A){
+(function(L, A, P){
   if(!A) return;
   var k=Object.keys(L), yer=k.indexOf('TK050')+1, bas={}, son={};
   k.slice(0, yer).forEach(function(x){ bas[x]=L[x]; });
   A.ESKI.forEach(function(kod){ bas['amc'+kod]=A.girdi(kod); });
   k.slice(yer).forEach(function(x){ bas[x]=L[x]; });
   A.kodlar().forEach(function(kod){ if(!bas['amc'+kod]) son['amc'+kod]=A.girdi(kod); });
+  if(P) P.kodlar().forEach(function(kod){ son['ap'+kod]=P.girdi(kod); });
   k.forEach(function(x){ delete L[x]; });
   Object.keys(bas).forEach(function(x){ L[x]=bas[x]; });
   Object.keys(son).forEach(function(x){ L[x]=son[x]; });
-})(VE_MOUNT_LIBRARY, _MNT_AMC);
+})(VE_MOUNT_LIBRARY, _MNT_AMC, _MNT_AP);
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
 // Gömülü katalog (VE_MOUNT_LIBRARY) fabrika varsayılanıdır ve ÇALIŞMA ANINDA
@@ -353,7 +359,7 @@ function veMntGetLibraryMap(){
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
-      amc:m.amc||null };                                    // AMC künyesi (js/mount-amc.js)
+      amc:m.amc||null, ap:m.ap||null };                     // üreticinin künyesi (js/mount-amc.js · js/mount-ap.js)
   });
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     var def=_mntDef(n)||{};
@@ -370,7 +376,7 @@ function veMntGetLibraryMap(){
           dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
-          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc };
+          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc, ap:base.ap };
       });
     }
     // Kullanıcı tanımlı takozlar (Özel grup) — 3-eksen eğri (curveX/Y/Z) taşıyabilir.
@@ -411,15 +417,18 @@ function veMntGetLibraryList(){
 function _mntLibTam(e){
   return !!e && ['sx','sy','sz','dx','dy','dz'].every(function(f){ return _mntNum(e[f], 0)>0; });
 }
-// Listelerin sırası: AMC dışı katalog kendi sırasıyla, sonra AMC kodları ailenin,
-// tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın kombinasyon sırası).
+// Listelerin sırası: üretici veritabanı dışı katalog kendi sırasıyla, sonra AMC ve
+// A+P kodları ailenin, tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın
+// kombinasyon sırası).
 function _mntLibSirali(list){
-  var sira=(_MNT_AMC ? _MNT_AMC.kodlar() : []), yer={};
-  sira.forEach(function(k, i){ yer[k]=i; });
-  var amc=list.filter(function(e){ return e.amc && yer[e.amc.kod]!==undefined; });
-  var obur=list.filter(function(e){ return !(e.amc && yer[e.amc.kod]!==undefined); });
-  amc.sort(function(a, b){ return yer[a.amc.kod]-yer[b.amc.kod]; });
-  return obur.concat(amc);
+  var yer={};
+  (_MNT_AMC ? _MNT_AMC.kodlar() : []).forEach(function(k, i){ yer['amc'+k]=i; });
+  (_MNT_AP ? _MNT_AP.kodlar() : []).forEach(function(k, i){ yer['ap'+k]=100000+i; });
+  var id=function(e){ return e.amc ? 'amc'+e.amc.kod : (e.ap ? 'ap'+e.ap.kod : null); };
+  var ure=list.filter(function(e){ return yer[id(e)]!==undefined; });
+  var obur=list.filter(function(e){ return yer[id(e)]===undefined; });
+  ure.sort(function(a, b){ return yer[id(a)]-yer[id(b)]; });
+  return obur.concat(ure);
 }
 
 // Otomatik yük durumları — araç yük kitabı g-faktörleri (a_x, a_y, a_z magnitüd;
@@ -4257,6 +4266,7 @@ function _mntLibAmcKunyeHTML(e){
     + sat('Sertlik', K.sh!=null ? veSayi(K.sh, 0)+' ShA' : null)
     + sat('Sıkma torku', K.tork!=null ? veSayi(K.tork, (K.tork%1)?1:0)+' N·m' : null)
     + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
+    + sat('Sönüm', K.sonum!=null ? veSayi(K.sonum, 2) : null)
     + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
   if(K.uyg.length){
@@ -4264,6 +4274,46 @@ function _mntLibAmcKunyeHTML(e){
     K.uyg.forEach(function(src, i){ h+=_mntLibAmcResim(src, K.aile+' · uygulama '+(i+1)); });
     h+='</div>';
   }
+  return h+'</div>';
+}
+// A+P künyesi: katalog tipinde ölçülü çizim + e-mağaza fotoğrafı ve veri; programın
+// BMC girdisinde (LMT-1433-00) katalog eşinin gövdesi. Kapasite yazılmaz (Canlı Not 65).
+function _mntApOlcu(o){
+  if(!o) return null;
+  var n=function(v){ return veSayi(v, (v%1)?1:0); }, p=[];
+  if(o.sd!=null){                                          // H-takoz: montaj deliği ve boru
+    p.push('montaj deliği Ø'+n(o.sd)); if(o.T!=null) p.push('levha '+n(o.T));
+    if(o.H!=null) p.push('boy '+n(o.H)); if(o.D2!=null) p.push('dış Ø'+n(o.D2));
+    if(o.d1!=null) p.push('iç Ø'+n(o.d1)+' mm');
+    if(o.vida) p.push(_mntEsc(o.vida));
+    return p.join(' · ');
+  }
+  if(o.boy!=null) p.push(n(o.boy)+(o.en!=null ? ' × '+n(o.en) : '')+' mm');
+  if(o.dBoy!=null) p.push('delik '+n(o.dBoy)+(o.dEn!=null ? ' × '+n(o.dEn) : ''));
+  if(o.dCap!=null) p.push('Ø'+n(o.dCap));
+  if(o.dis) p.push(_mntEsc(o.dis));
+  return p.length ? p.join(' · ') : null;
+}
+function _mntLibApKunyeHTML(e){
+  if(!e || !_MNT_AP) return '';
+  var K=e.ap ? _MNT_AP.kunye(e.ap.kod) : _MNT_AP.kunyeEs(e.key);
+  if(!K) return '';
+  var sat=function(ad, v){ return v==null || v==='' ? '' : '<tr><th scope="row">'+ad+'</th><td>'+v+'</td></tr>'; };
+  var en=function(t){ return '<span lang="en">'+_mntEsc(t)+'</span>'; };
+  var h='<div class="ve-mnt-amc" data-ap="'+_mntEsc(K.kod || K.uretici)+'">'
+    + '<div class="ve-mnt-amc-gorsel">'
+    + _mntLibAmcResim(K.cizim, K.urun+' · ölçülü çizim', 've-mnt-amc-cizim')
+    + _mntLibAmcResim(K.foto, K.urun, 've-mnt-amc-foto')
+    + '</div><table class="ve-mnt-amc-veri"><tbody>'
+    + (K.uretici ? sat('Üretici kodu', _mntEsc(K.uretici)) + sat('Katalog eşi', en(K.aile+' '+K.tipAdi))
+                 : sat('Kod', 'A+P '+_mntEsc(K.kod)) + sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi)))
+    + (K.sinif ? sat('Sertlik', en(K.sinif)+(K.sh!=null ? ' · ~'+veSayi(K.sh, 0)+' ShA' : '')) : '')
+    + sat('Ölçüler', _mntApOlcu(K.olcu))
+    + sat('Yükseklik', K.olcu && K.olcu.yuk!=null ? veSayi(K.olcu.yuk, (K.olcu.yuk%1)?1:0)+' mm' : null)
+    + sat('Rijitlik toleransı', K.tol!=null ? '±%'+veSayi(K.tol, 0) : null)
+    + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
+    + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
+    + '</tbody></table>';
   return h+'</div>';
 }
 // TAKOZ ÖZELLİKLERİ PENCERESİ — sütunda (2026-10-15'e dek 1040 px'lik modal
@@ -4306,7 +4356,7 @@ function getMntLibraryPropertiesHTML(node){
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
   var D=_mntLibDurumlari(node, sel);
   var kategoriler=[
-    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)),
+    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)+_mntLibApKunyeHTML(sel)),
       durum:_mntDurum('ok') },
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
     { k:'egri', ad:'Kuvvet–sehim', govde:_mntLibEgriHTML(node, sel), durum:D.egri }
@@ -5544,7 +5594,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
     _mntLibTam: _mntLibTam, _mntLibSirali: _mntLibSirali,
-    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibTur: _mntLibTur,
+    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, _mntLibTur: _mntLibTur,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,

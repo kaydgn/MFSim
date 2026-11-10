@@ -139,14 +139,14 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
       'TK035', 'TK040', 'TK050', 'amc137963', 'amc137964', 'amc137731', 'amc137981', 'amc137982', 'amc137983',
       'amc137830', 'amc137833', 'amc177296', 'amc137829', 'lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh',
       'bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
-    expect(Object.keys(L)).toHaveLength(24 + 138);
+    expect(Object.keys(L)).toHaveLength(24 + 138 + 86);                       // + A+P (js/mount-ap.js)
   });
 
-  test('tam tip yalnız AMC-EO\'nun 10 kodu; ötekilerde radyal boş, dinamik eksenel kz × oran', () => {
+  test('tam tip AMC-EO\'nun 10 kodu + teknik resimlerin 3 kodu; ötekilerde radyal boş, dinamik eksenel kz × oran', () => {
     const tam = kodlar.filter((k) => cp._mntLibTam(L['amc' + k]));
-    expect(tam.sort()).toEqual(Object.keys(A.EO).sort());
-    const e = L.amc137961;
-    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz]).toEqual([null, null, 450, null, null, 540]);
+    expect(tam.sort()).toEqual(Object.keys(A.EO).concat(['137061', '137062', '137961']).sort());
+    const e = L.amc137962;
+    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz]).toEqual([null, null, 700, null, null, 980]);
     const h = L.amc177081;                                            // hidrolik: dinamik frekansa bağlı, yazılmadı
     expect([h.sz, h.dz]).toEqual([250, null]);
     const d = L.amc137461;                                            // DSM: rijitlik yok
@@ -156,10 +156,10 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
   test('eksik tip uygulanınca takozun radyali boşalır ve pencere "rijitlik eksik" der; kapasite gelir', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: { kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } };
     global.nodes = [n];
-    cp.veMntApplyLib('m1', 'amc137961');
-    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd]).toEqual([null, null, 450, null, null, 540]);
-    expect(n.data.maxLoad).toBe(300);
-    expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137961)).toBe('eksik');
+    cp.veMntApplyLib('m1', 'amc137962');
+    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd]).toEqual([null, null, 700, null, null, 980]);
+    expect(n.data.maxLoad).toBe(400);
+    expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137962)).toBe('eksik');
     expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137963)).toBe('gomulu');
   });
 
@@ -167,11 +167,11 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
     global.nodes = [n];
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();                              // rijitliksiz tip (DSM) boş takoza oturmaz
-    cp.veMntApplyLib('m1', 'amc137961');
+    cp.veMntApplyLib('m1', 'amc137962');
     const E = cp._mntKutuphaneEslesme(n);
-    expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137961', 6, []]);
+    expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137962', 6, []]);
     delete n.data.libKey;                                                       // bağsız: altı değer tek tipi gösterir
-    expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137961');
+    expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137962');
     n.data.kxs = 700;                                                           // radyal elle girildi → fark
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();
   });
@@ -193,14 +193,15 @@ describe('PARAMETRİK — eksik tip aday değil', () => {
   test('adaylar yalnız tam tipler; Takoz Özellikleri\'nde tamamlanan AMC kodu aday olur', () => {
     const M = { lib: cp.veMntGetLibraryMap() };
     const ad = P._mntParamAdaylar(M, null).map((a) => a.key);
-    expect(ad).toHaveLength(24);
-    expect(ad).not.toContain('amc137961');
+    expect(ad).toHaveLength(27);                                                // 24 + teknik resimlerin 3 kodu
+    expect(ad).toEqual(expect.arrayContaining(['amc137061', 'amc137062', 'amc137961']));
+    expect(ad).not.toContain('amc137962');
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'],
-      data: { mounts: [], overrides: { amc137961: { sx: 700, sy: 480, dx: 840, dy: 576 } } } };
+      data: { mounts: [], overrides: { amc137962: { sx: 1300, sy: 900, dx: 1820, dy: 1260 } } } };
     global.nodes = [lib];
     const ad2 = P._mntParamAdaylar({ lib: cp.veMntGetLibraryMap() }, null).map((a) => a.key);
-    expect(ad2).toHaveLength(25);
-    expect(ad2).toContain('amc137961');
+    expect(ad2).toHaveLength(28);
+    expect(ad2).toContain('amc137962');
   });
 });
 
@@ -236,6 +237,63 @@ describe('GÖRSELLER — üreticinin çizimi ve fotoğrafları', () => {
     const b = fs.readFileSync(path.join(__dirname, '../../build.js'), 'utf8');
     expect(b).toMatch(/path\.join\(ROOT, 'assets', 'takoz'\)/);
     expect(b).toMatch(/'window\.__MFSIM_TAKOZ = '/);
+  });
+});
+
+// ── TEKNİK RESİM — BMC'nin dokuz resmindeki AMC kutusu (kullanıcı 2026-11-10) ──
+// Resimden okunan sayılar (kN/mm → N/mm, kg) burada BAĞIMSIZ yazılı: modülün
+// RESIM tablosu bozulursa ya da grafiğin sayısallaştırması kayarsa kırmızı.
+describe('TEKNİK RESİM — AMC kutusu', () => {
+  const RES = {                                   // kod: [maks. yük kg, X, Y, Z N/mm, din]
+    '137061': [500, 2470, 2470, 900, null], '137062': [750, 2750, 2750, 1600, null],
+    '137963': [650, 1800, 1210, 1150, 1.6], '137964': [900, 2770, 1990, 1900, 1.8],
+    '177296': [900, 1090, 1090, 650, 2], '137961': [300, 1200, 780, 450, 1.2]
+  };
+  const TABLO = { '137063': 310, '137061': 500, '137062': 750, '137961': 300, '137962': 400, '137963': 650, '137964': 900,
+    '137981': 400, '137982': 600, '137983': 900, '137984': 1100, '177294': 400, '177295': 600, '177296': 900, '177297': 1000 };
+  test('grafikten okunan kz resmin Z\'siyle birebir (beş kod) — sayısallaştırmanın bağımsız doğrulaması', () => {
+    ['137061', '137062', '137961', '137963', '177296'].forEach((k) => expect([k, A.KOD[k][3]]).toEqual([k, RES[k][3]]));
+  });
+  test('resimlerdeki aile yük tabloları on beş kodda sitenin tablosuyla aynı', () => {
+    Object.keys(TABLO).forEach((k) => expect([k, A.KOD[k][2]]).toEqual([k, TABLO[k]]));
+  });
+  test('üç kodda resim = AMC-EO; üç kodda X · Y yeni → kütüphanede tam tip', () => {
+    ['137963', '137964', '177296'].forEach((k) => {
+      expect(A.EO[k][0]).toEqual(RES[k].slice(1, 4));
+      expect(A.EO[k][1]).toEqual(RES[k].slice(1, 4).map((v) => Math.round(v * RES[k][4])));
+    });
+    expect([L.amc137061.sx, L.amc137061.sy, L.amc137061.sz, L.amc137061.dx, L.amc137061.dz]).toEqual([2470, 2470, 900, 3952, 1440]);
+    expect([L.amc137062.sx, L.amc137062.sy, L.amc137062.sz, L.amc137062.dx, L.amc137062.dz]).toEqual([2750, 2750, 1600, 4950, 2880]);
+    expect([L.amc137961.sx, L.amc137961.sy, L.amc137961.sz, L.amc137961.dx, L.amc137961.dy, L.amc137961.dz]).toEqual([1200, 780, 450, 1440, 936, 540]);
+    ['137061', '137062', '137961'].forEach((k) => expect(L['amc' + k].amc.kzKaynak).toBe('resim'));
+  });
+  test('137962\'nin resmindeki kutu 137963\'ün kopyası — yazılmadı, tip eksik kalır', () => {
+    const e = L.amc137962;
+    expect([e.sx, e.sy, e.sz]).toEqual([null, null, 700]);
+    expect(A.RESIM['137962']).toBeUndefined();
+  });
+  test('137961 Z basma eğrisi: basma δ < 0, monoton; maks. yükte sekant tabloyla ±1 %; orijin eğimi katalogla uyumlu', () => {
+    const z = L.amc137961.curves.z;
+    expect(z[z.length - 1]).toEqual([0, 0]);
+    for (let i = 1; i < z.length; i++) { expect(z[i][0]).toBeGreaterThan(z[i - 1][0]); expect(z[i][1]).toBeGreaterThan(z[i - 1][1]); }
+    const C = require('../../js/mount-core.js');
+    const mnt = { kstat: [1200e3, 780e3, 450e3], curves: { z: z.map((p) => [p[0] / 1000, p[1]]) } };
+    const yasa = C.mountStaticLaws ? C.mountStaticLaws(mnt)[2] : null;
+    if (yasa) {
+      const F = 300 * 9.81; let lo = -0.0128, hi = 0;                           // F(δ) = −F'yi ikiye bölmeyle bul
+      for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (yasa.force(m) < -F) lo = m; else hi = m; }
+      expect(Math.abs(F / -lo / 1000 / 450 - 1)).toBeLessThan(0.01);
+    }
+    expect(C.lawCatalogMismatch(mnt)).toEqual([]);
+  });
+  test('Takoz Özellikleri: resimli tipte sönüm ve kaynak; BMC parça no yazılmaz (kullanıcı 2026-11-10)', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137961' } };
+    global.nodes = [lib];
+    const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
+    const satir = [...d.querySelectorAll('.ve-mnt-amc tr')].map((r) => [r.querySelector('th').textContent, r.querySelector('td').textContent]);
+    expect(satir).toContainEqual(['Sönüm', '0,03']);
+    expect(satir).toContainEqual(['Kaynak', 'AMC çizimi · BMC teknik resmi']);
+    expect(d.textContent).not.toMatch(/BMC parça/);
   });
 });
 

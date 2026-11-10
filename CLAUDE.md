@@ -352,7 +352,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görseller `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65). Kapı: `mount-amc.test.js` + `mount-param.test.js` → *AMC KAPASİTESİ*.
+  (Canlı Not 65). **BMC teknik resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu
+  137061 · 137062 · 137961'i tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC
+  parça numarası ne ekranda ne kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js`
+  (→ *TEKNİK RESİM*) + `mount-param.test.js` → *AMC KAPASİTESİ*.
+- `js/mount-ap.js` + `assets/takoz/ap/` — **Angst+Pfister APSOvib® takoz veritabanı** (kullanıcı
+  2026-11-10: *"kayıtlı olan Angst-Pfister takozlarını da araştır"*): konik · HD konik · H-takoz ·
+  marine · jeneratör — 24 tip, 86 kod, e-mağazanın güncel tablosundan (föylerle çapraz); A+P'nin
+  kg'ı daN. **Dinamik yayımlanmıyor**: dx/dy/dz boş, tip EKSİK (taramaya aday değil) — statiği
+  dinamik saymak YAZILMAZ. LMT-1433-00 (LASPAR kodu) ↔ konik 026 S 1 flanşla eşleşir (`ESLES`,
+  künyede katalog eşi). Görseller `tools/takoz-gorsel.js --ap`. Kapı: `mount-ap.test.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
