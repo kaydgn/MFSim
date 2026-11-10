@@ -510,11 +510,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tests/e2e/` — Playwright E2E testleri
 - `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
 - `MFSim_Olcum_Goruntuleyici.html` — Görüntüleyicinin tek dosya çıktısı (`npm run build:viewer` üretir; MFSim_Code.html'in aksine **git'e dahil** — dağıtımı bu dosyanın indirilmesiyle oluyor)
-- `candbc/` — **CAN Çözümleyici** (ayrı program, bkz. `candbc/README.md`)
-- `MFSim_CAN_Cozumleyici.html` — CAN Çözümleyici'nin tek dosya çıktısı (`npm run build:can` üretir; görüntüleyici gibi **git'e dahil**)
+- **CAN Çözümleyici YOK** (kullanıcı 2026-11-10, F041: *"CAN muhabbetini tamamen programdan çıkaracağız"*):
+  `candbc/`, `MFSim_CAN_Cozumleyici.html` ve `build:can` kaldırıldı; DBC/CAN kaydı çözümü
+  programa geri konmaz. CANoe'dan dışa aktarılmış Excel/CSV ölçümünün içe aktarımı CAN
+  çözümlemesi değildir, kalır.
 - `programlar/` — MFSim çevresinde üretilen **tek dosyalık HTML programların arşivi**
   ve `kayit.json` künyesi (bkz. `programlar/README.md`). Artifact kopyaları
-  donmuştur; üretilen üç ürün (`MFSim_Code.html`, görüntüleyici, CAN)
+  donmuştur; üretilen iki ürün (`MFSim_Code.html`, görüntüleyici)
   **taşınmadı**, kayıt onlara depo kökünden yol veriyor. `kayit.json` elle
   düzenlenmez, üretilir. Programa Araçlar → **Program Arşivi**'nden bağlı
   (`js/cp-programlar.js`). **KATALOG gömülür, programların GÖVDESİ gömülmez** —
@@ -599,8 +601,8 @@ Kullanıcı kararı (2026-10-16): *"Pencerede hemen hemen her yerde birer
 açıklama var … programa AŞIRI BİR AMATÖRLÜK KATIYOR."* Aynı şikâyet dördüncü
 kez geldi (2026-08-31 · 09-23 · 09-28 · 10-16). Önceki üçü tek bir yüzeyin
 kuralına yazıldı ve kalıp her yeni ekranda geri geldi; bu kural programın
-tamamı içindir: kabuk, pencereler, sihirbazlar, Sonuçlar, raporlar, kılavuz,
-görüntüleyici ve CAN Çözümleyici.
+tamamı içindir: kabuk, pencereler, sihirbazlar, Sonuçlar, raporlar, kılavuz ve
+görüntüleyici.
 
 Ekranda ve indirilen ya da basılan belgede duran her metin dört türden biridir:
 **ad** (denetimin, bölümün, sütunun adı), **veri** (sayı, birim, künye,
@@ -634,8 +636,7 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
   "buraya bırakın" olur. Önce yer, sonra eylem; denetim ekrandaki adıyla
   ("Veri Gezgini’nden sinyal seçin."). Yüzey başına tek yönlendirme; ipucu
   görünen adı tekrarlamaz. **Yazım:** JS'te `veYon('…')` (`js/yon.js`, metni
-  değiştirmez — tarayıcı yuvayı çağrıdan tanır), CAN Çözümleyici'de `cdbYon`,
-  statik HTML'de `data-ve-yon`; çağrısız emir cümlesi `tarif` sayılır. Kapı:
+  değiştirmez — tarayıcı yuvayı çağrıdan tanır), statik HTML'de `data-ve-yon`; çağrısız emir cümlesi `tarif` sayılır. Kapı:
   `metin-dili.test.js` → *YÖNLENDİRME* (biçim) + `yerlesim.spec.js` (adsız
   düğme, sebepsiz kapalı denetim — `tests/helpers/yon-olcu.js`). Kaynaklar ve
   yuvaların tablosu `docs/decisions/ortak-yuzeyler.md` → *Yönlendirme yuvası*.
@@ -846,9 +847,7 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `tests/helpers/sayi-olcu.js`. Kaynak kapsamı `js/` ve `viewer/js/`'nin
   TAMAMI — yeni dosya kendiliğinden girer; tek istisna dışarıdan gelen
   `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)
-  kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
-  `js/`'ten dosya almadığı için kendi yazıcısını taşır (`cdbSayi`); aynılık
-  `can-sayi.test.js`'te ölçülür. Programın YAZMADIĞI metin (commit konusu)
+  kaynak taraması görmez, ekran/belge/günlük taraması görür. Programın YAZMADIĞI metin (commit konusu)
   `data-ve-dis-metin` taşır; ekran taraması onu ve `<code>`'u atlar (tamamı
   rakam kısaltma "0352592"). Yüzey turu GitHub API'sini sabit fikstürle
   karşılar (`tests/e2e/helpers/github-fikstur.js`) — canlı listeyle kapının
@@ -868,7 +867,7 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   bunları göremiyordu: açık temada 169, koyu temada 62 ayrı yazı AA
   altındaydı. Ölçüt tek yerde (`tests/helpers/kontrast-olcu.js`); kapı
   paletin TAMAMINI açar (örnekte olmayan tipler ve ikincil pencereler dâhil).
-  Kapı: `kontrast.spec.js` + görüntüleyici/CAN taraması +
+  Kapı: `kontrast.spec.js` + görüntüleyici taraması +
   `theme-contrast.test.js` → *"satır içi color:var(--accent-*)"* ·
   *"satır içi sabit #renk"*.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
@@ -1056,41 +1055,17 @@ kez yanlış yapıldı (görüntüleyici açılışta hata veriyordu). Farkları
 `viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
 değildir — MFSim'den taşınmaz.
 
-### CAN Çözümleyici (`candbc/`)
-
-CAN kayıtlarını DBC'ye göre çözüp diyagrama döken **üçüncü program**. Karar
-kaydı ve dokunulmazlıkları `candbc/README.md` içinde; `candbc/js/*`,
-`candbc/index.html` ya da CAN testlerine dokunmadan önce oku.
-
-**`js/` ve `viewer/js/` ile HİÇBİR dosya paylaşmaz** — senkron kapısı yok,
-`sync:viewer` bu klasöre bakmaz. Ortak olan tek şey `css/`, o da build'de
-gömülüyor. Bu yüzden görüntüleyicideki tuzağın AYNISI burada da geçerli:
-
-```bash
-# css/ VEYA candbc/ dokunulduysa, commit'ten önce:
-npm run build:can        # ve üretilen MFSim_CAN_Cozumleyici.html'i commit'e kat
-```
-
-`css/styles.css`'te yapılan bir rötuş `candbc/` altında hiçbir şeye
-dokunmadığı için başka hiçbir kapı görmez; CI'daki tazelik kapısı
-(`build:can` + `git diff --exit-code`) görür ve kırmızıya döner.
-
-**`css/` ÜÇ ÜRÜNE BİRDEN GİRİYOR.** `viewer/build.js` ve `candbc/build.js` de
-`../css/*.css`'i inline ediyor; `css/styles.css`'e dokunmak
-`MFSim_Olcum_Goruntuleyici.html` ile `MFSim_CAN_Cozumleyici.html`'i **birden**
-bayatlatıyor ve ikisi de git'e dâhil.
-
-Bu bir kez görüntüleyicide, bir kez CAN'da kaçtı — çünkü kapı YALNIZ CI'daydı ve
-her kaçış bir CI turu + bir düzeltme commit'i + bir tur daha demekti. **Kapı artık
-`npm test` içinde**: `tests/unit/build-freshness.test.js` üretilen dosyayı geçici
-bir yola derleyip depodakiyle karşılaştırıyor (1 sn) ve bayat dosyayı adıyla, ilk
-fark satırıyla ve çalıştırılacak komutla söylüyor. Ürün sayısı artarsa o testin
-tablosuna bir satır eklenir — `package.json`'daki `build:*` betiklerine bak.
+**`css/` İKİ ÜRÜNE BİRDEN GİRİYOR.** `viewer/build.js` de `../css/*.css`'i
+inline ediyor; `css/styles.css`'e dokunmak `MFSim_Olcum_Goruntuleyici.html`'i
+bayatlatıyor ve o dosya git'e dâhil. Kapı `npm test` içinde:
+`tests/unit/build-freshness.test.js` üretilen dosyayı geçici bir yola derleyip
+depodakiyle karşılaştırıyor (1 sn) ve bayat dosyayı adıyla, ilk fark satırıyla
+ve çalıştırılacak komutla söylüyor. Ürün sayısı artarsa o testin tablosuna bir
+satır eklenir — `package.json`'daki `build:*` betiklerine bak.
 
 ```bash
 # npm test "BAYAT" derse:
 npm run build:viewer     # MFSim_Olcum_Goruntuleyici.html
-npm run build:can        # MFSim_CAN_Cozumleyici.html
 # (viewer/js/ dokunulduysa önce: npm run sync:viewer)
 ```
 
@@ -1259,13 +1234,13 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı); **yerel bırakma alanı** (`data-ve-dropzone`) kaplamayı devralıyor — alan içine bırakılan dosya ölçüm sihirbazını açmıyor, alan dışı davranış korunuyor |
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
-| `tests/unit/build-freshness.test.js` | `viewer/build.js` + `candbc/build.js` + `package.json` | **Git'e dâhil üretilen dosyalar taze mi**: `css/` üç ürüne birden girdiği için bir tema rötuşu `MFSim_Olcum_Goruntuleyici.html` ve `MFSim_CAN_Cozumleyici.html`'i birden bayatlatıyor ve kapı eskiden YALNIZ CI'daydı. Derleme geçici yola yapılır (`MFSIM_BUILD_OUT`) — test çalışma ağacını kirletmez. Ayrıca `three` köken kapısı: npm bağımlılığı kaldırıldı (kullanılmıyordu, kurulum başına 30,1 MB), sürüm izi `index.html` ile `vendor/three.min.js` arasında bağlı |
+| `tests/unit/build-freshness.test.js` | `viewer/build.js` + `package.json` | **Git'e dâhil üretilen dosyalar taze mi**: `css/` iki ürüne birden girdiği için bir tema rötuşu `MFSim_Olcum_Goruntuleyici.html`'i bayatlatıyor ve kapı eskiden YALNIZ CI'daydı. Derleme geçici yola yapılır (`MFSIM_BUILD_OUT`) — test çalışma ağacını kirletmez. Ayrıca `three` köken kapısı: npm bağımlılığı kaldırıldı (kullanılmıyordu, kurulum başına 30,1 MB), sürüm izi `index.html` ile `vendor/three.min.js` arasında bağlı |
 | `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok, CSS'te seçicisiz kopuk bildirim yok |
 | `tests/unit/pchip-uc-kopya.test.js` | `js/numerics.js` + `js/ft-performance.js` + `js/mount-core.js` | **Tek PCHIP algoritmasının ÜÇ ayrı yazımı aynı eğriyi verir**: `assets/examples`'taki her sayısal tablo üç kopyada karşılaştırılır — ayrışma sessizdi, çünkü her dosya kendi başına doğru. **Bilerek ayrık üç nokta ÇİVİLİ**: tablo dışı (A/B düz — C doğrusal, gerekçesi `mount-core.js`), n=2 (A `null` döner, `veEvalPchip` sessizce `0` verir), geçersiz girdi (yalnız `ft-performance.js` adresli hata atar) |
 | `tests/unit/loader-splash.test.js` | `js/loader.js` + `index.html` açılış ekranı | **Açılış ekranı (SİNEMA)**: splash gövdesi ↔ `ELS` kimlik sözleşmesi (bir yeniden adlandırma cetveli sessizce durdururdu), `data-mfsim-stage` işaretlerinden öbeklerin kurulması (işaretsiz script bir öncekine yazılır; ad `&` içerebilir) ve **yalnız o anki öbeğin** Roma rakamıyla yazılması (rakam sıradan türer: IV, IX, XIV), etiketin yalnız öbek DEĞİŞİNCE belirmesi, atlanan dosyanın GÖRÜNÜR olması (uyarı satırı DURUM söyler: "‹dosya› yüklenemedi." + öbek sürerken kehribar rakam) + yüklemenin devam etmesi, sürüm künyesi (modüler kopyada boş kalır), ipucu satırı ve döngüsü YOK; **SAHNE**: kare listesinin defer OLMAMASI ve yükleyiciden ÖNCE gelmesi (defer setine düşerse açılış fotoğrafsız açılır), karenin seçilip boyanması + gömülü data URI ↔ dosya yolu, kare yoksa kâğıt zeminde açılıp yüklemenin yine bitmesi, **bandın her renginin `--sinema-*` jetonundan gelmesi** (jeton palette bir kez, iki temada aynı; taban kuralın tema başlığı açık temada markayı siyah bantta görünmez yapardı) ve banda karşı AA, kapanışta bantların ekrandan ÇIKMASI (üstteki yukarı, alttaki aşağı, süre = `FADE_OUT_MS`) ve ekranın SÖNMEMESİ, perde yok, bant içeriğinin karşılamanın kesiğindeki içerikle aynı sol kenarda durması, modül giriş ekranının karşılamanın kesiğini, çizgisini ve içerik sütununu AYNI sınıflarla taşıması (geometri tek yerde; panelin kendi konumu yok), `--sinema-iyi` dâhil jetonların banda karşı AA, **temanın ilk karede** uygulanması (kayıtlı tema hiçbir şey çizilmeden konuyor, eski kimlik ilk karede göçüyor, bozuk kayıt varsayılana düşüyor); **KADEME**: kademe sayısı tek kaynak (CSS jetonu `--mfsim-kademe`, loader onu OKUR ve cetvelin ızgarası da onunla çizilir — kademe başına bir bölme), ilerlemenin kademeye yuvarlanması (1/24'te cetvel hâlâ boş), son geçilen bölmenin VURGU taşıması ve bitişte vurgunun sönmesi, yüzdenin GÖRÜNMEMESİ (değer `aria-valuenow`da), dişlinin kademe başına bir çentik dönüp %100'de TAM TUR tamamlaması (devir teslimde dik durur), dosya adı satırı YOK (durum satırı aşamayı söyler), süsleme karelerinin (dönen dişli + parıltı) KALDIRILDIĞI; **OTOMASYON**: `navigator.webdriver` iken adım gecikmesi ve en az süre sıfır (106 modülde e2e açılışı 20 → 4 sn); insanın beklemesi kısa — 25 ms ve en az 5 sn (kullanıcı kararı 2026-11-03; 150 ms ve 6,5 sn açılışı 19,4–21,2 sn tutuyordu), sabitler testte kaynaktan okunur; **HATA YAKALAYICI**: hata ve söz reddi aynı başlıkla ("Beklenmeyen hata"), en çok üç bildirim, ek cümle yok |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |
 | `tests/unit/results-txt-page.test.js` | `js/results.js` + `css/styles.css` | **TXT raporunun görünümü**: üst bandın soldaki "Veri Gezgini" bandıyla TEK ölçü kaynağından beslenmesi (yükseklik, alt çizgi, başlık puntosu, zemin, düğme sınıfı), sayfanın A4 olması ve içeriğe göre DARALMAMASI, gövdenin tek `<pre>` kalması (blok blok ortalama yok) ve metnin bire bir korunup kaçışlanması, font ölçüsünün sayfaya sığmaktan türemesi + okunur tavan, karakter oranının ölçülemeyince GÜVENLİ tarafa düşmesi, indirilen belgenin aynı sayfayı açıp `@page{size:A4}` ile basması |
-| `tests/unit/programlar-arsiv.test.js` | `js/cp-programlar.js` + `programlar/kayit.json` + `build.js` | **Program arşivi kaydı sessiz kırılmasın**: kayıttaki her `dosya` diskte var, öksüz HTML yok, her `kume` pencerenin küme tablosunda var (yoksa satır HİÇ çizilmez), üretilen üç üründe `boyut` YOK / donmuşlarda diskle birebir, `../` ile başlayan ürün yolunun belge dizinine düşmesi (depo ve dağıtım), yoklama hedefinin var olması ve veri TAŞIMAMASI, build'in gömdüğü global adın modülün okuduğuyla aynı olması, arşiv gövdelerinin gömülmediği |
+| `tests/unit/programlar-arsiv.test.js` | `js/cp-programlar.js` + `programlar/kayit.json` + `build.js` | **Program arşivi kaydı sessiz kırılmasın**: kayıttaki her `dosya` diskte var, öksüz HTML yok, her `kume` pencerenin küme tablosunda var (yoksa satır HİÇ çizilmez), üretilen iki üründe `boyut` YOK / donmuşlarda diskle birebir, `../` ile başlayan ürün yolunun belge dizinine düşmesi (depo ve dağıtım), yoklama hedefinin var olması ve veri TAŞIMAMASI, build'in gömdüğü global adın modülün okuduğuyla aynı olması, arşiv gövdelerinin gömülmediği |
 | `tests/e2e/programlar-arsiv.spec.js` | `js/cp-programlar.js` yoklaması | **GERÇEK tarayıcı**: arşiv yanında yokken liste yine çizilir ama satırlar pasif ve sebebi yazılı; yanındayken satırlar etkin ve tıklanan program gerçekten açılır. jsdom'da script etiketi ağa çıkmaz — bu halka Node'da HİÇ koşmuyor |
 | `tests/e2e/fead-yerlesim.spec.js` | `js/cp-fead.js` `veFeadFallbackSlots` + `veFeadArrangeByCoords` | **Örnek yüklenince kartlar nereye düşüyor** (gerçek tarayıcı): tablo ÜSTTE, iki kanvas YAN YANA, hiçbir kart çakışmıyor ve blok geniş — dar-uzun sütun dizilişi sığdırmayı yükseklikten sınırlayıp zoom'u 0,473'e düşürüyordu. **İKİNCİ HALKA YEDEK YOL**: `window.veFeadArrangeByCoords` kırılıp aynı kapılar yeniden ölçülüyor — kurucular yerleştiriciyi `try/catch` ile sarıyor, yani o yol patlarsa geçerli kalan sıra yedektir ve eskiden kanvasları ALT ALTA diziyordu. Node'a TAŞINAMAZ: yerleştirici aynı modül kapsamında duruyor, stub'lanamıyor ve koordinatların üstüne hemen yazıyor |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
@@ -1289,8 +1264,7 @@ npm run test:ci             # tüm birim testleri (--verbose --ci) — CI loglar
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
 npm run sync:viewer         # js/ → viewer/js/ (on kopya + iki yerel fark)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
-npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
-npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)
+npm run build:all           # ikisi birden (monolit + görüntüleyici)
 npm run shot -- --help      # ekran görüntüsü — İSTEĞE BAĞLI, yalnız kullanıcı isteyince
 npm run karsilama:secici    # karşılama kare seçicisi (Artifact olarak yayınlanır)
 npm run karsilama:webp -- <dosya...>   # yeni kare: JPEG/PNG → webp + listeye yaz

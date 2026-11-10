@@ -12,14 +12,6 @@
       "not": "npm run build:viewer üretir; git'e dâhil"
     },
     {
-      "dosya": "../MFSim_CAN_Cozumleyici.html",
-      "ad": "MFSim CAN Çözümleyici",
-      "simge": "🚌",
-      "tarih": null,
-      "kume": "urun",
-      "not": "npm run build:can üretir; git'e dâhil"
-    },
-    {
       "dosya": "../MFSim_Code.html",
       "ad": "MFSim (tek dosya)",
       "simge": "⚙️",

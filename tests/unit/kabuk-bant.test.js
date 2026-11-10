@@ -47,13 +47,12 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
     expect(CSS.match(/--bant-zemin:/g)).toHaveLength(1);
     // Eski ad kalan bir tüketicide SESSİZCE bozar: tanımsız `var()` ile
     // `min-height` geçersiz olur ve bant içeriği kadar büzülür, hata yok.
-    // Ölçüldü: CAN Çözümleyici'nin yan paneli (candbc/index.html) eski adı
-    // okuyordu. css/ üç ürüne giriyor — tarama üçünün de kaynağını kapsar.
+    // css/ iki ürüne giriyor — tarama ikisinin de kaynağını kapsar.
     const kaynaklar = [];
     const tara = (dizin) => fs.readdirSync(path.join(KOK, dizin)).forEach((f) => {
       if (/\.(js|css|html)$/.test(f)) kaynaklar.push(path.join(dizin, f));
     });
-    ['css', 'js', 'viewer', 'viewer/js', 'candbc', 'candbc/js'].forEach(tara);
+    ['css', 'js', 'viewer', 'viewer/js'].forEach(tara);
     kaynaklar.push('index.html');
     expect(kaynaklar.length).toBeGreaterThan(50);            // BOŞA ÇALIŞMIYOR
     const eski = kaynaklar.filter((f) =>

@@ -42,11 +42,11 @@ const ASAMA2 = fs.readdirSync(path.join(KOK, 'js'))
   .map((f) => 'js/' + f)
   .filter((f) => !ASAMA1.includes(f));
 // Aşama 3: geri kalan HER ürün dosyası — Sonuçlar, rapor üreticilerinin
-// paneli, sensörler, Ölçüm Görüntüleyici, CAN Çözümleyici, oyunlar. Dışarıda
+// paneli, sensörler, Ölçüm Görüntüleyici, oyunlar. Dışarıda
 // kalan tek şey kılavuz METNİ (guide-*.js — sebebi tools/ikon-dili.js'te).
 const dizin = (d) => fs.readdirSync(path.join(KOK, d)).filter((f) => f.endsWith('.js')).map((f) => d + '/' + f);
 const URUN = dizin('js').filter((f) => !/^js\/guide-/.test(f))
-  .concat(dizin('viewer/js'), dizin('candbc/js'), ['index.html', 'viewer/index.html', 'candbc/index.html'])
+  .concat(dizin('viewer/js'), ['index.html', 'viewer/index.html'])
   .concat(fs.readdirSync(path.join(KOK, 'css')).filter((f) => f.endsWith('.css')).map((f) => 'css/' + f));
 const ASAMA3 = URUN.filter((f) => !ASAMA1.includes(f) && !ASAMA2.includes(f));
 
@@ -135,9 +135,8 @@ describe('kaynakta adı geçen her ikon TANIMLI', () => {
   // Bilinmeyen ad dolu bir KARE çizer (maske yok, zemin currentColor) — hata
   // yok, uyarı yok. Sınıf, yardımcı çağrısı ve üçlü koşulun iki kolu taranır.
   const dosyalar = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
-    .concat(['index.html', 'css/styles.css', 'viewer/index.html', 'candbc/index.html'])
-    .concat(fs.readdirSync(path.join(KOK, 'viewer/js')).map((f) => 'viewer/js/' + f))
-    .concat(fs.readdirSync(path.join(KOK, 'candbc/js')).map((f) => 'candbc/js/' + f));
+    .concat(['index.html', 'css/styles.css', 'viewer/index.html'])
+    .concat(fs.readdirSync(path.join(KOK, 'viewer/js')).map((f) => 'viewer/js/' + f));
   const ADI = [/mf-ico-([a-z0-9-]+)(?![a-z0-9-]*['"]?\s*\+)/g, /veIkon\(\s*'([a-z0-9-]+)'/g,
     /veIkonDegis\([^,()]+,\s*'([a-z0-9-]+)'/g,
     /veIkon(?:Degis)?\([^'()]*?\?\s*'([a-z0-9-]+)'\s*:\s*'([a-z0-9-]+)'/g];

@@ -1,10 +1,9 @@
 /**
  * build-freshness.test.js — GİT'E DÂHİL ÜRETİLEN DOSYALAR TAZE Mİ
  *
- * NEDEN VAR: `css/styles.css` ÜÇ ürüne birden giriyor (MFSim_Code.html,
- * MFSim_Olcum_Goruntuleyici.html, MFSim_CAN_Cozumleyici.html) ve son ikisi
- * git'e dâhil. Bir tema rötuşu ikisini birden bayatlatıyor, ama rötuş
- * `viewer/` ya da `candbc/` altında hiçbir şeye dokunmadığı için `npm test`
+ * NEDEN VAR: `css/styles.css` iki ürüne birden giriyor (MFSim_Code.html,
+ * MFSim_Olcum_Goruntuleyici.html) ve ikincisi git'e dâhil. Bir tema rötuşu
+ * onu bayatlatıyor, ama rötuş `viewer/` altında hiçbir şeye dokunmadığı için `npm test`
  * bunu GÖRMÜYORDU: kapı yalnız CI'daydı.
  *
  * ÖLÇÜLDÜ (son 10 CI koşusu): tam olarak bu sınıf iki kez kırmızıya döndü
@@ -47,7 +46,6 @@ function ilkFark(a, b) {
 
 describe.each([
   ['MFSim_Olcum_Goruntuleyici.html', 'viewer/build.js',  'npm run build:viewer'],
-  ['MFSim_CAN_Cozumleyici.html',     'candbc/build.js',  'npm run build:can'],
 ])('%s kaynaklarıyla uyumlu', (urun, betik, komut) => {
   test(`kaynaktan yeniden üretilince BİREBİR aynı (değilse: ${komut})`, () => {
     const depodaki = fs.readFileSync(path.join(ROOT, urun), 'utf8');

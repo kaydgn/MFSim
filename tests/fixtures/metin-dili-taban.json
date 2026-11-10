@@ -1,18 +1,7 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 126,
+ "sayi": 121,
  "dosyalar": {
-  "candbc/js/can-dbc.js": {
-   "337310b05e": "‹›: çoklanmış sinyal var ama çoklayıcı (M) sinyali yok — o sinyaller çözülemez.",
-   "4ab5deedb8": "‹›.‹›: sinyal ‹›. bite kadar uzanıyor ama mesaj ‹› bayt (‹› bit).",
-   "84a378a52e": "‹›: ‹› bit — ham değer 53 bitten uzun, düşük bitler yuvarlanır."
-  },
-  "candbc/js/can-example.js": {
-   "8d7b8b1c07": "VAL_ 256 Vites 0 \"Bos\" 1 \"1. vites\" 2 \"2. vites\" 3 \"3. vites\" 4 \"4. vites\" 5 \"5."
-  },
-  "candbc/js/can-log.js": {
-   "4e8ec03cdb": "candump (SocketCAN, ID#VERİ)"
-  },
   "js/command-palette.js": {
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
    "e696b2f7ee": "excel csv import içe aktar ölçüm canoe vector sütun grafik xlsx"

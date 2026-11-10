@@ -7,8 +7,7 @@
 //
 //   showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'))
 //
-// Görüntüleyiciye birebir kopya (viewer/sync.js); CAN Çözümleyici kendi
-// eşini taşır (candbc/js/can-app.js → cdbYon).
+// Görüntüleyiciye birebir kopya (viewer/sync.js).
 // ═══════════════════════════════════════════════════════════════════════════
 
 function veYon(metin) {

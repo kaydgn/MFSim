@@ -24,7 +24,7 @@
 //     tıklayıp tarayıcının "dosya bulunamadı" sayfasına düşerdi.
 //
 // 3 · YOL = 'programlar/' + kayıttaki `dosya`. Kayıt yolları `programlar/`'a
-//     görelidir ve üç ürün `../` ile başlar; tarayıcı normalize edince belge
+//     görelidir ve iki ürün `../` ile başlar; tarayıcı normalize edince belge
 //     diziniyle aynı yere düşerler. Aynı ifade hem depoda (index.html kökte)
 //     hem dağıtılan kopyada (MFSim_Code.html'in yanında programlar/) doğru —
 //     ürünlere ayrı bir dal yazmak gerekmiyor.
@@ -119,7 +119,7 @@ function _vpaOzelAd(h) {
   return String(h).replace(/\b(MFSim|Artifact)\b/g, '<span lang="en">$1</span>');
 }
 
-// `boyut` YALNIZ donmuş dosyalarda var: üretilen üç ürünün boyutu her build'de
+// `boyut` YALNIZ donmuş dosyalarda var: üretilen iki ürünün boyutu her build'de
 // değişir, kayda yazılsa ilk build'de bayatlardı (programlar/README.md).
 function veProgramlarBoyut(n) {
   if(typeof n !== 'number' || !isFinite(n) || n <= 0) return '';
@@ -146,7 +146,7 @@ function veProgramlarSuz(liste, q) {
 // ── PENCERE ────────────────────────────────────────────────────────────────
 // Kabuk sınıfları `.ve-help-*` — Kılavuz Kiti ve Klavye Kısayolları ile AYNI.
 // İkinci bir pencere stili yazmak css/styles.css'e dokunmak demekti; o dosya
-// ÜÇ ürüne birden giriyor ve ikisinin dağıtım dosyasını bayatlatıyor (CLAUDE.md).
+// iki ürüne birden giriyor ve görüntüleyicinin dağıtım dosyasını bayatlatıyor (CLAUDE.md).
 
 var _vpaKuruldu = false;
 
@@ -218,7 +218,7 @@ function _vpaDurumSeridi(varMi) {
 // Kiti'nin kart ızgarası için); blokları doğrudan çocuk yapsaydık her biri bir
 // hücreye düşerdi — ölçüldü: durum şeridi dar bir şeride sıkışıyor, "Aç"
 // düğmeleri sıfır genişliğe iniyordu. Kapsayıcı iki sütunu birden kaplıyor,
-// böylece css/styles.css'e dokunmak gerekmiyor (o dosya üç ürüne birden girer).
+// böylece css/styles.css'e dokunmak gerekmiyor (o dosya iki ürüne birden girer).
 function _vpaCiz() {
   var b = document.getElementById('ve-programlar-body');
   if(!b) return;

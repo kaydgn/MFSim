@@ -1,7 +1,7 @@
 /**
  * yon-yuvasi.js — YÖNLENDİRME YUVASI (ARAYÜZ ANLATMAZ'ın dördüncü türü)
  * ───────────────────────────────────────────────────────────────────────
- * `veYon('…')` / `cdbYon('…')` çağrısının içi bir yuvadır: aşama kapılarının
+ * `veYon('…')` çağrısının içi bir yuvadır: aşama kapılarının
  * "tarif taşımaz" ve "bilgi bildirimi" taramaları onu dışarıda bırakır;
  * biçimini tools/metin-dili.js (yön profili) ölçer. Çağrının adı TEK yerde:
  * tarayıcının `YON_CAGRI`sı.

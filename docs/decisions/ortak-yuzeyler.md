@@ -1754,7 +1754,7 @@ ekranı … yazılar büyük, tam ortada … sağ alta çekelim"*.
 olduğu gibi kalır: bileşen adları (`componentDefs[*].name`, kapı onları
 OKUR), yüzey adları (Araç Performans, Takoz Çökme-Titreşim,
 Program Arşivi, Program Durumu, Kayış Tablosu, Kayış Yolu, Çizim Masası, Veri
-Gezgini, Sonuç Özeti, Ölçüm Görüntüleyici, CAN Çözümleyici), ürünün adı ve
+Gezgini, Sonuç Özeti, Ölçüm Görüntüleyici), ürünün adı ve
 künyesi, kısaltmalar, tuşlar, markalar ve İngilizce terimler (karar 8·A).
 Yüzey adı küçültülmez: komut paletindeki "Program durumu" "Program Durumu"
 oldu.
@@ -1899,7 +1899,7 @@ yazısı), beş seçenek metni yazıya döndü, kalanı ikon. Ayrıca:
 
 **Aşama 3 (geri kalan her ürün dosyası).** Kapı artık liste değil kural:
 kılavuz metni dışındaki her ürün dosyası taranıyor (Sonuçlar, rapor
-üreticilerinin paneli, sensörler, Ölçüm Görüntüleyici, CAN Çözümleyici).
+üreticilerinin paneli, sensörler, Ölçüm Görüntüleyici).
 Genişleyen tarayıcıyla 118 sapma → 0. Bunların 32'si aşama 1 ve 2'nin "0"
 dediği dosyalardaydı, çünkü tarayıcı iki sınıfı görmüyordu:
 - öğenin tek içeriği olan `×` `+` `−`: satır silen ×, sekme ekleyen +,
@@ -2126,22 +2126,6 @@ Tarih (`toLocaleString('tr-TR')`) ve CSS değeri makine işaretiyle kalır.
 **Kapı.** `sayi-dili.test.js` → *"bütün ürün"* (mutasyonla ölçüldü: hiçbir
 aşama listesinde olmamış `settings.js`'e geri konan `toFixed` düşürüyor) +
 `sayi-pencere.spec.js` (dört kural; 3c yapısında 4 bulgu).
-
-### Aşama 3e — CAN Çözümleyici (2026-09-27)
-
-**Hüküm.** CAN Çözümleyici de Türkçe yazar. `js/`'ten dosya almadığı için
-(candbc/README) yazıcı ikinci kez yazıldı: `cdbSayi` · `cdbSayiUstel`
-(`can-decode.js`), `veSayi`'nin davranış İKİZİ. Birimi `%` olan sinyal yüzdeyi
-öne alır ("%37,2"). CSV Excel-TR biçiminde: zaman sütunu da değer sütunu gibi
-virgüllü (noktalı zaman Türkçe Excel'de binlik ayracı okunuyordu).
-
-**Gerekçe.** Örnek kayıt yüklendiğinde ekranda (üç sekme + bant + eksen
-yazısı) 251 noktalı ondalık, 4 gruplanmamış sayı, 258 sondaki yüzde → 0.
-
-**Kapı.** `can-sayi.test.js` — iki yazıcı aynı tohumlarla karşılaştırılır
-(CAN yazıcısından binlik silinince 34 durum düşüyor), CAN kaynağında
-işaretsiz yazım yok + `can-cozumleyici.spec.js` → ekran taraması (MFSim'in
-ölçütüyle, `tests/helpers/sayi-olcu.js`).
 
 ## Sonuçlar panosu: modül kanalının adı bölünmez, işaret etiketi çizginin yanında (2026-09-28)
 
@@ -2502,7 +2486,7 @@ penceresinin dilinde bir ad sayar — tarif ve uzunluk sayımından düşer
 
 **Hüküm:** ad, veri ve durumun yanında dördüncü bir tür durur: bir sonraki
 adımı söyleyen TEK cümle. Yalnız beş yuvada yazılır, yazımı işaretlidir
-(`veYon` · `cdbYon` · `data-ve-yon`) ve biçimi ölçülür. Kural metni
+(`veYon` · `data-ve-yon`) ve biçimi ölçülür. Kural metni
 CLAUDE.md → *ARAYÜZ ANLATMAZ*.
 
 **Gerekçe:** kullanıcı (*"Açıklamaları kaldırınca da bazı yerlerde olmamış …

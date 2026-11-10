@@ -22,8 +22,8 @@
  *   yon        yönlendirme yuvasındaki metnin BİÇİMİ bozuk (yonBicim)
  *
  * YÖNLENDİRME (dördüncü tür, kullanıcı kararı 2026-10-19): bir sonraki adımı
- * söyleyen tek cümle yalnız YUVASINDA yazılır — JS'te veYon('…') (CAN'da
- * cdbYon) çağrısının içinde, HTML'de data-ve-yon taşıyan öğede. Yuvadaki
+ * söyleyen tek cümle yalnız YUVASINDA yazılır — JS'te veYon('…') çağrısının
+ * içinde, HTML'de data-ve-yon taşıyan öğede. Yuvadaki
  * metin tarif sayılmaz; biçimi ölçülür: tek cümle, en çok YON_ESIK sözcük,
  * "-in/-ın" emriyle biter; "-ınız", düz "tıklayın", sohbet, yön sözcüğü yok.
  *
@@ -50,7 +50,7 @@ const ESIK = 8;
 
 // ── KAPSAM ─────────────────────────────────────────────────────────────────
 // Ürünün metni: js/ (dışarıdan gelen çekirdek hariç), görüntüleyicinin kendi
-// dosyaları (öteki dosyaları js/'in kopyası), CAN Çözümleyici ve üç sayfa.
+// dosyaları (öteki dosyaları js/'in kopyası) ve iki sayfa.
 // Yeni dosya kendiliğinden girer.
 const ISTISNA = {
   'js/fead-core.js': 'dışarıdan geldi, birebir durur (FEAD skill, kural 1)',
@@ -61,8 +61,8 @@ const ISTISNA = {
 const GORUNTULEYICI_OZ = ['viewer/js/app.js', 'viewer/js/board.js', 'viewer/js/theme.js'];
 function kapsam() {
   const js = (d) => fs.readdirSync(path.join(KOK, d)).filter((f) => f.endsWith('.js')).map((f) => d + '/' + f).sort();
-  return [...js('js').filter((f) => !ISTISNA[f]), ...GORUNTULEYICI_OZ, ...js('candbc/js'),
-    'index.html', 'viewer/index.html', 'candbc/index.html'];
+  return [...js('js').filter((f) => !ISTISNA[f]), ...GORUNTULEYICI_OZ, 
+    'index.html', 'viewer/index.html'];
 }
 const KILAVUZ = /^js\/guide-/;
 
@@ -115,7 +115,7 @@ const PROFIL_ISARET = {
 };
 
 // ── YÖNLENDİRME YUVASI ─────────────────────────────────────────────────────
-const YON_CAGRI = /^(?:veYon|cdbYon)$/;
+const YON_CAGRI = /^veYon$/;
 const YON_ESIK = 10;
 // Biçimin bozulduğu yerler; boş liste = geçer. Emir son sözcükte aranır
 // ("-in/-ın/-un/-ün"); "-ınız" emrin kibar biçimi, "tıklayın" girdiye bağlı

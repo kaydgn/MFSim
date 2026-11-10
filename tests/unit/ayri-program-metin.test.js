@@ -1,7 +1,7 @@
 /**
- * ayri-program-metin.test.js — ARAYÜZ ANLATMAZ, ayrı iki program (aşama 15)
+ * ayri-program-metin.test.js — ARAYÜZ ANLATMAZ, Ölçüm Görüntüleyici (aşama 15)
  * ───────────────────────────────────────────────────────────────────────
- * Ölçüm Görüntüleyici (`viewer/`) ve CAN Çözümleyici (`candbc/`). Cırcır
+ * Ölçüm Görüntüleyici (`viewer/`). Cırcır
  * (`tools/metin-dili.js`) sözlüğün işaretlediğini tutar; bu dosya sözlüğün
  * görmediği sınıfları:
  *   · üst bantta açıklama cümlesi ("Excel / CSV ölçüm dosyalarını okur ve
@@ -20,14 +20,12 @@ const MD = require('../../tools/metin-dili.js');
 
 const ROOT = path.join(__dirname, '../..');
 const oku = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const JS = ['candbc/js/can-app.js', 'candbc/js/can-tree.js', 'candbc/js/can-dbc.js',
-  'candbc/js/can-log.js', 'candbc/js/can-chart.js', 'candbc/js/can-theme.js',
-  'candbc/js/can-example.js', 'viewer/js/board.js', 'viewer/js/theme.js', 'viewer/js/app.js'];
-const HTML = ['viewer/index.html', 'candbc/index.html'];
+const JS = ['viewer/js/board.js', 'viewer/js/theme.js', 'viewer/js/app.js'];
+const HTML = ['viewer/index.html'];
 const DIZGE = [...JS, ...HTML].flatMap((f) => MD.metinler(f).map((m) => ({ f, ...m })));
 
 test('taranan metin var (kapı boş girdiyle yeşil kalmasın)', () => {
-  expect(DIZGE.length).toBeGreaterThan(250);
+  expect(DIZGE.length).toBeGreaterThan(80);
 });
 
 // Program, biçim ve standart adları — sözcüğe yapışık büyük harf değil, adın kendisi
@@ -80,7 +78,7 @@ describe('üst bant ad ve durum taşır, açıklama cümlesi taşımaz', () => {
       .map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
   };
 
-  test.each([['viewer/index.html', 'mfv-topbar'], ['candbc/index.html', 'cdb-topbar']])('%s', (f, id) => {
+  test.each([['viewer/index.html', 'mfv-topbar']])('%s', (f, id) => {
     const metin = bant(f, id);
     expect(metin.length).toBeGreaterThan(2);
     // eski: "Excel / CSV ölçüm dosyalarını okur ve diyagrama döker" (7 sözcük),
@@ -91,23 +89,6 @@ describe('üst bant ad ve durum taşır, açıklama cümlesi taşımaz', () => {
   test('görüntüleyicinin alt başlığı programın tanımlayıcı adıdır', () => {
     expect(oku('viewer/index.html')).toContain('<span class="mfv-sub">Ölçüm Görüntüleyici</span>');
   });
-});
-
-test('CAN boş diyagramının ipucu kısayol penceresinin dilinde ("Ad: eylem · …")', () => {
-  const m = /<div class="ve-trace-empty-sub">([\s\S]*?)<\/div>/.exec(oku('candbc/index.html'));
-  const ipucu = m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-  const parca = ipucu.split(' · ');
-  expect(parca.length).toBeGreaterThanOrEqual(4);
-  parca.forEach((p) => expect(p).toMatch(/^[A-ZÇĞİÖŞÜ][^:]*: \p{Ll}/u));
-  expect(ipucu).toContain('Tekerlek: yakınlaştır');
-});
-
-test('örnek bildirimi künyeyi tekrar etmez: "üretilmiş" bilgisi yüklü dosyanın adında', () => {
-  const src = oku('candbc/js/can-app.js');
-  const f = /function cdbLoadExample\(\) \{[\s\S]*?\n\}/.exec(src)[0];
-  expect(f).toMatch(/cdbApplyDbc\(cdbParseDbc\(dbc\), '[^']*üretilmiş[^']*'\)/);
-  const bildirim = [...f.matchAll(/cdbToast\('([^']*)'/g)].map((x) => x[1]);
-  expect(bildirim).toEqual(['Örnek yüklendi.']);
 });
 
 test('görüntüleyicinin boş ölçüm penceresi tarif taşımaz (viewer/sync.js yerel farkı)', () => {

@@ -34,13 +34,6 @@ global.loadViewerSource = function loadViewerSource(file) {
   return fs.readFileSync(path.join(VIEWER_JS_DIR, file), 'utf8');
 };
 
-// candbc/js/<file> kaynağını string olarak okur. CAN Çözümleyici de ayrı bir
-// programdır (bkz. candbc/README.md) ve js/ ile HİÇBİR dosya paylaşmaz —
-// modülleri yalnızca orada anlamlı. Çekirdeği (DBC ayrıştırıcı, bit çıkarma,
-// kayıt biçimleri) tek global kapsamda görsün diye eval ile yüklenir.
-global.loadCanSource = function loadCanSource(file) {
-  return fs.readFileSync(path.join(__dirname, '../../candbc/js', file), 'utf8');
-};
 
 // escapeHTML GERÇEK sürümüyle konur, jest.fn() ile DEĞİL.
 //

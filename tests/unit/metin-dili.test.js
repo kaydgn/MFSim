@@ -165,14 +165,12 @@ describe('YÖNLENDİRME — dördüncü tür, yalnız yuvasında (kullanıcı ka
   test('veYon çağrısı yuvadır: metin "yon" bağlamında, tarif sayılmaz; çağrısız aynı cümle tariftir', () => {
     const f = gecici('a.js', [
       "showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');",
-      "showToast('Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün.', 'warning');",
-      "h += '<div class=\"bos\">' + cdbYon('Sinyal Gezgini’nden bir sinyal işaretleyin.') + '</div>';"
+      "showToast('Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün.', 'warning');"
     ].join('\n'));
     const m = T.metinler(f).map((x) => [x.baglam, x.profil, x.metin, x.isaret]);
     expect(m).toEqual(expect.arrayContaining([
       ['bildirim', 'arayuz', 'Rapor verisi yok. ‹›', []],
-      ['yon', 'yon', 'Çözücü penceresinde Hesapla ile çözün.', []],
-      ['yon', 'yon', 'Sinyal Gezgini’nden bir sinyal işaretleyin.', []]
+      ['yon', 'yon', 'Çözücü penceresinde Hesapla ile çözün.', []]
     ]));
     const cagrisiz = m.find((x) => x[2] === 'Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün.');
     expect(cagrisiz[3]).toContain('tarif');
@@ -195,7 +193,6 @@ describe('YÖNLENDİRME — dördüncü tür, yalnız yuvasında (kullanıcı ka
     const { metinleri } = require('../helpers/bildirim-olcu.js');
     const ifade = (k) => require('@babel/parser').parseExpression(k);
     expect(yonYuvasi(ifade("veYon('Tabloyu CSV ile indirin.')"))).toBe(true);
-    expect(yonYuvasi(ifade("cdbYon('Tanı sekmesini açın.')"))).toBe(true);
     expect(yonYuvasi(ifade("showToast('Tabloyu CSV ile indirin.')"))).toBe(false);
     expect(metinleri(ifade("'Pano kullanılamıyor. ' + veYon('Tabloyu CSV ile indirin.')")).map((m) => m.trim()))
       .toEqual(['Pano kullanılamıyor.']);
@@ -213,7 +210,7 @@ describe('kapsam', () => {
     const k = new Set(T.kapsam());
     fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
       .filter((f) => !T.ISTISNA[f]).forEach((f) => expect(k.has(f)).toBe(true));
-    ['index.html', 'viewer/index.html', 'candbc/index.html', 'viewer/js/app.js', 'candbc/js/can-app.js']
+    ['index.html', 'viewer/index.html', 'viewer/js/app.js']
       .forEach((f) => expect(k.has(f)).toBe(true));
   });
 });
