@@ -82,18 +82,6 @@ jobs:
             exit 1
           fi
 
-      # MFSim_CAN_Cozumleyici.html de git'e DÂHİL ve elle üretiliyor; aynı
-      # bayatlama sınıfı geçerli. Üstelik CAN Çözümleyici de css/styles.css'i
-      # gömüyor: bir tema rötuşu bu dosyayı da bayatlatır ve o rötuş candbc/
-      # altında hiçbir şeye dokunmadığı için başka hiçbir kapı görmez.
-      - name: Dağıtım dosyası taze mi (MFSim_CAN_Cozumleyici.html)
-        run: |
-          npm run build:can
-          if ! git diff --exit-code -- MFSim_CAN_Cozumleyici.html; then
-            echo "::error::MFSim_CAN_Cozumleyici.html kaynaklarla uyumsuz. 'npm run build:can' çalıştırıp sonucu commit'leyin."
-            exit 1
-          fi
-
   # YAYINLANAN ÜRÜNÜ AÇAN kapı — birim testlerin göremediği sınıf buradan geçer.
   #
   # 2026-08 olayı: js/results.js'e giren ham "</script>" dizisi index.html'de

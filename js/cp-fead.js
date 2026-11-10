@@ -935,7 +935,7 @@ function veFeadVarsayilanTazele(pencereId){
 // yeniden denenirse nelerin ölçülmüş olduğu oradan okunur.
 // ── KANVAS ROZETİ — DAĞITICI ───────────────────────────────────────────────
 // Stil ELEMANIN ÜSTÜNDE (css/ dosyasında değil) çünkü css/styles.css'e
-// dokunmak Ölçüm Görüntüleyici'nin ve CAN Çözümleyici'nin dağıtım dosyalarını
+// dokunmak Ölçüm Görüntüleyici'nin dağıtım dosyasını
 // bayatlatıyor (bkz. CLAUDE.md); iki rozet için o zinciri kurmaya değmez.
 //
 // KASNAK K/S ROZETİ KALDIRILDI — erişilemez koddu. Kasnakların kanvasta kutusu

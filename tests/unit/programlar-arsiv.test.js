@@ -63,9 +63,9 @@ describe('kayıt defteri ↔ disk', () => {
     expect(yabanci).toEqual([]);
   });
 
-  test('üretilen üç ürün boyut TAŞIMAZ, donmuş dosyaların hepsi taşır', () => {
+  test('üretilen ürünler boyut TAŞIMAZ, donmuş dosyaların hepsi taşır', () => {
     const urun = KAYIT.programlar.filter((p) => p.kume === 'urun');
-    expect(urun.length).toBe(3);
+    expect(urun.length).toBe(2);
     // Boyutları her build'de değişir; kayda yazılsaydı ilk build'de bayatlardı.
     urun.forEach((p) => expect(p.boyut).toBeUndefined());
 
@@ -87,7 +87,7 @@ describe('yol kurulumu', () => {
     expect(veProgramlarUrl({})).toBe('');
   });
 
-  // Kayıt yolları programlar/'a göreli; üç ürün ../ ile başlıyor. Tarayıcı
+  // Kayıt yolları programlar/'a göreli; iki ürün ../ ile başlıyor. Tarayıcı
   // normalize edince belge diziniyle AYNI yere düşmeleri gerekir — ürünlere
   // ayrı bir dal yazılmamasının tek gerekçesi bu.
   test('../ ile başlayan ürün yolu belge dizinine düşer (depo ve dağıtım)', () => {
@@ -168,18 +168,18 @@ describe('biçimleme ve arama', () => {
   });
 
   test('boyutsuz kayıt boş dize verir — "0 B" yazılmaz', () => {
-    // Üretilen üç üründe boyut YOK; "0 B" yazmak olmayan bir ölçü iddia ederdi.
+    // Üretilen ürünlerde boyut YOK; "0 B" yazmak olmayan bir ölçü iddia ederdi.
     [undefined, null, 0, NaN, 'x'].forEach((v) => expect(veProgramlarBoyut(v)).toBe(''));
   });
 
   test('arama ad, dosya ve notta geçiyor', () => {
     const liste = [
       { ad: 'Kayış Yolu', dosya: 'artifact/kayis.html', kume: 'artifact' },
-      { ad: 'CAN Çözümleyici', dosya: '../MFSim_CAN.html', kume: 'urun', not: 'build:can üretir' }
+      { ad: 'Ölçüm Görüntüleyici', dosya: '../MFSim_Olcum.html', kume: 'urun', not: 'build:viewer üretir' }
     ];
     expect(veProgramlarSuz(liste, 'kayış').map((p) => p.ad)).toEqual(['Kayış Yolu']);
-    expect(veProgramlarSuz(liste, 'MFSim_CAN').map((p) => p.ad)).toEqual(['CAN Çözümleyici']);
-    expect(veProgramlarSuz(liste, 'build:can').map((p) => p.ad)).toEqual(['CAN Çözümleyici']);
+    expect(veProgramlarSuz(liste, 'MFSim_Olcum').map((p) => p.ad)).toEqual(['Ölçüm Görüntüleyici']);
+    expect(veProgramlarSuz(liste, 'build:viewer').map((p) => p.ad)).toEqual(['Ölçüm Görüntüleyici']);
     expect(veProgramlarSuz(liste, '').length).toBe(2);
   });
 

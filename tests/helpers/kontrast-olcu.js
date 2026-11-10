@@ -5,8 +5,8 @@
  * Ekrandaki yazı ise renk başka yollardan da alıyordu ve palet testi onları
  * göremez: sabit renk (`#c88a20`), metin olarak ham aksan (`--accent-*`),
  * opaklıkla soldurulmuş jeton (`opacity:.62`). Bu dosya ölçütü TEK yerde
- * tutar; MFSim'in yüzey taraması (tests/e2e/kontrast.spec.js), CAN
- * Çözümleyici ve Ölçüm Görüntüleyici aynı ölçeri sayfaya kurar. Matematiğin
+ * tutar; MFSim'in yüzey taraması (tests/e2e/kontrast.spec.js) ve
+ * Ölçüm Görüntüleyici aynı ölçeri sayfaya kurar. Matematiğin
  * kendisi tests/unit/kontrast-olcu.test.js'te düşebiliyor.
  *
  * Ölçülen: görünen her HTML metin düğümünün EKRANDAKİ rengi — atalardan gelen

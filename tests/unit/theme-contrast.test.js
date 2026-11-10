@@ -182,7 +182,7 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
   test('JS üretimi HTML\'de metin rengi --ink-*: satır içi color:var(--accent-*) yok', () => {
     const KOK = path.join(__dirname, '../..');
     const dosyalar = [];
-    ['js', 'viewer/js', 'candbc/js'].forEach((d) => {
+    ['js', 'viewer/js'].forEach((d) => {
       fs.readdirSync(path.join(KOK, d)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
         .forEach((f) => dosyalar.push(d + '/' + f));
     });
@@ -212,7 +212,7 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
     const { yorumsuzJs, belgeMi } = require('../../tools/ikon-dili.js');
     const KOK = path.join(__dirname, '../..');
     const dosyalar = [];
-    ['js', 'viewer/js', 'candbc/js'].forEach((d) => {
+    ['js', 'viewer/js'].forEach((d) => {
       fs.readdirSync(path.join(KOK, d)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
         .forEach((f) => dosyalar.push(d + '/' + f));
     });
@@ -292,7 +292,7 @@ describe('gölge ve tül temayı izler', () => {
         bas += satir.length + 1;
       });
     };
-    ['js', 'viewer/js', 'candbc/js'].forEach((dz) => {
+    ['js', 'viewer/js'].forEach((dz) => {
       fs.readdirSync(path.join(KOK, dz)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
         .forEach((f) => {
           const d = dz + '/' + f;
@@ -306,7 +306,7 @@ describe('gölge ve tül temayı izler', () => {
       const ham = fs.readFileSync(path.join(KOK, 'css', f), 'utf8');
       ekle('css/' + f, ham, yorumsuzCss(ham), () => false);
     });
-    ['index.html', 'viewer/index.html', 'candbc/index.html'].forEach((d) => {
+    ['index.html', 'viewer/index.html'].forEach((d) => {
       const ham = fs.readFileSync(path.join(KOK, d), 'utf8');
       ekle(d, ham, yorumsuzCss(yorumsuzHtml(ham)), () => false);
     });

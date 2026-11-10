@@ -184,8 +184,7 @@ describe('alanın kendisi (jsdom)', () => {
 describe('kaynak', () => {
   const URUN_JS = [
     ...fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f),
-    ...fs.readdirSync(path.join(KOK, 'viewer/js')).filter((f) => f.endsWith('.js')).map((f) => 'viewer/js/' + f),
-    ...fs.readdirSync(path.join(KOK, 'candbc/js')).filter((f) => f.endsWith('.js')).map((f) => 'candbc/js/' + f)
+    ...fs.readdirSync(path.join(KOK, 'viewer/js')).filter((f) => f.endsWith('.js')).map((f) => 'viewer/js/' + f)
   ];
 
   test('ürünün hiçbir yerinde `type="number"` alan yok (yorumlar hariç)', () => {
@@ -193,7 +192,7 @@ describe('kaynak', () => {
     for (const f of URUN_JS) {
       yorumsuzJs(oku(f)).split('\n').forEach((l, i) => { if (/type=\\?["']?number/.test(l)) bulunan.push(f + ':' + (i + 1)); });
     }
-    for (const f of ['index.html', 'viewer/index.html', 'candbc/index.html']) {
+    for (const f of ['index.html', 'viewer/index.html']) {
       yorumsuzHtml(oku(f)).split('\n').forEach((l, i) => { if (/type=\\?["']?number/.test(l)) bulunan.push(f + ':' + (i + 1)); });
     }
     expect(bulunan).toEqual([]);

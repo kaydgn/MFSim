@@ -34,7 +34,7 @@ const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 const BILESEN = [...oku('js/components.js').matchAll(/^  '[a-z0-9-]+':\s*\{\s*\n\s+name:\s*'([^']+)'/gm)].map((m) => m[1]);
 const YUZEY = ['Araç Performans', 'Takoz Çökme-Titreşim', 'Program Arşivi',
   'Program Durumu', 'Kayış Tablosu', 'Kayış Yolu', 'Çizim Masası', 'Veri Gezgini', 'Sonuç Özeti',
-  'Ölçüm Görüntüleyici', 'CAN Çözümleyici', 'Çalışma Noktası'];
+  'Ölçüm Görüntüleyici', 'Çalışma Noktası'];
 const YER = ['Bolu Tüneli', 'Güç Grubu Müdürlüğü', 'Güç Aktarma Organları Mühendisliği'];   // yer ve birim adları
 const MODUL = ['Takoz'];                 // "Takoz modülü" (FEAD kısaltma, Araç Performans yüzey adı)
 const ATIF = ['Not', 'Bölüm', 'Tablo', 'Şekil', 'Kriter', 'Adım', 'Ek', 'Denklem', 'Sayfa', 'Madde', 'Kural'];

@@ -14,8 +14,8 @@
  * Kullanım: node tools/ikonlar.js            → css/icons.css yazar
  *           node tools/ikonlar.js --denetle  → dosya bayatsa çıkış 1
  *
- * css/ ÜÇ ürüne birden giriyor: ikon ekleyince `npm run build:viewer` ve
- * `npm run build:can` de koşulur (tests/unit/build-freshness.test.js).
+ * css/ iki ürüne birden giriyor: ikon ekleyince `npm run build:viewer` de
+ * koşulur (tests/unit/build-freshness.test.js).
  */
 const fs = require('fs');
 const path = require('path');

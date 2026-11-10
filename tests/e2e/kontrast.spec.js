@@ -11,8 +11,8 @@
  *   · ham vurgu      --accent-* METİN olarak (3,73–4,38:1)
  *   · opaklık        jetonla yazılıp `opacity:.5–.85` ile soldurulan yazı
  *                    (2,13–4,36:1) — renk doğru, ekrandaki sonuç değil
- * Ölçüt tests/helpers/kontrast-olcu.js'te (CAN Çözümleyici ve Ölçüm
- * Görüntüleyici aynısını kullanıyor). Gezilen yüzeyler yerleşim kapısıyla
+ * Ölçüt tests/helpers/kontrast-olcu.js'te (Ölçüm Görüntüleyici aynısını
+ * kullanıyor). Gezilen yüzeyler yerleşim kapısıyla
  * AYNI tur (tests/e2e/helpers/yuzey-turu.js): hangi pencerenin hangi veriyle
  * açılacağı orada, burada yalnız ne ölçüleceği. Node'da koşamaz: jsdom
  * kaskadı, opaklığı ve yerleşimi hesaplamaz.

@@ -112,9 +112,8 @@ describe('Inter — gömülü yüz', () => {
     expect(fs.existsSync(path.join(ROOT, 'tools/build-display-font.js'))).toBe(false);
   });
 
-  test('üç ürün de yalnız Inter\'i bağlıyor', () => {
-    [['index.html', 'css/fonts.css'], ['viewer/index.html', '../css/fonts.css'],
-      ['candbc/index.html', '../css/fonts.css']].forEach(([f, yol]) => {
+  test('iki ürün de yalnız Inter\'i bağlıyor', () => {
+    [['index.html', 'css/fonts.css'], ['viewer/index.html', '../css/fonts.css']].forEach(([f, yol]) => {
       const html = read(f);
       expect(html).toContain('href="' + yol + '"');
       expect(html).not.toContain('fonts-display.css');

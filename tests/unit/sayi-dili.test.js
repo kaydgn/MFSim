@@ -25,7 +25,7 @@ const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 // kendiliğinden girer. Kapsam aşama aşama büyüdü (1: grafik çekirdeği · 2a:
 // Sonuçlar katmanı · 2c: bileşen pencereleri · 3a–3b: belgeler · 3c: çözücü
 // günlüğü · 3d: kalan kabuk). Tek istisna dışarıdan gelen, birebir duran FEAD
-// çekirdeği; CAN Çözümleyici (candbc/) kendi yazıcısıyla ayrıca taranır.
+// çekirdeği.
 const ISTISNA = { 'js/fead-core.js': 'dışarıdan geldi, birebir durur (FEAD skill, kural 1)' };
 const URUN = ['js', 'viewer/js'].flatMap((d) => fs.readdirSync(path.join(KOK, d))
   .filter((f) => f.endsWith('.js')).map((f) => d + '/' + f));
@@ -216,7 +216,7 @@ describe('ekrandaki YAZI sayıya geri okunmaz', () => {
   const { yorumsuzJs } = require('../../tools/ikon-dili.js');
   test('ürün kaynağında `parseFloat/parseInt/Number(… .textContent/.innerText/.innerHTML)` yok', () => {
     const bulunan = [];
-    for (const d of ['js', 'viewer/js', 'candbc/js']) {
+    for (const d of ['js', 'viewer/js']) {
       for (const f of fs.readdirSync(path.join(KOK, d)).filter((x) => x.endsWith('.js'))) {
         yorumsuzJs(oku(d + '/' + f)).split('\n').forEach((l, i) => {
           if (/\b(parseFloat|parseInt|Number)\s*\([^;]*\.(textContent|innerText|innerHTML)\b/.test(l)) bulunan.push(d + '/' + f + ':' + (i + 1));

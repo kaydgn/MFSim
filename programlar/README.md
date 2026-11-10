@@ -63,12 +63,11 @@ yayınlanan kopyada pencere çalışır. İndirilen tek dosyanın yanına konmas
 - **`boyut`** — yalnız **donmuş** dosyalarda var. Üretilen üç üründe **YOK**:
   boyutları her build'de değişir, kayda yazılsa ilk build'de bayatlardı.
 
-## Üretilen üç ürün neden burada değil
+## Üretilen iki ürün neden burada değil
 
-`MFSim_Code.html`, `MFSim_Olcum_Goruntuleyici.html` ve `MFSim_CAN_Cozumleyici.html`
-**taşınmadı**, kayıt onlara depo kökünden yol veriyor. Sebep bir tercih değil, bir
-maliyet: bu üçü build hattının çıktısı ve konumları `viewer/build.js`,
-`candbc/build.js`, `tests/unit/build-freshness.test.js`, `tests/e2e/*.spec.js`,
+`MFSim_Code.html` ve `MFSim_Olcum_Goruntuleyici.html` **taşınmadı**, kayıt onlara depo kökünden yol veriyor. Sebep bir tercih değil, bir
+maliyet: bu ikisi build hattının çıktısı ve konumları `viewer/build.js`,
+`tests/unit/build-freshness.test.js`, `tests/e2e/*.spec.js`,
 `tools/shot.js`, `.github/workflows/ci-deploy.yml` ve dört belgede — kırk civarı
 yerde — sabit. Taşımak o kırk yeri de değiştirmeyi ve **indirme URL'lerinin
 değişmesini** gerektirirdi. Kayıt yolu taşıdığı için ikinci adım her iki hâlde de
