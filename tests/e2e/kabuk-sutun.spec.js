@@ -151,8 +151,10 @@ test('RAY TAM BOY — palet ile arasında TEK çizgi tepeden dibe; rayın başı
   expect(r.aktifUst).toBeGreaterThanOrEqual(r.bantAlt);
 });
 
+// Paletli bir modülün Sonuçlar sayfası: aralık "Veri Gezgini" bandıyla aynı satır.
+// (FEAD paletsiz — onun rayında aralık yok, PALETSİZ KAPSAM.)
 test('Sonuçlar sayfasında da aynı çerçeve — çizgi tepeden, köşe hücresi yok', async ({ page }) => {
-  await modulAc(page);
+  await paletliAc(page);
   await page.evaluate(() => veSubTabDegistir('sonuclar'));
   await page.waitForTimeout(500);
   const r = await page.evaluate(rayCerceve);
@@ -205,11 +207,28 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
       rayR: Math.round(ray.right), rayY: Math.round(ray.top), tuvalX: Math.round(w.left),
       tuvalY: Math.round(w.top),
       tuvalW: Math.round(w.width), alanSol: parseFloat(getComputedStyle(alan).borderLeftWidth) || 0,
+      rayBasH: parseFloat(getComputedStyle(document.getElementById('ve-nav-rail'), '::before').height),
+      ilkOge: Math.round(document.querySelector('#ve-nav-rail .ve-nav-item').getBoundingClientRect().top - ray.top),
+      bant: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')),
     };
   });
   const f = await olcP();
   expect(f.paletsiz).toBe(true);
   expect([f.sutun, f.acmaRayi]).toEqual([0, 0]);
+  // RAYIN BAŞINDA ARALIK YOK (Canlı Not 98: "'topoloji' butonunun üstü boş duruyor"):
+  // aralık paletin bandıyla hizanın ve açma düğmesinin yeriydi; FEAD'de ikisi de yok.
+  expect(f.rayBasH).toBe(0);
+  expect(f.ilkOge).toBeLessThanOrEqual(8);
+  // Sonuçlar sayfasında da: iki sayfa arasında ray oynamaz.
+  await page.evaluate(() => veSubTabDegistir('sonuclar'));
+  await page.waitForTimeout(400);
+  const s = await page.evaluate(() => ({
+    basH: parseFloat(getComputedStyle(document.getElementById('ve-nav-rail'), '::before').height),
+    ilkOge: Math.round(document.querySelector('#ve-nav-rail .ve-nav-item').getBoundingClientRect().top
+      - document.getElementById('ve-nav-rail').getBoundingClientRect().top) }));
+  expect(s).toEqual({ basH: 0, ilkOge: f.ilkOge });
+  await page.evaluate(() => veSubTabDegistir('arac-performans'));
+  await page.waitForTimeout(400);
   // Tuval rayın HEMEN yanında; aralarında tek çizgi (rayın).
   expect(f.tuvalX).toBe(f.rayR);
   expect(f.alanSol).toBe(0);
@@ -228,6 +247,8 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
   expect(k.paletsiz).toBe(false);
   expect(k.sutun).toBeGreaterThan(100);
   expect(f.tuvalW - k.tuvalW).toBe(k.sutun);
+  // paletli kapsamda aralık geri gelir: bandın boyunda
+  expect(k.rayBasH).toBe(k.bant);
 });
 
 test('durum şeridi TUVALİN ALTINDA ve tuval genişliğinde', async ({ page }) => {
