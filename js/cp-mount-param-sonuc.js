@@ -1180,17 +1180,12 @@ function _mntParamExcelPlan(ent, H){
       if(!V){
         V=E.tarama.veri={ vakaAdlari:tm.vakalar.map(function(v){ return v.ad; }), nT:nT, nM:nM,
                           kod:new Int32Array(L.length*nV*nT*3).fill(_MNT_PRM_BOS),
-                          modF:new Float64Array(L.length*nM).fill(NaN), modAd:new Uint16Array(L.length*nM).fill(65535), modAdlar:[],
-                          uc:[0, 0] };
+                          modF:new Float64Array(L.length*nM).fill(NaN), modAd:new Uint16Array(L.length*nM).fill(65535), modAdlar:[] };
       }
       tm.vakalar.forEach(function(v, q){
         if(!v.d || q>=V.vakaAdlari.length) return;
         v.d.forEach(function(d, m){
-          for(var a=0;a<3;a++) if(Number.isFinite(d[a])){
-            var z=Math.round(d[a]*100);
-            V.kod[((i*V.vakaAdlari.length+q)*nT+m)*3+a]=z;
-            if(z<V.uc[0]) V.uc[0]=z; if(z>V.uc[1]) V.uc[1]=z;   // panonun belirteç penceresi için
-          }
+          for(var a=0;a<3;a++) if(Number.isFinite(d[a])) V.kod[((i*V.vakaAdlari.length+q)*nT+m)*3+a]=Math.round(d[a]*100);
         });
       });
       tm.modlar.slice().sort(function(a, b){ return a.f-b.f; }).slice(0, nM).forEach(function(md, j){
