@@ -810,7 +810,7 @@ function _gmSec4(){
   h += _gmAdimlar([
     'Başlangıç sayfasında <strong>Boş kanvas</strong>’a ' + _gmNS('baslangic', _GM_BASLANGIC, 'bos') + ' basın: araç '
       + 'bileşenleri (Çözücü, Rapor, Görünümler …) kurulur.',
-    'Soldaki rayın başındaki düğmeyle ' + _gmNS('ekran', _GM_EKRAN, 'bilesenler') + ' <strong>Bileşenler</strong> '
+    'Soldaki rayda <strong>Sonuçlar</strong>’ın altındaki düğmeyle ' + _gmNS('ekran', _GM_EKRAN, 'bilesenler') + ' <strong>Bileşenler</strong> '
       + 'sütununu açın (' + _gmS('palet') + ').',
     'Güç grubunun her parçası için bir <strong>kütle gövdesi</strong>ni ' + _gmN(_GM_PALET, 'motor')
       + ' tuvale sürükleyin (Motor, Şanzıman, Şaft, Braket …).',

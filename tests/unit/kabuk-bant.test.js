@@ -141,9 +141,8 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
     const HTML = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
     expect(HTML).not.toMatch(/id="ve-tab-bar"|id="ve-doc-dock"/);
     expect(CSS).not.toMatch(/\.ve-tab-bar|\.ve-doc-dock|\.ve-split-resizer|\.ve-snapshot-pane/);
-    const once = kural('.ve-nav-rail::before');
-    expect(once).not.toMatch(/background|border-bottom|min-height/);
-    expect(once).toMatch(/(^|;)\s*height:\s*var\(--bant-h\)/);
+    // Rayın başında hücre de aralık da yok (Canlı Not 98 · 99): `::before` kuralı yok.
+    expect(CSS).not.toMatch(/\.ve-nav-rail::before/);
     expect(kural('.ve-nav-rail::after')).toMatch(/top:\s*0;/);
   });
 });
@@ -231,21 +230,32 @@ describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
     expect(kural('.ve-sidebar')).not.toMatch(/border-left:/);
   });
 
-  test('rayın başındaki aralık bandın boyunda ama bant DEĞİL (zemin ve çizgi yok)', () => {
-    const k = kural('.ve-nav-rail::before');
-    expect(k).toMatch(/content:\s*""/);
-    expect(k).not.toMatch(/border-bottom|background/);
-    // Rayın ÜST dolgusu yok (aralık şeridin altına yapışır); yan dolguyu
-    // aralık geri alır ki dikey çizgiye kadar uzansın.
-    const pay = kural('.ve-nav-rail').match(/padding:\s*0 (\d+)px \d+px;/);
+  // Kullanıcı 2026-11-10 (Canlı Not 98 · 99): *"topoloji butonunun üstü boş duruyor …
+  // kötü duruyor"* — önce FEAD'de (paletsiz), sonra kök topolojide (palet açık). Bandın
+  // boyundaki aralık açma düğmesinin yeriydi; düğme sayfa düğmelerinin altına indi.
+  // Çizimin kendisi: kabuk-sutun.spec.js → "RAY TAM BOY" · "AÇMA DÜĞMESİ RAYDA".
+  test('rayın başında aralık YOK — hiçbir kapsamda, hiçbir sayfada', () => {
+    // Üst dolgu ince: sayfa düğmeleri rayın tepesinden başlar.
+    const pay = kural('.ve-nav-rail').match(/padding:\s*(\d+)px \d+px;/);
     expect(pay).not.toBeNull();
-    expect(k).toMatch(new RegExp('margin:\\s*0 -' + pay[1] + 'px'));
+    expect(Number(pay[1])).toBeLessThanOrEqual(8);
+    // Kapsama ya da sayfaya göre aralık açan kural yok.
+    expect(CSS).not.toMatch(/\.ve-nav-rail::before|\.ve-nav-rail\s*\{[^}]*padding-top/);
   });
 
-  // Kullanıcı 2026-11-10 (Canlı Not 98): "Şu 'topoloji' butonunun üstü boş duruyor."
-  // Aralık paletin bandıyla hizanın ve açma düğmesinin yeri; paletsiz kapsamda ikisi
-  // de yok, aralık kapanır. Çizimin kendisi: kabuk-sutun.spec.js → "PALETSİZ KAPSAM".
-  test('paletsiz kapsamda (FEAD) rayın başında aralık yok', () => {
-    expect(kural('#sayfa2-content.ve-paletsiz .ve-nav-rail::before')).toMatch(/height:\s*0;/);
+  test('açma düğmesi rayın İÇİNDE, sayfa düğmelerinin altında; tablist yalnız sekme taşır', () => {
+    const HTML = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
+    const bas = HTML.indexOf('id="ve-nav-rail"');
+    const ray = HTML.slice(bas, HTML.indexOf('</nav>', bas));
+    const lb = ray.indexOf('role="tablist"'), ls = ray.indexOf('</div>', lb);
+    const liste = ray.slice(lb, ls);
+    // Düğme rayın içinde ve sekme listesinden SONRA.
+    expect(ray.indexOf('id="ve-sidebar-reveal"')).toBeGreaterThan(ls);
+    expect(liste).toMatch(/data-subtab="arac-performans"[\s\S]*data-subtab="sonuclar"/);
+    // Rayın kendisi tablist değil; listede sekme olmayan düğme yok.
+    expect(ray.slice(0, ray.indexOf('>'))).not.toMatch(/role="tablist"/);
+    expect((liste.match(/<button/g) || []).length).toBe((liste.match(/role="tab"/g) || []).length);
+    // Akışta: mutlak konum, yüzme katmanı ve kendi genişliği yok — rayın içerik kutusunda.
+    expect(kural('.ve-sidebar-reveal')).not.toMatch(/position:\s*absolute|z-index|(^|;)\s*width:/);
   });
 });

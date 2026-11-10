@@ -714,10 +714,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   başlar. Tuvalin kendi çerçevesi yok (çukur emekli): sınırı komşusunun
   çizgisidir; tuvalin üstünde bant YOK. Ray kendi sütunu ve TAM BOY (kullanıcı
   2026-11-09, Canlı Not 89): palet ile arasında TEK çizgi tepeden dibe, rayın
-  başında köşe hücresi yok — bandın boyunda zeminsiz aralık, palet kapalıyken
-  açma düğmesi orada; tuvalin üstünde yüzen kart yok. Kapı: `kabuk-bant.test.js`
+  başında köşe hücresi de ARALIK da yok (Canlı Not 98 · 99: *"topoloji butonunun
+  üstü boş duruyor"*) — sayfa düğmeleri her ekranda rayın tepesinden başlar ve
+  yerinden oynamaz; palet kapalıyken açma düğmesi rayda, sayfa düğmelerinin
+  ALTINDA; tuvalin üstünde yüzen kart yok. Kapı: `kabuk-bant.test.js`
   + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* · *"RAY TAM BOY"* · *"AÇMA
-  DÜĞMESİ RAYIN BAŞINDA"*.
+  DÜĞMESİ RAYDA"*.
 - **PROGRAM TEK TOPOLOJİYLE ÇALIŞIR** (kullanıcı 2026-11-09, Canlı Not 87:
   *"Yan yana ek topolojiler açıp sistem kurmuyoruz"*): sekme şeridi, sekme
   ekleme · kapatma · çoğaltma ve yan yana görünüm YOK; `veTabs` içte tek

@@ -272,7 +272,7 @@ function veSyncPaletsizKapsam(scope) {
   var paletsiz = !!(def && def.noPalette);
   var main = document.querySelector('.ve-main');
   if(main) main.classList.toggle('ve-paletsiz', paletsiz);
-  // Açma düğmesi rayın başında, .ve-main'in dışında (Canlı Not 33 · C):
+  // Açma düğmesi rayda, .ve-main'in dışında (Canlı Not 33 · C · 99):
   // sınıf kabına da yazılır (.ve-no-module gibi).
   var kab = document.getElementById('sayfa2-content');
   if(kab) kab.classList.toggle('ve-paletsiz', paletsiz);

@@ -421,10 +421,10 @@ describe('veBoundaryChipPos — paletin açma sekmesi düğmeyi ÖRTMEZ (view.so
     Object.defineProperty(rv, 'offsetLeft', { configurable: true, value: 0 });
     expect(cs.veChipSolOrtu(w)).toBe(31);
   });
-  // Kullanıcı seçimi 2026-11-05 (Canlı Not 33 · C): düğme rayın köşe hücresinde,
-  // tuvalin kabının DIŞINDA — görünürken de düğmeyi örtmez.
-  test('köşe hücresindeki düğme tuvali örtmez: görünürken de 0', () => {
-    document.body.innerHTML = '<div id="sayfa2-content"><nav class="ve-nav-rail"></nav><button id="ve-sidebar-reveal"></button>'
+  // Kullanıcı seçimi 2026-11-05 (Canlı Not 33 · C): düğme rayda (Canlı Not 99'dan beri
+  // sayfa düğmelerinin altında), tuvalin kabının DIŞINDA — görünürken de düğmeyi örtmez.
+  test('raydaki düğme tuvali örtmez: görünürken de 0', () => {
+    document.body.innerHTML = '<div id="sayfa2-content"><nav class="ve-nav-rail"><button id="ve-sidebar-reveal"></button></nav>'
       + '<div class="ve-main"><div id="ve-canvas-wrapper"></div></div></div>';
     const w = document.getElementById('ve-canvas-wrapper'), rv = document.getElementById('ve-sidebar-reveal');
     Object.defineProperty(rv, 'offsetWidth', { configurable: true, value: 64 });

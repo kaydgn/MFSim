@@ -714,6 +714,18 @@ düğmesinin üstünde, pencere ailesinin başlığıyla. Kapı: `tek-topoloji.t
 + `kabuk-sutun.spec.js` → *"RAY TAM BOY"* · *"TEK TOPOLOJİ"* · *"AÇMA DÜĞMESİ
 RAYIN BAŞINDA"*.
 
+**2026-11-10 — rayın başında aralık yok, açma düğmesi sayfa düğmelerinin altında.**
+Kullanıcı (Canlı Not 98, FEAD): *"Şu 'topoloji' butonunun üstü boş duruyor."*;
+(Canlı Not 99, kök topoloji, palet açık): *"Yine sol taraftaki topoloji
+butonunun üstü boş duruyor … kötü duruyor."* Bandın boyundaki aralık açma
+düğmesinin yeriydi ve palet açıkken, Sonuçlar'da ve paletsiz kapsamda boştu.
+Hüküm: aralık hiçbir kapsamda yok; sayfa düğmeleri rayın tepesinden başlar ve
+palet açılıp kapanınca ya da sayfa değişince yerinden oynamaz; açma düğmesi
+rayın akışında, sayfa düğmelerinin altında (tablist'in dışında — sekme değil).
+Kapı: `kabuk-bant.test.js` → *"rayın başında aralık YOK"* · *"açma düğmesi
+rayın İÇİNDE"* + `kabuk-sutun.spec.js` → *"RAY TAM BOY"* · *"AÇMA DÜĞMESİ
+RAYDA"* · *"PALETSİZ KAPSAM"*.
+
 ## Kabuk TEK ÇİZGİ — üst bant tek jeton, tuval kenara yapışık (2026-09-23)
 
 **Hüküm.** Yan yana duran üst başlıklar ölçüyü ve zemini tek jetondan alır

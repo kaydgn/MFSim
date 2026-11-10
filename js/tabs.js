@@ -86,6 +86,9 @@ function veSubTabDegistir(tabName) {
   rail.addEventListener('keydown', function(e) {
     var keys = { ArrowDown:1, ArrowUp:-1, Home:'first', End:'last' };
     if(!(e.key in keys)) return;
+    // Rayda sekme olmayan düğme de var (Bileşenler'in açma düğmesi, Canlı Not 99):
+    // ok tuşu yalnız sayfa düğmesinin üstündeyken sayfa değiştirir.
+    if(!(e.target && e.target.closest && e.target.closest('.ve-nav-item'))) return;
     var items = Array.prototype.slice.call(rail.querySelectorAll('.ve-nav-item'));
     if(!items.length) return;
     var cur = items.indexOf(document.activeElement);

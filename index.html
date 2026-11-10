@@ -292,7 +292,8 @@
          GÖRÜNÜM adı olmalı. "Araç Performans" bir MODÜL adı ve sol panelde
          sürüklenebilir bileşen olarak da geçiyor — aynı kelimenin iki anlamı
          kalmasın diye ayrıştırıldı. -->
-    <nav class="ve-nav-rail" id="ve-nav-rail" role="tablist" aria-orientation="vertical" aria-label="Sayfa">
+    <nav class="ve-nav-rail" id="ve-nav-rail">
+      <div class="ve-nav-sekme" role="tablist" aria-orientation="vertical" aria-label="Sayfa">
       <button type="button" class="ve-nav-item active" data-subtab="arac-performans"
               role="tab" aria-selected="true" aria-controls="ve-page-topoloji" tabindex="0"
               onclick="veSubTabDegistir('arac-performans')">
@@ -313,15 +314,17 @@
         </svg>
         <span class="ve-nav-label">Sonuçlar</span>
       </button>
-    </nav>
+      </div>
 
-    <!-- Bileşenler paneli kapalıyken rayın BAŞINDA beliren açma düğmesi
-         (kullanıcı 2026-11-05, Canlı Not 33 · C: tuvalin üstünde yüzen kart yok).
-         Rayın tablist'inde değil, onun üstünde: sekme değil, bir düğme. -->
-    <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" type="button" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
-      <span class="mf-ico mf-ico-package"></span>
-      <span class="mf-ico mf-ico-chevrons-right ve-sidebar-reveal-arrow"></span>
-    </button>
+      <!-- Bileşenler paneli kapalıyken beliren açma düğmesi RAYIN İÇİNDE, sayfa
+           düğmelerinin ALTINDA (kullanıcı 2026-11-10, Canlı Not 99: rayın başı
+           boş kalmaz; Canlı Not 33 · C: tuvalin üstünde yüzen kart yok). Sekme
+           değil bir düğme: tablist'in dışında. -->
+      <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" type="button" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
+        <span class="mf-ico mf-ico-package"></span>
+        <span class="mf-ico mf-ico-chevrons-right ve-sidebar-reveal-arrow"></span>
+      </button>
+    </nav>
 
     <!-- Ana İçerik -->
     <div class="ve-main" id="ve-page-topoloji" role="tabpanel" aria-label="Topoloji">
