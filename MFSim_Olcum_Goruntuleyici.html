@@ -11499,7 +11499,14 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 }
 /* Masanın kapısı DURUM KURALLARINDAN ÖNCE: özgüllük aynı, fare altının ve
    birincil kapının çerçevesi sonra gelip onu ezer. */
-.ve-bas-ic--masa .ve-bas-kapi{ min-height:62px; padding:12px 14px; border-color:var(--border-light); }
+/* KAPI KOMPAKT (kullanıcı 2026-11-10, Canlı Not 102: *"Şu butonlar da çok büyük.
+   Bunları da küçültelim."*): masanın panelinde kapı 62 → 40 px, ikon 36 → 24 px,
+   ad 14 → 13 px; sütun düzeninin (FEAD) kapısı değişmez. Kapı:
+   mount-baslangic.test.js → KAPI KOMPAKT + mount-baslangic.spec.js → AÇILIŞ. */
+.ve-bas-ic--masa .ve-bas-kapi{ min-height:40px; padding:7px 12px; gap:10px; border-color:var(--border-light); }
+.ve-bas-ic--masa .ve-bas-kapi-ik{ width:24px; height:24px; }
+.ve-bas-ic--masa .ve-bas-kapi-ik .mf-ico{ width:14px; height:14px; }
+.ve-bas-ic--masa .ve-bas-kapi-t b{ font-size:var(--fs-md); }
 .ve-bas-kapi:hover{ border-color:var(--border-hover); box-shadow:var(--shadow-md); }
 .ve-bas-kapi:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-kapi.birincil{ background:var(--accent-tint-6); border-color:var(--accent-primary); }
