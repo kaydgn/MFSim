@@ -2,10 +2,9 @@
  * mount-pencere.spec.js — TAKOZ PENCERELERİNİN ÇİZİMİ (gerçek tarayıcı)
  * ─────────────────────────────────────────────────────────────────────────
  * Tur 6 (2026-10-15) ölçümü:
- *   · Örnek penceresinin "Kanvasa kurulacak topoloji" şeması: tek dosyada PNG
- *     gömülü değil, kullanıcının gördüğü her zaman YEDEK ŞEMA. Şemanın içindeki
- *     ikonlar kabın enine büyüyordu (`.ve-mnt-ex-sema svg{width:100%}` iç
- *     svg'leri de yakalıyor: 40 → 137 px), adları 4,8 px'ti
+ *   · Örnek penceresinin şeması (2026-10-15: ikonlar kabın enine büyüyordu, adları 4,8 px'ti)
+ *     2026-11-10'da pencereyle birlikte KALKTI (Canlı Not 110); yerinde Başlangıç
+ *     Sihirbazı bileşeni: tek tık sihirbazı açar, pencere açmaz
  *   · 2D tam ekranda köşe göstergesi ("+Y") soldaki takozun karesinin altında
  *     (Siper, önden görünüş); koordinat üçlüsü "·" ayraçlıydı
  *   · (3B tam ekranın three.js kamerası ve ipucu kapıları 2026-10-16'da
@@ -42,7 +41,7 @@ async function bootApp(page) {
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
-    typeof window.createNode === 'function' && typeof window.veMntLoadExample === 'function' &&
+    typeof window.createNode === 'function' && typeof window.veMntOrnekYukle === 'function' &&
     typeof window.veMntAkso3BTamEkran === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => {
@@ -52,60 +51,45 @@ async function bootApp(page) {
 }
 async function ornek(page, k, imza) {
   await page.evaluate((kk) => {
-    let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-    ex.data = ex.data || {}; ex.data.exampleKey = kk; veMntLoadExample(ex.id);
+    veMntOrnekYukle(kk);
   }, k);
   await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
   await page.waitForTimeout(700);
 }
 const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS']];
 
-test('Örnek penceresi (PNG yok): şemanın ikonları kartının içinde, okunmayan yazı yok', async ({ page }) => {
+// BAŞLANGIÇ SİHİRBAZI BİLEŞENİ (kullanıcı 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen
+// kaldıralım … Onun yerine sihirbazı açan bir bileşen oluşturalım. Sembolü de sihirli falan"*):
+// gerçek fare tıkı sihirbazı açar, özellikler penceresi açılmaz; ikon kutusuna sığar ve çok renklidir.
+test('Başlangıç Sihirbazı bileşeni: tek tık sihirbazı açar, pencere açmaz; ikonu kutusunda', async ({ page }) => {
   await bootApp(page);
-  await page.evaluate(() => { const n = createNode('mnt-example', 300, 200); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
-  await page.waitForTimeout(600);
-  await page.evaluate(Y.KAYNAK);
-  const out = [];
-  for (const [k] of ORNEK) {
-    // Pencere her örnekte yeniden açılır: modül açılışının gecikmeli bir adımı
-    // ilk açılan pencereyi kapatabiliyor (ölçüldü: perde display:none, şema 0 px)
-    await page.evaluate((kk) => {
-      const n = nodes.find((x) => x.type === 'mnt-example');
-      clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); veMntSetExample(n.id, kk);
-    }, k);
-    // Resim `loading="lazy"`: görüş alanına girene dek istenmez, yedeğe de
-    // düşmez. Hemen istenir (404 → `onerror` → yedek şema), zamanlamaya kalmaz.
-    await page.evaluate(() => {
-      const f = document.querySelector('.ve-mnt-ex-sema');
-      if (f) f.scrollIntoView({ block: 'center' });
-      const img = f && f.querySelector('img');
-      if (img) img.loading = 'eager';
-    });
-    await page.waitForFunction(() => {
-      const f = document.querySelector('.ve-mnt-ex-sema');
-      const d = f && f.querySelector(':scope > svg, :scope > div > svg');
-      return !!(d && d.getBoundingClientRect().width > 50);
-    }, null, { timeout: 15000 });
-    await page.waitForTimeout(300);
-    const r = await page.evaluate(() => {
-      const f = document.querySelector('.ve-mnt-ex-sema');
-      const img = f && f.querySelector('img');
-      const dis = f && f.querySelector(':scope > svg, :scope > div > svg');
-      const buyuk = [...(dis ? dis.querySelectorAll('svg') : [])].filter((ic) => {
-        const kart = ic.previousElementSibling;
-        if (!kart || kart.tagName !== 'rect') return false;
-        return ic.getBoundingClientRect().width > kart.getBoundingClientRect().width + 0.5;
-      }).length;
-      return { png: !!(img && img.naturalWidth), gorunur: !!(dis && dis.getBoundingClientRect().width > 50), buyuk,
-        ikon: dis ? dis.querySelectorAll('svg').length : 0, yer: window.__yerlesim('.ve-mnt-ex-sema') };
-    });
-    expect(r.png).toBe(false);                 // yedek şema gerçekten görünen
-    expect(r.gorunur).toBe(true);
-    expect(r.ikon).toBeGreaterThan(5);
-    if (r.buyuk) out.push(k + ': kartından büyük ikon ' + r.buyuk);
-    Y.yerlesimOzet(r.yer, k).forEach((x) => out.push(x));
-  }
-  expect(out).toEqual([]);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  const kutu = '[data-type="mnt-wizard"] .ve-node-box';
+  await page.waitForSelector(kutu, { timeout: 20000 });
+  expect(await page.locator('[data-type="mnt-example"]').count()).toBe(0);     // eski bileşen yok
+  const ikon = await page.evaluate((k) => {
+    const b = document.querySelector(k), svg = b.querySelector('svg');
+    const r = b.getBoundingClientRect(), i = svg.getBoundingClientRect();
+    const renk = new Set([...svg.querySelectorAll('[fill],[stroke]')]
+      .map((e) => (e.getAttribute('fill') || e.getAttribute('stroke') || '').trim()).filter((c) => c && c !== 'none'));
+    return { sig: i.left >= r.left - 0.5 && i.right <= r.right + 0.5 && i.top >= r.top - 0.5 && i.bottom <= r.bottom + 0.5,
+      renk: renk.size, parca: svg.querySelectorAll('path,line,circle').length, yazi: svg.querySelectorAll('text').length };
+  }, kutu);
+  expect(ikon.sig).toBe(true);
+  expect(ikon.renk).toBeGreaterThanOrEqual(3);          // asa · yıldız · kıvılcımlar tek renk değil
+  expect(ikon.parca).toBeGreaterThanOrEqual(8);
+  expect(ikon.yazi).toBe(0);                            // harf çizgiyle çizilir, <text> yok
+  // Gerçek tık: sihirbaz açılır, özellikler penceresi AÇILMAZ
+  await page.evaluate(() => { clearSelection(); veTogglePropertiesPanel(false); });
+  await page.click(kutu);
+  await page.waitForFunction(() => { const o = document.getElementById('ve-mntwiz-overlay'); return o && o.style.display === 'flex'; }, null, { timeout: 10000 });
+  expect(await page.evaluate(() => document.getElementById('ve-properties-overlay').classList.contains('visible'))).toBe(false);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.getElementById('ve-mntwiz-overlay').style.display === 'none', null, { timeout: 10000 });
+  // Çift tık da aynı: pencere değil sihirbaz
+  await page.dblclick(kutu);
+  await page.waitForFunction(() => document.getElementById('ve-mntwiz-overlay').style.display === 'flex', null, { timeout: 10000 });
+  expect(await page.evaluate(() => document.getElementById('ve-properties-overlay').classList.contains('visible'))).toBe(false);
 });
 
 // Tam ekranda düz görünüşler YOK (2026-10-16); işaretler adlarıyla, koordinat

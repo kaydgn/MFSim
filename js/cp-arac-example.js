@@ -1,8 +1,8 @@
 // ============================================================================
 //  ARAÇ PERFORMANS — BAŞLANGIÇ VE ÖRNEKLER
 // ============================================================================
-// Takoz modülündeki "Başlangıç ve Örnekler" (mnt-example) bileşeninin Araç
-// Performans karşılığı. Aynı kalıp:
+// Takoz modülünün örnek yükleyicisinin (başlangıç sayfası; 2026-11-10'a dek "Başlangıç ve
+// Örnekler" bileşeni) Araç Performans karşılığı. Aynı kalıp:
 //   • kayıt defteri (AP_EXAMPLES) → panel açılır listesi
 //   • her girdi bir JSON topolojiye (assets/examples/ap_*.json) işaret eder
 //   • "Örneği Aktar" o JSON'u İÇ topolojiye birebir kurar

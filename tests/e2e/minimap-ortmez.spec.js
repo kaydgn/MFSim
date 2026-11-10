@@ -108,8 +108,7 @@ test('1366 genişliğinde AP ve Takoz: kartın adı minimapın altında kalmıyo
   const p2 = await browser.newPage();
   await ac(p2, 1366, 657, 'mount-analysis');
   for (const k of ['siper', 'tulga']) {
-    await p2.evaluate((k) => { let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-      ex.data = ex.data || {}; ex.data.exampleKey = k; veMntLoadExample(ex.id); }, k);
+    await p2.evaluate((k) => { veMntOrnekYukle(k); }, k);
     await p2.waitForTimeout(2200);
     expect(await p2.evaluate(ORTULEN), 'Takoz ' + k).toEqual([]);
   }

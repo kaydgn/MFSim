@@ -41,8 +41,7 @@ const MODULLER = {
     tip: "(t) => !/^(mnt-|fead-)/.test(t)",
   },
   'mount-analysis': {
-    ornek: "let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);"
-         + " ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);",
+    ornek: "veMntOrnekYukle('tulga');",
     tip: "(t) => /^mnt-/.test(t)",
   },
   'fead-analysis': {

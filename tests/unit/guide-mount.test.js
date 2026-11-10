@@ -292,8 +292,12 @@ describe('kılavuzun sesi ve yapısı (aşama 14)', () => {
       expect(rapor).toContain("row('" + satir + "'");
       expect(duz).toContain('Raporun ' + satir);
     });
-    expect(oku('js/cp-mount.js')).toContain("_mntBolum('Tutarlılık uyarıları'");
-    expect(duz).toContain('Tutarlılık uyarıları');
+    // "Başlangıç ve Örnekler" bileşeni kalktı (Canlı Not 110): penceresi ve Tutarlılık uyarıları
+    // bölümü de gitti; kılavuz onları anlatmaz, yerindeki Başlangıç Sihirbazı'nı anlatır.
+    expect(oku('js/cp-mount.js')).not.toContain("_mntBolum('Tutarlılık uyarıları'");
+    expect(duz).not.toContain('Tutarlılık uyarıları');
+    expect(duz).not.toContain('Başlangıç ve Örnekler');
+    expect(duz).toContain('Başlangıç Sihirbazı');
   });
 
   test('alt bölüm numarası bölümünün numarasıyla başlar', () => {

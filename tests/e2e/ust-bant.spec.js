@@ -326,6 +326,29 @@ test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async
   expect(r.ekranda).toBe(true);
 });
 
+// SIKI MENÜ (kullanıcı 2026-11-10, Canlı Not 109: *"Bu kısımda da boşluklar fazla …
+// isimler çizgi falan çok boşluklu"*): satır 30 → 24 px, başlıkta avatar 36 → 28 px,
+// menü 206 → 160 px. Ölçüm gerçek tarayıcıda: sınıf kuralını birim testi okur, satırın
+// gerçek boyunu (yazı satır yüksekliği dâhil) yalnız burada görülür.
+test('hesap menüsü SIKI — satır ≈ 24 px, avatar 28 px, menü ≤ 175 px', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  await page.evaluate(() => veKimlikAdYaz('Kerem Aydoğan'));
+  await page.click('#ve-bant-avatar');
+  const o = await page.evaluate(() => {
+    const m = document.querySelector('.ve-avatar-menu');
+    const h = (el) => Math.round(el.getBoundingClientRect().height);
+    return {
+      menu: h(m),
+      satir: [...m.querySelectorAll('.ve-context-item')].map(h),
+      avatar: h(m.querySelector('.ve-avatar-menu-av')),
+    };
+  });
+  expect(o.satir).toHaveLength(4);
+  o.satir.forEach((v) => { expect(v).toBeGreaterThanOrEqual(22); expect(v).toBeLessThanOrEqual(26); });
+  expect(o.avatar).toBe(28);
+  expect(o.menu).toBeLessThanOrEqual(175);
+});
+
 // SÜTUNDA KALAN bir pencere aç. İki halka önce ARAÇ penceresini açıyordu;
 // araç ölçümle `VE_SUTUNA_SIGMAYAN`a girince halkalar sütunu değil MODALI
 // açmaya başladı. Öncül açık bir iddia: tip listeye girerse sebebiyle düşer.

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-alternator','mnt-alt-bracket','mnt-ac','mnt-heat-shield','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-alternator','mnt-alt-bracket','mnt-ac','mnt-heat-shield','mnt-mount','mnt-library','mnt-solver','mnt-wizard','mnt-viewer','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -562,17 +562,24 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #cf222e)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #cf222e)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #9a6700)"/></svg>',
     inputs: 0, outputs: 0, isMountSolver: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
-  // Araç Performans "Başlangıç ve Örnekler" — mnt-example'ın güç aktarma karşılığı.
+  // Araç Performans "Başlangıç ve Örnekler" — güç aktarma modülünün örnek yükleyicisi.
   // Kayıt defteri ve panel js/cp-arac-example.js içinde.
   'ap-example': {
     name: 'Başlangıç ve Örnekler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="42" width="14" height="11" rx="2" fill="var(--text-muted, #5f6873)"/><line x1="48" y1="47" x2="56" y2="47" stroke="var(--text-muted, #5f6873)" stroke-width="3"/><circle cx="61" cy="47" r="5" fill="none" stroke="var(--text-muted, #5f6873)" stroke-width="3"/><line x1="36" y1="66" x2="66" y2="66" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="76" x2="54" y2="76" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isApExample: true, defaultWidth: 56, defaultHeight: 56
   },
-  'mnt-example': {
-    name: 'Başlangıç ve Örnekler',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isMountExample: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
+  // BAŞLANGIÇ SİHİRBAZI — tek tıkla Takoz Başlangıç Sihirbazı'nı açan araç (kullanıcı
+  // 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen kaldıralım … Onun yerine sihirbazı
+  // açan bir bileşen oluşturalım. Sembolü de sihirli falan"*; kalkan bileşen "Başlangıç ve
+  // Örnekler" — `mnt-example`: örnek listesi başlangıç sayfasında). İşi bir pencere değil
+  // bir EYLEM: `eylem` tek tıkta ve çift tıkta çalışır (js/ui-core.js → veTekTikEylem),
+  // özellikler penceresi yok. Kayıtlı projedeki `mnt-example` düğümü açılışta düşer
+  // (tanımsız tip — Koordinat Düzlemi gibi). Çizim: asa, ucunda yıldız, çevresinde kıvılcım.
+  'mnt-wizard': {
+    name: 'Başlangıç Sihirbazı',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="16" y1="86" x2="58" y2="44" stroke="var(--text-secondary, #535c67)" stroke-width="11" stroke-linecap="round"/><line x1="16" y1="86" x2="35" y2="67" stroke="var(--accent-primary, #1f5fd6)" stroke-width="11" stroke-linecap="round"/><path d="M71 5 L77.5 23.5 L96 30 L77.5 36.5 L71 55 L64.5 36.5 L46 30 L64.5 23.5 Z" fill="var(--accent-warning, #9a6700)"/><path d="M83 61 L85.6 68.4 L93 71 L85.6 73.6 L83 81 L80.4 73.6 L73 71 L80.4 68.4 Z" fill="var(--accent-primary, #1f5fd6)"/><path d="M30 14 L32.4 21.6 L40 24 L32.4 26.4 L30 34 L27.6 26.4 L20 24 L27.6 21.6 Z" fill="var(--accent-success, #1a7f37)"/><circle cx="92" cy="50" r="3" fill="var(--accent-warning, #9a6700)"/><circle cx="14" cy="52" r="2.6" fill="var(--accent-primary, #1f5fd6)"/><circle cx="58" cy="82" r="2.6" fill="var(--accent-success, #1a7f37)"/></svg>',
+    inputs: 0, outputs: 0, isMountWizard: true, maxInstances: 1, tekTik: true, eylem: 'veMntWizAc', defaultWidth: 60, defaultHeight: 56
   },
   'mnt-viewer': {
     name: '3D Görüntüleyici',

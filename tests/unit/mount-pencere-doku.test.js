@@ -58,47 +58,6 @@ describe('Görünümler: koordinat ayracı "; ", gerçek eksi', () => {
   });
 });
 
-describe('Örnek şeması: ad görünür yazı değil, <title>', () => {
-  test.each(['tulga', 'siper', 'asfat'])('%s', (k) => {
-    const ex = cp._mntExampleReg(k);
-    const d = div(cp._mntExampleDiagramSVG(ex.model, ex.tools));
-    expect(d.querySelectorAll('text').length).toBe(0);
-    expect(d.querySelectorAll('g > title').length).toBeGreaterThan(5);
-  });
-  // Araç adı elle YAZILMAZ: "2D Görünüm" → "Görünümler" yeniden adlandırmasında
-  // kayıttaki kopyalardan üçü eski adda kaldı ve hiçbir kapı görmedi; "Örnek"
-  // de kanvasa kurulan düğümün adı değildi. Şema adı componentDefs'ten okur.
-  test('araçların adı bileşenin kendi adı (componentDefs) — kayıtta ad kopyası yok', () => {
-    const liste = require('../../js/mount-core.js').getMountExampleList();
-    expect(liste.length).toBeGreaterThanOrEqual(6);
-    liste.forEach((ex) => {
-      expect(ex.tools.length).toBeGreaterThan(0);
-      ex.tools.forEach((t) => expect(`${ex.id} ${t.type}: ${t.name}`).toBe(`${ex.id} ${t.type}: undefined`));
-      const adlar = [...div(cp._mntExampleDiagramSVG(ex.model, ex.tools)).querySelectorAll('g > title')].map((x) => x.textContent);
-      ex.tools.forEach((t) => expect(adlar).toContain(componentDefs[t.type].name));
-    });
-  });
-  test('CSS: yalnız şemanın kendisi kabın eninde (iç ikon svg\'leri değil)', () => {
-    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
-    expect(css).not.toMatch(/\.ve-mnt-ex-sema svg\s*[{,]/);
-    expect(css).toMatch(/\.ve-mnt-ex-sema > svg/);
-  });
-});
-
-// Kullanıcı kararı S3·B (2026-10-15). Eski hâl: pencere önce bir PNG ekran
-// görüntüsünü deniyordu (koyu temada ~5 px yazı, tek dosyada hiç yüklenmiyor),
-// şema yalnız onerror yedeğiydi.
-describe('Örnek penceresi her zaman şema (S3·B)', () => {
-  test.each(['tulga', 'siper', 'asfat'])('%s: kayıtta görsel yok, pencerede <img> yok, klasörde PNG yok', (k) => {
-    const ex = cp._mntExampleReg(k);
-    expect(ex.image).toBeUndefined();
-    const d = div(cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: k } }));
-    expect(d.querySelectorAll('img').length).toBe(0);
-    expect(d.querySelectorAll('.ve-mnt-ex-sema > svg').length).toBe(1);
-    expect(fs.existsSync(path.join(KOK, 'assets/examples', k + '.png'))).toBe(false);
-  });
-});
-
 describe('Takoz arayüz dosyalarında düz çift tırnakla sözcük yok', () => {
   // Öznitelik değeri (`="…"`) değil, METİN içinde tırnaklanmış sözcük.
   const DOSYA = ['js/cp-mount.js', 'js/cp-mount-wizard.js', 'js/cp-mount-baslangic.js', 'js/cp-mount-3b.js', 'js/cp-mount-report.js'];
