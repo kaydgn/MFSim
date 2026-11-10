@@ -278,6 +278,27 @@ async function takozTuru(page, olc) {
   await page.evaluate(() => veMntWizKapat(false));
   const p = await pencereler(page, olc);
   expect(p.olculen).toBeGreaterThan(300);
+  // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — ölçülü çizim, ürün
+  // ve uygulama fotoğrafları, veri tablosu; tam tip (Cone 38 60 ShA) ve radyali boş tip
+  // (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz; tur onu açıyordu.
+  for (const k of ['amc137963', 'amc137961']) {
+    await page.evaluate((kk) => {
+      const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
+      n.data = n.data || {}; n.data._selKey = kk;
+      clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
+    }, k);
+    await page.waitForTimeout(500);
+    const sayfa = await page.evaluate((B) => {
+      const ic = document.querySelector('.ve-properties-content');
+      return ic ? Math.max(1, Math.ceil((ic.scrollHeight - B) / Math.max(1, ic.clientHeight - B))) : 1;
+    }, SAYFA_BINDIRME);
+    for (let s = 0; s < sayfa; s++) {
+      await page.evaluate(([ss, B]) => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = ss * (ic.clientHeight - B); }, [s, SAYFA_BINDIRME]);
+      await page.waitForTimeout(100);
+      await olc('#ve-properties', 'Takoz Özellikleri · ' + k + (s ? ' ↓' + (s + 1) : ''));
+    }
+    await page.evaluate(() => veTogglePropertiesPanel(false));
+  }
   await sonuclar(page, olc, 'sonuçlar', () => {
     if (typeof veSwitchSolverTab === 'function') veSwitchSolverTab('mount');
     veUpdateResultsTree();
@@ -307,7 +328,9 @@ async function takozTuru(page, olc) {
   const pid = await page.evaluate(() => {
     const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
     const n = createNode('mnt-parametric', 900, 120);
-    n.data = { haric: Object.keys(veMntGetLibraryMap()).filter((k) => tut.indexOf(k) < 0) };
+    // E9 kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10); tek uygun
+    // kombinasyon darbede 2 × kapasiteyi aşıyor — tur Sonuç'u Öneri'yle ölçsün.
+    n.data = { acik: { darbe: false }, haric: Object.keys(veMntGetLibraryMap()).filter((k) => tut.indexOf(k) < 0) };
     veMntParamTara(n.id);
     return n.id;
   });

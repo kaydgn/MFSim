@@ -309,7 +309,8 @@ describe('PENCERE — yalnız girdi', () => {
   test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod, önek + numara ve sertlik bölünmez', () => {
     modelKur('asfat');
     const d = dom(P.getMntParamPropertiesHTML(node()));
-    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib);
+    // Aday yalnız TAM tip (altı rijitlik): AMC'nin radyal değerini yayımlamadığı kodlar listede yok.
+    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib).filter((k) => cp._mntLibTam(lib[k]));
     const aday = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] tbody tr')].map((r) => r.children[1]);
     const grup = [...d.querySelectorAll('.ve-fp-kat[data-k="grup"] tbody tr')].flatMap((r) => [r.children[1], r.children[3]]);
     expect(aday.map((td) => td.textContent)).toEqual(keys.map((k) => lib[k].name));
@@ -518,11 +519,15 @@ describe('KOŞUCU', () => {
 
 describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullanıcı kararları 2026-10-18)', () => {
   // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon (uzlaşı tipleri aday).
+  // E9 (darbe yükü) KAPALI: AMC tipleri 2026-11-10'dan beri katalog kapasitesini taşıyor ve
+  // tek uygun kombinasyon (Cone 67 50 ShA'lı) darbede 2 × 900 kg'ı aşıyor — bu bölüm Sonuç'un
+  // yapısını sınar, uygun bir kombinasyon ister. E9'un kendisi aşağıda: *AMC KAPASİTESİ*.
   const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   function kur() {
     modelKur('asfat');
-    const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
+    const n = { id: 'pa', type: 'mnt-parametric', data: { acik: { darbe: false },
+      haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
     global.nodes.push(n);
     return n;
   }
@@ -957,5 +962,34 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(false);
     delete cz.data.ileri;
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
+  });
+});
+
+// AMC KAPASİTESİ (2026-11-10): AMC tipleri üreticinin tablosundaki "Max. Load"u taşır
+// (js/mount-amc.js); E4 (taşıma kapasitesi) ve E9 (darbe yükü ≤ 2 × anma, Paulstra)
+// artık o tiplerde ÖLÇÜLÜR. ASFAT, altı aday: tek uygun kombinasyon Cone 67 50 ShA'lı
+// ve E9'a takılır (AMC'nin kendi kataloğu rondelalı konide 3 × aşırı yük der — sınır
+// kullanıcının; değiştirilmedi). E9 kapalıyken aynı kombinasyon uygun.
+describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür', () => {
+  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const tara2 = (acik) => {
+    modelKur('asfat');
+    const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
+    if (acik) n.data.acik = acik;
+    global.nodes.push(n);
+    const Hz = P._mntParamHazirlik(n);
+    const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    it.adim(Infinity);
+    return it.sonuc();
+  };
+  test('Cone 67 50 ShA 900 kg taşır; ASFAT\'ın tek uygun kombinasyonu E9\'da elenir, E9 kapalıyken uygun', () => {
+    expect(cp.VE_MOUNT_LIBRARY.amc137731.maxLoad).toBe(900);
+    const S = tara2();
+    const kalan = (k) => S.huni.find((h) => h.k === k).kalan;
+    expect([S.N, kalan('kapasite'), kalan('darbe'), S.uygunN]).toEqual([216, 1, 0, 0]);
+    const A = tara2({ darbe: false });
+    expect(A.uygunN).toBe(1);
+    expect(A.sira[0].tipler).toContain('amc137731');
   });
 });

@@ -119,7 +119,7 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
     expect(gr).not.toContain('Katalog');
     expect(gr).not.toContain('Gömülü');
     const say = (ad) => d.querySelector('optgroup[label="' + ad + '"]').querySelectorAll('option').length;
-    expect([say('AMC Mecanocaucho'), say('Angst+Pfister'), say('Diğer')]).toEqual([10, 7, 7]);
+    expect([say('AMC Mecanocaucho'), say('Angst+Pfister'), say('Diğer')]).toEqual([148, 7, 7]);   // AMC: js/mount-amc.js
     const bas = [...d.querySelectorAll('.ve-fp-sect')].find((x) => /Takoz tipi/i.test(x.textContent));
     expect(bas.textContent).not.toMatch(/gömülü|\d+\s*özel/);
   });

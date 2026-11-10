@@ -38,3 +38,7 @@ metin-envanteri.json
 # Canlı Not (tools/canli-not.js): yayın klasörü (karesiz tek dosya + sayfa),
 # not dökümleri ve yeniden çizilen ekranlar — üretilir, commit edilmez.
 .canli-not/
+
+# Takoz görselleri (tools/takoz-gorsel.js): AMC CDN indirme önbelleği; üretilen
+# webp ve künye assets/takoz/amc/ altında (git'te).
+.takoz-gorsel/

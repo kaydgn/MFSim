@@ -39,7 +39,9 @@ async function kur(page, nTip = 6) {
     const tum = Object.keys(veMntGetLibraryMap());
     tum.forEach((k) => { if (tut.length < nTip && tut.indexOf(k) < 0) tut.push(k); });
     const n = createNode('mnt-parametric', 900, 120);
-    n.data = { haric: tum.filter((k) => tut.indexOf(k) < 0) };
+    // E9 kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10); tek uygun kombinasyon
+    // darbede 2 × kapasiteyi aşıyor — Sonuç'un yapısı Öneri'yle sınanır.
+    n.data = { acik: { darbe: false }, haric: tum.filter((k) => tut.indexOf(k) < 0) };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
     return n.id;
   }, nTip);

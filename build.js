@@ -253,6 +253,22 @@ if (fs.existsSync(belgeDir)) {
 console.log('  Belge sayfası göm: ' + Object.keys(BELGE).length + ' sayfa · ' +
   (Object.keys(BELGE).reduce(function(t, k) { return t + BELGE[k].length; }, 0) / 1024).toFixed(0) + ' KB base64');
 
+// ── 2c-5b) TAKOZ GÖRSELLERİ (2026-11-10) — assets/takoz/<üretici>/<ad>.webp
+// (tools/takoz-gorsel.js üretir: tipin ölçülü çizimi, ailenin fotoğrafları);
+// program görseli yoldan (modüler) ya da buradan açar (js/mount-amc.js → gorsel).
+var takozDir = path.join(ROOT, 'assets', 'takoz'), TAKOZ = {};
+if (fs.existsSync(takozDir)) {
+  fs.readdirSync(takozDir).sort().forEach(function(ure) {
+    var d = path.join(takozDir, ure);
+    if (!fs.statSync(d).isDirectory()) return;
+    fs.readdirSync(d).filter(function(f) { return f.endsWith('.webp'); }).sort().forEach(function(f) {
+      TAKOZ['takoz/' + ure + '/' + f] = 'data:image/webp;base64,' + fs.readFileSync(path.join(d, f)).toString('base64');
+    });
+  });
+}
+console.log('  Takoz görseli göm: ' + Object.keys(TAKOZ).length + ' görsel · ' +
+  (Object.keys(TAKOZ).reduce(function(t, k) { return t + TAKOZ[k].length; }, 0) / 1024).toFixed(0) + ' KB base64');
+
 // ── 2c-6) KILAVUZUN EKRAN GÖRÜNTÜLERİ (2026-11-09) — assets/kilavuz/<ad>.webp +
 // kunye.json (tools/kilavuz-resim.js üretir; işaretlerin kutuları programın DOM'undan
 // ölçülü). Takoz kılavuzu HTML olarak çizilemeyen yüzeyleri (tuval, 3B, sihirbaz)
@@ -270,6 +286,7 @@ var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_DEGISIKLIK = ' + JSON.stringify(DEGISIKLIK).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_BELGE = ' + JSON.stringify(BELGE).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_TAKOZ = ' + JSON.stringify(TAKOZ).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_KILAVUZ = ' + JSON.stringify(KILAVUZ).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa

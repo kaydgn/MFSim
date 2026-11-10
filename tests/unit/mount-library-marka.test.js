@@ -30,21 +30,21 @@ const markaSecenekleri = (d) =>
 describe('MARKA — katalogdaki her tipin markası var', () => {
   const kat = () => cp.veMntGetLibraryList().filter((e) => e.builtin);
 
-  test('her tip listedeki üç markadan birini taşır; dağılım 10 · 7 · 7', () => {
+  test('her tip listedeki üç markadan birini taşır; dağılım 148 · 7 · 7 (AMC: js/mount-amc.js)', () => {
     const sayi = {};
     kat().forEach((e) => { sayi[e.marka] = (sayi[e.marka] || 0) + 1; });
     expect(Object.keys(sayi).sort()).toEqual([...cp.VE_MNT_LIB_MARKALAR].sort());
-    expect(sayi['AMC Mecanocaucho']).toBe(10);
+    expect(sayi['AMC Mecanocaucho']).toBe(148);
     expect(sayi['Angst+Pfister']).toBe(7);
     expect(sayi['Diğer']).toBe(7);
-    expect(kat()).toHaveLength(24);
+    expect(kat()).toHaveLength(162);
   });
 
   test('anahtar, ad ve rijitlik değerleri markadan etkilenmez (kayıtlı projeler)', () => {
     const k = cp.VE_MOUNT_LIBRARY;
     expect(k.amc55sha).toMatchObject({ name: 'LMT-1433-37 55 ShA', sx: 1252, sz: 640, dz: 977 });
     expect(k.TK040).toMatchObject({ name: 'TK040 45 ShA (57RS329001M)', dx: 740, dz: 335 });
-    expect(Object.keys(k)).toHaveLength(24);
+    expect(Object.keys(k)).toHaveLength(162);
   });
 
   test('düzenlenmiş gömülü tip markasını korur; özel tip "Özel takozlar"dır', () => {
@@ -60,7 +60,9 @@ describe('MARKA — katalogdaki her tipin markası var', () => {
   test('gruplama sabit sırada, girdisiz marka listede yok', () => {
     const g = cp.veMntLibMarkalar(kat());
     expect(g.map((x) => x.ad)).toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer']);
-    expect(g.reduce((t, x) => t + x.girdiler.length, 0)).toBe(24);
+    expect(g.reduce((t, x) => t + x.girdiler.length, 0)).toBe(162);
+    // marka içinde AMC ailenin · tipin · sertliğin sırasıyla (kütüphanenin iç sırası değil)
+    expect(g[0].girdiler.map((e) => e.amc.kod)).toEqual(require('../../js/mount-amc.js').kodlar());
   });
 });
 
@@ -84,11 +86,11 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     const node = libNode([], 'TK040');
     global.nodes = [node];
     cp.veMntLibMarka('lib1', 'AMC Mecanocaucho');
-    expect(node.data._selKey).toBe('amc137963');
+    expect(node.data._selKey).toBe('amc137005');                 // listenin ilki: Cone 01 45 ShA
     expect(stubs.showNodeProperties).toHaveBeenCalledWith(node);
     const d = pencere(node);
     expect(d.querySelector('select.mntlib-marka').value).toBe('AMC Mecanocaucho');
-    expect(d.querySelectorAll('.mntlib-opt')).toHaveLength(10);
+    expect(d.querySelectorAll('.mntlib-opt')).toHaveLength(148);
   });
 
   test('seçili tip zaten o markadaysa Marka seçimi tipi DEĞİŞTİRMEZ', () => {
@@ -110,7 +112,7 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     node.data._curveEditKey = 'k1';
     global.nodes = [node];
     cp.veMntLibMarka('lib1', 'AMC Mecanocaucho');
-    expect(node.data._selKey).toBe('amc137963');
+    expect(node.data._selKey).toBe('amc137005');
     expect(node.data._curveEditKey).toBeNull();
   });
 

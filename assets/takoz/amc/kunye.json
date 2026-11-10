@@ -1,0 +1,446 @@
+{
+ "cizim-00": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_00.svg",
+  "en": 640,
+  "boy": 1092,
+  "bayt": 34128
+ },
+ "cizim-01": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_01.svg",
+  "en": 640,
+  "boy": 979,
+  "bayt": 41680
+ },
+ "cizim-02": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_02.svg",
+  "en": 640,
+  "boy": 935,
+  "bayt": 33668
+ },
+ "cizim-10": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_10.svg",
+  "en": 640,
+  "boy": 998,
+  "bayt": 31812
+ },
+ "cizim-100": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_100.svg",
+  "en": 640,
+  "boy": 1077,
+  "bayt": 40458
+ },
+ "cizim-11": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_11.svg",
+  "en": 640,
+  "boy": 1000,
+  "bayt": 37980
+ },
+ "cizim-12": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_12.svg",
+  "en": 640,
+  "boy": 1071,
+  "bayt": 36608
+ },
+ "cizim-120-np": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_120_NP.svg",
+  "en": 640,
+  "boy": 1117,
+  "bayt": 51402
+ },
+ "cizim-121-ng": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_121_ng.svg",
+  "en": 640,
+  "boy": 1007,
+  "bayt": 49590
+ },
+ "cizim-121-np": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_121_np.svg",
+  "en": 640,
+  "boy": 1019,
+  "bayt": 48018
+ },
+ "cizim-13": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_13.svg",
+  "en": 640,
+  "boy": 1025,
+  "bayt": 41556
+ },
+ "cizim-14-2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_14_2.svg",
+  "en": 640,
+  "boy": 1036,
+  "bayt": 39208
+ },
+ "cizim-14-4": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_14_4.svg",
+  "en": 640,
+  "boy": 1037,
+  "bayt": 38122
+ },
+ "cizim-141": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_141.svg",
+  "en": 640,
+  "boy": 1038,
+  "bayt": 36698
+ },
+ "cizim-17": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_17.svg",
+  "en": 640,
+  "boy": 953,
+  "bayt": 36726
+ },
+ "cizim-20": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_20.svg",
+  "en": 640,
+  "boy": 1138,
+  "bayt": 47240
+ },
+ "cizim-200": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_200.svg",
+  "en": 640,
+  "boy": 1336,
+  "bayt": 51336
+ },
+ "cizim-21-2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_21_2.svg",
+  "en": 640,
+  "boy": 1071,
+  "bayt": 40380
+ },
+ "cizim-21-4": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_21_4.svg",
+  "en": 640,
+  "boy": 1071,
+  "bayt": 47192
+ },
+ "cizim-27": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_27.svg",
+  "en": 640,
+  "boy": 1023,
+  "bayt": 44534
+ },
+ "cizim-30": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_30.svg",
+  "en": 640,
+  "boy": 1085,
+  "bayt": 46964
+ },
+ "cizim-31": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_31.svg",
+  "en": 640,
+  "boy": 1089,
+  "bayt": 45924
+ },
+ "cizim-33": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_33.svg",
+  "en": 640,
+  "boy": 1029,
+  "bayt": 45844
+ },
+ "cizim-35": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_35.svg",
+  "en": 640,
+  "boy": 1189,
+  "bayt": 43376
+ },
+ "cizim-36": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_36.svg",
+  "en": 640,
+  "boy": 1105,
+  "bayt": 44344
+ },
+ "cizim-38": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_38.svg",
+  "en": 640,
+  "boy": 906,
+  "bayt": 27590
+ },
+ "cizim-39": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_39.svg",
+  "en": 640,
+  "boy": 1078,
+  "bayt": 39368
+ },
+ "cizim-40": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_40.svg",
+  "en": 640,
+  "boy": 1170,
+  "bayt": 48096
+ },
+ "cizim-45": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_45.svg",
+  "en": 640,
+  "boy": 1015,
+  "bayt": 49764
+ },
+ "cizim-50-m16x15": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_50_15.svg",
+  "en": 640,
+  "boy": 995,
+  "bayt": 46836
+ },
+ "cizim-50-m16x2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_50_2.svg",
+  "en": 640,
+  "boy": 976,
+  "bayt": 45316
+ },
+ "cizim-51-m16x15": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_51_15.svg",
+  "en": 640,
+  "boy": 1003,
+  "bayt": 46530
+ },
+ "cizim-51-m16x2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_51_2.svg",
+  "en": 640,
+  "boy": 999,
+  "bayt": 44954
+ },
+ "cizim-60": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_60.svg",
+  "en": 640,
+  "boy": 1010,
+  "bayt": 36570
+ },
+ "cizim-62": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_62.svg",
+  "en": 640,
+  "boy": 1098,
+  "bayt": 44698
+ },
+ "cizim-65": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_65.svg",
+  "en": 640,
+  "boy": 1110,
+  "bayt": 43538
+ },
+ "cizim-67": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_67.svg",
+  "en": 640,
+  "boy": 1076,
+  "bayt": 47300
+ },
+ "cizim-68": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_68.svg",
+  "en": 640,
+  "boy": 1150,
+  "bayt": 47162
+ },
+ "cizim-70": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_70.svg",
+  "en": 640,
+  "boy": 1118,
+  "bayt": 43764
+ },
+ "cizim-75": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/cono_tipo_75.svg",
+  "en": 640,
+  "boy": 1035,
+  "bayt": 46020
+ },
+ "cizim-dsm-141": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/dsm_141.svg",
+  "en": 640,
+  "boy": 1131,
+  "bayt": 39572
+ },
+ "cizim-dsm-22": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/dsm_22.svg",
+  "en": 640,
+  "boy": 1091,
+  "bayt": 44766
+ },
+ "cizim-dsm-83": {
+  "kaynak": "https://cdn.amcsa.es/images/families/drawings/dsm_83.svg",
+  "en": 640,
+  "boy": 890,
+  "bayt": 37804
+ },
+ "cizim-hid-31": {
+  "kaynak": "https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf#page=37",
+  "en": 640,
+  "boy": 307,
+  "bayt": 14540
+ },
+ "cizim-hid-32": {
+  "kaynak": "https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf#page=37",
+  "en": 640,
+  "boy": 307,
+  "bayt": 14526
+ },
+ "cizim-hid-70": {
+  "kaynak": "https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf#page=37",
+  "en": 640,
+  "boy": 307,
+  "bayt": 14336
+ },
+ "cizim-hid-71": {
+  "kaynak": "https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf#page=37",
+  "en": 640,
+  "boy": 307,
+  "bayt": 15116
+ },
+ "cizim-hid-72": {
+  "kaynak": "https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf#page=37",
+  "en": 640,
+  "boy": 307,
+  "bayt": 11954
+ },
+ "urun-dsm": {
+  "kaynak": "https://cdn.amcsa.es/images/families/small/DSM_small.jpg",
+  "en": 800,
+  "boy": 596,
+  "bayt": 17034
+ },
+ "urun-flansli": {
+  "kaynak": "https://cdn.amcsa.es/images/families/small/Cono_Base_Fijacion.jpg",
+  "en": 800,
+  "boy": 596,
+  "bayt": 14400
+ },
+ "urun-hidrolik": {
+  "kaynak": "https://cdn.amcsa.es/images/families/small/conos_hidraulicos.jpg",
+  "en": 800,
+  "boy": 596,
+  "bayt": 20688
+ },
+ "urun-kesikli": {
+  "kaynak": "https://cdn.amcsa.es/images/families/small/Conos_con_alveolos.jpg",
+  "en": 500,
+  "boy": 348,
+  "bayt": 8886
+ },
+ "urun-masif": {
+  "kaynak": "https://cdn.amcsa.es/images/families/small/conos_solidos.jpg",
+  "en": 500,
+  "boy": 348,
+  "bayt": 7762
+ },
+ "uyg-flansli-1": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_con_base_fijacion.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 23522
+ },
+ "uyg-flansli-2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_con_base_fijacion2.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 19518
+ },
+ "uyg-flansli-3": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_con_base_fijacion3.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 13464
+ },
+ "uyg-flansli-4": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_con_base_fijacion4.jpg",
+  "en": 500,
+  "boy": 333,
+  "bayt": 16936
+ },
+ "uyg-flansli-5": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_con_base_fijacion5.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 19668
+ },
+ "uyg-flansli-6": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/f10_be75e6c4-dc1e-40fb-bb9a-8b8cdb1a3d01.jpg",
+  "en": 800,
+  "boy": 600,
+  "bayt": 47774
+ },
+ "uyg-kesikli-1": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/Cono_38.jpg",
+  "en": 800,
+  "boy": 450,
+  "bayt": 47958
+ },
+ "uyg-kesikli-2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/Mount2.2.jpg",
+  "en": 800,
+  "boy": 600,
+  "bayt": 54830
+ },
+ "uyg-kesikli-3": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/alveol1.jpg",
+  "en": 800,
+  "boy": 450,
+  "bayt": 31226
+ },
+ "uyg-kesikli-4": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/alveol2.jpg",
+  "en": 800,
+  "boy": 450,
+  "bayt": 24568
+ },
+ "uyg-kesikli-5": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/conos_alveolos_1.jpg",
+  "en": 800,
+  "boy": 450,
+  "bayt": 18024
+ },
+ "uyg-kesikli-6": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/conos_con_alveolos_1.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 24594
+ },
+ "uyg-masif-1": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_solido1.jpg",
+  "en": 500,
+  "boy": 350,
+  "bayt": 11656
+ },
+ "uyg-masif-2": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_solido2.jpg",
+  "en": 500,
+  "boy": 350,
+  "bayt": 10766
+ },
+ "uyg-masif-3": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_solido3.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 16506
+ },
+ "uyg-masif-4": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_31.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 20466
+ },
+ "uyg-masif-5": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono31_02.jpg",
+  "en": 800,
+  "boy": 610,
+  "bayt": 88654
+ },
+ "uyg-masif-6": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_33.jpg",
+  "en": 600,
+  "boy": 592,
+  "bayt": 29522
+ },
+ "uyg-masif-7": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/cono_70.jpg",
+  "en": 500,
+  "boy": 375,
+  "bayt": 13422
+ },
+ "uyg-masif-8": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/Cono_mount0.jpg",
+  "en": 800,
+  "boy": 772,
+  "bayt": 78700
+ },
+ "uyg-masif-9": {
+  "kaynak": "https://cdn.amcsa.es/images/families/more/Cono_mount10.jpg",
+  "en": 800,
+  "boy": 719,
+  "bayt": 57778
+ }
+}

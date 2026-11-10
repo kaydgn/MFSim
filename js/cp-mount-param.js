@@ -45,13 +45,17 @@ function _mntParamModel(liste){
            eng:eng, fAtes:fAtes };
 }
 
-// Aday tipler: etkin kütüphanenin TAMAMI (gömülü + değiştirilmiş + özel);
+// Aday tipler: etkin kütüphanenin TAM tipleri (gömülü + değiştirilmiş + özel);
 // kullanıcı dışarıda bıraktıklarını `haric`ta tutar — yeni eklenen tip
-// kendiliğinden aday olur.
+// kendiliğinden aday olur. Altı rijitliği olmayan tip (AMC'nin radyal değerini
+// yayımlamadığı kodlar) aday DEĞİL: çözücü onu reddeder; Takoz Özellikleri'nde
+// tamamlanınca aday olur (cp-mount.js → _mntLibTam).
 function _mntParamAdaylar(M, node){
   var haric={};
   ((node && node.data && node.data.haric) || []).forEach(function(k){ haric[k]=true; });
-  return Object.keys(M.lib).map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:!haric[k] }; });
+  var tam=(typeof _mntLibTam==='function') ? _mntLibTam : function(){ return true; };
+  return Object.keys(M.lib).filter(function(k){ return tam(M.lib[k]); })
+    .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:!haric[k] }; });
 }
 
 // Pencerede yüzde, çekirdekte oran.

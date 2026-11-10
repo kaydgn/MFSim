@@ -4525,6 +4525,7 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .mntlib-dot[data-t="egri"]{ background:var(--accent-danger); }
 .mntlib-dot[data-t="degisti"]{ background:var(--accent-warning); }
 .mntlib-dot[data-t="gomulu"]{ background:var(--accent-primary); }
+.mntlib-dot[data-t="eksik"]{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-muted); }
 .mntlib-kz{
   font-size:var(--fs-micro);color:var(--text-muted);
   white-space:nowrap;
@@ -9937,6 +9938,23 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-lib-kim{ display:flex; align-items:center; gap:6px; margin:0 0 10px; }
 .ve-mnt-lib-kim > .ve-fp-inp{ flex:1 1 auto; min-width:0; }
 .ve-mnt-lib-kim > .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+/* AMC künyesi (js/mount-amc.js): ölçülü çizim + ürün fotoğrafı, veri tablosu, uygulama fotoğrafları.
+   Görsel bir düğme — tık büyütür (veBasResimAc). Çizimin kâğıdı beyaz: koyu temada da çerçeveli kart. */
+.ve-mnt-amc{ display:flex; flex-direction:column; gap:8px; margin:0 0 4px; }
+.ve-mnt-amc-gorsel{ display:grid; grid-template-columns:3fr 2fr; gap:6px; align-items:stretch; }
+.ve-mnt-amc-res{ display:block; padding:0; margin:0; border:1px solid var(--border-color); background:#fff; /* sabit renk: görselin kâğıdı */
+  border-radius:var(--radius-xs); cursor:zoom-in; overflow:hidden; min-width:0; }
+.ve-mnt-amc-res:hover, .ve-mnt-amc-res:focus-visible{ border-color:var(--accent-primary); outline:none; }
+.ve-mnt-amc-res img{ display:block; width:100%; height:100%; object-fit:contain; }
+.ve-mnt-amc-cizim img{ max-height:220px; }
+.ve-mnt-amc-foto img{ max-height:220px; }
+.ve-mnt-amc-veri{ width:100%; border-collapse:collapse; font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
+.ve-mnt-amc-veri th{ text-align:left; font-weight:500; color:var(--text-muted); padding:3px 8px 3px 0; white-space:nowrap; width:1%; }
+.ve-mnt-amc-veri td{ color:var(--text-primary); padding:3px 0; }
+.ve-mnt-amc-veri tr + tr > *{ border-top:1px solid var(--border-color); }
+.ve-mnt-amc-uyg{ display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr)); gap:4px; }
+.ve-mnt-amc-uyg .ve-mnt-amc-res{ aspect-ratio:4/3; }
+.ve-mnt-amc-uyg .ve-mnt-amc-res img{ object-fit:cover; }
 .ve-fp-dugme[aria-disabled="true"], .ve-fp-dugme[aria-disabled="true"]:hover{
   color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border-color); cursor:default;
 }
