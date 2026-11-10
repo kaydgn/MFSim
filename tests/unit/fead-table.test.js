@@ -228,6 +228,7 @@ describe('tablodan düzenleme', () => {
 // components.js test kapsamında çalışıyor; eski ölçüyü yükseltirken kartın
 // tablosunu cp-fead.js'ten soruyor (tarayıcıda ikisi de üst-seviye).
 global.veFeadKartVarsayilanW = fead.veFeadKartVarsayilanW;
+global.veFeadKartVarsayilanH = fead.veFeadKartVarsayilanH;
 // Ters yön de aynı: cp-fead.js eski varsayılan ölçüleri components.js'in
 // listesinden okuyor.
 global.VE_FEAD_LAYOUT_LEGACY = VE_FEAD_LAYOUT_LEGACY;
@@ -1247,10 +1248,12 @@ describe('PAFTA — tablo kartın katmanı', () => {
     ns.push(alt);                                               // aynı sırada DEĞİL
     fead.veFeadTabloToggle('k1');                               // tablo kapandı
     expect(sol.width).toBe(VE_FEAD_LAYOUT_W);
+    expect(sol.height).toBe(VE_FEAD_LAYOUT_DAR_H);              // tablosuz kart uzun (Canlı Not 100)
     expect(sag.x).toBe(664 - (VE_FEAD_PAFTA_W - VE_FEAD_LAYOUT_W));
     expect(alt.x).toBe(700);                                    // altta: dokunulmadı
     fead.veFeadTabloToggle('k1');                               // geri
     expect(sol.width).toBe(VE_FEAD_PAFTA_W);
+    expect(sol.height).toBe(VE_FEAD_LAYOUT_H);
     expect(sag.x).toBe(664);
     // ELLE VERİLMİŞ ÖLÇÜ korunur.
     sol.width = 700;
@@ -1272,7 +1275,7 @@ describe('PAFTA — tablo kartın katmanı', () => {
     expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 420, height: 340, data: {} }))
       .toEqual({ w: VE_FEAD_PAFTA_W, h: VE_FEAD_LAYOUT_H, changed: true });
     expect(veFeadLayoutSizeFor({ type: 'fead-layout', width: 420, height: 340, data: { katOn: 'isletme' } }))
-      .toEqual({ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H, changed: true });
+      .toEqual({ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_DAR_H, changed: true });
   });
 
   // PAFTANIN BOYU satır sayısından; TAVAN kartın %55'i (çizime yer kalsın),

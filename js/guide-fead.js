@@ -294,7 +294,8 @@ function _gfSahneKart(tip, veri){
     // çizim + altındaki Kayış Tablosu'dur; yalnız çizimi basmak, altında boş
     // bir şerit olan bir kart gösterirdi. Kabuk programın kendi sınıflarıyla —
     // ölçüsü kartın varsayılanı, tablonun boyu programın kendi hesabı.
-    var w = _gfKartW(n), h = (typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500;
+    var w = _gfKartW(n), h = (typeof veFeadKartVarsayilanH === 'function') ? veFeadKartVarsayilanH(n)
+      : ((typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500);
     var kart = Object.assign({}, n, { width: w, height: h });
     var ciz = veFeadLayoutCardHTML(kart);
     if(typeof veFeadTabloAcik !== 'function' || !veFeadTabloAcik(kart)

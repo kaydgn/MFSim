@@ -222,8 +222,9 @@ function veFeadFallbackSlots(dugumler, opts){
       // KART BAŞINA GENİŞLİK: tablolu kart geniş, tablosuz dar (Pafta). Eşit
       // adımla dizmek geniş kartın sağındakini onun üstüne bindirirdi.
       var kw = (typeof n === 'string') ? (d.defaultWidth || 440) : veFeadKartVarsayilanW(n);
+      var kh = (typeof n === 'string') ? d.defaultHeight : veFeadKartVarsayilanH(n);
       if(kanvasX === null) kanvasX = sagX + kanvasBasla * (_feadKartW().genis + 24);
-      out.push({ lx: kanvasX, ly: kanvasY, w: kw, h: d.defaultHeight });
+      out.push({ lx: kanvasX, ly: kanvasY, w: kw, h: kh });
       kanvasX += kw + 24;
       kanvasNo++;
     } else {
@@ -4618,8 +4619,11 @@ function veFeadLayoutSVG(build, W, H, opts){
   var _kp = opts.kenarPay || {};
   var kpL = Math.max(0, +_kp.sol || 0), kpR = Math.max(0, +_kp.sag || 0),
       kpU = Math.max(0, +_kp.ust || 0), kpD = Math.max(0, +_kp.alt || 0);
+  // ROZETİN ÜST PAYI (Canlı Not 101, aşağıda): yalnız geometri rozete değerse 0'dan
+  // büyür; her ölçeklemeye eklenir ki etiket payı onu ezmesin.
+  var ROZPAY = 0;
   function olcekle(padL, padR, padU, padD){
-    padL += kpL; padR += kpR; padU += kpU; padD += kpD;
+    padL += kpL; padR += kpR; padU += kpU + ROZPAY; padD += kpD;
     var eW = W - padL - padR - ROSE, eH = H - padU - padD;
     s = Math.min(eW/spanX, eH/spanY);
     offX = padL + (eW - spanX*s)/2; offY = padU + (eH - spanY*s)/2;
@@ -4696,10 +4700,15 @@ function veFeadLayoutSVG(build, W, H, opts){
   // ÇARPIŞMA ÖLÇÜTÜ SINIR KUTUSU DEĞİL, ÇİZİLEN ŞEYİN KENDİSİ. Sınır kutusu
   // kullanılsaydı BMC'de de çarpardı (kutunun sağ alt köşesi güle 0.5 px kalıyor)
   // ve şerit hiç kazanılmazdı — oysa orası BOŞ: krank sağda değil, ORTA-ALTTA.
+  // Aynı ölçüt sağ üstteki rozete de soruluyor (`kutu` · kasnağın payı `rEk`).
   function _roseCarpti(){
     if(!seritAdayi || !roseKutu) return false;
+    return _kutuyaDeger(roseKutu, 12);                   // +ad payı
+  }
+  function _kutuyaDeger(kutu, rEk){
     var T = _feadXform(s, offX, offY, minX, maxY);
-    function kutuKesisir(x0,y0,x1,y1){       // doğru parçası ↔ gül kutusu
+    var roseKutu = kutu;
+    function kutuKesisir(x0,y0,x1,y1){       // doğru parçası ↔ kutu
       var r = roseKutu;
       if(Math.max(x0,x1) < r.x0 || Math.min(x0,x1) > r.x1) return false;
       if(Math.max(y0,y1) < r.y0 || Math.min(y0,y1) > r.y1) return false;
@@ -4711,7 +4720,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
     // Kasnak çemberi ↔ kutu: kutunun çembere en yakın noktası yarıçapın içindeyse.
     for(var i=0;i<ps.length;i++){
-      var X = T.tx(ps[i].c[0]), Y = T.ty(ps[i].c[1]), R = ps[i].rPitch * s + 12;  // +ad payı
+      var X = T.tx(ps[i].c[0]), Y = T.ty(ps[i].c[1]), R = ps[i].rPitch * s + rEk;
       var nx = Math.min(Math.max(X, roseKutu.x0), roseKutu.x1);
       var ny = Math.min(Math.max(Y, roseKutu.y0), roseKutu.y1);
       if((nx-X)*(nx-X) + (ny-Y)*(ny-Y) <= R*R) return true;
@@ -4738,6 +4747,23 @@ function veFeadLayoutSVG(build, W, H, opts){
   }
   if(_roseCarpti()){
     ROSE = VE_FEAD_ROSE_W;
+    olcekle(pad, pad, pad, pad);
+    etiketPayi();
+  }
+  // ── ROZET DE ÇİZİMİN ÜSTÜNE BİNMEZ (kullanıcı 2026-11-10, Canlı Not 101:
+  // *"Şurası modelin üstünde kalıyor, güzel değil."*): yazılar rozetten kaçıyordu
+  // (ROZ, aşağıda) ama kasnak ve kayış kaçmıyordu — sağ üstteki kasnak rozetin
+  // altında kalıyordu. Geometri (kasnak + kayışın dişleri, açıklıklar, kol)
+  // rozetin kutusuna değiyorsa çizim üstten pay alır; çizim dikeyde boşluk
+  // bırakıyorsa pay ortalamada yarıya iner, bu yüzden pay değmeyene dek yarım
+  // rozet adımıyla büyür (tavan kartın dörtte biri). Değmeyen çizim BİREBİR eski.
+  // Kutu `ROZ`un kutusunun aynısı, sınır denetimi de aynı.
+  var _rozOn = (opts.ustPay && Number(opts.ustPay.w) > 0
+                && Number(opts.ustPay.w) < W * VE_FEAD_ROZET_ORAN
+                && Number(opts.ustPay.h) > 0 && Number(opts.ustPay.h) < H / 3)
+    ? { x0: W - Number(opts.ustPay.w) - 4, x1: W, y0: 0, y1: Number(opts.ustPay.h) + 4 } : null;
+  for(var _rk = 2; _rozOn && _rk <= 8 && _kutuyaDeger(_rozOn, 3); _rk++){
+    ROZPAY = Math.min(H / 4, (_rozOn.y1 - 4) * _rk / 2);
     olcekle(pad, pad, pad, pad);
     etiketPayi();
   }
@@ -6582,24 +6608,30 @@ function veFeadTabloAcik(node){
 }
 
 // VARSAYILAN ÖLÇÜDEKİ KART TABLOYU İZLER; elle verilmiş ölçüye dokunulmaz.
-// Tablolu kart geniş (`VE_FEAD_PAFTA_W`), tablosuz kart eski ölçüsünde
-// (`VE_FEAD_LAYOUT_W`) — ölçü tek yerden, components.js'te.
+// Tablolu kart geniş (`VE_FEAD_PAFTA_W` × `VE_FEAD_LAYOUT_H`), tablosuz kart
+// dar ve UZUN (`VE_FEAD_LAYOUT_W` × `VE_FEAD_LAYOUT_DAR_H`, Canlı Not 100) —
+// ölçü tek yerden, components.js'te.
 function _feadKartW(){
   return {
     dar: (typeof VE_FEAD_LAYOUT_W === 'number') ? VE_FEAD_LAYOUT_W : 440,
     genis: (typeof VE_FEAD_PAFTA_W === 'number') ? VE_FEAD_PAFTA_W : 640,
-    h: (typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500
+    h: (typeof VE_FEAD_LAYOUT_H === 'number') ? VE_FEAD_LAYOUT_H : 500,
+    hDar: (typeof VE_FEAD_LAYOUT_DAR_H === 'number') ? VE_FEAD_LAYOUT_DAR_H : 650
   };
 }
 function veFeadKartVarsayilanW(node){
   var K = _feadKartW();
   return veFeadTabloAcik(node) ? K.genis : K.dar;
 }
+function veFeadKartVarsayilanH(node){
+  var K = _feadKartW();
+  return veFeadTabloAcik(node) ? K.h : K.hDar;
+}
 // Kart dokunulmamış bir ölçüde mi (iki varsayılandan biri ya da eski bir
 // varsayılan). Eski varsayılanlar components.js'in listesinden.
 function _feadKartVarsayilanOlcuMu(node){
   var K = _feadKartW(), w = node && node.width, h = node && node.height;
-  if(h === K.h && (w === K.dar || w === K.genis)) return true;
+  if((w === K.genis && h === K.h) || (w === K.dar && h === K.hDar)) return true;
   var eski = (typeof VE_FEAD_LAYOUT_LEGACY !== 'undefined' && VE_FEAD_LAYOUT_LEGACY) || [];
   return eski.some(function(o){ return o.w === w && o.h === h; });
 }
@@ -6627,21 +6659,21 @@ function _feadKutuYaz(n){
 function veFeadKartTabloOlcu(node, liste, komsuYok){
   if(!node || !_feadDefOf(node).isFeadLayout || !_feadKartVarsayilanOlcuMu(node)) return false;
   var canli = !liste;
-  var K = _feadKartW(), hedef = veFeadKartVarsayilanW(node);
+  var K = _feadKartW(), hedef = veFeadKartVarsayilanW(node), hedefH = veFeadKartVarsayilanH(node);
   var w0 = node.width, d = hedef - w0;
-  if(!d && node.height === K.h) return false;
+  if(!d && node.height === hedefH) return false;
   var sag = (Number(node.x) || 0) + w0, y0 = Number(node.y) || 0, h0 = node.height || K.h;
   (liste || (typeof nodes !== 'undefined' ? nodes : [])).forEach(function(n){
     if(!n || n === node || !d || komsuYok) return;
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
     var nx = Number(n.x) || 0, ny = Number(n.y) || 0, nh = n.height || 60;
     if(nx < sag - 1) return;                               // yalnız SAĞINDAKİLER
-    if(ny >= y0 + Math.max(h0, K.h) || ny + nh <= y0) return; // aynı sırada değil
+    if(ny >= y0 + Math.max(h0, hedefH) || ny + nh <= y0) return; // aynı sırada değil
     n.x = nx + d;
     if(canli) _feadKutuYaz(n);
   });
   node.width = hedef;
-  node.height = K.h;
+  node.height = hedefH;
   if(canli) _feadKutuYaz(node);
   return true;
 }
@@ -9933,6 +9965,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTabloAcik: veFeadTabloAcik, veFeadTabloToggle: veFeadTabloToggle,
     veFeadTabloDugmeHTML: veFeadTabloDugmeHTML,
     veFeadPaftaH: veFeadPaftaH, veFeadKartVarsayilanW: veFeadKartVarsayilanW,
+    veFeadKartVarsayilanH: veFeadKartVarsayilanH,
     veFeadKartTabloOlcu: veFeadKartTabloOlcu, veFeadMigratePafta: veFeadMigratePafta,
     _feadPaftaCiz: _feadPaftaCiz, _feadPaftaBosalt: _feadPaftaBosalt,
     _feadPaftaTus: _feadPaftaTus, _feadTabloGoster: _feadTabloGoster,

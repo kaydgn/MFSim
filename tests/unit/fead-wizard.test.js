@@ -479,7 +479,7 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(yakalanan).toBeTruthy();
     const L = componentDefs['fead-layout'];
     // Tablolu (geometri) kart GENİŞ, tablosuz (işletme) kart dar — Pafta.
-    const kanvas = yakalanan.filter((a) => a && a.h === L.defaultHeight
+    const kanvas = yakalanan.filter((a) => a && [L.defaultHeight, VE_FEAD_LAYOUT_DAR_H].includes(a.h)
                                           && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w));
     expect(kanvas).toHaveLength(2);
     expect(kanvas.map((a) => a.w)).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W]);
