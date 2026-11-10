@@ -20,7 +20,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 var _MNT_PARAM_IS = null;       // çalışan tarama: { nodeId, dur }
-var _MNT_PARAM_XLS = { is:null }; // süren Excel çıktısı (cp-mount-param-sonuc.js): is = { nodeId, i, n }
+var _MNT_PARAM_XLS = { is:null }; // süren Excel çıktısı (cp-mount-param-sonuc.js): is = { nodeId, i, n, dosya }
 
 // ── Canlı model — taramanın girdisi ─────────────────────────────────────────
 // `liste` (ops.): düğüm listesi; verilmezse canlı `nodes`.
@@ -477,8 +477,11 @@ function _mntParamDugme(nodeId){
 function _mntParamIlerleme(nodeId){
   var s=_MNT_PARAM_IS;
   var x=_MNT_PARAM_XLS.is;
-  if((!s || s.nodeId!==nodeId) && x && x.nodeId===nodeId)
-    return { ad:'Excel', metin:'Satır '+_mntS(x.i, 0)+' / '+_mntS(x.n, 0), oran:x.n ? x.i/x.n : 1 };
+  if((!s || s.nodeId!==nodeId) && x && x.nodeId===nodeId){
+    // satırların çözümü çubuğun %70'i, kitabın kurulumu ve dosyanın yazımı kalanı
+    if(x.dosya!=null) return { ad:'Excel', metin:'Dosya', oran:0.7+0.3*x.dosya };
+    return { ad:'Excel', metin:'Satır '+_mntS(x.i, 0)+' / '+_mntS(x.n, 0), oran:x.n ? 0.7*x.i/x.n : 0.7 };
+  }
   if(!s || s.nodeId!==nodeId) return null;
   if(s.son) return { ad:'Tarama', metin:'Sonuç', oran:1 };
   return { ad:'Tarama', metin:'Kombinasyon '+_mntS(s.i, 0)+' / '+_mntS(s.n, 0), oran:s.n ? s.i/s.n : 0 };

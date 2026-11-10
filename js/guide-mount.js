@@ -1758,7 +1758,7 @@ function _gmSec17(){
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
       + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.',
     '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması, '
-      + 'tarama tablosu ve konfigürasyon başına bir sayfa (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
+      + 'tarama tablosu ve seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
@@ -1830,17 +1830,22 @@ function _gmSec17(){
   h += _gmNot('Excel çıktısı',
       '<strong>Excel’i indir</strong> taramayı bugünkü sınırlarla <code>takoz_konfigurasyonlari.xlsx</code> '
     + 'dosyasına yazar; tarama yinelenmez, satırların ölçümü sürerken çubuk eylem satırındadır. '
-    + '<strong>Özet</strong>: mevcut tasarım (K0) ve sıranın ilk dokuz kombinasyonu (K1 … K9); grupların tipi, '
-    + '<em>Uygunluk</em>, dört kesin kriter, frekans payı, TR ve en düşük mod. <em>Uygunluk</em>: bütün açık '
-    + 'kısıtlar sağlanıyorsa <em>Uygun</em> (sıranın ilki <em>En uygun</em>, koyu yeşil), yalnız dört kesin '
-    + 'kriter sağlanıyorsa <em>Kısmen uygun</em>; yeşil sıra düştükçe açılır, <em>Uygun değil</em> renksizdir. '
-    + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve sayfa adı o konfigürasyonun '
-    + 'sayfasını açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter sayısına sonra '
-    + 'TR’ye göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, dört kriter (✓ / ✗), '
-    + 'frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
-    + '<strong>K0 … K9</strong>: modelin her yük durumunda takoz başına X, Y, Z yer değiştirmesi, modlar ve TR; '
-    + 'üstte <em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. Izgara '
-    + 'çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli açılır; hücreler değer taşır, formül yoktur.');
+    + '<strong>Özet</strong>: mevcut tasarım (K0) ve dört kesin kriteri sağlayan kombinasyonlardan statik sehimi '
+    + 'en küçük dokuzu (K1 … K9); grupların tipi, <em>Uygunluk</em>, statik sehim, dört kesin kriter, frekans '
+    + 'payı, TR ve en düşük mod. <em>Statik sehim</em>: 1 g statik yükte takozların düşey sehiminin en büyüğü '
+    + '(max |δ<sub>z</sub>|). <em>Uygunluk</em>: dört kesin kriter sağlanıyorsa <em>Uygun</em>, statik sehimi en '
+    + 'küçük olan <em>En uygun</em> (koyu yeşil); yeşil, sehim arttıkça açılır; <em>Uygun değil</em> renksizdir. '
+    + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve <em>Sonuç</em> hücresi '
+    + 'konfigürasyonun sonucunu açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter '
+    + 'sayısına sonra statik sehime göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, '
+    + 'dört kriter (✓ / ✗), frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
+    + '<em>Sonuçlar →</em> Sonuç sayfasını açar. <strong>Sonuç</strong>: üstte bir kombinasyonun sonucu — '
+    + '<em>No</em> alanına Tarama’nın numarası yazılırsa o kombinasyon, alan boşsa Tarama’nın filtresinde kalan '
+    + 'ilk satır (<em>Süzgecin ilk satırı</em>); dört kriter, TR, statik sehim, frekans payı, her yük durumunda '
+    + 'takoz başına X, Y, Z yer değiştirmesi ve modlar. Altında K0 … K9 aynı tabloyla; her birinde '
+    + '<em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. Bütün '
+    + 'kombinasyonların sonucu gizli <strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun '
+    + 'dışındaki satır ve sütunlar gizli açılır.');
   h += _gmNot('Seçimi modele uygulamak',
       '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
     + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '
