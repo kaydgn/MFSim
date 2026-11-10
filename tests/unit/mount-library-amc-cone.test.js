@@ -221,8 +221,11 @@ describe('(B) Çalışma noktası — kütüphanede yalnız nominali olmayan par
     const kod = {};
     Object.keys(L).forEach((k) => (L[k].name.match(/\(AMC (1\d{5})\)$/) || []).slice(1)
       .forEach((c) => { kod[c] = (kod[c] || []).concat(k); }));
-    expect(Object.keys(kod).sort()).toEqual(['137731', '137829', '137830', '137833', '137963', '137964',
-      '137981', '137982', '137983', '177296']);
+    // 2026-11-10'dan beri üreticinin bütün konik aileleri (js/mount-amc.js, 148 kod); bu
+    // dosyanın kodları (A)'nın dokuzu ve (B)'nin 137829'u aralarında.
+    expect(Object.keys(kod).sort()).toEqual(Object.keys(require('../../js/mount-amc.js').KOD).sort());
+    ['137731', '137829', '137830', '137833', '137963', '137964', '137981', '137982', '137983', '177296']
+      .forEach((c) => expect(kod[c]).toEqual(['amc' + c]));
     Object.keys(kod).forEach((c) => expect([c, kod[c].length]).toEqual([c, 1]));
     expect(Object.keys(L).filter((k) => /-calc$/.test(k))).toEqual([]);
     Object.keys(kod).forEach((c) => expect(kod[c][0]).toBe('amc' + c));     // anahtar ↔ ad

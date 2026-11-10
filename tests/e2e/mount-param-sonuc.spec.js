@@ -38,7 +38,9 @@ async function kur(page) {
   return page.evaluate(() => {
     const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
     const n = createNode('mnt-parametric', 900, 120);
-    n.data = { haric: Object.keys(veMntGetLibraryMap()).filter((k) => tut.indexOf(k) < 0) };
+    // E9 kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10); tek uygun kombinasyon
+    // darbede 2 × kapasiteyi aşıyor — Sonuç'un yapısı Öneri'yle sınanır.
+    n.data = { acik: { darbe: false }, haric: Object.keys(veMntGetLibraryMap()).filter((k) => tut.indexOf(k) < 0) };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
     return n.id;
   });

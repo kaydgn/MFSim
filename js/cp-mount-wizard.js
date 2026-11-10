@@ -2280,6 +2280,7 @@ function _mwTakozListeHTML(c){
 function _mwKatalogSecHTML(t){
   var lib = (typeof veMntGetLibraryList === 'function') ? veMntGetLibraryList() : [];
   var b = lib.filter(function(e){ return e.builtin; }), o = lib.filter(function(e){ return !e.builtin; });
+  if(typeof _mntLibSirali === 'function') b = _mntLibSirali(b);
   // Seçili tip Takoz penceresinin eşleşmesinden: örnekten doldurulan satır
   // bağsız gelir ama altı değeri bir tiple aynıdır.
   var E = (typeof _mntKutuphaneEslesme === 'function') ? _mntKutuphaneEslesme({ data:t }) : null;

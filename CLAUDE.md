@@ -336,6 +336,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   aksesuar (`veMntStpAksKatalog`: FEAD aksesuar kataloğunun `kg`'si, üreticinin
   belgesinden; bilinmeyen `null`). Kapı: `mount-aksesuar.test.js` (→ *TİPLER* ·
   *TAŞIYICI* · *ÇÖZÜCÜ* · *ORTA NOKTA* · *KATALOG*).
+- `js/mount-amc.js` + `tools/takoz-gorsel.js` + `assets/takoz/amc/` — **AMC Mecanocaucho®
+  konik takoz veritabanı** (kullanıcı 2026-11-10: *"TÜM MODELLERİNİ … Sağlam bir takoz
+  veritabanımız"* · *"Takoz resimlerini de al"*): 5 aile · 51 tip · 148 kod; envanter
+  (kod, sertlik, maks. yük, sıkma torku, ağırlık) üreticinin tablosundan, eksenel kz
+  üreticinin yük–sehim grafiğinden (log-log çizgi F = kz·δ, g = 9,81; AMC-EO'yla 9'da 7
+  birebir). **Radyal rijitlik yayımlanmıyor**: yalnız AMC-EO'daki 10 kodda; ötekiler
+  kütüphanede EKSİK tip (sx/sy/dx/dy boş), taramaya aday olmaz (`_mntLibTam`), Takoz
+  Özellikleri'nden tamamlanır — tahmin YAZILMAZ. Kütüphane girdileri modülden üretilir
+  (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
+  tablosundan (E4 · E9'u ölçtürür). Görseller `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
+  (Canlı Not 65). Kapı: `mount-amc.test.js` + `mount-param.test.js` → *AMC KAPASİTESİ*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

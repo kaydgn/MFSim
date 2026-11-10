@@ -30,7 +30,11 @@ beforeEach(() => { resetStubs(stubs); global.nodes = []; });
 
 const L = cp.VE_MOUNT_LIBRARY;
 const KAYNAKLI = { '57RS313773': 'A26', '57RS313774': 'A26', '57RS313773-sr116': 'ASR-SR-116', '57RS313774-sr116': 'ASR-SR-116' };
-const ADLI = Object.keys(L).filter((k) => !KAYNAKLI[k]);
+// Sertliği üreticinin yazmadığı AMC ürünleri (Cone 100 A/B/C, Cone 200 A/B — sitede Shore "-"):
+// ad = ürün + (parça no). Liste veri modülünden (js/mount-amc.js → KOD[k][1] === null).
+const AMC = require('../../js/mount-amc.js');
+const SERTLIKSIZ = Object.keys(AMC.KOD).filter((k) => AMC.KOD[k][1] === null).map((k) => 'amc' + k);
+const ADLI = Object.keys(L).filter((k) => !KAYNAKLI[k] && SERTLIKSIZ.indexOf(k) < 0);
 // ürün + sertlik + isteğe bağlı (parça no): büyük harf ve rakam, üretici önekiyle ("AMC 137963")
 const BICIM = /^(\S+(?: \S+)*?) (\d{2}) ShA(?: \(((?:AMC )?[0-9A-Z]+)\))?$/;
 
@@ -39,6 +43,11 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
     ADLI.forEach((k) => expect([k, BICIM.test(L[k].name)]).toEqual([k, true]));
     Object.values(L).forEach((e) =>
       expect([e.name, /BMC|FEA|8x8|çalışma noktası|parça no|·/i.test(e.name)]).toEqual([e.name, false]));
+  });
+
+  test('sertliği yazılmayan AMC ürünü: ad = ürün + (AMC kod) — Cone 100 A/B/C, Cone 200 A/B', () => {
+    expect(SERTLIKSIZ.sort()).toEqual(['amc137213', 'amc137214', 'amc137215', 'amc137437', 'amc137438']);
+    SERTLIKSIZ.forEach((k) => expect(L[k].name).toMatch(/^Cone (100|200) [ABC] \(AMC 1\d{5}\)$/));
   });
 
   test('istisna yalnız 57RS çiftleri: ad = kod (kaynak)', () => {
