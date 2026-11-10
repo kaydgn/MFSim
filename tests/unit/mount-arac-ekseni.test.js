@@ -244,7 +244,7 @@ describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
     expect(nx()).not.toBe(once);
   });
 
-  test('yazıcı: varsayılan alan yazmaz; geçersiz ivme varsayılana döner; saveState mutasyondan sonra', () => {
+  test('yazıcı: varsayılan alan yazmaz (ileri yön hariç — onay); geçersiz ivme varsayılana döner; saveState mutasyondan sonra', () => {
     kur('tulga');
     const n = cozucu();
     let gorulen = null;
@@ -253,7 +253,7 @@ describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
     expect(n.data.ileri).toBe('+x');
     expect(JSON.parse(gorulen).ileri).toBe('+x');
     cp.veMntSetYon(n.id, 'ileri', '-x');
-    expect('ileri' in n.data).toBe(false);
+    expect(n.data.ileri).toBe('-x');                                  // ileri yönde seçim ONAYDIR (F048)
     cp.veMntSetYon(n.id, 'torkYon', '-x');
     expect('torkYon' in n.data).toBe(false);
     cp.veMntSetYon(n.id, 'kaldirimG', '3.5');

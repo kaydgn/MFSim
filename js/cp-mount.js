@@ -418,11 +418,32 @@ var MNT_AUTO_CASES = [
 // (güç grubundaki transfer kutusu dönüşü çeviriyorsa fiziksel karşılığı bu).
 // Kapı: mount-arac-ekseni.test.js · mount-adams-tulga.test.js · mount-adams-ttar.test.js.
 var MNT_ILERI = '-x', MNT_KALDIRIM_G = 1.55, MNT_KALDIRIM_YON = 'ters', MNT_TORK_YON = '-x';
-function _mntYonAyari(d){
+// İLERİ YÖNÜN ÖNERİSİ — güç grubunun dizilişinden (F048, 2026-11-10). Motorun
+// önü (kasnak tarafı) şanzımanın (yoksa transfer kutusunun) karşı yanındadır;
+// öneri motorun önü aracın önüne bakar varsayımıyla: motor şanzımandan −X
+// taraftaysa ileri −X. Motorun önü geriye bakan araçta (TTAR) öneri tutmaz —
+// bu yüzden öneri yalnız önerir: Çözücü'de onaylanmamış yön durumla söylenir.
+// Onay `d.ileri`dir (iki değer de yazılır); onaysız modelde etkin yön öneri,
+// öneri yoksa varsayılan −X. Komşusu tork yönüdür (F049) ve ileri yönden
+// türetilmez. Kapı: mount-ileri-oneri.test.js.
+var MNT_ILERI_ESIK = 1;   // mm — motor ile şanzımanın X farkı bunun altındaysa öneri yok
+function _mntIleriOnerisi(liste){
+  var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes) ? nodes : []);
+  var bul=function(tip){ for(var i=0;i<L.length;i++){ var n=L[i];
+    if(n && n.type===tip && n.data && Number.isFinite(_mntNum(n.data.cgx, NaN))) return n; } return null; };
+  var m=bul('mnt-motor'), s=bul('mnt-gearbox') || bul('mnt-transfer');
+  if(!m || !s) return null;
+  var mx=_mntNum(m.data.cgx), sx=_mntNum(s.data.cgx);
+  if(!(Math.abs(sx-mx)>=MNT_ILERI_ESIK)) return null;
+  return { ileri:(mx<sx ? '-x' : '+x'), motorX:mx, arkaX:sx, arka:s.type };
+}
+function _mntIleriOnayli(d){ return !!d && (d.ileri==='+x' || d.ileri==='-x'); }
+function _mntYonAyari(d, oneri){
   d = d || {};
   var g = _mntNum(d.kaldirimG, NaN);
   var xx = function(v, vars){ return (v==='+x' || v==='-x') ? v : vars; };
-  return { ileri: xx(d.ileri, MNT_ILERI),
+  var oy = oneri && (oneri.ileri==='+x' || oneri.ileri==='-x') ? oneri.ileri : MNT_ILERI;
+  return { ileri: xx(d.ileri, oy),
            kaldirimG: (Number.isFinite(g) && g>0) ? g : MNT_KALDIRIM_G,
            kaldirimYon: (d.kaldirimYon==='ayni' || d.kaldirimYon==='ters') ? d.kaldirimYon : MNT_KALDIRIM_YON,
            torkYon: xx(d.torkYon, MNT_TORK_YON) };
@@ -1978,6 +1999,11 @@ function veMntPencereTazele(){
     if(a && b && a!==document.activeElement && String(a.value)!==String(b.getAttribute('value'))){ a.value=b.getAttribute('value'); n++; }
     var ia=el.querySelector('.ve-fp-i'), ib=yeni.querySelector('.ve-fp-i');
     if(ia && ib && ia.outerHTML!==ib.outerHTML) ia.outerHTML=ib.outerHTML;
+  });
+  // Seçici modelin değerini izler (odaktaki seçiciye yazılmaz; seçici kurulmaz).
+  Array.prototype.forEach.call(kok.querySelectorAll('select[data-mnt-izle][id]'), function(el){
+    var yeni=bul(el.id), o=yeni && yeni.querySelector('option[selected]');
+    if(o && el!==document.activeElement && el.value!==o.getAttribute('value')){ el.value=o.getAttribute('value'); n++; }
   });
   // Zorunlu alanın tonu yazılan değeri izler.
   Array.prototype.forEach.call(kok.querySelectorAll('input[data-zorunlu]'), function(i){
@@ -4657,7 +4683,9 @@ function _mntGatherForSolver(solver, liste){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(solver && solver.data), baglanti:baglanti };
+  var sd=solver && solver.data;
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, _mntIleriOnerisi(L)),
+           ileriOnay:_mntIleriOnayli(sd), baglanti:baglanti };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
@@ -4787,7 +4815,7 @@ function _mntForgetResults(){
 // (fiziğe girmez). Nokta kütlenin tensörü imzaya girmez (çözücü onu sıfırlar).
 // Tork alanlarının HEPSİ girer: vites oranları vites başına durumları,
 // silindir sayısı uygunluğu değiştirir — ikisi de hesaplanan sonucun parçası.
-function _mntImza(si, torque, sd, bag){
+function _mntImza(si, torque, sd, bag, yon){
   var t=torque||{}, d=sd||{};
   var v={
     b:bag ? [bag.id||'', bag.S, bag.a, bag.sinir] : 0,
@@ -4795,7 +4823,7 @@ function _mntImza(si, torque, sd, bag){
     m:(si.mounts||[]).map(function(m){ return [m.id||'', m.pos, m.kstat, m.kdyn, m.fCap||0, m.fits||0, m.curves||0]; }),
     t:Object.keys(t).sort().map(function(k){ return [k, _mntNum(t[k], null)]; }),
     s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)],
-    y:(function(Y){ return [Y.ileri, Y.kaldirimG, Y.kaldirimYon, Y.torkYon]; })(_mntYonAyari(d))
+    y:(function(Y){ return [Y.ileri, Y.kaldirimG, Y.kaldirimYon, Y.torkYon]; })(yon || _mntYonAyari(d))
   };
   var s=JSON.stringify(v), h=5381;
   for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
@@ -4816,7 +4844,7 @@ function veMntSonucDurumu(liste, R){
   for(var i=0;i<list.length;i++){ if(list[i] && list[i].id===R.solverId){ solver=list[i]; break; } }
   if(!solver || typeof veMountCore==='undefined') return { durum:'bayat', R:R };
   var g=_mntGatherForSolver(solver, liste);
-  var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data, g.baglanti);
+  var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data, g.baglanti, g.yon);
   return { durum:(imza===R.imza ? 'guncel' : 'bayat'), R:R };
 }
 
@@ -4937,11 +4965,23 @@ function _mntCozucuDurumGovde(node){
 }
 // ARACIN İLERİ YÖNÜ · KALDIRIM DARBESİ · TORK YÖNÜ — yük kitabının girdisi
 // (_mntYonAyari); kitap hemen altında değeri izler. Varsayılan seçim alan yazmaz.
+function _mntCozucuIleriNot(node){
+  var d=node.data||{}, O=_mntIleriOnerisi(), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
+  var ic='', ton='';
+  if(!_mntIleriOnayli(d)){
+    ton='warn';
+    ic='<b>Onaylanmadı.</b> '+(O ? 'Diziliş önerisi '+eks(O.ileri)+'.' : 'Varsayılan −X.')
+      + ' <button type="button" class="ve-fp-dugme" onclick="veMntIleriOnayla(\''+node.id+'\')">Onayla</button>';
+  } else if(O && O.ileri!==d.ileri){
+    ic='Diziliş önerisi '+eks(O.ileri)+'.';
+  }
+  return '<div id="ve-mnt-ileri-not-'+node.id+'" data-tazele>'+(ic ? _mntNot(ic, ton) : '')+'</div>';
+}
 function _mntCozucuYonGovde(node){
-  var Y=_mntYonAyari(node.data);
+  var Y=_mntYonAyari(node.data, _mntIleriOnerisi());
   var secici=function(alan, etiket, deger, secenekler, degis){
     var h='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">'+etiket+'</span>'
-      + '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" onchange="'+degis+'">';
+      + '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" data-mnt-izle onchange="'+degis+'">';
     secenekler.forEach(function(o){ h+='<option value="'+o[0]+'"'+(deger===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; });
     return h+'</select></label>';
   };
@@ -4949,7 +4989,8 @@ function _mntCozucuYonGovde(node){
   return _mntBolum('Araç ekseni', '',
       _mntIzgara(2,
         secici('ileri', 'İleri yön', Y.ileri, eksen, 'veMntSetYon(\''+node.id+'\',\'ileri\',this.value)')
-      + secici('torkYon', 'Tork yönü', Y.torkYon, eksen, 'veMntSetYon(\''+node.id+'\',\'torkYon\',this.value)')))
+      + secici('torkYon', 'Tork yönü', Y.torkYon, eksen, 'veMntSetYon(\''+node.id+'\',\'torkYon\',this.value)'))
+      + _mntCozucuIleriNot(node))
     + _mntBolum('Kaldırım darbesi', 'yanal',
       _mntIzgara(2,
         _mntVarsayilanAlan(node, 'kaldirimG', 'İvme <u>[g]</u>', MNT_KALDIRIM_G, 'genel araç yük kitabı',
@@ -5128,7 +5169,11 @@ function veMntSetYon(nodeId, key, val){
   if(key!=='ileri' && key!=='torkYon' && key!=='kaldirimG' && key!=='kaldirimYon') return;
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
-  if(key==='ileri' || key==='torkYon'){
+  if(key==='ileri'){
+    // Seçim ONAYDIR: iki değer de yazılır (onaysız yön dizilişin önerisi).
+    if(val!=='+x' && val!=='-x') return;
+    node.data.ileri=val;
+  } else if(key==='torkYon'){
     if(val==='+x') node.data[key]='+x'; else delete node.data[key];
   } else if(key==='kaldirimYon'){
     if(val==='ayni') node.data.kaldirimYon='ayni'; else delete node.data.kaldirimYon;
@@ -5139,6 +5184,12 @@ function veMntSetYon(nodeId, key, val){
     else node.data.kaldirimG=v;
   }
   if(typeof saveState==='function') saveState();
+}
+
+// İleri yönün onayı: etkin yön (öneri ya da varsayılan) alana yazılır.
+function veMntIleriOnayla(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  veMntSetYon(nodeId, 'ileri', _mntYonAyari(node.data, _mntIleriOnerisi()).ileri);
 }
 
 // Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
@@ -5260,7 +5311,8 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           yon:prep.gather.yon || _mntYonAyari(),
           // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
-          imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti) };
+          ileriOnay:prep.gather.ileriOnay,
+          imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti, prep.gather.yon) };
   // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
   // (çekirdek sectionMoment); hüküm raporda, Statik durumda sınıra göre
   R.baglanti=_mntBaglantiMomenti(prep, allCases, designCases);
@@ -5580,7 +5632,8 @@ if(typeof module!=='undefined' && module.exports){
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
-    _mntYonAyari: _mntYonAyari, _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
+    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntIleriOnayli: _mntIleriOnayli,
+    veMntIleriOnayla: veMntIleriOnayla, _mntCozucuIleriNot: _mntCozucuIleriNot, _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
     _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
     veMntSetYon: veMntSetYon,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,

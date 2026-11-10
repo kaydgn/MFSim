@@ -1187,7 +1187,7 @@ function _mntRepYonCumle(R){
   var Y=(R && R.yon) || {};
   var eks=function(v){ return v==='+x' ? '+X' : '−X'; };
   var g=Number(Y.kaldirimG); if(!(Number.isFinite(g) && g>0)) g=1.55;
-  return '<p>Araç ekseni: ileri yön '+eks(Y.ileri)+'; ileri vites tork momenti '+eks(Y.torkYon)
+  return '<p>Araç ekseni: ileri yön '+eks(Y.ileri)+(R && R.ileriOnay===false ? ' (onaylanmadı)' : '')+'; ileri vites tork momenti '+eks(Y.torkYon)
     + '; yanal bordür darbesi '+_rF(g, 2)+' g, '+(Y.kaldirimYon==='ayni' ? 'virajla aynı yönde' : 'virajın tersi yönde')+'.</p>';
 }
 // §8.5 — TÜM yük durumları (sehim matrisi) ───────────────────────────────────
