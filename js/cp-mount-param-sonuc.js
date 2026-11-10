@@ -1079,33 +1079,32 @@ function veMntParamRapor(nodeId){
 }
 
 // ── EXCEL ÇIKTISI ───────────────────────────────────────────────────────────
-// Kullanıcı kararı (2026-11-09): "Kullanıcı bu Excel formatında çıktı alacak."
-// Düzen js/mount-param-excel.js'te (Özet · Tarama · konfigürasyon sayfaları),
-// dosya js/xlsx-yaz.js'te. Konfigürasyonlar: mevcut tasarım (K0) ve en çok
-// dokuz kombinasyon — önce bütün açık kısıtları sağlayanlar (pencerenin uzlaşı
-// sırası), sonra dört kesin kriteri sağlayıp ek kısıtı bozanlar (toplam ihlal
-// küçükten büyüğe); kesin kriteri bozan listeye girmez (hiçbiri sağlamıyorsa
-// pencerenin sırası, en az ihlalli). Uygunluk pencerenin hükmünden: listenin
-// ilki En uygun, bütün açık kısıtlar sağlanıyorsa Uygun, yalnız kesin
-// kriterler sağlanıyorsa Kısmen uygun, kesin kriterden biri sağlanmıyorsa
-// Uygun değil. Tarama sayfası çözülen kombinasyonlar —
-// sağlanan kesin kriter sayısına, sonra TR'ye göre sıralı, en çok
-// VE_MNT_PRM_XLS_TAVAN satır. Hesap DİLİM DİLİM (konfigürasyonun tam çözümü,
-// tarama satırının anma ölçümü); ilerleme eylem satırında (_mntParamIlerleme).
+// Kullanıcı kararları: 2026-11-09 "Kullanıcı bu Excel formatında çıktı alacak";
+// 2026-11-10: ana kriter statik sehimi en küçük olan seçim; TÜM tarama verisinin
+// takoz sehim sonuçları görülsün; K sonuçları açık sayfa olarak durmasın, tıklanınca
+// açılsın (terim kararı S2·C: takozun δ'sı sehim). Düzen js/mount-param-excel.js'te
+// (Özet · Tarama · Sonuç · gizli Veri), dosya js/xlsx-yaz.js'te.
+// Konfigürasyonlar: mevcut tasarım (K0) ve dört kesin kriteri sağlayan en çok dokuz
+// kombinasyon, STATİK SEHİM (δ_s: 1 g, en büyük |δz|) küçükten büyüğe; ilki En uygun,
+// kalanı Uygun. Hiçbiri sağlamıyorsa pencerenin sırası (en az ihlalli), Uygun değil.
+// Tarama: çözülen bütün kombinasyonlar — sağlanan kesin kriter sayısı, sonra statik
+// sehim; en çok VE_MNT_PRM_XLS_TAVAN satır, her satırın TAM çözümü (yük durumları ×
+// takoz × X/Y/Z, modlar) Veri sayfasına. Hesap DİLİM DİLİM; ilerleme eylem satırında
+// (_mntParamIlerleme).
 var VE_MNT_PRM_XLS_TAVAN = 20000;
 var VE_MNT_PRM_XLS_KONFIG = 9;
+var VE_MNT_PRM_XLS_BAYT = 1 << 18;          // bir dilimde sıkıştırıcıya yazılan en çok ham bayt
 var _MNT_PRM_KESIN = ['k1', 'k1a', 'k1b', 'k2'];
+var _MNT_PRM_BOS = -2147483648;          // Veri'de "sonuç yok" (Int32 tabanı)
 
 function _mntPrmBit(k){
   var b=0;
   veMntKatalog.KISITLAR.forEach(function(Q, i){ if(Q.k===k) b=(1<<i)>>>0; });
   return b;
 }
-// Kombinasyonun uygunluğu: bits (açık kısıtların ihlal biti), iki (ikinci aşama ölçüldü mü).
-function _mntPrmUygunluk(bits, iki, kesin){
-  if(bits & kesin) return 'Uygun değil';
-  if(bits || !iki) return 'Kısmen uygun';
-  return 'Uygun';
+// Kombinasyonun uygunluğu: kesin kriterden biri bozuksa Uygun değil.
+function _mntPrmUygunluk(bits, kesin){
+  return (bits & kesin) ? 'Uygun değil' : 'Uygun';
 }
 // Dışa aktarımın planı: adımlar (her biri tek konfigürasyon ya da tek tarama
 // satırı) ve adımlar bitince Excel'in girdisi (E).
@@ -1117,21 +1116,21 @@ function _mntParamExcelPlan(ent, H){
   var grupOf=[];
   M.G.forEach(function(g, gi){ g.uyeler.forEach(function(i){ grupOf[i]=gi; }); });
   var tipAd=function(t){ return M.G.map(function(g, gi){ return (t && t[gi]) ? libAd(t[gi]) : mevAd[gi]; }); };
+  var sehim=function(o){ var m=-Infinity; ((o && o.dz) || []).forEach(function(v){ if(Math.abs(v)>m) m=Math.abs(v); }); return m>-Infinity ? m : NaN; };
   var eng=M.eng || {}, sv=M.solver || { data:{} };
+  var adayAd=(D.adaylar || []).map(function(a){ return a.name; });
   var E={ baslik:'Takoz konfigürasyonları', fAtes:M.fAtes, rolanti:eng.idleRpm, silindir:eng.cylinders,
           zeta:_mntZetaOf(sv), kutle:NaN, gruplar:M.G.map(function(g){ return g.ad; }),
           takozlar:M.gather.mounts.map(function(m, i){ return { ad:m.name, grup:grupOf[i] }; }),
-          konfig:[], tarama:{ N:0, gruplar:D.taranan.slice(), satirlar:[] } };
+          konfig:[], tarama:{ N:0, gruplar:D.taranan.slice(), adaylar:D.taranan.map(function(){ return adayAd; }), satirlar:[], veri:null } };
   var adim=[];
-  // konfigürasyonlar
-  var secilen=S.uygunN>0 ? S.sira.map(function(s){ return s.idx; }) : [], kismen=[];
+  // konfigürasyonlar: dört kesin kriteri sağlayanlar, statik sehim küçükten büyüğe
+  var gecen=[];
   for(var y=0;y<D.N;y++){
-    var by=Hk.m[y];
-    if(D.d1[y]!==1 || (by & kesin) || (!by && D.d2[y]===1)) continue;
-    kismen.push({ x:y, v:Hk.v1[y]+(Number.isFinite(Hk.v2[y]) ? Hk.v2[y] : 1e6) });
+    if(D.d1[y]===1 && !(Hk.m[y] & kesin) && Number.isFinite(D.d[y])) gecen.push(y);
   }
-  kismen.sort(function(a, b){ return a.v-b.v || a.x-b.x; });
-  secilen=secilen.concat(kismen.map(function(k){ return k.x; })).slice(0, VE_MNT_PRM_XLS_KONFIG);
+  gecen.sort(function(a, b){ return D.d[a]-D.d[b] || a-b; });
+  var secilen=gecen.slice(0, VE_MNT_PRM_XLS_KONFIG);
   if(!secilen.length) secilen=S.sira.slice(0, VE_MNT_PRM_XLS_KONFIG).map(function(s){ return s.idx; });
   var liste=[{ K:0, mevcut:true, tipler:M.G.map(function(){ return null; }) }];
   secilen.forEach(function(x, i){ liste.push({ K:i+1, idx:x, tipler:D.tipler(x) }); });
@@ -1141,39 +1140,64 @@ function _mntParamExcelPlan(ent, H){
       if(k.mevcut){
         var R=veMntKatalog.hepsi(ent.mevcut.o1, ent.mevcut.o2, H.ctx).sonuc;
         kr=_MNT_PRM_KESIN.map(function(q){ return !!(R[q] && R[q].ok); });
-        var ek=Object.keys(R).some(function(q){ return _MNT_PRM_KESIN.indexOf(q)<0 && !R[q].ok; });
-        uy=(!ent.mevcut.o1 || kr.indexOf(false)>=0) ? 'Uygun değil' : (ek || !ent.mevcut.o2) ? 'Kısmen uygun' : 'Uygun';
+        uy=(!ent.mevcut.o1 || kr.indexOf(false)>=0) ? 'Uygun değil' : 'Uygun';
       } else {
         var b=Hk.m[k.idx];
         kr=bitK.map(function(x){ return !(b & x); });
-        uy=_mntPrmUygunluk(b, D.d2[k.idx]===1, kesin);
-        if(uy!=='Uygun değil' && n===1) uy='En uygun';
+        uy=_mntPrmUygunluk(b, kesin);
+        if(uy==='Uygun' && n===1) uy='En uygun';
       }
       if(o && !(E.kutle>0)) E.kutle=o.m;
       var ad=tipAd(k.tipler);
       E.konfig[n]={ K:k.K, mevcut:!!k.mevcut, tipler:ad, uygunluk:uy, kriter:kr,
+                    d:k.mevcut ? sehim(o) : D.d[k.idx],
                     f:o ? o.f : [], T:o ? o.T : NaN, takozTip:grupOf.map(function(gi){ return ad[gi]; }),
                     vakalar:t ? t.vakalar : [], modlar:t ? t.modlar : [] };
     });
   });
-  // tarama satırları
+  // tarama satırları: sağlanan kesin kriter sayısı, sonra statik sehim
   var sec=[];
   for(var x=0;x<D.N;x++){
     if(D.d1[x]!==1) continue;
     var gec=0; bitK.forEach(function(b){ if(!(Hk.m[x] & b)) gec++; });
-    sec.push({ x:x, gec:gec });
+    sec.push({ x:x, gec:gec, d:Number.isFinite(D.d[x]) ? D.d[x] : Infinity });
   }
-  sec.sort(function(a, b){ return b.gec-a.gec || D.T[a.x]-D.T[b.x] || a.x-b.x; });
+  sec.sort(function(a, b){ return b.gec-a.gec || a.d-b.d || a.x-b.x; });
   E.tarama.N=sec.length;
-  sec.slice(0, VE_MNT_PRM_XLS_TAVAN).forEach(function(s){
+  var L=sec.slice(0, VE_MNT_PRM_XLS_TAVAN), nT=M.gather.mounts.length, nM=6, V=null, etiket={};
+  L.forEach(function(s){
     adim.push(function(){
-      var t=D.tipler(s.x), o=O.anma(t);
+      var t=D.tipler(s.x), tm=O.tam(t), o=tm ? tm.o : null;
       if(!o) return;
+      var i=E.tarama.satirlar.length;
       E.tarama.satirlar.push({
         tipler:D.taranan.map(function(g){ return libAd(t[g]); }),
         f:o.f, fB:o.fB, T:o.T, d:D.d[s.x], k:bitK.map(function(b){ return !(Hk.m[s.x] & b); }),
-        yuk:D.taranan.map(function(g){ return Math.max.apply(null, M.G[g].uyeler.map(function(i){ return o.pay[i]; })); }),
+        yuk:D.taranan.map(function(g){ return Math.max.apply(null, M.G[g].uyeler.map(function(j){ return o.pay[j]; })); }),
         azami:D.taranan.map(function(g){ var v=o.kap[M.G[g].uyeler[0]]; return v>0 ? v : null; })
+      });
+      var nV=tm.vakalar.length;
+      if(!V){
+        V=E.tarama.veri={ vakaAdlari:tm.vakalar.map(function(v){ return v.ad; }), nT:nT, nM:nM,
+                          kod:new Int32Array(L.length*nV*nT*3).fill(_MNT_PRM_BOS),
+                          modF:new Float64Array(L.length*nM).fill(NaN), modAd:new Uint16Array(L.length*nM).fill(65535), modAdlar:[],
+                          uc:[0, 0] };
+      }
+      tm.vakalar.forEach(function(v, q){
+        if(!v.d || q>=V.vakaAdlari.length) return;
+        v.d.forEach(function(d, m){
+          for(var a=0;a<3;a++) if(Number.isFinite(d[a])){
+            var z=Math.round(d[a]*100);
+            V.kod[((i*V.vakaAdlari.length+q)*nT+m)*3+a]=z;
+            if(z<V.uc[0]) V.uc[0]=z; if(z>V.uc[1]) V.uc[1]=z;   // panonun belirteç penceresi için
+          }
+        });
+      });
+      tm.modlar.slice().sort(function(a, b){ return a.f-b.f; }).slice(0, nM).forEach(function(md, j){
+        V.modF[i*nM+j]=md.f;
+        var e=String(md.ad == null ? '' : md.ad);
+        if(!(e in etiket)){ etiket[e]=V.modAdlar.length; V.modAdlar.push(e); }
+        V.modAd[i*nM+j]=etiket[e];
       });
     });
   });
@@ -1196,7 +1220,7 @@ function veMntParamExcelIndir(nodeId){
   if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return Promise.resolve(null); }
   var P;
   try { P=_mntParamExcelPlan(ent, H); } catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); return Promise.resolve(null); }
-  var is=_MNT_PARAM_XLS.is={ nodeId:nodeId, i:0, n:P.adim.length }, yazildi=-Infinity;
+  var is=_MNT_PARAM_XLS.is={ nodeId:nodeId, i:0, n:P.adim.length, dosya:null }, yazildi=-Infinity;
   var cubuk=function(){ if(typeof _mntParamIlerlemeYaz==='function') _mntParamIlerlemeYaz(nodeId); };
   return new Promise(function(coz){
     var bitir=function(metin, d, b){
@@ -1205,16 +1229,29 @@ function veMntParamExcelIndir(nodeId){
     };
     _mntParamYaz(nodeId, '');
     cubuk();
+    // Üç evre aynı dilimden geçer: satırların çözümü (P.adim), kitabın kurulumu
+    // (K — Tarama'nın satırları adım adım), dosyanın yazımı (Y — XML, UTF-8, CRC ve
+    // sıkıştırma parça parça). Hiçbir evre tek görevde koşmaz.
+    var K=null, Y=null;
+    var adim=function(){
+      if(is.i<is.n){ P.adim[is.i++](); return true; }
+      if(!K) K=veMntParamExcel.kitapIs(P.E());
+      if(!Y){
+        if(K.adim()){ is.dosya=0.25*K.oran(); return true; }
+        Y=veXlsxYaz.is(K.kitap());
+      }
+      var d=Y.adim(); is.dosya=0.25+0.75*Y.oran();
+      return d;
+    };
     var dilim=function(){
-      var bas=_mntParamSimdi();
-      try { while(is.i<is.n){ P.adim[is.i++](); if(_mntParamSimdi()-bas>=_MNT_PARAM_DILIM) break; } }
+      var bas=_mntParamSimdi(), b0=Y ? Y.bayt() : 0, surer=true;
+      // dilimde yazılan bayt da sınırlı: sıkıştırması aynı görevin sonunda koşar
+      try { do { surer=adim(); } while(surer && _mntParamSimdi()-bas<_MNT_PARAM_DILIM && (!Y || Y.bayt()-b0<VE_MNT_PRM_XLS_BAYT)); }
       catch(e){ bitir('Hata: '+e.message, 'no'); return; }
       var t=_mntParamSimdi();
-      if(is.i>=is.n || t-yazildi>=100){ yazildi=t; cubuk(); }
-      if(is.i<is.n){ _mntParamSonraki(dilim); return; }
-      var kitap;
-      try { kitap=veMntParamExcel.kitap(P.E()); } catch(e){ bitir('Hata: '+e.message, 'no'); return; }
-      veXlsxYaz.yazSikistir(kitap).then(function(b){
+      if(!surer || t-yazildi>=100){ yazildi=t; cubuk(); }
+      if(surer){ _mntParamSonraki(dilim); return; }
+      Y.bitir().then(function(b){
         try { _mntParamDosyaIndir(b, 'takoz_konfigurasyonlari.xlsx'); }
         catch(e){ bitir('Hata: '+e.message, 'no'); return; }
         bitir('İndirildi ('+_mntS(b.length/1024, 0)+' KB)', 'ok', b);
