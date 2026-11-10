@@ -298,7 +298,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
 // tarayıcının sıkıştırmasıyla (CompressionStream) yazılır ve programın kendi
 // okuyucusu açar — Node'da bu yol HİÇ koşmuyor (jsdom'da sıkıştırma yok).
 // Düğme satırı dar sütunda taşmaz (üç düğme alt satıra iner).
-test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, Özet · Tarama · Sonuç · K sayfaları · gizli Veri ve Seçim; düğme satırı taşmaz', async ({ page }) => {
+test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, Özet · Tarama · Sonuç; Tarama\'nın satırı kendi bloğuna bağlı; düğme satırı taşmaz', async ({ page }) => {
   const hata = [];
   page.on('pageerror', (e) => hata.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
@@ -324,23 +324,23 @@ test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, Özet �
   expect(z.names.some((n) => z.entries[n].method === 8)).toBe(true);           // tarayıcıda sıkıştırılmış
   const wb = R.veXlsOpen(bayt);
   const ad = wb.sheets.map((s) => s.name);
-  const KS = ad.slice(3, -2);                                                    // Özet'in konfigürasyonları, sayfa başına bir
-  expect(KS.length).toBeGreaterThan(0);
-  expect(ad).toEqual(['Özet', 'Tarama', 'Sonuç'].concat(KS.map((_, k) => 'K' + k), ['Veri', 'Seçim']));
+  expect(ad).toEqual(['Özet', 'Tarama', 'Sonuç']);                              // sekmeler görünür
   const w = R.veXlsUtf8(z.read('xl/workbook.xml'));
-  expect(w).toContain('name="Veri" sheetId="' + (ad.length - 1) + '" state="hidden"');
-  expect(w).toContain('name="Seçim" sheetId="' + ad.length + '" state="hidden"');
-  expect(w).toContain('showSheetTabs="0"');                                      // sayfalar bağlantıyla açılır
+  expect(w).not.toMatch(/state="hidden"|showSheetTabs/);
   const oz = wb.readSheet(0).rows;
   expect(oz[5].slice(1, 3)).toEqual(['K', 'Sonuç']);
   expect(oz[6][1]).toBe('K0');
-  expect(wb.readSheet(2).rows[1][2]).toBe('Tarama’da süzgeçle tek satır bırakın.');   // Sonuç açılışta boş
+  const son = wb.readSheet(2).rows;
+  expect(son[1][2]).toBe('Özet’te ya da Tarama’da konfigürasyonu seçin.');       // sekmeden açılınca sonuç yok
   const ta = wb.readSheet(1).rows;
   expect(ta[0][0]).toMatch(/^Tarama — [\d.]+ kombinasyon/);
   const no = ta.slice(5).map((r) => r[0]).filter(Number.isFinite);              // veri 6. satırdan
-  const ve = wb.readSheet(ad.indexOf('Veri')).rows;
   expect(no.length).toBeGreaterThan(9);
-  expect(ve.slice(1).map((r) => r[0])).toEqual(no);                              // her tarama satırı Veri'de, aynı No
+  // her tarama satırının No'su Sonuç'taki bloğunun şeridine; bloğun başlığı o No
+  const s2 = R.veXlsUtf8(z.read('xl/worksheets/sheet2.xml'));
+  const hedef = [...s2.matchAll(/<c r="A(\d+)"[^>]*><f>HYPERLINK\(&quot;#'Sonuç'!\$A\$(\d+):\$A\$\d+&quot;,(\d+)\)<\/f>/g)];
+  expect(hedef.map((m) => +m[3])).toEqual(no);
+  hedef.forEach((m) => expect(son[+m[2]][2].split(' — ')[0]).toBe('No ' + Number(m[3]).toLocaleString('tr-TR')));   // şeridin ilk satırının altı başlık
   await expect(page.locator('#ve-mnt-param-st-' + id)).toHaveText(/^İndirildi \([\d.]+ KB\)$/);
   expect(hata).toEqual([]);
 });
@@ -372,8 +372,9 @@ test('EXCEL DİLİMLİ: 3.375 kombinasyonun Excel\'i sürerken arayüz donmaz; d
   expect(uzun.filter((d) => d >= 100)).toEqual([]);
   const R = require('../../js/xlsx-read.js');
   const wb = R.veXlsOpen(bayt);
-  const ad = wb.sheets.map((x) => x.name);
-  expect(ad.slice(0, 3).concat(ad.slice(-2))).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri', 'Seçim']);
-  expect(wb.readSheet(ad.indexOf('Veri')).rows.length).toBe(3376);
+  expect(wb.sheets.map((x) => x.name)).toEqual(['Özet', 'Tarama', 'Sonuç']);
+  expect(wb.readSheet(1).rows.filter((r) => Number.isFinite(r[0])).length).toBe(3375);
+  const son = wb.readSheet(2).rows;                                              // her tarama satırının bloğu
+  expect(son.filter((r) => typeof r[2] === 'string' && /^No [\d.]+ — /.test(r[2])).length).toBe(3375);
   expect(hata).toEqual([]);
 });

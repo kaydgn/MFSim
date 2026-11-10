@@ -6,25 +6,22 @@
 // konfigürasyonu olacak … Kullanıcı bu Excel formatında çıktı alacak." Düzen
 // Canlı Not'ta kullanıcıyla 19 notta kuruldu (10 Ton TTA, R12); bu dosya o
 // düzeni taramanın verisinden KURAR, hesaplamaz:
-//   Özet  — başlık; "Tarama →"; konfigürasyon başına satır: K · Sonuç (o
-//           konfigürasyonun sayfasına bağlı) · grupların tipi · Uygunluk (TEK renkli
-//           sütun: en uygun koyu yeşil, öteki uygunlar sırayla açılan yeşil, uygun
-//           olmayan renksiz) · statik sehim · dört kesin kriter · frekans payı · TR ·
-//           en düşük mod. Kriterin tanımı başlığın NOTUNDA (fare üstüne gelince).
-//   Tarama — çözülen kombinasyonlar: modlar, f_b, TR, statik sehim, dört kriter
-//           (✓/✗), frekans payı, grup başına statik ve azami yük, kapasite; "← Özet"
-//           ve "Sonuçlar →".
-//   Sonuç — TEK konfigürasyon (kullanıcı 2026-11-10: "Sonuç kısmı Excel açıldığında
-//           boş gelsin … hangi konfigürasyona tıklarsa, sadece o"): Tarama'nın
-//           süzgecinde TEK satır kalınca o satır, yoksa boş; değerler gizli Veri'den
-//           formülle (Excel makrosuz bir tıkı öteki sayfaya taşıyamaz — seçim süzgeç).
-//   K0…Kn — Özet'in konfigürasyonları, her biri kendi sayfasında (Özet · geri · ileri;
-//           yük durumu × takoz × X/Y/Z, modlar, TR). Kitabın SEKME ÇUBUĞU GİZLİ:
-//           sayfalar yalnız bağlantıyla açılır (gizli sayfaya bağlantı gidemez).
-//   Veri  — GİZLİ: Tarama'nın her satırı (No = satır) için bütün sonuç; yük
-//           durumu başına tek hücre, takoz × X/Y/Z yer değiştirmesi mm'nin yüzde
-//           biri tam sayı, ';' ayraçlı (yerel ondalık ayarından bağımsız okunur).
-//   Seçim — GİZLİ: Tarama'da görünen satır sayısı ve tekse No'su.
+//   Özet  — başlık; "Tarama →"; konfigürasyon başına satır: K · Sonuç (Sonuç'taki
+//           bloğuna bağlı) · grupların tipi · Uygunluk (TEK renkli sütun: en uygun koyu
+//           yeşil, öteki uygunlar sırayla açılan yeşil, uygun olmayan renksiz) · statik
+//           sehim · dört kesin kriter · frekans payı · TR · en düşük mod. Kriterin tanımı
+//           başlığın NOTUNDA (fare üstüne gelince).
+//   Tarama — çözülen kombinasyonlar: No ve grupların tipi MAVİ BAĞLANTI (kullanıcı
+//           2026-11-10: "o konfigürasyon yazılarının üstüne tıkladığında, o konfigürasyonun
+//           sonucuna gitsin"), modlar, f_b, TR, statik sehim, dört kriter (✓/✗), frekans
+//           payı, grup başına statik ve azami yük, kapasite; "← Özet".
+//   Sonuç — bütün konfigürasyonların bloğu: Özet'in K0…Kn'si, sonra Tarama'nın her
+//           satırı (yük durumu × takoz × X/Y/Z, modlar, TR; Özet/Tarama · geri · ileri).
+//           Sekmeden açılınca boş (kullanıcı 2026-11-10: "Sonuç kısmı Excel açıldığında boş
+//           gelsin"); bağlantı bloğu açar, bloklar arasındaki yüksek boş satırlar ekranda
+//           yalnız o konfigürasyonu bırakır. Excel makrosuz bir tıkı başka sayfaya değer
+//           olarak taşıyamaz: her konfigürasyonun sonucu dosyada hazır yazılı.
+// Sekmeler görünür: Özet · Tarama · Sonuç (kullanıcı 2026-11-10).
 // Her sayfada ızgara kapalı, kullanılmayan satır ve sütun gizli, sütun
 // genişliği içeriğe göre (Calibri ölçüsü: aşağıdaki tablo). Takoz adındaki
 // "ASR…" kaynak eki yazılmaz (kullanıcı 2026-11-09).
@@ -235,7 +232,7 @@ var veMntParamExcel = (function(){
   }
 
   // ── Özet ─────────────────────────────────────────────────────────────────
-  function ozet(E, adlar){
+  function ozet(E, adlar, D){
     var S = { ad:'Özet', hucre:[], birlesik:[], bag:[], not:[], izgara:false, gizle:true, yakin:85, satir:{ 2:24, 4:22 }, sutun:{ 1:2 } };
     var HR = 6, N = notlar(E), G = E.gruplar.map(kok);
     S.hucre.push([2, 2, E.baslik || 'Takoz konfigürasyonları', BASLIK]);
@@ -253,7 +250,7 @@ var veMntParamExcel = (function(){
       var r = HR + 1 + n, en = k.uygunluk === 'En uygun';
       S.hucre.push([r, 2, 'K' + k.K, bagStil(en)]);
       S.hucre.push([r, 3, adlar[n], bagStil(en, true)]);
-      S.bag.push([r, 2, 'K' + k.K, 'A1'], [r, 3, 'K' + k.K, 'A1']);
+      S.bag.push([r, 2, 'Sonuç', D.serit(n)], [r, 3, 'Sonuç', D.serit(n)]);   // Sonuç'taki bloğu
       G.forEach(function(g, i){ S.hucre.push([r, 4 + i, temiz(k.tipler[i] || '—'), SOL]); });
       var st = { kenar:true, yatay:'center', dikey:'center' };
       if(en){ st.dolgu = KOYU; st.renk = 'FFFFFF'; st.b = true; }
@@ -276,7 +273,7 @@ var veMntParamExcel = (function(){
   // ── Tarama ───────────────────────────────────────────────────────────────
   // Satırlar adım adım eklenir (kitapIs); başlık ve ölçü taramaBasla'da, süzgeç ve
   // sütun genişliği taramaBitir'de.
-  function taramaBasla(E){
+  function taramaBasla(E, D){
     var T = E.tarama, S = { ad:'Tarama', hucre:[], birlesik:[], izgara:false, gizle:true, yakin:85, satir:{}, sutun:{} };
     var G = T.gruplar.map(function(g){ return kok(E.gruplar[g]); });
     var L = T.satirlar, nMod = L.reduce(function(m, x){ return Math.max(m, (x.f || []).length); }, 0) || 6;
@@ -286,7 +283,6 @@ var veMntParamExcel = (function(){
     S.hucre.push([3, 1, 'Sönüm oranı ζ', ETIKET], [3, 4, E.zeta, sayiStil('0.00')]);
     S.bag = [];
     S.hucre.push([2, 6, '← Özet', DUGME]); S.bag.push([2, 6, 'Özet', 'A1']);
-    if(T.veri){ S.hucre.push([3, 6, 'Sonuçlar →', DUGME]); S.bag.push([3, 6, 'Sonuç', 'A1']); }
     var bas = ['No'].concat(G);
     for(var i = 1; i <= nMod; i++) bas.push('Mod ' + i + ' [Hz]');
     bas = bas.concat(['Zıplama f_b [Hz]', 'TR [%]', 'Statik sehim [mm]', 'Kriter 1', '1a', '1b', '2', 'Dört kriter', 'Frekans payı [Hz]'])
@@ -295,14 +291,20 @@ var veMntParamExcel = (function(){
     bas.forEach(function(b, c){ S.hucre.push([5, c + 1, b, BAS]); });
     var o = olcBasla(S);
     olcEkle(o, S.hucre, 0, S.hucre.length);
-    return { S:S, G:G, L:L, nMod:nMod, nSut:bas.length, olc:o };
+    return { S:S, G:G, L:L, nMod:nMod, nSut:bas.length, olc:o, D:D };
   }
   function taramaSatir(Z, E, n0, n1){
     var S = Z.S, G = Z.G, nMod = Z.nMod, i0 = S.hucre.length;
     for(var n = n0; n < n1; n++){
       var x = Z.L[n], r = 6 + n, c = 1;
-      S.hucre.push([r, c++, n + 1, HUC]);
-      G.forEach(function(g, j){ S.hucre.push([r, c++, temiz(x.tipler[j]), SOL]); });
+      // No ve taranan grupların tipi: Sonuç'taki bloğun bağlantısı (formül: süzgeç ve
+      // sıralama hücreyle taşır; değer formülün son değeri)
+      var hedef = Z.D && n < Z.D.nT ? '#\'Sonuç\'!' + Z.D.serit(Z.D.nK + n) : null;
+      S.hucre.push(hedef ? [r, c++, { f:'HYPERLINK("' + hedef + '",' + (n + 1) + ')', v:n + 1 }, BAG_NO] : [r, c++, n + 1, HUC]);
+      G.forEach(function(g, j){
+        var ad = temiz(x.tipler[j]);
+        S.hucre.push(hedef ? [r, c++, { f:'HYPERLINK("' + hedef + '","' + fx(ad) + '")', v:ad }, BAG_TIP] : [r, c++, ad, SOL]);
+      });
       var f = (x.f || []).slice().sort(function(a, b){ return a - b; });
       for(var i = 0; i < nMod; i++) S.hucre.push([r, c++, Number.isFinite(f[i]) ? f[i] : '', sayiStil('0.00')]);
       S.hucre.push([r, c++, x.fB, sayiStil('0.00')], [r, c++, x.T * 100, sayiStil('0.0')], [r, c++, x.d, sayiStil('0.0')]);
@@ -324,81 +326,44 @@ var veMntParamExcel = (function(){
     return S;
   }
   function tarama(E){
-    var Z = taramaBasla(E);
+    var Z = taramaBasla(E, sonucDuzen(E));
     taramaSatir(Z, E, 0, Z.L.length);
     return taramaBitir(Z);
   }
 
-  // ── Sonuç (tek konfigürasyon) · K sayfaları · Veri · Seçim ─────────────
+  // ── Sonuç: bütün konfigürasyonların sonuç blokları (biçimli akış) ────────
+  // Sayfanın başı (1–6): yönlendirme, Özet · Tarama düğmeleri, iki yüksek boş satır —
+  // sekmeden açılınca sonuç görünmez. Ardından her `adim` satırda bir blok: önce Özet'in
+  // konfigürasyonları (K0…Kn), sonra Tarama'nın satırları (No sırası). Blok (s ilk satırı):
+  // s boşluk (30 pt) · s+1 başlık · s+3 düğmeler · s+5 tip · s+6 ad · s+7 X/Y/Z · s+8… yük
+  // durumları · dört satır sonra modlar · üç satır sonra TR; ardından iki yüksek (409 pt) boş
+  // satır. Özet'in K'sı ve Tarama'nın konfigürasyon yazıları bloğun ŞERİDİNİ (A sütunu,
+  // s…s+H−1) açar: ekranda yalnız o konfigürasyon. K bloğu çözümün değerleri (tam
+  // duyarlık), tarama satırınınki mm'nin yüzde biri (veri.kod).
   var BOS = -2147483648;                     // veri.kod'da "sonuç yok"
-  // Paketli metinden t. belirteç: ';' yerine W boşluk konur, MID(t·W + 1, W) yalnız
-  // t. belirteci tutar — W metnin TAMAMINDAN uzunsa (öncekilerin boyu pencereyi kaydırır:
-  // sabit 40, altı takozun 18 belirtecinde 5. ve 6. takozu yanlış okuyordu). W: en uzun
-  // belirtecin boyu + 1, belirteç sayısı kadar. En küçük ve en büyük belirteç veri.uc'ta
-  // (paketlerken), yoksa koddan.
-  function pencereBoyu(V){
-    var en = 0, ek = 0;
-    if(V.uc){ ek = Math.min(0, V.uc[0]); en = Math.max(0, V.uc[1]); }
-    else for(var k = V.kod, i = 0; i < k.length; i++){ var v = k[i]; if(v === BOS) continue; if(v > en) en = v; if(v < ek) ek = v; }
-    return (Math.max(String(en).length, String(ek).length) + 1) * 3 * V.nT;
-  }
+  var UST = 6, YUKSEK = 409, SATIR_SINIR = 1048576;
+  var BOS_SONUC = veYon('Özet’te ya da Tarama’da konfigürasyonu seçin.');
   function fx(s){ return String(s).replace(/"/g, '""'); }
-  function yuvarla(v, d){ var k = Math.pow(10, d); return Number.isFinite(v) ? Math.round(v * k) / k : null; }
+  // Birleşik görünüşlü kutu, birleştirmesiz (bloklar binlerce): yazı ilk hücrede, üç hücre
+  // ortalanmış (centerContinuous), kenarlık dıştan.
+  function kutu(st, yan){ return Object.assign({}, st, { yatay:'centerContinuous', kenar:yan }); }
+  var KUTU_AD = [kutu(BAS1, 'ltb'), kutu(BAS1, 'tb'), kutu(BAS1, 'trb')];
+  var KUTU_DUGME = [kutu(DUGME, 'ltb'), kutu(DUGME, 'tb'), kutu(DUGME, 'trb')];
+  var TIP = { yatay:'center', dikey:'center' };          // ortadaki hücrede: yazı iki boş komşusuna taşar
+  var SAYI1 = sayiStil('0.0'), SAYI2 = sayiStil('0.00');
+  var BAG_NO = bagStil(false), BAG_TIP = bagStil(false, true);
 
-  // Veri sayfasının sütunları (1 tabanlı): No · taranan grupların tipi · dört kriter ·
-  // Dört kriter · TR · statik sehim · frekans payı · mod f · mod tipi · yük durumları.
-  function veriSutun(E){
-    var T = E.tarama, V = T.veri, nG = T.gruplar.length, nM = V.nM, nV = V.vakaAdlari.length, c = 2;
-    var o = { no:1, tip:[], k:[], modF:[], modAd:[], vaka:[] };
-    for(var i = 0; i < nG; i++) o.tip.push(c++);
-    for(i = 0; i < 4; i++) o.k.push(c++);
-    o.dort = c++; o.T = c++; o.d = c++; o.pay = c++;
-    for(i = 0; i < nM; i++) o.modF.push(c++);
-    for(i = 0; i < nM; i++) o.modAd.push(c++);
-    for(i = 0; i < nV; i++) o.vaka.push(c++);
-    o.son = c - 1;
-    return o;
-  }
-  function veriSatiri(E, i){
-    var T = E.tarama, V = T.veri, x = T.satirlar[i], nM = V.nM, nV = V.vakaAdlari.length, nT = V.nT;
-    var f = (x.f || []).slice().sort(function(a, b){ return a - b; }), k = x.k || [];
-    var L = [i + 1];
-    T.gruplar.forEach(function(g, j){ L.push(temiz(x.tipler[j])); });
-    for(var j = 0; j < 4; j++) L.push(k[j] ? '✓' : '✗');   // metin: belgenin ✓/✗ işareti
-    L.push(k.length === 4 && k.every(Boolean) ? 'Uygun' : '—');
-    L.push(yuvarla(x.T * 100, 4), yuvarla(x.d, 3), yuvarla(frekansPayi(f, E.fAtes), 3));
-    for(j = 0; j < nM; j++) L.push(yuvarla(V.modF[i * nM + j], 3));
-    for(j = 0; j < nM; j++){ var a = V.modAd[i * nM + j]; L.push(a < V.modAdlar.length ? modAdi(V.modAdlar[a]) : ''); }
-    for(var q = 0; q < nV; q++){
-      var b = ((i * nV + q) * nT) * 3, p = [];
-      for(var e = 0; e < nT * 3; e++){ var z = V.kod[b + e]; p.push(z === BOS ? '' : String(z)); }
-      L.push(p.join(';'));
-    }
-    return L;
-  }
-  function veri(E){
-    var T = E.tarama, V = T.veri, C = veriSutun(E), bas = [];
-    var G = T.gruplar.map(function(g){ return kok(E.gruplar[g]); });
-    bas[C.no - 1] = 'No';
-    G.forEach(function(g, j){ bas[C.tip[j] - 1] = g; });
-    ['Kriter 1', '1a', '1b', '2'].forEach(function(t, j){ bas[C.k[j] - 1] = t; });
-    bas[C.dort - 1] = 'Dört kriter'; bas[C.T - 1] = 'TR [%]'; bas[C.d - 1] = 'Statik sehim [mm]'; bas[C.pay - 1] = 'Frekans payı [Hz]';
-    C.modF.forEach(function(c, j){ bas[c - 1] = 'Mod ' + (j + 1) + ' [Hz]'; });
-    C.modAd.forEach(function(c, j){ bas[c - 1] = 'Mod ' + (j + 1) + ' tipi'; });
-    C.vaka.forEach(function(c, q){ bas[c - 1] = V.vakaAdlari[q] + ' [mm/100]'; });
-    return { ad:'Veri', gizli:true, akis:{ n:T.satirlar.length + 1, satir:function(i){ return i ? veriSatiri(E, i - 1) : bas; } } };
-  }
-
-  // Blokun satırları: başlık b, düğmeler b+2, tablo b+4'ten (tip · ad · X/Y/Z), yük durumları
-  // b+7'den, modlar dört satır sonra, TR modlardan üç satır sonra.
+  // Blokun tablosu (b: başlık satırı): tip b+4 (takozun ortadaki sütununda) · ad b+5 · X/Y/Z
+  // b+6 · yük durumları b+7'den, modlar dört satır sonra, TR modlardan üç satır sonra. Kutular
+  // ölçü için S.birlesik'te (sütun genişliği birleşik hücre gibi dağıtılır); sayfaya birleştirme
+  // yazılmaz.
   function blokTablo(S, E, b, tipHucre, vakaHucre, V, modlar, trHucre){
     var TK = E.takozlar;
     TK.forEach(function(t, i){
       var c0 = 4 + 4 * i;
-      S.hucre.push([b + 4, c0, tipHucre(i), { yatay:'center', dikey:'center' }]);
-      birles(S, b + 4, c0, c0 + 2);
+      S.hucre.push([b + 4, c0 + 1, tipHucre(i), TIP]);
       for(var j = 0; j < 3; j++){
-        S.hucre.push([b + 5, c0 + j, j ? '' : kok(t.ad), BAS1]);
+        S.hucre.push([b + 5, c0 + j, j ? '' : kok(t.ad), KUTU_AD[j]]);
         S.hucre.push([b + 6, c0 + j, 'XYZ'.charAt(j), BAS1]);
       }
       birles(S, b + 5, c0, c0 + 2);
@@ -407,139 +372,147 @@ var veMntParamExcel = (function(){
       var r = b + 7 + q;
       S.hucre.push([r, 3, ad, BAS1]);
       TK.forEach(function(t, i){
-        for(var j = 0; j < 3; j++) S.hucre.push([r, 4 + 4 * i + j, vakaHucre(q, i, j), sayiStil('0.0')]);
+        for(var j = 0; j < 3; j++) S.hucre.push([r, 4 + 4 * i + j, vakaHucre(q, i, j), SAYI1]);
       });
     });
     var mh = b + 7 + V.length + 4;
     S.hucre.push([mh, 2, 'Mod', BAS1], [mh, 3, 'Mod Tipi', BAS1], [mh, 4, 'Hz', BAS1]);
     modlar.forEach(function(m, i){
-      S.hucre.push([mh + 1 + i, 2, i + 1, BAS1], [mh + 1 + i, 3, m[0], HUC], [mh + 1 + i, 4, m[1], sayiStil('0.00')]);
+      S.hucre.push([mh + 1 + i, 2, i + 1, BAS1], [mh + 1 + i, 3, m[0], HUC], [mh + 1 + i, 4, m[1], SAYI2]);
     });
     var tr_ = mh + Math.max(modlar.length, 1) + 3;
-    S.hucre.push([tr_, 2, 'TR (%)', HUC], [tr_, 3, trHucre, sayiStil('0.00')]);
+    S.hucre.push([tr_, 2, 'TR (%)', HUC], [tr_, 3, trHucre, SAYI2]);
     return tr_;
   }
-  // K bloku: çözümün değerleri (formülsüz); geri · ileri öteki K sayfasına.
-  function kBlok(S, E, k, n, b){
-    var G = E.gruplar.map(kok);
-    S.satir[b - 1] = 30; S.satir[b] = 24; S.satir[b + 2] = 22;
-    S.hucre.push([b, 3, 'K' + k.K + ' — ' + G.map(function(g, i){ return g + ': ' + temiz(k.tipler[i] || '—'); }).join(' · '), BASLIK]);
+  // Blokun başı: başlık; dönüş (C), geri (D–F) ve ileri (son takozun sütunları) düğmesi —
+  // [metin, hedef sayfa, hedef hücre]; geri ve ileri bağlantısı düğmenin üç hücresini kaplar.
+  function blokBasi(S, E, b, baslik, don, geri, ileri){
+    S.hucre.push([b, 3, baslik, BASLIK]);
+    S.hucre.push([b + 2, 3, don[0], DUGME]); S.bag.push([b + 2, 3, don[1], don[2]]);
     var TK = E.takozlar, son = TK.length < 2 ? 8 : 4 + 4 * (TK.length - 1);
-    S.hucre.push([b + 2, 3, '← Özet sayfasına dön', DUGME]); S.bag.push([b + 2, 3, 'Özet', 'A1']);
-    if(n > 0){
-      for(var c = 4; c <= 6; c++) S.hucre.push([b + 2, c, c === 4 ? '← Geri konfigürasyon (K' + E.konfig[n - 1].K + ')' : '', DUGME]);
-      birles(S, b + 2, 4, 6); S.bag.push([b + 2, 4, 'K' + E.konfig[n - 1].K, 'A1']);
-    }
-    if(n < E.konfig.length - 1){
-      for(c = son; c <= son + 2; c++) S.hucre.push([b + 2, c, c === son ? 'İleri konfigürasyon (K' + E.konfig[n + 1].K + ') →' : '', DUGME]);
-      birles(S, b + 2, son, son + 2); S.bag.push([b + 2, son, 'K' + E.konfig[n + 1].K, 'A1']);
-    }
+    [[geri, 4], [ileri, son]].forEach(function(x){
+      if(!x[0]) return;
+      for(var j = 0; j < 3; j++) S.hucre.push([b + 2, x[1] + j, j ? '' : x[0][0], KUTU_DUGME[j]]);
+      birles(S, b + 2, x[1], x[1] + 2);
+      S.bag.push([b + 2, x[1], x[0][1], x[0][2], x[1] + 2]);
+    });
+  }
+  // Düzen: blok sayısı (Özet'in konfigürasyonları nK, Tarama'nın satırları nT), blok boyu H,
+  // adım (blok + iki yüksek satır; Excel'in satır sınırını aşacaksa bir yüksek satır, o da
+  // aşarsa sığan kadar tarama satırı), bloğun ilk satırı ve şeridi (bağlantının hedefi).
+  function sonucDuzen(E){
+    var T = E.tarama || {}, V = T.veri, L = T.satirlar || [], nK = E.konfig.length;
+    var nV = V ? V.vakaAdlari.length : 0, nM = V ? V.nM : 0;
+    E.konfig.forEach(function(k){ nV = Math.max(nV, (k.vakalar || []).length); nM = Math.max(nM, (k.modlar || []).length); });
+    var H = nV + Math.max(nM, 1) + 16, adim = H + 2, nT = V ? L.length : 0;
+    if(UST + (nK + nT) * adim + 1 > SATIR_SINIR) adim = H + 1;
+    if(UST + (nK + nT) * adim + 1 > SATIR_SINIR) nT = Math.max(0, Math.floor((SATIR_SINIR - 1 - UST) / adim) - nK);
+    var ilk = function(j){ return UST + 1 + j * adim; };
+    return { nK:nK, nT:nT, H:H, adim:adim, n:UST + (nK + nT) * adim, ilk:ilk,
+             serit:function(j){ var s0 = ilk(j); return '$A$' + s0 + ':$A$' + (s0 + H - 1); } };
+  }
+  // Tarama satırının grup başına tipi: taranan grup satırdan, öteki grup mevcut tasarımınki.
+  function grupTipleri(E, x){
+    var taranan = {};
+    E.tarama.gruplar.forEach(function(g, j){ taranan[g] = j; });
+    return E.gruplar.map(function(g, gi){
+      return temiz(gi in taranan ? x.tipler[taranan[gi]] : ((E.konfig[0] && E.konfig[0].tipler[gi]) || '—'));
+    });
+  }
+  // Özet'in n. konfigürasyonunun bloğu: çözümün değerleri, formülsüz.
+  function kBlok(E, D, n){
+    var k = E.konfig[n], G = E.gruplar.map(kok), b = D.ilk(n) + 1, S = { hucre:[], birlesik:[], bag:[] };
+    blokBasi(S, E, b, 'K' + k.K + ' — ' + G.map(function(g, i){ return g + ': ' + temiz(k.tipler[i] || '—'); }).join(' · '),
+      ['← Özet sayfasına dön', 'Özet', 'A1'],
+      n > 0 ? ['← Geri konfigürasyon (K' + E.konfig[n - 1].K + ')', 'Sonuç', D.serit(n - 1)] : null,
+      n < E.konfig.length - 1 ? ['İleri konfigürasyon (K' + E.konfig[n + 1].K + ') →', 'Sonuç', D.serit(n + 1)] : null);
     var V = k.vakalar || [];
-    var M = (k.modlar || []).slice().sort(function(a, b){ return a.f - b.f; });
+    var M = (k.modlar || []).slice().sort(function(a, c){ return a.f - c.f; });
     blokTablo(S, E, b, function(i){ return temiz((k.takozTip || [])[i] || ''); },
       function(q, i, j){ var d = (V[q].d || [])[i] || []; return Number.isFinite(d[j]) ? d[j] : ''; },
       V.map(function(v){ return v.ad; }), M.map(function(m){ return [modAdi(m.ad), m.f]; }),
       Number.isFinite(k.T) ? k.T * 100 : '');
+    return S;
   }
-  // Sonuç: TEK konfigürasyon — Tarama'nın süzgecinde tek satır kalınca o satır (Seçim!A2),
-  // yoksa boş. Değerler Veri'den INDEX ile; önbellek boş (kitap açılışta yeniden hesaplanır),
-  // sütun genişliği Tarama'nın ilk satırının değerlerinden.
-  var BOS_SONUC = veYon('Tarama’da süzgeçle tek satır bırakın.');
-  function sonuc(E){
-    var S = { ad:'Sonuç', hucre:[], birlesik:[], bag:[], izgara:false, gizle:true, yakin:85, satir:{ 1:30, 2:24, 4:22 }, sutun:{} };
-    var T = E.tarama, V = T.veri, C = veriSutun(E), n = T.satirlar.length, nM = V.nM;
-    var G = E.gruplar.map(kok), taranan = {};
-    T.gruplar.forEach(function(g, j){ taranan[g] = j; });
-    var sec = "'Seçim'!$A$2";
-    var rng = function(c){ var h = harf(c); return '\'Veri\'!$' + h + '$2:$' + h + '$' + (n + 1); };
-    var idx = function(c){ return 'INDEX(' + rng(c) + ',' + sec + ')'; };
-    var ilk = veriSatiri(E, 0);
-    var oku = function(c){ return ilk[c - 1]; };
-    // başlık: No ve grupların tipi; seçim yoksa yönlendirme
-    var parca = [];
-    E.gruplar.forEach(function(g, gi){
-      var lit = '"' + fx(G[gi] + ': ') + '"';
-      if(gi in taranan) parca.push(lit + '&' + idx(C.tip[taranan[gi]]));
-      else parca.push('"' + fx(G[gi] + ': ' + temiz((E.konfig[0] && E.konfig[0].tipler[gi]) || '—')) + '"');
-    });
-    S.hucre.push([2, 3, { f:'IF(' + sec + '="","' + fx(BOS_SONUC) + '",IFERROR("No "&' + sec + '&" — "&' + parca.join('&" · "&') + ',""))',
-      v:BOS_SONUC }, BASLIK]);
-    S.hucre.push([4, 3, '← Özet sayfasına dön', DUGME]); S.bag.push([4, 3, 'Özet', 'A1']);
-    for(var c = 4; c <= 6; c++) S.hucre.push([4, c, c === 4 ? '← Tarama' : '', DUGME]);
-    birles(S, 4, 4, 6); S.bag.push([4, 4, 'Tarama', 'A1']);
-    // kriterler
-    var kr = [['Kriter 1', C.k[0], HUC], ['1a', C.k[1], HUC], ['1b', C.k[2], HUC], ['2', C.k[3], HUC], ['Dört kriter', C.dort, HUC],
-      ['TR [%]', C.T, sayiStil('0.0')], ['Statik sehim [mm]', C.d, sayiStil('0.00')], ['Frekans payı [Hz]', C.pay, sayiStil('0.000')]];
-    kr.forEach(function(x, j){
-      S.hucre.push([6, 4 + j, x[0], BAS]);
-      S.hucre.push([7, 4 + j, { f:'IFERROR(' + idx(x[1]) + ',"")', v:'', olc:oku(x[1]) }, x[2]]);
-    });
-    // tablo: tip · ad · X/Y/Z 9–11, yük durumları 12'den (blokTablo'nun b'si 5)
-    var grupOf = E.takozlar.map(function(t){ return t.grup; });
-    var uzun = function(gi){
-      var A = (T.adaylar && T.adaylar[taranan[gi]]) || [];
-      return A.reduce(function(m, a){ a = temiz(a); return a.length > m.length ? a : m; }, '');
-    };
-    var tipHucre = function(i){
-      var gi = grupOf[i];
-      if(gi in taranan) return { f:'IFERROR(' + idx(C.tip[taranan[gi]]) + ',"")', v:'', olc:uzun(gi) };
-      var sabit = temiz((E.konfig[0] && E.konfig[0].tipler[gi]) || '');
-      return { f:'IF(' + sec + '="","","' + fx(sabit) + '")', v:'', olc:sabit };
-    };
-    var W = pencereBoyu(V);
-    var vakaHucre = function(q, i, j){
-      var t = 3 * i + j;
-      return { f:'IFERROR(VALUE(TRIM(MID(SUBSTITUTE(' + idx(C.vaka[q]) + ',";",REPT(" ",' + W + ')),' + (t * W + 1) + ',' + W + ')))/100,"")',
-               v:'', olc:-88.8 };
-    };
-    var modAdUzun = (V.modAdlar || []).reduce(function(m, a){ a = modAdi(a); return a.length > m.length ? a : m; }, '');
-    var modlar = [];
-    for(var j = 0; j < nM; j++){
-      modlar.push([{ f:'IFERROR(' + idx(C.modAd[j]) + ',"")', v:'', olc:modAdUzun },
-                   { f:'IFERROR(' + idx(C.modF[j]) + ',"")', v:'', olc:88.88 }]);
+  // Tarama'nın i. satırının (No i + 1) bloğu: veri.kod'dan (mm'nin yüzde biri).
+  function tBlok(E, D, i){
+    var T = E.tarama, V = T.veri, x = T.satirlar[i], G = E.gruplar.map(kok), j = D.nK + i, b = D.ilk(j) + 1, no = i + 1;
+    var S = { hucre:[], birlesik:[], bag:[] }, nV = V.vakaAdlari.length, nT = V.nT, nM = V.nM, tip = grupTipleri(E, x);
+    blokBasi(S, E, b, 'No ' + tr(no, 0) + ' — ' + G.map(function(g, gi){ return g + ': ' + tip[gi]; }).join(' · '),
+      ['← Tarama sayfasına dön', 'Tarama', '$A$' + (5 + no)],
+      i > 0 ? ['← Geri konfigürasyon (No ' + tr(no - 1, 0) + ')', 'Sonuç', D.serit(j - 1)] : null,
+      i < D.nT - 1 ? ['İleri konfigürasyon (No ' + tr(no + 1, 0) + ') →', 'Sonuç', D.serit(j + 1)] : null);
+    var grupOf = E.takozlar.map(function(t){ return t.grup; }), M = [];
+    for(var m = 0; m < nM; m++){
+      var f = V.modF[i * nM + m], a = V.modAd[i * nM + m];
+      if(Number.isFinite(f)) M.push([a < V.modAdlar.length ? modAdi(V.modAdlar[a]) : '', f]);
     }
-    blokTablo(S, E, 5, tipHucre, vakaHucre, V.vakaAdlari, modlar, { f:'IFERROR(' + idx(C.T) + ',"")', v:'', olc:88.88 });
-    var o = olc(S);
-    S.sutun = o.sutun; Object.assign(S.satir, o.satir);
+    blokTablo(S, E, b, function(k){ return tip[grupOf[k]] || ''; },
+      function(q, k, a){ var z = V.kod[((i * nV + q) * nT + k) * 3 + a]; return z === BOS ? '' : z / 100; },
+      V.vakaAdlari, M, Number.isFinite(x.T) ? x.T * 100 : '');
     return S;
   }
-  // Seçim (gizli): A1 Tarama'da görünen satır sayısı, A2 tekse o satırın No'su (dizi formülü:
-  // SUBTOTAL(103, OFFSET) süzgecin gizlediği satırı saymaz), değilse boş.
-  function secim(E){
-    var n = E.tarama.satirlar.length, tA = '\'Tarama\'!$A$6:$A$' + (5 + n);
-    return { ad:'Seçim', gizli:true, hucre:[
-      [1, 1, { f:'SUBTOTAL(103,' + tA + ')', v:n }],
-      [2, 1, { f:'IF(A1=1,INDEX(' + tA + ',MATCH(1,SUBTOTAL(103,OFFSET(\'Tarama\'!$A$6,ROW(' + tA + ')-ROW(\'Tarama\'!$A$6),0)),0)),"")',
-               v:'', dizi:true }]
-    ] };
-  }
-  // K sayfası: Özet'in bir konfigürasyonu, yalnız o.
-  function kSayfa(E, k, n){
-    var S = { ad:'K' + k.K, hucre:[], birlesik:[], bag:[], izgara:false, gizle:true, yakin:85, satir:{}, sutun:{} };
-    kBlok(S, E, k, n, 2);
-    var o = olc(S);
-    S.sutun = o.sutun; Object.assign(S.satir, o.satir);
-    return S;
+  // Sonuç sayfası: satırları istendikçe (blok blok) üretilen biçimli akış. Sütun genişliği
+  // sayfanın başından, K bloklarından, ilk ve son tarama satırının bloğundan ve en uzun mod
+  // adından; bağlantılar satırlar üretilirken birikir (bag yazımın sonunda okunur).
+  function sonucSayfa(E, D){
+    var ust = { hucre:[[2, 3, BOS_SONUC, BASLIK], [4, 3, '← Özet sayfasına dön', DUGME]], birlesik:[], bag:[[4, 3, 'Özet', 'A1']] };
+    for(var j = 0; j < 3; j++) ust.hucre.push([4, 4 + j, j ? '' : '← Tarama', KUTU_DUGME[j]]);
+    birles(ust, 4, 4, 6); ust.bag.push([4, 4, 'Tarama', 'A1', 6]);
+    function grupla(S){
+      var m = {};
+      S.hucre.forEach(function(h){ (m[h[0]] || (m[h[0]] = [])).push([h[1], h[2], h[3]]); });
+      Object.keys(m).forEach(function(r){ m[r].sort(function(a, c){ return a[0] - c[0]; }); });
+      return m;
+    }
+    var olcS = { hucre:ust.hucre.slice(), birlesik:ust.birlesik.slice() }, ekle = function(S){
+      olcS.hucre = olcS.hucre.concat(S.hucre); olcS.birlesik = olcS.birlesik.concat(S.birlesik);
+    };
+    for(var n = 0; n < D.nK; n++) ekle(kBlok(E, D, n));
+    if(D.nT){ ekle(tBlok(E, D, 0)); if(D.nT > 1) ekle(tBlok(E, D, D.nT - 1)); }
+    var V = E.tarama && E.tarama.veri;
+    if(V) (V.modAdlar || []).forEach(function(a){ olcS.hucre.push([D.n + 2, 3, modAdi(a), HUC]); });
+    var o = olc(olcS), sonC = 1;
+    olcS.hucre.forEach(function(h){ if(h[1] > sonC) sonC = h[1]; });
+    var ustR = grupla(ust), BAG = [], bj = -1, satir = null;
+    return { ad:'Sonuç', izgara:false, gizle:'sutun', yakin:85, sutun:o.sutun, bag:function(){ return BAG; },
+      akis:{ n:D.n, sutun:sonC,
+        hucre:function(r){
+          if(r === 1){ BAG = ust.bag.slice(); bj = -1; }
+          if(r <= UST) return ustR[r] || null;
+          var jj = Math.floor((r - UST - 1) / D.adim);
+          if(jj !== bj){
+            bj = jj;
+            var S = jj < D.nK ? kBlok(E, D, jj) : tBlok(E, D, jj - D.nK);
+            satir = grupla(S); BAG.push.apply(BAG, S.bag);
+          }
+          return satir[r] || null;
+        },
+        ht:function(r){
+          if(r <= UST) return r === 2 ? 24 : r === 4 ? 22 : r >= 5 ? YUKSEK : undefined;
+          var x = (r - UST - 1) % D.adim;
+          return x === 0 ? 30 : x === 1 ? 24 : x === 3 ? 22 : x >= D.H ? YUKSEK : undefined;
+        } } };
   }
 
-  // Dilimli kurulum (uzun iş arayüzü kilitlemez): adim() bir adım yapar — Özet, K
-  // sayfaları ve Sonuç, Tarama'nın başı, KAC satırı, sonu — ve iş yaptıysa true döner;
-  // Veri'nin satırları yazılırken üretilir. kitap(E) adımların tek seferi.
+  // Dilimli kurulum (uzun iş arayüzü kilitlemez): adim() bir adım yapar — Özet ve Sonuç'un
+  // düzeni, Tarama'nın başı, KAC satırı, sonu — ve iş yaptıysa true döner; Sonuç'un
+  // blokları yazılırken üretilir. kitap(E) adımların tek seferi.
   var KAC = 100;
   function kitapIs(E){
     var T = E.tarama, N = (T && T.satirlar) ? T.satirlar.length : 0, evre = 0, n = 0;
-    var OZ = null, SON = null, SEC = null, KS = [], Z = null, TA = null;
+    var OZ = null, SON = null, Z = null, TA = null, D = null;
     return {
       adim: function(){
         if(evre === 0){
+          D = sonucDuzen(E);
           var adlar = E.konfig.map(function(k){ return sayfaAdi(k, k.tipler || []); });
-          OZ = ozet(E, adlar);
-          KS = E.konfig.map(function(k, i){ return kSayfa(E, k, i); });
-          if(N && T.veri){ SON = sonuc(E); SEC = secim(E); }
+          OZ = ozet(E, adlar, D);
+          SON = sonucSayfa(E, D);
           evre = N ? 4 : 3;
           return true;
         }
-        if(evre === 4){ Z = taramaBasla(E); evre = 1; return true; }
+        if(evre === 4){ Z = taramaBasla(E, D); evre = 1; return true; }
         if(evre === 1){
           var son = Math.min(N, n + KAC);
           taramaSatir(Z, E, n, son); n = son;
@@ -552,13 +525,10 @@ var veMntParamExcel = (function(){
       oran: function(){ return evre === 3 ? 1 : (evre === 0 ? 0 : (evre === 4 ? 0.05 : 0.05 + 0.9 * n / N)); },
       kitap: function(){
         if(evre !== 3) throw new Error('Kitap kurulmadı');
-        // sekme çubuğu gizli: sayfalar bağlantıyla açılır (Özet → K sayfaları · Tarama → Sonuç)
         var sayfalar = [OZ];
         if(N) sayfalar.push(TA);
-        if(SON) sayfalar.push(SON);
-        sayfalar = sayfalar.concat(KS);
-        if(N && T.veri) sayfalar.push(veri(E), SEC);
-        return { sayfalar:sayfalar, sekmeGizli:true };
+        sayfalar.push(SON);
+        return { sayfalar:sayfalar };
       }
     };
   }
