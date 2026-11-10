@@ -378,6 +378,29 @@ describe('YAYIN — köprü ve sayfa', () => {
     expect(T.govde({ id: 'n1', version: 3, data: { no: 1, metin: 'a' } })).toEqual({ no: 1, metin: 'a', id: 'n1', __surum: 3 });
     expect(T.govde({ no: 2, metin: 'b' })).toEqual({ no: 2, metin: 'b' });
   });
+
+  // İKİ SINIR (kullanıcı 2026-11-10: "Canlı notu güncelleyelim"): AMC görselleri programı 14,5 →
+  // 17,8 MB yaptı. Tek 16 MB denetimi programın GÜNCELLEMESİNİ de durduruyordu; oysa güncelleme
+  // varlık olarak gider (metin varlığı 20 MiB) ve 17,8 MiB'lık kopya kabul edildi. 16 MB yalnız
+  // sayfanın gömdüğü kopya içindir.
+  test('SINIR: varlık 20 MiB\'a, sayfaya gömülü kopya 16 MiB\'a kadar; ikisi ayrı hüküm', () => {
+    const MiB = 1048576;
+    expect(T.SINIR).toBe(16 * MiB);
+    expect(T.VARLIK_SINIRI).toBe(20 * MiB);
+    expect(T.sinirHukmu(11.4 * MiB)).toEqual({ varlik: true, sayfa: true });          // Not 27 çağındaki program
+    expect(T.sinirHukmu(16 * MiB)).toEqual({ varlik: true, sayfa: true });            // sınırın kendisi sığar
+    expect(T.sinirHukmu(16 * MiB + 1)).toEqual({ varlik: true, sayfa: false });       // yalnız varlık
+    expect(T.sinirHukmu(18675972)).toEqual({ varlik: true, sayfa: false });           // AMC görselleriyle program
+    expect(T.sinirHukmu(20 * MiB)).toEqual({ varlik: true, sayfa: false });
+    expect(T.sinirHukmu(20 * MiB + 1)).toEqual({ varlik: false, sayfa: false });      // hiçbiri
+  });
+
+  test('hazırla: 16 MB\'ı aşan program varlık olarak hazırlanır (durmaz), sayfa yayını kapalı söylenir', () => {
+    const arac = fs.readFileSync(path.join(KOK, 'tools/canli-not.js'), 'utf8');
+    expect(arac).toMatch(/if \(!hukum\.varlik\) \{\s*throw new Error/);              // yalnız 20 MB aşılınca durur
+    expect(arac).not.toMatch(/if \(boyut > SINIR\) \{\s*throw/);                     // eski tek sınır dönmedi
+    expect(arac).toContain("'YAPILAMAZ (program 16 MB\\'ı aşıyor)'");                  // sayfa yayını sebebiyle kapalı
+  });
 });
 
 // ═══ GÜNCELLİK ═════════════════════════════════════════════════════════════

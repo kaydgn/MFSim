@@ -468,7 +468,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   not N: …", `tools/version-info.js` → `notlar`), `build.js` yalnız künyenin modül listesindeki
   notlarınkini gömer (`__MFSIM_DEGISIKLIK`). Kapı: `degisiklik-resim.test.js`.
 - `tools/canli-not.{js,html}` + `tools/canli-not-kopru.js` + `tools/canli-not-cekirdek.js` — **Canlı
-  Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya, 11,4 MB), kullanıcı
+  Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya; sınırlar skill `canli-not` §1), kullanıcı
   üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular, notun
   satırına sonucun görüntüsünü koyar. Yeni program varlık deposuna ve `yayin/son`a gider: sayfa
   KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05); şeridin
