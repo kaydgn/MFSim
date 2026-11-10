@@ -10,6 +10,8 @@
  *   ÇİZİM      şeklin yol verisi ve kutusu (sayfa ile aracın ortak dili)
  *   YER        notun yer özeti, Claude'a giden yorumun sınırı
  *   DOĞRULAMA  bozuk not sessizce çizilmez; sıra
+ *   KATEGORİ   Notlar listesi durumdan türeyen bölümlere ayrılır (girdi bekleniyor ·
+ *              uygulanıyor · uygulanacak · uygulanan); hiçbir not düşmez
  *   SEÇİM      çevrelenen öğe arka plandan önce, okun ucu, başlığın yönü
  *   KÜNYE      görünen değer (Türkçe sayı alanı), CSS yolu
  *   FOTOĞRAF   betiksiz, canlı değerli, özgün belgeye dokunmaz
@@ -121,6 +123,38 @@ describe('DOĞRULAMA — bozuk not çizilmez, sıra korunur', () => {
     expect(CN.yenidenEskiye(l).map((n) => n.no)).toEqual([4, 3, 2, 1]);
     expect(CN.siraliNotlar(l).map((n) => n.no)).toEqual([1, 2, 3, 4]);
     expect(l.map((n) => n.no)).toEqual([3, 2, 1, 4]);              // girdi değişmez
+  });
+});
+
+// ═══ KATEGORİ ══════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-10: "Notlar içine 'uygulanan' 'uygulanıyor' 'uygulanacak' 'girdi
+// bekleniyor' gibi kategoriler koyalım. Notları takip ederiz." Kategori notun
+// DURUMUNDAN türer; hata sessiz olurdu — bir not hiçbir bölümde görünmezse kullanıcı
+// o notun kaybolduğunu sanır.
+describe('KATEGORİ — Notlar listesi durumdan türeyen bölümlere ayrılır', () => {
+  const n = (no, durum) => ({ no, sira: no, durum });
+  test('sıra dikkat sırası; her not tek kategoride, kategoride yeniden eskiye; girdi değişmez', () => {
+    const l = [n(1, 'uygulandi'), n(2, 'bekliyor'), n(3, 'uygulaniyor'), n(4, 'soru'), n(5, 'uygulandi'), n(6, 'bekliyor')];
+    const k = CN.kategorile(l);
+    expect(k.map((x) => x.ad)).toEqual(['Girdi bekleniyor', 'Uygulanıyor', 'Uygulanacak', 'Uygulanan', 'İptal', 'Diğer']);
+    expect(k.map((x) => x.notlar.map((m) => m.no))).toEqual([[4], [3], [6, 2], [5, 1], [], []]);
+    expect(l.map((m) => m.no)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  test('tanınmayan durum düşmez (Diğer); İptal ve Diğer boşken gizli, dört ana kategori hep var', () => {
+    const k = CN.kategorile([n(1, 'bitti'), n(2, 'iptal')]);
+    expect(k.find((x) => x.kod === 'diger').notlar.map((m) => m.no)).toEqual([1]);
+    expect(k.find((x) => x.kod === 'iptal').notlar.map((m) => m.no)).toEqual([2]);
+    const bos = CN.kategorile([]);
+    expect(bos.filter((x) => !x.bosGizli).map((x) => x.kod)).toEqual(['girdi', 'uygulaniyor', 'uygulanacak', 'uygulanan']);
+    expect(bos.every((x) => x.notlar.length === 0)).toBe(true);
+  });
+
+  test('her durum bir kategoriye bağlı (yeni durum eklenirse bu test söyler); açık not = kuyruk · işlenen · girdi bekleyen', () => {
+    const baglanan = [].concat(...CN.KATEGORILER.map((k) => k.durumlar)).sort();
+    expect(baglanan).toEqual(Object.keys(CN.DURUMLAR).sort());
+    ['bekliyor', 'uygulaniyor', 'soru'].forEach((d) => expect(CN.acikNot(n(1, d))).toBe(true));
+    ['uygulandi', 'iptal'].forEach((d) => expect(CN.acikNot(n(1, d))).toBe(false));
   });
 });
 
@@ -579,11 +613,72 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     const a = sayfa();
     await bekle();
     const not = (id, no) => ({ id, no, sira: no, metin: 'x', durum: 'uygulandi', zaman: '2026-11-05T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } });
-    const sira = () => [...a.d.querySelectorAll('#cn-notlar > li')].map((li) => li.id);
+    const sira = () => [...a.d.querySelectorAll('#cn-notlar .cn-not')].map((li) => li.id);
     a.notGonder([not('a', 1), not('b', 2), not('c', 3)]);
     expect(sira()).toEqual(['not-c', 'not-b', 'not-a']);
     a.notGonder([not('a', 1), not('b', 2), not('c', 3), not('d', 4)]);
     expect(sira()).toEqual(['not-d', 'not-c', 'not-b', 'not-a']);
+  });
+
+  // Kullanıcı 2026-11-10: "Notlar içine 'uygulanan' 'uygulanıyor' 'uygulanacak' 'girdi
+  // bekleniyor' gibi kategoriler koyalım. Notları takip ederiz." Bölümler sayfada
+  // sırayla, başlıkta sayı; satır durumuna göre bölümde, durum değişince AYNI satır
+  // öteki bölüme taşınır (çizim, sonuç görüntüsü ve yorum çapası yerinde kalır).
+  test('Notlar kategorilere ayrılır: başlık ve sayı, satır bölümünde, durum değişince satır TAŞINIR', async () => {
+    window.localStorage.removeItem('cn-kat-kapali');
+    const a = sayfa();
+    await bekle();
+    const not = (id, no, durum) => ({ id, no, sira: no, metin: 'x', durum, zaman: '2026-11-10T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } });
+    const bolum = (kod) => a.d.querySelector('.cn-kat[data-kat="' + kod + '"]');
+    const satirlar = (kod) => [...bolum(kod).querySelectorAll('.cn-not')].map((li) => li.id);
+    const sayilar = () => [...a.d.querySelectorAll('.cn-kat:not([hidden])')].map((s) =>
+      s.querySelector('.cn-kat-ad').textContent + ' ' + s.querySelector('.cn-kat-say').textContent);
+    a.notGonder([not('a', 1, 'uygulandi'), not('b', 2, 'bekliyor'), not('c', 3, 'uygulaniyor'), not('d', 4, 'soru'), not('e', 5, 'uygulandi')]);
+    expect(sayilar()).toEqual(['Girdi bekleniyor 1', 'Uygulanıyor 1', 'Uygulanacak 1', 'Uygulanan 2']);
+    expect(satirlar('girdi')).toEqual(['not-d']);
+    expect(satirlar('uygulanan')).toEqual(['not-e', 'not-a']);          // her bölümde en yeni en üstte
+    expect(a.d.querySelectorAll('.cn-cip').length).toBe(0);             // durum bölümün başlığında, satırda ikinci kez yazılmaz
+    // açık not sayacı: kuyruk · işlenen · girdi bekleyen (3), biten sayılmaz
+    expect(a.d.getElementById('cn-sayac').textContent).toBe('5');
+    expect(a.d.getElementById('cn-sayac').getAttribute('data-bekleyen')).toBe('3');
+    // durum değişince satır öteki bölüme TAŞINIR: aynı eleman, bölümler sırayla
+    const b = a.d.querySelector('#not-b');
+    a.notGonder([not('a', 1, 'uygulandi'), not('b', 2, 'uygulaniyor'), not('c', 3, 'uygulaniyor'), not('d', 4, 'soru'), not('e', 5, 'uygulandi')]);
+    expect(a.d.querySelector('#not-b')).toBe(b);
+    expect(satirlar('uygulaniyor')).toEqual(['not-c', 'not-b']);
+    expect(satirlar('uygulanacak')).toEqual([]);
+    // boş kategori başlığıyla kalır (sayı 0) ve tıklanamaz; İptal ve Diğer boşken gizli
+    expect(sayilar()).toEqual(['Girdi bekleniyor 1', 'Uygulanıyor 2', 'Uygulanacak 0', 'Uygulanan 2']);
+    expect(bolum('uygulanacak').querySelector('button').disabled).toBe(true);
+    expect(bolum('iptal').hidden).toBe(true);
+    expect(bolum('diger').hidden).toBe(true);
+    a.notGonder([not('a', 1, 'iptal')]);
+    expect(bolum('iptal').hidden).toBe(false);
+    expect(satirlar('iptal')).toEqual(['not-a']);
+    expect(a.d.getElementById('cn-bos').hidden).toBe(true);
+  });
+
+  test('bölüm başlığı bölümü kapatır ve açar; kapalı olanlar hatırlanır', async () => {
+    window.localStorage.removeItem('cn-kat-kapali');
+    const a = sayfa();
+    await bekle();
+    const not = (id, no) => ({ id, no, sira: no, metin: 'x', durum: 'uygulandi', zaman: '2026-11-10T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } });
+    a.notGonder([not('a', 1), not('b', 2)]);
+    const bolum = a.d.querySelector('.cn-kat[data-kat="uygulanan"]'), dugme = bolum.querySelector('button');
+    expect([dugme.getAttribute('aria-expanded'), bolum.getAttribute('data-kapali')]).toEqual(['true', '0']);
+    dugme.click();
+    expect([dugme.getAttribute('aria-expanded'), bolum.getAttribute('data-kapali')]).toEqual(['false', '1']);
+    expect(window.localStorage.getItem('cn-kat-kapali')).toBe('["uygulanan"]');
+    // başka bir açılışta kapalı gelir; satırlar yine de DOM'da (yorum çapası bozulmaz)
+    const b = sayfa();
+    await bekle();
+    b.notGonder([not('a', 1), not('b', 2)]);
+    const bolumB = b.d.querySelector('.cn-kat[data-kat="uygulanan"]');
+    expect(bolumB.getAttribute('data-kapali')).toBe('1');
+    expect(bolumB.querySelectorAll('.cn-not').length).toBe(2);
+    bolumB.querySelector('button').click();
+    expect(bolumB.getAttribute('data-kapali')).toBe('0');
+    expect(window.localStorage.getItem('cn-kat-kapali')).toBe('[]');
   });
 
   test('notun satırında sonucun görüntüsü; tıklanınca büyük, Esc kapatır', async () => {
