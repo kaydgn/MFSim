@@ -4717,6 +4717,7 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .mntlib-dot[data-t="degisti"]{ background:var(--accent-warning); }
 .mntlib-dot[data-t="gomulu"]{ background:var(--accent-primary); }
 .mntlib-dot[data-t="eksik"]{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-muted); }
+.mntlib-dot[data-t="tahmin"]{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--accent-primary); }   /* radyal tahmini (Canlı Not 113) */
 .mntlib-kz{
   font-size:var(--fs-micro);color:var(--text-muted);
   white-space:nowrap;
@@ -9995,6 +9996,9 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-nw{ white-space:nowrap; }
 .ve-mnt-ek{ display:inline-block; }
 .ve-properties-content .ve-mnt-foy td.kr{ color:var(--ink-danger); font-weight:700; }
+/* TAHMİNİ DEĞER (Canlı Not 113): üreticinin yayımlamadığı radyal — yazı eğik ve soluk;
+   değer girilebilir, girilen değer tahmin değildir. */
+.ve-properties-content .ve-mnt-foy td.tah input{ font-style:italic; color:var(--text-muted); }
 /* ZORUNLU VE BOŞ — kutu girdiye değil HÜCREYE: veri ızgarasında girdi
    dinlenmede kutusuz kalır (kullanıcı kararı 13·B). */
 .ve-properties-content .ve-mnt-foy td.zor{ background:var(--warning-tint-8); }

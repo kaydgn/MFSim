@@ -346,9 +346,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   veritabanımız"* · *"Takoz resimlerini de al"*): 5 aile · 51 tip · 148 kod; envanter
   (kod, sertlik, maks. yük, sıkma torku, ağırlık) üreticinin tablosundan, eksenel kz
   üreticinin yük–sehim grafiğinden (log-log çizgi F = kz·δ, g = 9,81; AMC-EO'yla 9'da 7
-  birebir). **Radyal rijitlik yayımlanmıyor**: yalnız AMC-EO'daki 10 kodda; ötekiler
-  kütüphanede EKSİK tip (sx/sy/dx/dy boş), taramaya aday olmaz (`_mntLibTam`), Takoz
-  Özellikleri'nden tamamlanır — tahmin YAZILMAZ. Kütüphane girdileri modülden üretilir
+  birebir). **Radyal rijitlik yayımlanmıyor**: yalnız AMC-EO'daki 10 kodda ölçülü; öteki 132
+  kodda TAHMİNİ (kullanıcı 2026-11-10, Canlı Not 113: *"Programın çözmesi gerek … program
+  reddeder diye bir kıstas olmaması lazım"*): kx = rx·kz, ky = ry·kz, oran AMC-EO'nun aynı tipi →
+  aynı ailesi → bütün tiplerin medyanı (aynı geometride oran sertlikten bağımsız), dinamik =
+  statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
+  değer tahminden çıkar; tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
+  olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının

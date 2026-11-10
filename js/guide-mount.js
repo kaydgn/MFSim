@@ -1054,7 +1054,8 @@ function _gmSec9(){
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
-      + 'girilmiş olabilir'],
+      + 'girilmiş olabilir. Eğik ve soluk yazılı değer <strong>tahminidir</strong>; '
+      + '<strong>Radyal tahmini</strong> satırı oranı ve kaynağını yazar'],
     ['Kuvvet–sehim', 'X · Y · Z kuvvet–sehim eğrileri tek diyagramda; aynı eğriyi çizen eksenler tek çizgidir',
       'Statik düz, dinamik kesikli çizgidir. Katalogdaki takozun eğrisi salt okunurdur; z-eğrisinin '
       + 'noktaları yalnız özel takozda girilir']
@@ -1066,6 +1067,15 @@ function _gmSec9(){
     + 'penceresinin tip notu kaç değerin tiple aynı olduğunu yazar. Taşıma kapasitesi de kopyalanır; tipte '
     + 'tanımsızsa takozdaki eski değer silinir. Katalogdaki bir takozda yapılan değişiklik bu '
     + 'Takoz Özellikleri düğümüne yazılır, katalogun kendi değeri bozulmaz.');
+  h += _gmNot('Radyal rijitlik tahmini',
+      'AMC radyal rijitliği (k<sub>x</sub>, k<sub>y</sub>) yalnız ölçtüğü on kod için verir; eksenel '
+    + 'k<sub>z</sub> = Z, dik takılı takozda yukarı–aşağı. Öteki kodlarda radyal rijitlik '
+    + '<strong>eksenel × oran</strong> alınır: aynı geometride bütün yönler kauçuğun sertliğiyle birlikte '
+    + 'değiştiği için oran tipin özelliğidir (Cone 39’un üç sertliğinde 1,86 · 1,91 · 1,78). Oran sırayla '
+    + 'aynı tipin AMC değerinden, yoksa aynı ailenin AMC-EO’daki tiplerinden, yoksa AMC-EO’daki bütün '
+    + 'tiplerden (medyan) gelir; dinamik değer statik × dinamik/statik oranıdır. Tahminli tip çözülür, '
+    + 'raporda değeri ≈ ile yazılır; katalog taramasına aday olmaz. Üreticinin değeri girilince o eksen '
+    + 'tahmin olmaktan çıkar.');
   h += _gmH3('Nonlineer z-eğrisi', 'egri');
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
     + 'doğru değil, yukarı bükülen bir eğridir. Takoza <strong>kuvvet–sehim eğrisi</strong> '
