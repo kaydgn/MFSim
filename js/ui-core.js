@@ -22,21 +22,15 @@ function veMasterRozet(tip) {
 // tek sefer baglanan dinleyiciler bu state uzerinden calisir. Undo/redo veya
 // yeni node olusturmanin dinleyici yigmasini engeller.
 // ═══════════════════════════════════════════════════════════════════════════
-var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 }, tik: null };
-// TEK TIKLA AÇILAN ARAÇ (componentDefs.tekTik, kullanım notu T20): aracın işi
-// penceresi — sürüklemesiz tek tık pencereyi açar; öteki bileşenlerde tek tık
-// yalnız seçer, pencere çift tıkla. Sürükleme eşiği (px):
-var VE_TEK_TIK_ESIK = 4;
-function veTekTikAcar(node, e, bas) {
-  var d = node && (node.def || (typeof componentDefs !== 'undefined' && componentDefs[node.type]));
-  if(!d || !d.tekTik || !bas || bas.ctrl || (e && (e.ctrlKey || e.metaKey || e.shiftKey))) return false;
-  if(Math.abs(e.clientX - bas.x) + Math.abs(e.clientY - bas.y) >= VE_TEK_TIK_ESIK) return false;
-  return typeof selectedNodes === 'undefined' || (selectedNodes.length === 1 && selectedNodes[0] === node);
-}
+var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
+// TEK TIK SEÇER, ÇİFT TIK AÇAR — her bileşende (kullanıcı 2026-11-10, Canlı Not 116:
+// *"Başlangıç sihirbazı gibi pop-up olarak açılan bileşenlere iki kere tıklamak durumunda
+// kalalım. Tek tıkla açılınca garip duruyor."*). Takoz'un araç şeridi (componentDefs.tekTik,
+// kullanım notu T20) tek tıkta penceresini açıyordu; beyan ve açıcı kalktı.
 // EYLEM ARACI (componentDefs.eylem = global işlevin adı; kullanıcı 2026-11-10, Canlı Not
-// 110: Takoz'un Başlangıç Sihirbazı bileşeni): işi bir pencere değil bir eylemdir. Tek
-// tık (ve çift tık) eylemi çalıştırır, özellikler penceresi açılmaz. Dönüş: eylem
-// çalıştıysa true — çağıran pencereyi ancak false dönünce açar.
+// 110: Takoz'un Başlangıç Sihirbazı bileşeni): işi bir pencere değil bir eylemdir. Çift
+// tık eylemi çalıştırır, özellikler penceresi açılmaz. Dönüş: eylem çalıştıysa true —
+// çağıran pencereyi ancak false dönünce açar. Kapı: tek-tik-arac.test.js → *ÇİFT TIK*.
 function veTekTikEylem(node) {
   var d = node && (node.def || (typeof componentDefs !== 'undefined' && componentDefs[node.type]));
   var ad = d && d.eylem;
@@ -80,7 +74,6 @@ function veAttachNodeDrag(nodeEl, node) {
 
     if(!e.ctrlKey && selectedNodes.indexOf(node) === -1) clearSelection();
     addToSelection(node);
-    _veNodeDrag.tik = { node: node, x: e.clientX, y: e.clientY, ctrl: !!(e.ctrlKey || e.metaKey) };
     e.stopPropagation();
   });
 }
@@ -144,9 +137,6 @@ function veAttachNodeDrag(nodeEl, node) {
     if(typeof saveState === 'function') saveState();
     _veNodeDrag.active = false;
     _veNodeDrag.anchor = null;
-    var t = _veNodeDrag.tik;
-    _veNodeDrag.tik = null;
-    if(t && veTekTikAcar(t.node, e, t) && !veTekTikEylem(t.node) && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
 })();
 
