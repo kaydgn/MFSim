@@ -122,7 +122,10 @@ function _mntParamOlcucu(M, ctx){
       });
     });
     if(s && s!==1) mounts=mounts.map(function(m){ var d=Object.assign({}, m); _mntParamOlcekle(d, s); return d; });
-    return _mntPrepareFrom({ components:g.components, mounts:mounts, torque:g.torque }, solver);
+    // Toplayıcının TAMAMI Çözücü'nünki (yön ayarı: ileri · kaldırım · tork yönü; bağlantı
+    // yüzü), yalnız takozlar değişir — yön düşünce yük durumları varsayılana iniyordu:
+    // Tulga'da (tork +X) iki tork durumu ters, Adams'tan RMS 17,28 mm.
+    return _mntPrepareFrom(Object.assign({}, g, { mounts:mounts }), solver);
   }
   function statik(prep){
     for(var i=0;i<prep.loadCases.length;i++) if(prep.loadCases[i].name==='Static') return prep.loadCases[i];

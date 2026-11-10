@@ -361,8 +361,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   AYRI belgede, ana rapora eklenmez. Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar
   (tam tarama: ikinci aşama her kombinasyonda), sınır değişince yalnız hüküm yeniden
   kurulur; tam tarama TEK GEÇİŞ (kombinasyonun iki aşaması ardışık, ölçücü
-  hazırlığı paylaşır). Kapı: `mount-katalog.test.js` (→ *DEPO* · *CANLI* · *TAM* ·
-  *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM* · *SONUÇ* · *KOŞUCU*).
+  hazırlığı paylaşır). **Hazırlık Çözücü'nün toplayıcısının TAMAMI** — yön ayarı (ileri ·
+  kaldırım · tork yönü) dâhil, yalnız takozlar değişir: yön düşünce yük durumları varsayılana
+  iniyordu (Tulga'nın iki tork durumu ters, Adams'tan RMS 17,28 mm). Kapı: `mount-katalog.test.js`
+  (→ *DEPO* · *CANLI* · *TAM* · *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *TEK YOL — yön
+  ayarıyla* · *AYNI HÜKÜM* · *SONUÇ* · *KOŞUCU*).
 - `js/mount-param-ciz.js` + `js/cp-mount-param-sonuc.js` — Parametrik Analiz'in
   **Sonuç** kategorisi (kullanıcı kararları 2026-10-18; *"Tablo + iki sade grafik,
   diğer diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"*): Öneri ·
