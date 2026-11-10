@@ -684,7 +684,7 @@ function veMntOrnekYukle(key){
 
 // YÜKLENEN ÖRNEKTE BİLEŞENLER SÜTUNU KAPALI (kullanıcı 2026-11-05, Canlı Not
 // 38: *"Örnek yüklediğim zaman hala 'bileşenler' sütunu açık geliyor. Kapalı
-// gelsin"*): sütun daraltılır, açma düğmesi rayın başında. Tercih yazılmaz
+// gelsin"*): sütun daraltılır, açma düğmesi rayda. Tercih yazılmaz
 // (Canlı Not 62 — aşağıda); vazgeçilen yükleme daraltmaz. GEÇİŞSİZ ve SIĞDIRMADAN ÖNCE: tuval 220 px genişliyor — geçişle
 // ya da sığdırmadan sonra daralsaydı kadraj dar tuvalde kurulur, model sola
 // kayık kalırdı.

@@ -1468,7 +1468,7 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   display:flex;
   flex-direction:row;
   overflow:hidden;
-  position:relative;   /* rayın başındaki açma düğmesinin kabı */
+  position:relative;
   --ray-w:64px;        /* rayın genişliği */
 }
 
@@ -1487,10 +1487,12 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   flex-direction:column;
   align-items:stretch;
   gap:2px;
-  padding:0 4px 6px;
+  padding:6px 4px;
   background:var(--bg-secondary);
   position:relative;
 }
+/* Sayfa düğmeleri (tablist) rayın akışında; açma düğmesi onların altında. */
+.ve-nav-sekme{ display:flex; flex-direction:column; align-items:stretch; gap:2px; }
 /* Palet ile arasındaki TEK çizgi (2026-09-28) — ray tam boy olduğundan tepeden
    iner (Canlı Not 89; önce bandın altından başlıyordu, Canlı Not 33 · C). */
 .ve-nav-rail::after{
@@ -1501,20 +1503,12 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
    Baksana, çok çirkin. Düzelt."*): rayın başındaki KÖŞE HÜCRESİ (bandın zemini ve alt
    çizgisi, Canlı Not 33 · C) kalktı — ray üst banttan dibe tek sütun, palet ile
    arasındaki TEK çizgi de tepeden iner; bant yalnız "Bileşenler"in ve müfettişin
-   başı. Rayın başında bandın boyunda bir ARALIK kalır: öğeler paletin içeriğiyle aynı
-   yükseklikte başlar ve palet kapalıyken açma düğmesi orada durur (yerleri palet
-   açılıp kapanınca oynamaz). Kapı: kabuk-sutun.spec.js → "RAY TAM BOY". */
-.ve-nav-rail::before{
-  content:""; flex:none;
-  height:var(--bant-h); box-sizing:border-box;
-  margin:0 -4px 4px;
-}
-/* PALETSİZ KAPSAMDA ARALIK YOK (kullanıcı 2026-11-10, Canlı Not 98: *"Şu 'topoloji'
-   butonunun üstü boş duruyor. Güzel değil."*): aralık paletin başlık bandıyla hizanın
-   ve açma düğmesinin yeriydi; paletsiz kapsamda (FEAD) ikisi de yok — öğeler rayın
-   tepesinden başlar, iki sayfada da (Topoloji ↔ Sonuçlar geçişinde ray oynamaz).
-   Kapı: kabuk-sutun.spec.js → "PALETSİZ KAPSAM". */
-#sayfa2-content.ve-paletsiz .ve-nav-rail::before{ height:0; }
+   başı. RAYIN BAŞINDA ARALIK YOK (kullanıcı 2026-11-10, Canlı Not 98 · 99: *"topoloji
+   butonunun üstü boş duruyor … kötü duruyor"*): sayfa düğmeleri her ekranda — palet
+   açık ya da kapalı, Topoloji ya da Sonuçlar, paletli ya da paletsiz kapsam — rayın
+   tepesinden başlar ve yerinden oynamaz; bandın boyundaki aralık açma düğmesinin
+   yeriydi, düğme sayfa düğmelerinin altına indi (.ve-sidebar-reveal). Kapı:
+   kabuk-sutun.spec.js → "RAY TAM BOY" · "AÇMA DÜĞMESİ RAYDA" · "PALETSİZ KAPSAM". */
 /* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
    aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
    DIŞINDA olduğu için sınıf kabına da yazılır. */
@@ -1629,8 +1623,9 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* Dar ekranda etiketler düşer, ikonlar kalır: 64px'lik ray 1000px'in altında
    tuvalden görünür pay alır. İkon + title yeterli — hedef boyutu küçülmez. */
 @media (max-width: 1000px){
-  .ve-nav-rail{ width:40px; padding:0 4px 6px; }
+  .ve-nav-rail{ width:40px; padding:6px 4px; }
   .ve-nav-label{ display:none; }
+  .ve-sidebar-reveal .ve-sidebar-reveal-arrow{ display:none; }
   .ve-nav-item{ padding:8px 2px; }
   .ve-nav-item.active::before{ left:-4px; }
 }
@@ -1652,7 +1647,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 
 /* Modül seçim overlay'i görünürken sidebar + açma düğmesi tamamen gizlenir.
    Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir (düğme
-   rayın başında, .ve-main'in dışında: sınıf kabından okunur). */
+   rayda, .ve-main'in dışında: sınıf kabından okunur). */
 .ve-main.ve-no-module .ve-sidebar,
 #sayfa2-content.ve-no-module .ve-sidebar-reveal{
   display:none !important;
@@ -1723,15 +1718,15 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 .ve-sidebar.compact .ve-sidebar-collapse-btn,
 .ve-sidebar.compact .ve-sidebar-title{ display:none; }
 
-/* AÇMA DÜĞMESİ RAYIN BAŞINDA (Canlı Not 33 · C; köşe hücresi Canlı Not 89'la
-   kalktı): panel kapalıyken rayın başındaki bant boyu aralıkta belirir — tuvalin
-   sol kenarında yüzen, kenarlıklı ve gölgeli kart emekli. Rayın dikey çizgisini
-   örtmez (en − 1 px). Görünürlüğü veToggleSidebar yazar (.visible). */
+/* AÇMA DÜĞMESİ RAYDA (Canlı Not 33 · C: tuvalin sol kenarında yüzen, kenarlıklı
+   ve gölgeli kart emekli; Canlı Not 99: rayın başındaki aralık kalktı): panel
+   kapalıyken rayın akışında, sayfa düğmelerinin ALTINDA belirir — sayfa
+   düğmeleri yerinden oynamaz. Rayın içerik kutusunda: dikey çizgiyi örtmez.
+   Görünürlüğü veToggleSidebar yazar (.visible). */
 .ve-sidebar-reveal{
-  position:absolute;
-  left:0; top:0;
-  z-index:150;
-  width:calc(var(--ray-w) - 1px); height:var(--bant-h);
+  flex:none;
+  height:var(--bant-h);
+  margin-top:6px;
   box-sizing:border-box;
   display:none;            /* yalnızca daraltılmışken flex */
   flex-direction:row;
@@ -1741,6 +1736,7 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   padding:0;
   background:transparent;
   border:none;
+  border-radius:var(--radius-sm);
   color:var(--text-secondary);
   cursor:pointer;
   opacity:0;

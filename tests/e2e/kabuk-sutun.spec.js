@@ -26,7 +26,8 @@
  *    müfettiş) tek bant: aynı ölçü, aynı zemin, aynı alt çizgi. Tuval kenara
  *    yapışık; "tuval bir ÇUKURA oturur" hükmü emekli. 2026-11-09 (Canlı Not
  *    89): ray TAM BOY — başındaki köşe hücresi kalktı, palet ile arasındaki
- *    çizgi tepeden iner, paletin açma düğmesi rayın başındaki aralıkta.
+ *    çizgi tepeden iner. 2026-11-10 (Canlı Not 98 · 99): rayın başında aralık
+ *    yok; paletin açma düğmesi sayfa düğmelerinin altında.
  *
  * ÖDENEN BEDEL BURADA ÇİVİLİ: tuval 24 px kaybetti. Bunu gizlemek yerine
  * ölçüyoruz — ve şeridin katlanmasının 86 px geri getirdiğini de.
@@ -97,14 +98,14 @@ const saydam = (renk) => /,\s*0\s*\)$/.test(renk);
 // RAY TAM BOY (kullanıcı 2026-11-09, Canlı Not 89: *"Sence burası güzel mi
 // görünüyor? Baksana, çok çirkin. Düzelt."*): rayın başındaki KÖŞE HÜCRESİ
 // (bandın zemini ve alt çizgisi, Canlı Not 33 · C) kalktı — ray üst banttan
-// dibe tek sütun, çizgi tepeden iner. Rayın başında bandın boyunda bir aralık
-// kalır (zeminsiz, çizgisiz): öğeler paletin içeriğiyle aynı yükseklikte başlar.
+// dibe tek sütun, çizgi tepeden iner. RAYIN BAŞINDA ARALIK YOK (kullanıcı
+// 2026-11-10, Canlı Not 98 · 99: *"topoloji butonunun üstü boş duruyor"*):
+// sayfa düğmeleri rayın tepesinden başlar; açma düğmesi onların altında.
 const rayCerceve = () => {
   const ray = document.querySelector('#ve-nav-rail');
   const rb = ray.getBoundingClientRect();
-  const bas = getComputedStyle(ray, '::before');
   const cizgi = getComputedStyle(ray, '::after');
-  const aktif = document.querySelector('.ve-nav-item.active').getBoundingClientRect();
+  const ilk = ray.querySelector('.ve-nav-item').getBoundingClientRect();
   const bant = [...document.querySelectorAll('.ve-sidebar-header, .ve-results-head')]
     .find((e) => e.offsetWidth > 0);
   const komsu = bant.parentElement.getBoundingClientRect();
@@ -120,12 +121,9 @@ const rayCerceve = () => {
     raySag: Math.round(rb.x + rb.width),
     komsuSolKalinlik: parseFloat(getComputedStyle(bant.parentElement).borderLeftWidth) || 0,
     bitisik: Math.round(komsu.x) === Math.round(rb.x + rb.width),
-    basH: parseFloat(bas.height),
-    basZemin: bas.backgroundColor, basResim: bas.backgroundImage,
-    basCizgi: parseFloat(bas.borderBottomWidth) || 0,
+    bas: getComputedStyle(ray, '::before').content,
     bantUst: Math.round(bb.top), bantAlt: Math.round(bb.bottom),
-    aktifUst: Math.round(aktif.y),
-    jeton: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')),
+    ilkUst: Math.round(ilk.top - rb.top),
   };
 };
 
@@ -142,19 +140,16 @@ test('RAY TAM BOY — palet ile arasında TEK çizgi tepeden dibe; rayın başı
   // ray bandın hizasından başlıyor ve çizgi rayın TAMAMI boyunca
   expect(r.rayUst).toBe(r.bantUst);
   expect([r.rayCizgiUst, r.rayCizgiAlt]).toEqual([r.rayUst, r.rayAlt]);
-  // köşe hücresi YOK: rayın başı bandın boyunda bir aralık — zemini ve çizgisi yok
-  expect(r.basH).toBe(r.jeton);
-  expect(saydam(r.basZemin)).toBe(true);
-  expect(r.basResim).toBe('none');
-  expect(r.basCizgi).toBe(0);
-  // rayın aktif öğesi bant satırına binmiyor: paletin içeriğiyle aynı yükseklikten başlar
-  expect(r.aktifUst).toBeGreaterThanOrEqual(r.bantAlt);
+  // köşe hücresi de aralık da YOK: ilk sayfa düğmesi rayın tepesinden başlar
+  expect(r.bas).toBe('none');
+  expect(r.ilkUst).toBeLessThanOrEqual(8);
 });
 
-// Paletli bir modülün Sonuçlar sayfası: aralık "Veri Gezgini" bandıyla aynı satır.
-// (FEAD paletsiz — onun rayında aralık yok, PALETSİZ KAPSAM.)
+// Paletli bir modülün Sonuçlar sayfası: aynı çerçeve, sayfa düğmeleri aynı yerde
+// (Topoloji ↔ Sonuçlar geçişinde ray oynamaz).
 test('Sonuçlar sayfasında da aynı çerçeve — çizgi tepeden, köşe hücresi yok', async ({ page }) => {
   await paletliAc(page);
+  const t = await page.evaluate(rayCerceve);
   await page.evaluate(() => veSubTabDegistir('sonuclar'));
   await page.waitForTimeout(500);
   const r = await page.evaluate(rayCerceve);
@@ -164,9 +159,8 @@ test('Sonuçlar sayfasında da aynı çerçeve — çizgi tepeden, köşe hücre
   expect(r.rayKenar).toBe(0);
   expect(r.rayUst).toBe(r.bantUst);           // "Veri Gezgini" bandıyla aynı tepe
   expect(r.rayCizgiUst).toBe(r.rayUst);
-  expect(saydam(r.basZemin)).toBe(true);
-  expect(r.basCizgi).toBe(0);
-  expect(r.aktifUst).toBeGreaterThanOrEqual(r.bantAlt);
+  expect(r.bas).toBe('none');
+  expect(r.ilkUst).toBe(t.ilkUst);
 });
 
 // ── PALETSİZ KAPSAM (2026-09-28) ───────────────────────────────────────────
@@ -207,26 +201,20 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
       rayR: Math.round(ray.right), rayY: Math.round(ray.top), tuvalX: Math.round(w.left),
       tuvalY: Math.round(w.top),
       tuvalW: Math.round(w.width), alanSol: parseFloat(getComputedStyle(alan).borderLeftWidth) || 0,
-      rayBasH: parseFloat(getComputedStyle(document.getElementById('ve-nav-rail'), '::before').height),
       ilkOge: Math.round(document.querySelector('#ve-nav-rail .ve-nav-item').getBoundingClientRect().top - ray.top),
-      bant: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')),
     };
   });
   const f = await olcP();
   expect(f.paletsiz).toBe(true);
   expect([f.sutun, f.acmaRayi]).toEqual([0, 0]);
-  // RAYIN BAŞINDA ARALIK YOK (Canlı Not 98: "'topoloji' butonunun üstü boş duruyor"):
-  // aralık paletin bandıyla hizanın ve açma düğmesinin yeriydi; FEAD'de ikisi de yok.
-  expect(f.rayBasH).toBe(0);
+  // RAYIN BAŞINDA ARALIK YOK (Canlı Not 98: "'topoloji' butonunun üstü boş duruyor").
   expect(f.ilkOge).toBeLessThanOrEqual(8);
   // Sonuçlar sayfasında da: iki sayfa arasında ray oynamaz.
   await page.evaluate(() => veSubTabDegistir('sonuclar'));
   await page.waitForTimeout(400);
-  const s = await page.evaluate(() => ({
-    basH: parseFloat(getComputedStyle(document.getElementById('ve-nav-rail'), '::before').height),
-    ilkOge: Math.round(document.querySelector('#ve-nav-rail .ve-nav-item').getBoundingClientRect().top
-      - document.getElementById('ve-nav-rail').getBoundingClientRect().top) }));
-  expect(s).toEqual({ basH: 0, ilkOge: f.ilkOge });
+  const s = await page.evaluate(() => Math.round(document.querySelector('#ve-nav-rail .ve-nav-item').getBoundingClientRect().top
+      - document.getElementById('ve-nav-rail').getBoundingClientRect().top));
+  expect(s).toBe(f.ilkOge);
   await page.evaluate(() => veSubTabDegistir('arac-performans'));
   await page.waitForTimeout(400);
   // Tuval rayın HEMEN yanında; aralarında tek çizgi (rayın).
@@ -247,8 +235,8 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
   expect(k.paletsiz).toBe(false);
   expect(k.sutun).toBeGreaterThan(100);
   expect(f.tuvalW - k.tuvalW).toBe(k.sutun);
-  // paletli kapsamda aralık geri gelir: bandın boyunda
-  expect(k.rayBasH).toBe(k.bant);
+  // paletli kapsamda da aralık yok (Canlı Not 99): sayfa düğmeleri aynı yerde
+  expect(k.ilkOge).toBe(f.ilkOge);
 });
 
 test('durum şeridi TUVALİN ALTINDA ve tuval genişliğinde', async ({ page }) => {
@@ -346,43 +334,54 @@ test('KABUK TEK ÇİZGİ — iki başlık aynı bantta, tuval komşularına yap�
   expect(r.golge).toBe('none');
 });
 
-// AÇMA DÜĞMESİ RAYIN BAŞINDA (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C;
-// köşe hücresi Canlı Not 89'la kalktı): palet kapalıyken Bileşenler'in açma
-// düğmesi rayın başındaki bant boyu aralıkta — tuvalin sol kenarında yüzen,
-// kenarlıklı ve gölgeli kart emekli. Rayın dikey çizgisini örtmez; Sonuçlar'da
-// yok; tık paleti açar.
-test('AÇMA DÜĞMESİ RAYIN BAŞINDA — tuvalde yüzen kart yok, rayın çizgisi örtülmez', async ({ page }) => {
+// AÇMA DÜĞMESİ RAYDA (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C: tuvalin sol
+// kenarında yüzen, kenarlıklı ve gölgeli kart emekli; kullanıcı 2026-11-10, Canlı
+// Not 99: rayın başı boş kalmaz): palet kapalıyken Bileşenler'in açma düğmesi
+// rayın içinde, sayfa düğmelerinin ALTINDA. Sayfa düğmeleri palet açılıp kapanınca
+// yerinden oynamaz; düğme rayın dikey çizgisini örtmez; Sonuçlar'da yok; tık
+// paleti açar.
+test('AÇMA DÜĞMESİ RAYDA — sayfa düğmelerinin altında, düğmeler oynamaz; tuvalde yüzen kart yok', async ({ page }) => {
   await paletliAc(page);
+  const sekmeler = () => page.evaluate(() => [...document.querySelectorAll('#ve-nav-rail .ve-nav-item')]
+    .map((e) => Math.round(e.getBoundingClientRect().top)));
+  const acik = await sekmeler();
   await page.evaluate(() => veToggleSidebar(true));
   await page.waitForTimeout(500);
   const o = await page.evaluate(() => {
     const rv = document.getElementById('ve-sidebar-reveal'), ray = document.getElementById('ve-nav-rail');
     const b = rv.getBoundingClientRect(), rb = ray.getBoundingClientRect(), w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
-    const cs = getComputedStyle(rv), bas = getComputedStyle(ray, '::before');
-    const ilk = ray.querySelector('.ve-nav-item').getBoundingClientRect();
-    return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height),
-      rayX: Math.round(rb.left), rayY: Math.round(rb.top), rayW: Math.round(rb.width), basH: parseFloat(bas.height),
-      ilkUst: Math.round(ilk.top),
+    const cs = getComputedStyle(rv);
+    const son = [...ray.querySelectorAll('.ve-nav-item')].pop().getBoundingClientRect();
+    return { x: Math.round(b.left), y: Math.round(b.top), sag: Math.round(b.right), h: Math.round(b.height),
+      rayX: Math.round(rb.left), raySag: Math.round(rb.right), sonAlt: Math.round(son.bottom),
       tuvalSol: Math.round(w.left), opak: cs.opacity, golge: cs.boxShadow, kenar: parseFloat(cs.borderRightWidth) || 0,
       ustteki: (() => { const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!(e && rv.contains(e)); })() };
   });
-  expect({ x: o.x, y: o.y, h: o.h }).toEqual({ x: o.rayX, y: o.rayY, h: o.basH });
-  expect(o.w).toBe(o.rayW - 1);                     // rayın çizgisi görünür
-  expect(o.ilkUst).toBeGreaterThanOrEqual(o.y + o.h);   // rayın öğelerine binmiyor
-  expect(o.tuvalSol).toBeGreaterThanOrEqual(o.x + o.w);   // tuvalin üstünde değil
+  expect(await sekmeler()).toEqual(acik);              // sayfa düğmeleri yerinde
+  expect(o.h).toBeGreaterThan(0);
+  expect(o.x).toBeGreaterThanOrEqual(o.rayX);           // rayın içinde
+  expect(o.sag).toBeLessThanOrEqual(o.raySag - 1);      // rayın çizgisi görünür
+  expect(o.y).toBeGreaterThanOrEqual(o.sonAlt);         // sayfa düğmelerinin altında
+  expect(o.tuvalSol).toBeGreaterThanOrEqual(o.sag);     // tuvalin üstünde değil
   expect([o.opak, o.golge, o.kenar]).toEqual(['1', 'none', 0]);
   expect(o.ustteki).toBe(true);
   await page.click('#ve-sidebar-reveal');
   await page.waitForTimeout(500);
   expect(await page.evaluate(() => document.getElementById('ve-sidebar').offsetWidth)).toBeGreaterThan(100);
   expect(await page.evaluate(() => document.getElementById('ve-sidebar-reveal').offsetWidth)).toBe(0);
-  // Sonuçlar'da palet yok, düğme de yok
+  expect(await sekmeler()).toEqual(acik);
+  // Sonuçlar'da palet yok, düğme de yok; sayfa düğmeleri yine aynı yerde
   await page.evaluate(() => veToggleSidebar(true));
   await page.waitForTimeout(500);
   await page.evaluate(() => veSubTabDegistir('sonuclar'));
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => document.getElementById('ve-sidebar-reveal').offsetWidth)).toBe(0);
-  await page.evaluate(() => { veSubTabDegistir('arac-performans'); veToggleSidebar(false); });
+  expect(await sekmeler()).toEqual(acik);
+  // Ok tuşu yalnız sayfa düğmesinde sayfa değiştirir (açma düğmesi sekme değil)
+  await page.evaluate(() => { veSubTabDegistir('arac-performans'); document.getElementById('ve-sidebar-reveal').focus(); });
+  await page.keyboard.press('ArrowDown');
+  expect(await page.evaluate(() => currentSubTab)).toBe('arac-performans');
+  await page.evaluate(() => veToggleSidebar(false));
 });
 
 // BANT İNCE — ÖLÇÜ İÇERİKTEN. Kullanıcı: 36 px'lik bant "gereksiz kalın"
