@@ -242,4 +242,11 @@ describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
     expect(pay).not.toBeNull();
     expect(k).toMatch(new RegExp('margin:\\s*0 -' + pay[1] + 'px'));
   });
+
+  // Kullanıcı 2026-11-10 (Canlı Not 98): "Şu 'topoloji' butonunun üstü boş duruyor."
+  // Aralık paletin bandıyla hizanın ve açma düğmesinin yeri; paletsiz kapsamda ikisi
+  // de yok, aralık kapanır. Çizimin kendisi: kabuk-sutun.spec.js → "PALETSİZ KAPSAM".
+  test('paletsiz kapsamda (FEAD) rayın başında aralık yok', () => {
+    expect(kural('#sayfa2-content.ve-paletsiz .ve-nav-rail::before')).toMatch(/height:\s*0;/);
+  });
 });
