@@ -163,6 +163,19 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137963)).toBe('gomulu');
   });
 
+  test('eksik tip uygulanınca tip notu 6/6 der: iki tarafı boş radyal "elle değiştirildi" sayılmaz; boş takoz eşleşmez', () => {
+    const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
+    global.nodes = [n];
+    expect(cp._mntKutuphaneEslesme(n)).toBeNull();                              // rijitliksiz tip (DSM) boş takoza oturmaz
+    cp.veMntApplyLib('m1', 'amc137961');
+    const E = cp._mntKutuphaneEslesme(n);
+    expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137961', 6, []]);
+    delete n.data.libKey;                                                       // bağsız: altı değer tek tipi gösterir
+    expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137961');
+    n.data.kxs = 700;                                                           // radyal elle girildi → fark
+    expect(cp._mntKutuphaneEslesme(n)).toBeNull();
+  });
+
   test('liste sırası: AMC dışı katalog önce, AMC ailenin · tipin · sertliğin sırasıyla', () => {
     const s = cp._mntLibSirali(cp.veMntGetLibraryList().filter((e) => e.builtin));
     expect(s[0].key).toBe('amc55sha');

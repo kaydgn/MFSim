@@ -1828,13 +1828,18 @@ function _mntYasaVar(o){
 }
 function _mntKutuphaneEslesme(node){
   var d=node.data||{}, map=veMntGetLibraryMap();
-  var esit=function(a, b){ var x=_mntNum(a,NaN), y=_mntNum(b,NaN);
+  // İki tarafı da BOŞ alan eşittir: AMC'nin radyalini yayımlamadığı tip uygulanınca
+  // takozun X/Y'si de boş — "elle değiştirildi" sayılmaz. Bağsız takozun tip araması
+  // en az bir dolu değer ister: boş takoz rijitliksiz tiple (DSM) eşleşmez.
+  var bos=function(v){ return !Number.isFinite(_mntNum(v,NaN)); };
+  var esit=function(a, b){ if(bos(a) && bos(b)) return true;
+    var x=_mntNum(a,NaN), y=_mntNum(b,NaN);
     return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x-y)<=1e-9*Math.max(1, Math.abs(y)); };
   var say=function(e){ var ayni=0, farkli=[];
     _MNT_RIJ_KUT.forEach(function(a){ if(esit(d[a[0]], e[a[1]])) ayni++; else farkli.push(a[2]); });
     return { ayni:ayni, farkli:farkli }; };
   var e=(d.libKey && map[d.libKey]) ? map[d.libKey] : null;
-  if(!e){
+  if(!e && _MNT_RIJ_KUT.some(function(a){ return !bos(d[a[0]]); })){
     var tam=Object.keys(map).map(function(k){ return map[k]; }).filter(function(x){ return say(x).ayni===6; });
     if(tam.length===1) e=tam[0];
   }
@@ -4120,7 +4125,7 @@ function _mntLibOptionRow(node, e, sel){
     +' data-search="'+_mntEsc(_mntLibNorm(e.name+' '+e.key))+'"'
     +' onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">';
   h+='<span class="mntlib-dot" data-t="'+_mntLibTur(e)+'"></span>';
-  h+='<span class="mntlib-opt-name">'+_mntEsc(e.name)+'</span>';
+  h+='<span class="mntlib-opt-name" title="'+_mntEsc(e.name)+'">'+_mntEsc(e.name)+'</span>';
   h+='<span class="mntlib-kz">'+_mntLibKz(e)+'</span>';
   // ∿ / ✓ yuvaları HER satırda basılır (gerekmiyorsa boş) → kz sütunu hizalı kalır
   h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">'+veIkon('activity'):'>')+'</span>';
@@ -4135,7 +4140,7 @@ function _mntLibTrigger(node, sel){
     +' onclick="veMntLibDropdownToggle(\''+node.id+'\',event)">';
   if(sel){
     h+='<span class="mntlib-dot" data-t="'+_mntLibTur(sel)+'"></span>';
-    h+='<span class="mntlib-trigger-name">'+_mntEsc(sel.name)+'</span>';
+    h+='<span class="mntlib-trigger-name" title="'+_mntEsc(sel.name)+'">'+_mntEsc(sel.name)+'</span>';
     h+='<span class="mntlib-kz">'+_mntLibKz(sel)+'</span>';
     if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">'+veIkon('activity')+'</span>';
   } else {
