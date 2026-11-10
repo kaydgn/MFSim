@@ -2606,8 +2606,12 @@ function _mwMasaCiz(c){
   el.innerHTML = svg;
   _mwGorUygula();
 }
-// 3B çizim: yalın kap (başlık ve gösterge masada), özet panelinin solunda;
-// seçili satır perdesiz vurgulu. STEP önizlemesi aktarımın yazacağı durumdan.
+// 3B çizim: yalın kap (başlık ve gösterge masada), özet panelinin solunda.
+// SEÇİLİ ÖNDE (kullanıcı 2026-11-10, Canlı Not 119: *"Takoz seçildiğinde, 3D görüntüleyici
+// üzerinde öne doğru çıksın, belirginleşsin … arka tarafta kalmış"*): seçili gövde ya da takoz
+// perdenin ÜSTÜNDE (Görünümler'in föy satırının perdesi), kalan model gölgede — kutunun
+// arkasındaki takoz yalnız halkasıyla görünüyordu. STEP önizlemesi aktarımın yazacağı durumdan.
+// Kapı: mount-sihirbaz-doku.test.js → *SEÇİLİ ÖNDE*.
 function _mwMasa3B(el, k, o){
   var st3 = (k === 'kaynak' && _mwStpOnizleme()) ? _mwStpAktarDurumu(_mwStp).st : _mwState;
   var liste = _mwAksoDugumler(st3), lej = document.getElementById('ve-mw-masa-lej');
@@ -2623,7 +2627,7 @@ function _mwMasa3B(el, k, o){
   var W = Math.max(240, Math.round(o.w - ((k === 'ozet' && o.w > 760) ? VE_MW_OZET_PANEL + 24 : 0))), H = Math.max(200, Math.round(o.h - VE_MW_AKSO_ALT));
   var sec = (k === 'govde' && _mwSec.govde) ? 'mw:' + _mwSec.govde : ((k === 'takoz' && _mwSec.takoz) ? 'mw:' + _mwSec.takoz : '');
   var ortu = _mwAksoOrtu(el);
-  el.innerHTML = '<div id="' + VE_MW_AKSO + '" class="ve-mw-akso" data-yalin="1" data-perde="0" data-etiket="genis" data-balon="1"'
+  el.innerHTML = '<div id="' + VE_MW_AKSO + '" class="ve-mw-akso" data-yalin="1" data-perde="' + (sec ? '1' : '0') + '" data-etiket="genis" data-balon="1"'
     + ' data-w="' + W + '" data-h="' + H + '"' + (sec ? ' data-sec="' + _mwEsc(sec) + '"' : '')
     + (ortu ? ' data-ortu="' + ortu + '"' : '')
     + ' style="width:' + W + 'px;height:' + H + 'px"></div>';
