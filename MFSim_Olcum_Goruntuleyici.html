@@ -1687,6 +1687,12 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   height:var(--bant-h); box-sizing:border-box;
   margin:0 -4px 4px;
 }
+/* PALETSİZ KAPSAMDA ARALIK YOK (kullanıcı 2026-11-10, Canlı Not 98: *"Şu 'topoloji'
+   butonunun üstü boş duruyor. Güzel değil."*): aralık paletin başlık bandıyla hizanın
+   ve açma düğmesinin yeriydi; paletsiz kapsamda (FEAD) ikisi de yok — öğeler rayın
+   tepesinden başlar, iki sayfada da (Topoloji ↔ Sonuçlar geçişinde ray oynamaz).
+   Kapı: kabuk-sutun.spec.js → "PALETSİZ KAPSAM". */
+#sayfa2-content.ve-paletsiz .ve-nav-rail::before{ height:0; }
 /* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
    aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
    DIŞINDA olduğu için sınıf kabına da yazılır. */
