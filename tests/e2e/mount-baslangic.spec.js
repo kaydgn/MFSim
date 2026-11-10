@@ -104,7 +104,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
   expect(o.veri).toBe(0);
   expect(o.kunye).toEqual([]);                           // kapıda künye yok (Canlı Not 84; önce 4 · 5 · 1 ad)
-  expect(new Set(o.kapiBoy).size).toBe(1);               // üç kapı aynı boyda (önce 81 · 64 · 64 px)
+  expect(o.kapiBoy).toEqual([40, 40, 40]);               // üç kapı aynı boyda, kompakt (Canlı Not 102; önce 62 px)
   expect(o.dip).toEqual([26, 26]);                       // Ana topoloji · Kılavuz (Canlı Not 86; önce 32 px)
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
