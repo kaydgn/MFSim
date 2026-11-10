@@ -194,6 +194,21 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
   // gerektiğini talimat gibi yazsak … Adım eksikliklerini de ekleyelim. Yani güzel ayrı bir yapı
   // olsun."*): adım listesinin altında açık adımın talimatı ve eksikleri. Önce eksikler girdilerin
   // sütunundaydı (Başlangıç ve Özet'te hiç yoktu) ve talimat yoktu; şimdi tek yerde, beş adımda da.
+  // TAKOZ İŞLEMLERİ (kullanıcı 2026-11-10, Canlı Not 120: *"'Aynalı Eşini Ekle' gibi bir saçmalığı
+  // kaldıralım."*): takozun düzenleyicisinde yalnız Sil; takoz Takoz ekle ile eklenir.
+  test('TAKOZ İŞLEMLERİ: Aynalı eşini ekle yok — düzenleyicide yalnız Sil, listede Takoz ekle; talimatta da yok', () => {
+    W.veMntWizAc();
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'takoz'));
+    W.veMntWizTakozEkle();
+    const yan = document.getElementById('ve-mw-yan');
+    const ops = [...yan.querySelectorAll('.ve-fw-ed-ops')].map((o) => [...o.querySelectorAll('button')].map((b) => b.textContent.trim()));
+    expect(ops).toEqual([['Takoz ekle'], ['Sil']]);
+    expect(yan.textContent).not.toMatch(/Aynal/);
+    expect(W.veMntWizTakozAyna).toBeUndefined();
+    expect(W.VE_MW_STEPS.find((x) => x.key === 'takoz').talimat.join(' ')).not.toMatch(/Aynal/);
+    W.veMntWizKapat(false);
+  });
+
   test('TALİMAT: adım listesinin altında açık adımın talimatı ve eksikleri; eksikler sütunda ikinci kez yok', () => {
     W.veMntWizAc();
     W.VE_MW_STEPS.forEach((s) => {

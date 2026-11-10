@@ -60,8 +60,9 @@ const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '5
 
 // BAŞLANGIÇ SİHİRBAZI BİLEŞENİ (kullanıcı 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen
 // kaldıralım … Onun yerine sihirbazı açan bir bileşen oluşturalım. Sembolü de sihirli falan"*):
-// gerçek fare tıkı sihirbazı açar, özellikler penceresi açılmaz; ikon kutusuna sığar ve çok renklidir.
-test('Başlangıç Sihirbazı bileşeni: tek tık sihirbazı açar, pencere açmaz; ikonu kutusunda', async ({ page }) => {
+// gerçek fare ÇİFT tıkı sihirbazı açar (Canlı Not 116: *"iki kere tıklamak durumunda kalalım"*),
+// tek tık yalnız seçer; özellikler penceresi açılmaz; ikon kutusuna sığar ve çok renklidir.
+test('Başlangıç Sihirbazı bileşeni: tek tık seçer, çift tık sihirbazı açar, pencere açmaz; ikonu kutusunda', async ({ page }) => {
   await bootApp(page);
   await ornek(page, 'tulga', 'Ön Takoz Braketi');
   const kutu = '[data-type="mnt-wizard"] .ve-node-box';
@@ -79,14 +80,16 @@ test('Başlangıç Sihirbazı bileşeni: tek tık sihirbazı açar, pencere açm
   expect(ikon.renk).toBeGreaterThanOrEqual(3);          // asa · yıldız · kıvılcımlar tek renk değil
   expect(ikon.parca).toBeGreaterThanOrEqual(8);
   expect(ikon.yazi).toBe(0);                            // harf çizgiyle çizilir, <text> yok
-  // Gerçek tık: sihirbaz açılır, özellikler penceresi AÇILMAZ
+  // Gerçek tek tık: yalnız seçer — sihirbaz da özellikler penceresi de AÇILMAZ
   await page.evaluate(() => { clearSelection(); veTogglePropertiesPanel(false); });
   await page.click(kutu);
-  await page.waitForFunction(() => { const o = document.getElementById('ve-mntwiz-overlay'); return o && o.style.display === 'flex'; }, null, { timeout: 10000 });
-  expect(await page.evaluate(() => document.getElementById('ve-properties-overlay').classList.contains('visible'))).toBe(false);
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => document.getElementById('ve-mntwiz-overlay').style.display === 'none', null, { timeout: 10000 });
-  // Çift tık da aynı: pencere değil sihirbaz
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() => {
+    const o = document.getElementById('ve-mntwiz-overlay');
+    return [!!(o && o.style.display === 'flex'), document.getElementById('ve-properties-overlay').classList.contains('visible'),
+      selectedNodes.length === 1 && selectedNodes[0].type === 'mnt-wizard'];
+  })).toEqual([false, false, true]);
+  // Çift tık: pencere değil sihirbaz
   await page.dblclick(kutu);
   await page.waitForFunction(() => document.getElementById('ve-mntwiz-overlay').style.display === 'flex', null, { timeout: 10000 });
   expect(await page.evaluate(() => document.getElementById('ve-properties-overlay').classList.contains('visible'))).toBe(false);

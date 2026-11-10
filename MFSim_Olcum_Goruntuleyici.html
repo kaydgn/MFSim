@@ -2717,9 +2717,10 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   flex:1 0 16px;
 }
 /* Birincil eylem: kesiğin tek dolu yüzeyi — vurgu zemininde kesiğin
-   renginde yazı (iki temada aynı). İNCE (kullanıcı 2026-11-09, Canlı Not 67:
-   *"Şu buton çok kalın olmuş"*): 36 px — modül satırının (58 px) altında;
-   kapı welcome-screen.test.js → *İNCE BİRİNCİL DÜĞME*. */
+   renginde yazı (iki temada aynı). ORTA BOY: 52 px kalındı (Canlı Not 67: *"Şu buton
+   çok kalın olmuş"* → 36 px), 36 px küçük kaldı (Canlı Not 114: *"Bu sefer de çok
+   küçülmüş"*) → 44 px, yazı 14 px, ikon 18 px — kısa ekranın modül satırının (48 px)
+   altında; kapı welcome-screen.test.js → *BİRİNCİL DÜĞMENİN BOYU*. */
 .ve-welcome-open{
   flex:none;
   display:flex;
@@ -2728,10 +2729,10 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   gap:10px;
   width:280px;
   max-width:100%;
-  height:36px;
+  height:44px;
   padding:0 14px 0 16px;
   font-family:var(--font-sans);
-  font-size:var(--fs-md);
+  font-size:var(--fs-lg);
   font-weight:600;
   color:var(--sinema-bant);
   background:var(--sinema-vurgu);
@@ -2748,8 +2749,8 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   gap:8px;
 }
 .ve-welcome-open .mf-ico{
-  width:16px;
-  height:16px;
+  width:18px;
+  height:18px;
 }
 .ve-welcome-links{
   flex:none;
@@ -11523,13 +11524,14 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 /* Masanın kapısı DURUM KURALLARINDAN ÖNCE: özgüllük aynı, fare altının ve
    birincil kapının çerçevesi sonra gelip onu ezer. */
 /* KAPI KOMPAKT (kullanıcı 2026-11-10, Canlı Not 102: *"Şu butonlar da çok büyük.
-   Bunları da küçültelim."*): masanın panelinde kapı 62 → 40 px, ikon 36 → 24 px,
-   ad 14 → 13 px; sütun düzeninin (FEAD) kapısı değişmez. Kapı:
-   mount-baslangic.test.js → KAPI KOMPAKT + mount-baslangic.spec.js → AÇILIŞ. */
-.ve-bas-ic--masa .ve-bas-kapi{ min-height:40px; padding:7px 12px; gap:10px; border-color:var(--border-light); }
-.ve-bas-ic--masa .ve-bas-kapi-ik{ width:24px; height:24px; }
-.ve-bas-ic--masa .ve-bas-kapi-ik .mf-ico{ width:14px; height:14px; }
-.ve-bas-ic--masa .ve-bas-kapi-t b{ font-size:var(--fs-md); }
+   Bunları da küçültelim."* → 62 → 40 px; Canlı Not 115: *"Bunları da bir tık
+   büyültelim"* → 48 px): masanın panelinde kapı 48 px, ikon 28 px, ad 14 px; sütun
+   düzeninin (FEAD) kapısı değişmez. Kapı: mount-baslangic.test.js → KAPI KOMPAKT +
+   mount-baslangic.spec.js → AÇILIŞ. */
+.ve-bas-ic--masa .ve-bas-kapi{ min-height:48px; padding:8px 12px; gap:12px; border-color:var(--border-light); }
+.ve-bas-ic--masa .ve-bas-kapi-ik{ width:28px; height:28px; }
+.ve-bas-ic--masa .ve-bas-kapi-ik .mf-ico{ width:16px; height:16px; }
+.ve-bas-ic--masa .ve-bas-kapi-t b{ font-size:var(--fs-lg); }
 .ve-bas-kapi:hover{ border-color:var(--border-hover); box-shadow:var(--shadow-md); }
 .ve-bas-kapi:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-kapi.birincil{ background:var(--accent-tint-6); border-color:var(--accent-primary); }

@@ -827,14 +827,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sebebi söyler, pencere çöp kutusunu çizmez (`cp-core.js`). Delete tuşu,
   çöp kutusu ve toplu seçim aynı kapıdan geçer. İlk kullanıcısı kutusuz FEAD
   kayışı. Kapı: `fead-cizim-masasi.test.js` → *"kayış SİLİNMEZ"*.
-- **TEK TIKLA AÇILAN ARAÇ KENDİNİ BEYAN EDER** (`componentDefs.tekTik` →
-  `js/ui-core.js` `veTekTikAcar`): işi penceresi olan araç (Takoz'un araç
-  şeridi) sürüklemesiz tek tıkta pencereyi açar; öteki bileşende tek tık yalnız
-  seçer, pencere çift tıkla. Sürükleme, Ctrl/Shift ve çoklu seçim açmaz. Kapı:
-  `tek-tik-arac.test.js`.
+- **TEK TIK SEÇER, ÇİFT TIK AÇAR — her bileşende** (kullanıcı 2026-11-10, Canlı Not 116:
+  *"Başlangıç sihirbazı gibi pop-up olarak açılan bileşenlere iki kere tıklamak durumunda
+  kalalım. Tek tıkla açılınca garip duruyor."*): Takoz'un araç şeridinin tek tıkta pencere açan
+  beyanı (`tekTik`, kullanım notu T20) kalktı; hiçbir tip tek tıkta açmaz. Kapı:
+  `tek-tik-arac.test.js` → *ÇİFT TIK*.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
-  olan araç (Takoz'un Başlangıç Sihirbazı) tek tıkta ve çift tıkta eylemi çalıştırır; özellikler
+  olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler
   penceresi açılmaz ve seçim açık pencerenin konusunu değiştirmez. Kapı: `tek-tik-arac.test.js` →
   *EYLEM ARACI*.
 - **KARTIN EN KÜÇÜK ÖLÇÜSÜNÜ TİPİ SÖYLER** (`componentDefs.minWidth/minHeight`

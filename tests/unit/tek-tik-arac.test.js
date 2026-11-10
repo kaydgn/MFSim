@@ -1,17 +1,16 @@
 /**
- * tek-tik-arac.test.js — TEK TIKLA AÇILAN ARAÇ (kullanım notu T20, 2026-11-03)
+ * tek-tik-arac.test.js — TEK TIK SEÇER, ÇİFT TIK AÇAR (kullanıcı 2026-11-10, Canlı Not 116)
  * ─────────────────────────────────────────────────────────────────────────
- * Ölçülen: pencere sütunu kapalıyken tuvaldeki 3D Görüntüleyici'ye tek tık
- * yalnız seçim kulpu gösteriyordu; penceresi ancak çift tıkla açılıyordu
- * ("tıklamanın bir şey yapmadığı izlenimi"). Aracın işi penceresidir:
- * `componentDefs.tekTik` beyan eden tip (Takoz'un araç şeridi) sürüklemesiz
- * tek tıkta pencereyi açar. Öteki bileşenlerde tek tık yalnız seçer —
- * pencere çift tıkla (kullanıcı kararı 2026-10-16). Sürükleme, Ctrl ile
- * çoklu seçim ve çoklu seçim pencere açmaz.
+ * Kullanıcı: "Başlangıç sihirbazı gibi pop-up olarak açılan bileşenlere iki kere
+ * tıklamak durumunda kalalım. Tek tıkla açılınca garip duruyor." Takoz'un araç şeridi
+ * (Takoz Özellikleri · Çözücü · 3D Görüntüleyici · Görünümler · Rapor · Parametrik
+ * Analiz) tek tıkta penceresini (kullanım notu T20, `componentDefs.tekTik`), Başlangıç
+ * Sihirbazı sihirbazı açıyordu (Canlı Not 110). Artık her bileşende tek tık yalnız
+ * seçer; çift tık penceresini ya da eylemini açar.
  *
- * EYLEM ARACI (kullanıcı 2026-11-10, Canlı Not 110): Başlangıç Sihirbazı bileşeninin işi
- * bir pencere değil bir eylemdir — `componentDefs.eylem` beyan eder; tek tık (ve çift tık)
- * eylemi çalıştırır, özellikler penceresi açılmaz.
+ * EYLEM ARACI (Canlı Not 110): Başlangıç Sihirbazı bileşeninin işi bir pencere değil bir
+ * eylemdir — `componentDefs.eylem` beyan eder; çift tık eylemi çalıştırır, özellikler
+ * penceresi açılmaz.
  */
 const stubs = stubGlobals({
   updateAllConnections: jest.fn(), veMinimapUpdate: jest.fn(), saveState: jest.fn(),
@@ -48,37 +47,48 @@ const tikla = (el, o = {}, kay = 0) => {
 };
 beforeEach(() => { resetStubs(stubs); global.selectedNodes = []; });
 
-describe('TEK TIK — araç penceresini açar, bileşen yalnız seçer', () => {
-  test('Takoz araç şeridinin yedi tipi tekTik beyan eder; kütle gövdesi ve takoz etmez', () => {
-    expect(HEPSI.filter((t) => componentDefs[t].tekTik)).toEqual(HEPSI);
-    expect(Object.keys(componentDefs).filter((t) => componentDefs[t].tekTik).sort()).toEqual(HEPSI.slice().sort());
-    ['mnt-motor', 'mnt-mount', 'engine', 'fead-layout'].forEach((t) => expect(!!componentDefs[t].tekTik).toBe(false));
+const cift = (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+
+describe('ÇİFT TIK — tek tık seçer, çift tık açar (Canlı Not 116)', () => {
+  beforeEach(() => { window.veMntWizAc = jest.fn(); });
+  afterEach(() => { delete window.veMntWizAc; });
+
+  test('hiçbir tip tek tıkta açmayı beyan etmez; tek tık açıcısı yok', () => {
+    expect(Object.keys(componentDefs).filter((t) => componentDefs[t].tekTik)).toEqual([]);
+    expect(typeof veTekTikAcar).toBe('undefined');
   });
 
-  test.each(ARACLAR)('%s: sürüklemesiz tek tık pencereyi açar', (t) => {
-    const { el } = kur(t);
+  test.each(HEPSI)('%s: sürüklemesiz tek tık yalnız seçer — pencere de eylem de açılmaz', (t) => {
+    const { el, node } = kur(t);
     tikla(el);
-    expect(stubs.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    expect(stubs.veTogglePropertiesPanel).not.toHaveBeenCalled();
+    expect(window.veMntWizAc).not.toHaveBeenCalled();
+    expect(global.selectedNodes).toEqual([node]);
   });
 
-  test('sürükleme · Ctrl · çoklu seçim pencere açmaz; kütle gövdesi tek tıkta yalnız seçilir', () => {
-    const v = kur('mnt-viewer');
-    tikla(v.el, {}, 30);                                         // sürükleme
-    tikla(v.el, { ctrlKey: true });                              // çoklu seçimin Ctrl'ü
-    global.selectedNodes = [kur('mnt-motor').node];
-    tikla(v.el, { ctrlKey: false, shiftKey: true });             // Shift
-    const m = kur('mnt-motor');
-    global.selectedNodes = [];
-    tikla(m.el);
+  test.each(ARACLAR)('%s: çift tık penceresini açar', (t) => {
+    const { el } = kur(t);
+    cift(el);
+    expect(stubs.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    expect(window.veMntWizAc).not.toHaveBeenCalled();
+  });
+
+  test('kütle gövdesi ve takoz da aynı: tek tık seçer, çift tık açar', () => {
+    ['mnt-motor', 'mnt-mount'].forEach((t) => {
+      const { el, node } = kur(t);
+      global.selectedNodes = [];
+      tikla(el);
+      expect(global.selectedNodes).toEqual([node]);
+    });
     expect(stubs.veTogglePropertiesPanel).not.toHaveBeenCalled();
-    expect(global.selectedNodes).toEqual([m.node]);
+    cift(kur('mnt-motor').el);
+    expect(stubs.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
   });
 });
 
-describe('EYLEM ARACI — tek tık ve çift tık eylemi çalıştırır, pencere açmaz', () => {
+describe('EYLEM ARACI — çift tık eylemi çalıştırır, pencere açmaz', () => {
   beforeEach(() => { window.veMntWizAc = jest.fn(); });
   afterEach(() => { delete window.veMntWizAc; });
-  const cift = (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
 
   test('beyan: yalnız Başlangıç Sihirbazı eylem taşır, eylem global işlevin adıdır', () => {
     expect(Object.keys(componentDefs).filter((t) => componentDefs[t].eylem)).toEqual(EYLEMLER);
@@ -89,39 +99,17 @@ describe('EYLEM ARACI — tek tık ve çift tık eylemi çalıştırır, pencere
     expect(componentDefs['mnt-example']).toBeUndefined();
   });
 
-  test('sürüklemesiz tek tık sihirbazı açar, özellikler penceresini AÇMAZ', () => {
-    const { el } = kur('mnt-wizard');
-    tikla(el);
-    expect(window.veMntWizAc).toHaveBeenCalledTimes(1);
-    expect(stubs.veTogglePropertiesPanel).not.toHaveBeenCalled();
-  });
-
-  test('çift tık da sihirbazı açar, pencereyi açmaz', () => {
+  test('çift tık sihirbazı açar, özellikler penceresini AÇMAZ', () => {
     const { el } = kur('mnt-wizard');
     cift(el);
     expect(window.veMntWizAc).toHaveBeenCalledTimes(1);
     expect(stubs.veTogglePropertiesPanel).not.toHaveBeenCalled();
   });
 
-  test('sürükleme · Ctrl · Shift eylemi çalıştırmaz', () => {
-    const w = kur('mnt-wizard');
-    tikla(w.el, {}, 30);
-    tikla(w.el, { ctrlKey: true });
-    tikla(w.el, { shiftKey: true });
-    expect(window.veMntWizAc).not.toHaveBeenCalled();
-  });
-
-  test('eylem işlevi yüklü değilse tık sessizce yutulur, pencere yine açılmaz', () => {
+  test('eylem işlevi yüklü değilse çift tık sessizce yutulur, pencere yine açılmaz', () => {
     delete window.veMntWizAc;
     const { el } = kur('mnt-wizard');
-    expect(() => tikla(el)).not.toThrow();
+    expect(() => cift(el)).not.toThrow();
     expect(stubs.veTogglePropertiesPanel).not.toHaveBeenCalled();
-  });
-
-  test('pencere açan araç eski yolda: tek tık pencereyi açar, eylem çalışmaz', () => {
-    const { el } = kur('mnt-solver');
-    tikla(el);
-    expect(stubs.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
-    expect(window.veMntWizAc).not.toHaveBeenCalled();
   });
 });

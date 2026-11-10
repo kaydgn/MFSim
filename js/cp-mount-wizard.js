@@ -52,8 +52,7 @@ var VE_MW_STEPS = [
   { key:'takoz',  ad:'Takozlar', girdi:'Konum · katalog · statik ve dinamik rijitlik', talimat:[
     'Takoz ekle ile her takozu ekleyin.',
     'Konumu üst bağlantı yüzeyinin merkezinden girin.',
-    'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.',
-    'Simetrik takozu Aynalı eşini ekle ile çoğaltın.'] },
+    'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.'] },
   { key:'tork',   ad:'Tork ve çalışma', girdi:'Motor torku · vites oranları · transfer · aks payı', talimat:[
     'Motor’u katalogdan seçin ya da tepe tork ve devirleri girin.',
     'Şanzıman’ın vites oranlarını ve stall oranını girin.',
@@ -597,29 +596,8 @@ function veMntWizTakozSil(key){
   if(_mwSec.takoz === key) _mwSec.takoz = null;
   veMntWizRender();
 }
-// Aynalı eş: y işareti döner, ad Sağ ↔ Sol. Takozlar çoğunlukla çift durur.
-var _MW_AYNA = [['Sağ', 'Sol'], ['sağ', 'sol'], ['SAĞ', 'SOL'], ['Right', 'Left'], ['right', 'left']];
-function _mwAynaAd(ad){
-  var s = String(ad || '');
-  for(var i = 0; i < _MW_AYNA.length; i++){
-    var a = _MW_AYNA[i][0], b = _MW_AYNA[i][1];
-    if(s.indexOf(a) >= 0) return s.split(a).join(b);
-    if(s.indexOf(b) >= 0) return s.split(b).join(a);
-  }
-  return s + ' (eş)';
-}
-function veMntWizTakozAyna(key){
-  var t = _mwSatir('takoz', key); if(!t || !(Math.abs(_mwNum(t.y)) >= 1)) return null;
-  var e = _mwKopya(t);
-  e.key = _mwKey('t'); delete e._dugum; delete e.kaynak;
-  e.ad = _mwAynaAd(t.ad);
-  e.y = -_mwNum(t.y);
-  var i = _mwState.takozlar.indexOf(t);
-  _mwState.takozlar.splice(i + 1, 0, e);
-  _mwSec.takoz = e.key;
-  veMntWizRender();
-  return e;
-}
+// "Aynalı eşini ekle" YOK (kullanıcı 2026-11-10, Canlı Not 120: *"'Aynalı Eşini Ekle' gibi bir
+// saçmalığı kaldıralım."*): takoz Takoz ekle ile eklenir. Kapı: mount-wizard.test.js → *TAKOZ İŞLEMLERİ*.
 // Takoz kataloğu — panelle TEK yazıcı (cp-mount.js → _mntLibUygula).
 function veMntWizTakozKatalog(key, libKey){
   var t = _mwSatir('takoz', key); if(!t) return;
@@ -2298,7 +2276,6 @@ function _mwTakozEditorHTML(t){
     var f = t['fit' + a], p = t['curve' + a];
     return (f && (f.form === 'poly' || f.form === 'asym')) || (Array.isArray(p) && p.length >= 2);
   });
-  var aynaOlur = Math.abs(_mwNum(t.y)) >= 1;
   var h = '<div class="ve-fw-ed">'
     + _mwAlan('Ad', _mwInp(P + 'ad', t.ad, { text:true, baslik:'Ad' }))
     + _mwAlan('Konum [mm]' + _mwKaynakIsaret(t, 'konum'),
@@ -2315,8 +2292,6 @@ function _mwTakozEditorHTML(t){
     + _mwAlan('Kapasite [kg]', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'isteğe bağlı', baslik:'Kapasite' }))
     + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni · katalogdan</div>' : '')
     + '<div class="ve-fw-ed-ops">'
-    + '<button type="button" class="ve-fw-btn"' + (aynaOlur ? '' : ' disabled title="Takoz y = 0 düzleminde"')
-      + ' onclick="veMntWizTakozAyna(\'' + k + '\')">' + _mwIkon('arrow-left-right') + ' Aynalı eşini ekle</button>'
     + '<button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizTakozSil(\'' + k + '\')">' + _mwIkon('trash') + ' Sil</button>'
     + '</div></div>';
   return h;
@@ -2933,12 +2908,12 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizGo: veMntWizGo, veMntWizGoto: veMntWizGoto, veMntWizRender: veMntWizRender, veMntWizLive: veMntWizLive,
     veMntWizGovdeEkle: veMntWizGovdeEkle, veMntWizGovdeSil: veMntWizGovdeSil, veMntWizGovdeTip: veMntWizGovdeTip,
     veMntWizNokta: veMntWizNokta, veMntWizTakozEkle: veMntWizTakozEkle, veMntWizTakozSil: veMntWizTakozSil,
-    veMntWizTakozAyna: veMntWizTakozAyna, veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
+    veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
     veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
-    veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim, _mwAynaAd: _mwAynaAd,
+    veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim,
     _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
     _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML, veMntWizEylemHTML: veMntWizEylemHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,
