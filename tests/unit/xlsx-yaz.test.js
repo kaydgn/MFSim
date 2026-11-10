@@ -182,6 +182,12 @@ describe('XLSX YAZICI — formül, gizli sayfa, akış', () => {
     expect(parca(X.dosyalar(KITAP), 'xl/workbook.xml')).not.toContain('calcPr');   // formülsüz kitapta yok
   });
 
+  test('sekme çubuğu gizli kitap: workbookView showSheetTabs="0"; belirtilmezse yok', () => {
+    expect(parca(X.dosyalar({ sayfalar: [{ ad: 'A', hucre: [[1, 1, 1]] }], sekmeGizli: true }), 'xl/workbook.xml'))
+      .toContain('<workbookView activeTab="0" showSheetTabs="0"/>');
+    expect(parca(X.dosyalar(KITAP), 'xl/workbook.xml')).toContain('<workbookView activeTab="0"/>');
+  });
+
   test('ilk sayfa gizlenmez (Excel açılacak sekme bulamaz)', () => {
     const W = parca(X.dosyalar({ sayfalar: [{ ad: 'A', gizli: true, hucre: [[1, 1, 1]] }] }), 'xl/workbook.xml');
     expect(W).not.toContain('state="hidden"');

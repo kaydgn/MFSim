@@ -23,7 +23,7 @@
 //       filtre: 'A5:W581', izgara: false, gizle: true, yakin: 85,
 //       gizli: true,                 // sayfa sekmesi gizli (formüller okur)
 //       akis: { n, satir(i) → [deger] }   // hucre yerine: n satır, i. satırın değerleri
-//   }] }
+//   }], sekmeGizli: true }               // sekme çubuğu gizli: sayfalar bağlantıyla açılır
 //   formül: { f:'IF(A1>0,1,0)', v:önbellek, dizi:true? } — '=' yazılmaz; dizi:
 //     tek hücrelik dizi formülü (Ctrl+Shift+Enter karşılığı). Formül varsa
 //     calcPr fullCalcOnLoad: Excel açılışta yeniden hesaplar.
@@ -384,7 +384,7 @@ var veXlsxYaz = (function(){
           + kac(konum(s.ad, '$' + m[1] + '$' + m[2] + ':$' + m[3] + '$' + m[4])) + '</definedName>');
       });
       // Formül varsa kitap açılışta yeniden hesaplanır (önbellek değeri ilk görünüş içindir).
-      return BAS + '<workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'
+      return BAS + '<workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"' + (kitap.sekmeGizli ? ' showSheetTabs="0"' : '') + '/></bookViews><sheets>'
         + S.map(function(s, i){
           return '<sheet name="' + kac(s.ad) + '" sheetId="' + (i + 1) + '"' + (s.gizli && i > 0 ? ' state="hidden"' : '') + ' r:id="rId' + (i + 1) + '"/>';
         }).join('')

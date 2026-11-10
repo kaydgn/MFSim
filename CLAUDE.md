@@ -387,22 +387,25 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
 - `js/mount-param-excel.js` + `js/xlsx-yaz.js` — Parametrik Analiz'in **Excel çıktısı**
   (kullanıcı kararı 2026-11-09: *"Kullanıcı bu Excel formatında çıktı alacak"*; düzen Canlı
-  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç · Veri (gizli).
-  Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı başlığın
-  NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara kapalı, kullanılmayan
-  satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk STATİK SEHİMDEN**
-  (kullanıcı 2026-11-10): dört kesin kriteri sağlayanlar 1 g'nin max |δz|'sine göre sıralı, ilki
-  En uygun, kalanı Uygun (Kısmen uygun YOK); Tarama kriter sayısı → sehim. **Konfigürasyonun
-  sayfası YOK, sonucu Sonuç'ta** (kullanıcı 2026-11-10: *"Tıklandığında açılsın, gizli olsun"* —
-  gizli sayfa makrosuz bağla açılmaz): üstte seçili kombinasyonun panosu (No alanı, boşsa
-  Tarama'nın süzgecinde kalan ilk satır; formül son değeriyle yazılır), altında K0…K9 blokları
-  (Özet · Geri · İleri); Tarama'nın HER satırının sonucu gizli Veri'de (yük durumu başına paketli,
-  mm/100; panonun MID penceresi paketli metnin boyundan uzun — sabit 40, altı takozda 5. ve 6.
-  takozu yanlış okuyordu). Yazıcı DOM'suz ve bağımlılıksız (okuyucunun karşılığı; formül, gizli
-  ve akışlı sayfa); kitap ve dosya DİLİMLİ (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*).
-  Kapı: `mount-param-excel.test.js` (→ *SONUÇ* · *VERİ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js`
-  (→ *SEÇİM ve ONAY* · *TEK YOL* · *TARAMA* · *PANO*) + `xlsx-yaz.test.js` + `mount-param-sonuc.spec.js` →
-  *EXCEL* · *EXCEL DİLİMLİ*.
+  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç · K0…K9 ·
+  Veri ve Seçim (gizli). Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz),
+  kriterin tanımı başlığın NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara
+  kapalı, kullanılmayan satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk
+  STATİK SEHİMDEN** (kullanıcı 2026-11-10): dört kesin kriteri sağlayanlar 1 g'nin max |δz|'sine
+  göre sıralı, ilki En uygun, kalanı Uygun (Kısmen uygun YOK); Tarama kriter sayısı → sehim.
+  **Sonuç TEK konfigürasyon, açılışta BOŞ** (kullanıcı 2026-11-10: *"Sonuç kısmı Excel açıldığında
+  boş gelsin … hangi konfigürasyona tıklarsa, sadece o"* — No alanlı pano No 1'i varsayılan
+  gösteriyordu ve mevcut tasarım sanıldı): Özet'in K'sı kendi sayfasını (K0…K9: Özet · Geri ·
+  İleri) açar; Sonuç yalnız Tarama'nın süzgecinde TEK satır kalınca o satır (gizli Seçim:
+  SUBTOTAL(103)), yoksa yönlendirme — Excel makrosuz bir tıkı başka sayfaya taşıyamaz; kitabın
+  SEKME ÇUBUĞU GİZLİ (gizli sayfaya bağlantı gitmez), sayfalar düğmelerle. Tarama'nın HER
+  satırının sonucu gizli Veri'de (yük durumu başına paketli, mm/100; MID penceresi paketli metnin
+  boyundan uzun — sabit 40, altı takozda 5. ve 6. takozu yanlış okuyordu). Yazıcı DOM'suz ve
+  bağımlılıksız (okuyucunun karşılığı; formül, gizli ve akışlı sayfa); kitap ve dosya DİLİMLİ
+  (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*). Kapı: `mount-param-excel.test.js` (→ *SONUÇ* ·
+  *K SAYFALARI* · *VERİ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js` (→ *SEÇİM ve ONAY* · *TEK
+  YOL* · *TARAMA* · *SONUÇ*; formül HESAPLANIR, önbellek değil: `tests/helpers/xlsx-formul.js`) +
+  `xlsx-yaz.test.js` + `mount-param-sonuc.spec.js` → *EXCEL* · *EXCEL DİLİMLİ*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

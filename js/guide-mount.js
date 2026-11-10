@@ -1751,8 +1751,9 @@ function _gmSec17(){
       + '<strong>Hesapla</strong> ve ana rapor: Çözücü taramanın ölçtüğü modları ve sehimleri bulur.',
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
       + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.',
-    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması, '
-      + 'tarama tablosu ve seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
+    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması ve her '
+      + 'birinin sonucu, tarama tablosu ve Tarama’da seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', '
+      + '<em>Excel çıktısı</em>).'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
@@ -1830,16 +1831,19 @@ function _gmSec17(){
     + '(max |δ<sub>z</sub>|). <em>Uygunluk</em>: dört kesin kriter sağlanıyorsa <em>Uygun</em>, statik sehimi en '
     + 'küçük olan <em>En uygun</em> (koyu yeşil); yeşil, sehim arttıkça açılır; <em>Uygun değil</em> renksizdir. '
     + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve <em>Sonuç</em> hücresi '
-    + 'konfigürasyonun sonucunu açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter '
-    + 'sayısına sonra statik sehime göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, '
-    + 'dört kriter (✓ / ✗), frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
-    + '<em>Sonuçlar →</em> Sonuç sayfasını açar. <strong>Sonuç</strong>: üstte bir kombinasyonun sonucu — '
-    + '<em>No</em> alanına Tarama’nın numarası yazılırsa o kombinasyon, alan boşsa Tarama’nın filtresinde kalan '
-    + 'ilk satır (<em>Süzgecin ilk satırı</em>); dört kriter, TR, statik sehim, frekans payı, her yük durumunda '
-    + 'takoz başına X, Y, Z yer değiştirmesi ve modlar. Altında K0 … K9 aynı tabloyla; her birinde '
-    + '<em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. Bütün '
-    + 'kombinasyonların sonucu gizli <strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun '
-    + 'dışındaki satır ve sütunlar gizli açılır.');
+    + 'konfigürasyonun kendi sayfasını (K0 … K9) açar: her yük durumunda takoz başına X, Y, Z yer değiştirmesi, '
+    + 'modlar ve TR; <em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. '
+    + '<strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter sayısına sonra statik sehime göre '
+    + 'sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, dört kriter (✓ / ✗), frekans payı, '
+    + 'grup başına statik ve azami yük, kapasite; başlık satırında filtre. <em>Sonuçlar →</em> Sonuç sayfasını '
+    + 'açar. <strong>Sonuç</strong>: Tarama’nın filtresinde TEK satır kalınca o kombinasyonun sonucu — dört '
+    + 'kriter, TR, statik sehim, frekans payı, her yük durumunda takoz başına X, Y, Z yer değiştirmesi ve modlar; '
+    + 'birden çok satır görünürken boştur. Tek satır bırakmak için kombinasyonun <em>No</em> hücresine sağ '
+    + 'tıklayıp Excel’in <em>Filtre</em> menüsünden seçili hücrenin değerine göre filtreleyin ya da grupların '
+    + 'sütunlarında birer tip seçin. Kitabın alt çubuğunda sayfa adları yoktur; sayfalar düğmelerle açılır. '
+    + 'Bütün kombinasyonların sonucu gizli '
+    + '<strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli '
+    + 'açılır.');
   h += _gmNot('Seçimi modele uygulamak',
       '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
     + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '
