@@ -1053,7 +1053,7 @@ function _gmSec9(){
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
       + 'girilmiş olabilir. Eğik ve soluk yazılı değer <strong>tahminidir</strong>; '
-      + '<strong>Radyal tahmini</strong> satırı oranı ve kaynağını yazar'],
+      + '<strong>Radyal tahmini</strong> (A+P’de <strong>Dinamik tahmini</strong>) satırı oranı ve kaynağını yazar'],
     ['Kuvvet–sehim', 'X · Y · Z kuvvet–sehim eğrileri tek diyagramda; aynı eğriyi çizen eksenler tek çizgidir',
       'Statik düz, dinamik kesikli çizgidir. Katalogdaki takozun eğrisi salt okunurdur; z-eğrisinin '
       + 'noktaları yalnız özel takozda girilir']

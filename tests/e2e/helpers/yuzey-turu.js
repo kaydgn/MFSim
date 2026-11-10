@@ -280,8 +280,10 @@ async function takozTuru(page, olc) {
   expect(p.olculen).toBeGreaterThan(300);
   // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — veri tablosu (görsel yok,
   // Canlı Not 111) ve Tip satırının (i) düğmesinin penceresi (teknik resim); tam tip (Cone 38
-  // 60 ShA) ve radyali boş tip (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz.
-  for (const k of ['amc137963', 'amc137961']) {
+  // 60 ShA), resimli tip (Cone 38 40 ShA: sönüm, Z eğrisi) ve radyali tahmini tip (Cone 38
+  // 50 ShA). Varsayılan seçim (LMT-1433-37) künyesiz. A+P (2026-11-10): konik yatak ve
+  // H-takoz (dinamik tahmini, tolerans satırı), LMT-1433-00'ın katalog eşi.
+  for (const k of ['amc137963', 'amc137961', 'amc137962', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh']) {
     await page.evaluate((kk) => {
       const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
       n.data = n.data || {}; n.data._selKey = kk;

@@ -14,8 +14,10 @@
  *   • kz'nin AMC-EO'yla örtüştüğü (9 kodun 7'si ±0,2 %) ve iki ayrışmanın sayısı;
  *   • dinamik/statik oranın AMC kuralı (Sh+20)/50 ve sertliksiz flanşlı konilerin oranı;
  *   • kütüphane girdileri: anahtar, ad, kapasite; radyali yayımlanmayan kod TAHMİNİ
- *     (Canlı Not 113: AMC-EO'nun radyal/eksenel oranı — aynı tip, aile, hepsi), çözülür,
- *     taramaya aday değil; radyali girilince aday; kz'si olmayan DSM eksik;
+ *     (Canlı Not 113: AMC'nin ölçtüğü radyal/eksenel oran — AMC-EO ve teknik resimler;
+ *     aynı tipte sertliğe göre ara değer, aile, hepsi), çözülür, taramaya aday değil;
+ *     radyali girilince aday; kz'si olmayan DSM eksik;
+ *   • teknik resimler: kutunun X · Y'si üç kodu ölçülü yapar, 137961'in Z eğrisi;
  *   • görsel: yalnız her tipin teknik resmi diskte ve künyede — ürün ve uygulama
  *     fotoğrafı yok (Canlı Not 111: "Sadece teknik resmi kalsa yeter");
  *   • Takoz Özellikleri künyesi: yalnız veri, kapasite yazılmaz (Canlı Not 65);
@@ -142,21 +144,21 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
       'TK035', 'TK040', 'TK050', 'amc137963', 'amc137964', 'amc137731', 'amc137981', 'amc137982', 'amc137983',
       'amc137830', 'amc137833', 'amc177296', 'amc137829', 'lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh',
       'bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
-    expect(Object.keys(L)).toHaveLength(24 + 138);
+    expect(Object.keys(L)).toHaveLength(24 + 138 + 86);                       // + A+P (js/mount-ap.js)
   });
 
   test('tahminli tip uygulanınca tip notu 6/6 der ve radyalin tahmini olduğunu söyler; elle girilen değer farktır', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
     global.nodes = [n];
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();                              // rijitliksiz tip (DSM) boş takoza oturmaz
-    cp.veMntApplyLib('m1', 'amc137961');
+    cp.veMntApplyLib('m1', 'amc137962');
     const E = cp._mntKutuphaneEslesme(n);
-    expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137961', 6, []]);
+    expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137962', 6, []]);
     const not = document.createElement('div'); not.innerHTML = cp._mntKutuphaneNotu(n);
-    expect(not.textContent).toBe('Cone 38 40 ShA (AMC 137961) ile 6/6 değer aynı · radyal tahmini (kz × x 1,51 · y 1,05 · Cone 38 · AMC-EO).');
+    expect(not.textContent).toBe('Cone 38 50 ShA (AMC 137962) ile 6/6 değer aynı · radyal tahmini (kz × x 2,12 · y 1,39 · Cone 38, 40–60 ShA · AMC-EO · AMC çizimi).');
     delete n.data.libKey;                                                       // bağsız: altı değer tek tipi gösterir
-    expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137961');
-    n.data.kxs = 700;                                                           // radyal elle girildi → fark
+    expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137962');
+    n.data.kxs = 1500;                                                          // radyal elle girildi → fark
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();
   });
 
@@ -171,66 +173,85 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
 });
 
 describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)', () => {
-  test('oran tipin ölçümü: aynı tipte sertlikten bağımsız — bir sertliği dışarıda bırakan sınama ±8 %', () => {
-    [['39', ['137981', '137982', '137983']], ['38', ['137963', '137964']]].forEach(([t, ks]) => {
-      ks.forEach((k) => {
-        const o = ks.filter((x) => x !== k).map((x) => A.EO[x][0][0] / A.EO[x][0][2]);
-        const tah = o.reduce((a, b) => a + b, 0) / o.length * A.EO[k][0][2];
-        expect([t, k, Math.abs(tah / A.EO[k][0][0] - 1) < 0.08]).toEqual([t, k, true]);
+  test('ölçüm: AMC-EO\'nun 10 kodu + teknik resimlerin 3 yeni kutusu; oran tipte sertlikle değişebilir', () => {
+    expect(kodlar.filter((k) => A.olcum(k)).sort()).toEqual(Object.keys(A.EO).concat(['137061', '137062', '137961']).sort());
+    expect(A.ORAN.tip['38'].olc.map((o) => [o.sh, +o.x.toFixed(3), +o.y.toFixed(3), o.belge]))
+      .toEqual([[40, 2.667, 1.733, 'AMC çizimi'], [60, 1.565, 1.052, 'AMC-EO'], [70, 1.458, 1.047, 'AMC-EO']]);
+    expect(A.ORAN.tip['31'].olc.map((o) => [o.sh, +o.x.toFixed(3)])).toEqual([[60, 2.744], [70, 1.719]]);
+    expect(A.ORAN.tip['39'].olc.map((o) => +o.x.toFixed(3))).toEqual([1.861, 1.913, 1.779]);    // Cone 39'da az değişir
+  });
+  test('sertliğe göre ara değer: bir sertliği dışarıda bırakan sınamada tipin ortalamasından yakın', () => {
+    let ara = 0, ort = 0;
+    Object.keys(A.ORAN.tip).forEach((t) => {
+      const O0 = A.ORAN.tip[t].olc; if (O0.length < 2) return;
+      O0.forEach((o) => {
+        const O = O0.filter((x) => x !== o);
+        const T = { olc: O, x: O.reduce((a, b) => a + b.x, 0) / O.length, y: O.reduce((a, b) => a + b.y, 0) / O.length };
+        const r = A.tipOrani(T, o.sh);
+        ara += Math.abs(r.x / o.x - 1) + Math.abs(r.y / o.y - 1);
+        ort += Math.abs(T.x / o.x - 1) + Math.abs(T.y / o.y - 1);
       });
     });
-    expect([A.ORAN.tip['39'].x, A.ORAN.tip['38'].x, A.ORAN.tip['38'].y].map((v) => +v.toFixed(3))).toEqual([1.851, 1.512, 1.05]);
+    expect([+ara.toFixed(2), +ort.toFixed(2)]).toEqual([4.52, 5.41]);
+    expect(ara).toBeLessThan(ort);
+  });
+  test('ara değer ölçülmüş sertlikler arasında doğrusal, dışında en yakın ölçülmüş sertliğinki (öteleme yok)', () => {
+    const r = (k) => A.tahminOrani(k);
+    expect([r('137962').x, r('137962').y, r('137962').kaynak.sh]).toEqual([2.116, 1.393, [40, 60]]);   // Cone 38 50 ShA
+    expect([r('137063').x, r('137063').kaynak.sh]).toEqual([2.744, [60]]);                           // Cone 31 50 ShA
+    expect([r('137984').x, r('137984').kaynak.sh]).toEqual([1.779, [60]]);                           // Cone 39 70 ShA
   });
   test('sıra: aynı tip → aynı aile (eksen başına medyan) → ölçülmüş bütün tipler (x = y); hidrolikte din./stat. ailenin ölçümü', () => {
-    const r = (k) => A.tahminOrani(k);
-    expect(r('137961').kaynak).toEqual({ tur: 'tip', ad: 'Cone 38', n: 2 });          // Cone 38 40 ShA
-    expect(r('137005').kaynak).toEqual({ tur: 'aile', ad: 'Solid cone', n: 3 });      // Cone 01: masif ailesi
-    expect(r('137213').kaynak).toEqual({ tur: 'hepsi', ad: null, n: 6 });             // flanşlı: ölçüm yok
-    expect([r('137005').x, r('137005').y, r('137213').x, r('137213').y]).toEqual([2.641, 2.641, 1.914, 1.914]);
+    const r = (k) => A.tahminOrani(k), B = ['AMC-EO', 'AMC çizimi'];
+    expect(r('137962').kaynak).toEqual({ tur: 'tip', ad: 'Cone 38', n: 3, sh: [40, 60], belge: B });
+    expect(r('137005').kaynak).toEqual({ tur: 'aile', ad: 'Solid cone', n: 4, belge: B });      // Cone 01: masif ailesi
+    expect(r('137213').kaynak).toEqual({ tur: 'hepsi', ad: null, n: 7, belge: B });             // flanşlı: ölçüm yok
+    expect([r('137005').x, r('137005').y, r('137213').x, r('137213').y]).toEqual([2.437, 2.437, 1.977, 1.977]);
     const kes = kodlar.find((k) => aile(k) === 'kesikli' && !A.ORAN.tip[KOD[k][0]]);
     expect(r(kes).kaynak.tur).toBe('aile');
-    expect(r(kes).x / r(kes).y).toBeCloseTo(1.44, 1);                                // kesikli konide x ≠ y
+    expect(r(kes).x / r(kes).y).toBeCloseTo(1.46, 1);                                // kesikli konide x ≠ y
     expect([r('177081').din, r('177081').dinTahmin]).toEqual([2, true]);             // hidrolik: 177296'nın 2,0'ı
     expect([r('137005').din, r('137005').dinTahmin]).toEqual([1.3, false]);           // NR: kodun kendi oranı
-    expect(r('137982')).toBeNull();                                                   // ölçülü kodda tahmin yok
+    ['137982', '137961', '137061'].forEach((k) => expect(r(k)).toBeNull());          // ölçülü kodda tahmin yok
   });
-  test('kütüphane: 10 ölçülü · 132 tahminli · 6 eksik (DSM); kz × oran 5 N/mm\'ye yuvarlı, dinamik statik × din./stat.', () => {
+  test('kütüphane: 13 ölçülü · 129 tahminli · 6 eksik (DSM); kz × oran 5 N/mm\'ye yuvarlı, dinamik statik × din./stat.', () => {
     const E = kodlar.map((k) => L['amc' + k]);
-    expect(E.filter((e) => cp._mntLibTam(e) && !cp._mntLibTahmin(e).length).map((e) => e.amc.kod).sort()).toEqual(Object.keys(A.EO).sort());
-    expect(E.filter((e) => cp._mntLibTahmin(e).length)).toHaveLength(132);
+    expect(E.filter((e) => cp._mntLibTam(e) && !cp._mntLibTahmin(e).length).map((e) => e.amc.kod).sort())
+      .toEqual(Object.keys(A.EO).concat(['137061', '137062', '137961']).sort());
+    expect(E.filter((e) => cp._mntLibTahmin(e).length)).toHaveLength(129);
     expect(E.filter((e) => !cp._mntLibTam(e)).map((e) => e.amc.aile)).toEqual(Array(6).fill('dsm'));
-    const e = L.amc137961;                                                            // Cone 38 40 ShA: kz 450, din 1,2
-    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([680, 475, 450, 816, 570, 540, ['sx', 'sy', 'dx', 'dy']]);
+    const e = L.amc137962;                                                            // Cone 38 50 ShA: kz 700, din 1,4
+    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([1480, 975, 700, 2072, 1365, 980, ['sx', 'sy', 'dx', 'dy']]);
     const h = L.amc177081;                                                            // hidrolik: dinamik de tahmini
     expect([h.sx, h.sz, h.dx, h.dz, h.tahmin]).toEqual([420, 250, 840, 500, ['sx', 'sy', 'dx', 'dy', 'dz']]);
     const d = L.amc137461;                                                            // DSM: kz yok, tahmin yok
     expect([d.sx, d.sz, d.dz, d.tahmin]).toEqual([null, null, null, undefined]);
-    expect(['amc137963', 'amc137982'].map((k) => L[k].tahmin)).toEqual([undefined, undefined]);
+    expect(['amc137963', 'amc137982', 'amc137961'].map((k) => L[k].tahmin)).toEqual([undefined, undefined, undefined]);
   });
   test('girilen değer tahminden çıkar; kalan tahmin girilenden kurulur (kz → kx, kx → dinamik)', () => {
-    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], overrides: { amc137961: { sz: 500 } } } };
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], overrides: { amc137962: { sz: 600 } } } };
     global.nodes = [lib];
-    let e = cp.veMntGetLibraryMap().amc137961;
-    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([755, 525, 500, 906, 630, 540, ['sx', 'sy', 'dx', 'dy']]);
-    lib.data.overrides.amc137961 = { sx: 700 };
-    e = cp.veMntGetLibraryMap().amc137961;
-    expect([e.sx, e.dx, e.tahmin]).toEqual([700, 840, ['sy', 'dx', 'dy']]);           // dinamik girilen statikten: 700 × 1,2
-    lib.data.overrides.amc137961 = { sx: 700, sy: 480, dx: 840, dy: 576 };
-    e = cp.veMntGetLibraryMap().amc137961;
+    let e = cp.veMntGetLibraryMap().amc137962;
+    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([1270, 835, 600, 1778, 1169, 980, ['sx', 'sy', 'dx', 'dy']]);
+    lib.data.overrides.amc137962 = { sx: 1500 };
+    e = cp.veMntGetLibraryMap().amc137962;
+    expect([e.sx, e.dx, e.tahmin]).toEqual([1500, 2100, ['sy', 'dx', 'dy']]);         // dinamik girilen statikten: 1.500 × 1,4
+    lib.data.overrides.amc137962 = { sx: 1500, sy: 1000, dx: 2100, dy: 1400 };
+    e = cp.veMntGetLibraryMap().amc137962;
     expect([e.tahmin, cp._mntLibTur(e), cp.veMntGetLibraryMap().amc137005.tahmin]).toEqual([null, 'degisti', ['sx', 'sy', 'dx', 'dy']]);
-    expect(L.amc137961.sx).toBe(680);                                                 // fabrika girdisi değişmez
+    expect(L.amc137962.sx).toBe(1480);                                                // fabrika girdisi değişmez
   });
   test('tahminli tip uygulanınca takoz dolu ve "rijitlik eksik" yok; tür ve takozun tahminli alanları', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: { kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } };
     global.nodes = [n];
-    cp.veMntApplyLib('m1', 'amc137961');
-    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd, n.data.maxLoad]).toEqual([680, 475, 450, 816, 570, 540, 300]);
+    cp.veMntApplyLib('m1', 'amc137962');
+    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd, n.data.maxLoad]).toEqual([1480, 975, 700, 2072, 1365, 980, 400]);
     expect(cp._mntTakozTipDurumu(n).d).toBe('ok');
     expect(cp._mntTakozTahmin(n)).toEqual(['kxs', 'kys', 'kxd', 'kyd']);
-    n.data.kxs = 700;                                                                 // elle girilen değer tahmin değil
+    n.data.kxs = 1500;                                                                // elle girilen değer tahmin değil
     expect(cp._mntTakozTahmin(n)).toEqual(['kys', 'kxd', 'kyd']);
     const M = cp.veMntGetLibraryMap();
-    expect(['amc137961', 'amc137963', 'amc137461'].map((k) => cp._mntLibTur(M[k]))).toEqual(['tahmin', 'gomulu', 'eksik']);
+    expect(['amc137962', 'amc137961', 'amc137963', 'amc137461'].map((k) => cp._mntLibTur(M[k]))).toEqual(['tahmin', 'egri', 'gomulu', 'eksik']);
   });
   test('Takoz Özellikleri: tahminli hücreler işaretli, durum "tahmini", eksik bandı yok; kaynağı Rijitlik\'te', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137005' } };
@@ -242,8 +263,8 @@ describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)'
     expect(d.querySelector('.ve-fp-kat[data-k="rij"]').getAttribute('data-d')).toBe('ok');
     expect(d.textContent).not.toMatch(/reddeder|rijitlik eksik/);
     const g = d.querySelector('#ve-mnt-lib-tah-lib1');
-    expect([g.getAttribute('data-d'), g.textContent]).toEqual(['warn', 'Radyal tahminikz × 2,64 · Solid cone, 3 tip · AMC-EO']);
-    expect(document.querySelector ? d.querySelector('#ve-mnt-lib-sx-lib1').value : '').toBe('345');
+    expect([g.getAttribute('data-d'), g.textContent]).toEqual(['warn', 'Radyal tahminikz × 2,44 · Solid cone, 4 tip · AMC-EO · AMC çizimi']);
+    expect(d.querySelector('#ve-mnt-lib-sx-lib1').value).toBe('315');
   });
   test('ÇÖZÜCÜ: radyali yayımlanmayan tip modeli reddettirmez — eskiden boş radyal hata veriyordu', () => {
     const H = require('../helpers/takoz-dogrulama.js');
@@ -265,14 +286,16 @@ describe('PARAMETRİK — eksik ve tahminli tip aday değil', () => {
   test('adaylar yalnız tam ve tahminsiz tipler; Takoz Özellikleri\'nde radyali girilen AMC kodu aday olur', () => {
     const M = { lib: cp.veMntGetLibraryMap() };
     const ad = P._mntParamAdaylar(M, null).map((a) => a.key);
-    expect(ad).toHaveLength(24);
-    expect(ad).not.toContain('amc137961');
+    expect(ad).toHaveLength(27);                                                // 24 + teknik resimlerin 3 kodu
+    expect(ad).toEqual(expect.arrayContaining(['amc137061', 'amc137062', 'amc137961']));
+    expect(ad).not.toContain('amc137962');
+    expect(ad.filter((k) => /^ap/.test(k))).toEqual([]);                              // A+P: dinamik tahmini
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'],
-      data: { mounts: [], overrides: { amc137961: { sx: 700, sy: 480, dx: 840, dy: 576 } } } };
+      data: { mounts: [], overrides: { amc137962: { sx: 1300, sy: 900, dx: 1820, dy: 1260 } } } };
     global.nodes = [lib];
     const ad2 = P._mntParamAdaylar({ lib: cp.veMntGetLibraryMap() }, null).map((a) => a.key);
-    expect(ad2).toHaveLength(25);
-    expect(ad2).toContain('amc137961');
+    expect(ad2).toHaveLength(28);
+    expect(ad2).toContain('amc137962');
   });
 });
 
@@ -308,6 +331,63 @@ describe('GÖRSELLER — yalnız tipin teknik resmi (Canlı Not 111)', () => {
     const b = fs.readFileSync(path.join(__dirname, '../../build.js'), 'utf8');
     expect(b).toMatch(/path\.join\(ROOT, 'assets', 'takoz'\)/);
     expect(b).toMatch(/'window\.__MFSIM_TAKOZ = '/);
+  });
+});
+
+// ── TEKNİK RESİM — BMC'nin dokuz resmindeki AMC kutusu (kullanıcı 2026-11-10) ──
+// Resimden okunan sayılar (kN/mm → N/mm, kg) burada BAĞIMSIZ yazılı: modülün
+// RESIM tablosu bozulursa ya da grafiğin sayısallaştırması kayarsa kırmızı.
+describe('TEKNİK RESİM — AMC kutusu', () => {
+  const RES = {                                   // kod: [maks. yük kg, X, Y, Z N/mm, din]
+    '137061': [500, 2470, 2470, 900, null], '137062': [750, 2750, 2750, 1600, null],
+    '137963': [650, 1800, 1210, 1150, 1.6], '137964': [900, 2770, 1990, 1900, 1.8],
+    '177296': [900, 1090, 1090, 650, 2], '137961': [300, 1200, 780, 450, 1.2]
+  };
+  const TABLO = { '137063': 310, '137061': 500, '137062': 750, '137961': 300, '137962': 400, '137963': 650, '137964': 900,
+    '137981': 400, '137982': 600, '137983': 900, '137984': 1100, '177294': 400, '177295': 600, '177296': 900, '177297': 1000 };
+  test('grafikten okunan kz resmin Z\'siyle birebir (beş kod) — sayısallaştırmanın bağımsız doğrulaması', () => {
+    ['137061', '137062', '137961', '137963', '177296'].forEach((k) => expect([k, A.KOD[k][3]]).toEqual([k, RES[k][3]]));
+  });
+  test('resimlerdeki aile yük tabloları on beş kodda sitenin tablosuyla aynı', () => {
+    Object.keys(TABLO).forEach((k) => expect([k, A.KOD[k][2]]).toEqual([k, TABLO[k]]));
+  });
+  test('üç kodda resim = AMC-EO; üç kodda X · Y yeni → kütüphanede tam tip', () => {
+    ['137963', '137964', '177296'].forEach((k) => {
+      expect(A.EO[k][0]).toEqual(RES[k].slice(1, 4));
+      expect(A.EO[k][1]).toEqual(RES[k].slice(1, 4).map((v) => Math.round(v * RES[k][4])));
+    });
+    expect([L.amc137061.sx, L.amc137061.sy, L.amc137061.sz, L.amc137061.dx, L.amc137061.dz]).toEqual([2470, 2470, 900, 3952, 1440]);
+    expect([L.amc137062.sx, L.amc137062.sy, L.amc137062.sz, L.amc137062.dx, L.amc137062.dz]).toEqual([2750, 2750, 1600, 4950, 2880]);
+    expect([L.amc137961.sx, L.amc137961.sy, L.amc137961.sz, L.amc137961.dx, L.amc137961.dy, L.amc137961.dz]).toEqual([1200, 780, 450, 1440, 936, 540]);
+    ['137061', '137062', '137961'].forEach((k) => expect(L['amc' + k].amc.kzKaynak).toBe('resim'));
+  });
+  test('137962\'nin resmindeki kutu 137963\'ün kopyası — yazılmadı; radyali Cone 38\'in ölçümlerinden tahmini', () => {
+    const e = L.amc137962;
+    expect(A.RESIM['137962']).toBeUndefined();
+    expect([e.sz, e.tahmin, e.sx === 1800]).toEqual([700, ['sx', 'sy', 'dx', 'dy'], false]);
+  });
+  test('137961 Z basma eğrisi: basma δ < 0, monoton; maks. yükte sekant tabloyla ±1 %; orijin eğimi katalogla uyumlu', () => {
+    const z = L.amc137961.curves.z;
+    expect(z[z.length - 1]).toEqual([0, 0]);
+    for (let i = 1; i < z.length; i++) { expect(z[i][0]).toBeGreaterThan(z[i - 1][0]); expect(z[i][1]).toBeGreaterThan(z[i - 1][1]); }
+    const C = require('../../js/mount-core.js');
+    const mnt = { kstat: [1200e3, 780e3, 450e3], curves: { z: z.map((p) => [p[0] / 1000, p[1]]) } };
+    const yasa = C.mountStaticLaws ? C.mountStaticLaws(mnt)[2] : null;
+    if (yasa) {
+      const F = 300 * 9.81; let lo = -0.0128, hi = 0;                           // F(δ) = −F'yi ikiye bölmeyle bul
+      for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (yasa.force(m) < -F) lo = m; else hi = m; }
+      expect(Math.abs(F / -lo / 1000 / 450 - 1)).toBeLessThan(0.01);
+    }
+    expect(C.lawCatalogMismatch(mnt)).toEqual([]);
+  });
+  test('Takoz Özellikleri: resimli tipte sönüm ve kaynak; BMC parça no yazılmaz (kullanıcı 2026-11-10)', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137961' } };
+    global.nodes = [lib];
+    const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
+    const satir = [...d.querySelectorAll('.ve-mnt-amc tr')].map((r) => [r.querySelector('th').textContent, r.querySelector('td').textContent]);
+    expect(satir).toContainEqual(['Sönüm', '0,03']);
+    expect(satir).toContainEqual(['Kaynak', 'AMC çizimi · BMC teknik resmi']);
+    expect(d.textContent).not.toMatch(/BMC parça/);
   });
 });
 

@@ -348,11 +348,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   veritabanımız"* · *"Takoz resimlerini de al"*): 5 aile · 51 tip · 148 kod; envanter
   (kod, sertlik, maks. yük, sıkma torku, ağırlık) üreticinin tablosundan, eksenel kz
   üreticinin yük–sehim grafiğinden (log-log çizgi F = kz·δ, g = 9,81; AMC-EO'yla 9'da 7
-  birebir). **Radyal rijitlik yayımlanmıyor**: yalnız AMC-EO'daki 10 kodda ölçülü; öteki 132
-  kodda TAHMİNİ (kullanıcı 2026-11-10, Canlı Not 113: *"Programın çözmesi gerek … program
-  reddeder diye bir kıstas olmaması lazım"*): kx = rx·kz, ky = ry·kz, oran AMC-EO'nun aynı tipi →
-  aynı ailesi → bütün tiplerin medyanı (aynı geometride oran sertlikten bağımsız), dinamik =
-  statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
+  birebir). **Radyal rijitlik yayımlanmıyor**: AMC-EO'daki 10 kodda ve BMC teknik resimlerinin
+  3 kodunda ölçülü; öteki 129 kodda TAHMİNİ (kullanıcı 2026-11-10, Canlı Not 113: *"Programın
+  çözmesi gerek … program reddeder diye bir kıstas olmaması lazım"*): kx = rx·kz, ky = ry·kz, oran
+  AMC'nin ölçümünden — aynı tipin ölçülmüş sertlikleri arasında doğrusal, dışında en yakınınki
+  (resimler oranın sertlikle değiştiğini gösterdi: Cone 38 40 ShA 2,67 ↔ 60 ShA 1,57) → aynı
+  ailesi → bütün tiplerin medyanı, dinamik = statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
   değer tahminden çıkar; tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
   olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
@@ -360,10 +361,21 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
   (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112). Kapı:
-  `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK RESİM*) + `mount-library-dropdown.test.js` →
-  *SEÇİLİ SATIR* + `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` →
-  *AMC KAPASİTESİ*.
+  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112). **BMC teknik
+  resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
+  tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
+  kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
+  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* +
+  `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` → *AMC KAPASİTESİ*.
+- `js/mount-ap.js` + `assets/takoz/ap/` — **Angst+Pfister APSOvib® takoz veritabanı** (kullanıcı
+  2026-11-10: *"kayıtlı olan Angst-Pfister takozlarını da araştır"*): konik · HD konik · H-takoz ·
+  marine · jeneratör — 24 tip, 86 kod, e-mağazanın güncel tablosundan (föylerle çapraz); A+P'nin
+  kg'ı daN. **Dinamik yayımlanmıyor**: TAHMİNİ (Canlı Not 113'ün kuralı) — NR'de (Sh+20)/50 (AMC'nin
+  NR yasası), CR H-takozda AMC-EO'nun 9 NR kodunun medyanı (`DIN_MEDYAN`); işaretli, çözülür,
+  taramaya aday olmaz; statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
+  ölçülmüş benzeri yok → eksik. Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --ap`).
+  LMT-1433-00 (LASPAR kodu) ↔ konik 026 S 1 flanşla eşleşir (`ESLES`, künyede katalog eşi). Kapı:
+  `mount-ap.test.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

@@ -136,7 +136,8 @@ describe('kapı 2 — dinamik/statik oranı eksene göre değişemez', () => {
     // Eşiği ne körelmiş ne de kırılgan tutan çivi: gerçek veriyle hata arasında.
     const worst = Math.max(...Object.keys(LIB).map((k) => {
       const e = LIB[k];
-      return (e.sx > 0 && e.sy > 0 && e.sz > 0) ? spread([e.sx, e.sy, e.sz], [e.dx, e.dy, e.dz]) : 0;
+      // oran yalnız dinamiği de bilinen girdide (A+P dinamik yayımlamıyor — js/mount-ap.js)
+      return (e.sx > 0 && e.sy > 0 && e.sz > 0 && e.dx > 0 && e.dy > 0 && e.dz > 0) ? spread([e.sx, e.sy, e.sz], [e.dx, e.dy, e.dz]) : 0;
     }));
     expect(worst).toBeLessThan(LIMIT);
     const tk = LIB.TK040;
