@@ -101,7 +101,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   → *Başlangıç Sihirbazı bileşeni*): FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir); alt çubuk YOK — Geri · İleri (son adımda Modeli
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
-  alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). **İlk hâl** —
+  alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
+  Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
+  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
