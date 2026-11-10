@@ -18,21 +18,28 @@
 //       sutun: { c: genişlik },      // karakter birimi (Excel'in sütun genişliği)
 //       satir: { r: yükseklik },     // pt
 //       birlesik: ['D6:F6'],
-//       bag: [[r, c, hedefSayfa, 'A1']],
+//       bag: [[r, c, hedefSayfa, 'A1', c2?]],   // c2: bağlantı r. satırda c…c2 hücrelerini kaplar
 //       not: [[r, c, metin, genişlikPx, yükseklikPx]],
 //       filtre: 'A5:W581', izgara: false, gizle: true, yakin: 85,
 //       gizli: true,                 // sayfa sekmesi gizli (formüller okur)
 //       akis: { n, satir(i) → [deger] }   // hucre yerine: n satır, i. satırın değerleri
+//       akis: { n, sutun, hucre(r) → [[c, deger, stil]], ht(r) → pt }   // biçimli akış (aşağıda)
 //   }], sekmeGizli: true }               // sekme çubuğu gizli: sayfalar bağlantıyla açılır
 //   formül: { f:'IF(A1>0,1,0)', v:önbellek, dizi:true? } — '=' yazılmaz; dizi:
 //     tek hücrelik dizi formülü (Ctrl+Shift+Enter karşılığı). Formül varsa
 //     calcPr fullCalcOnLoad: Excel açılışta yeniden hesaplar.
 //   akis: stilsiz, satırları sırayla yazılan sayfa (yüz binlerce hücre);
-//     metin satır içi (inlineStr), sayı <v>.
+//     metin satır içi (inlineStr), sayı <v>. akis.hucre verilirse BİÇİMLİ akış: r. satırın
+//     hücreleri istendikçe (stil, paylaşılan metin, formül), satır yüksekliği ht(r)'den;
+//     sayfanın sutun · izgara · gizle · yakin · bag'i (bag bir işlevse yazımın SONUNDA
+//     okunur: satırlar üretilirken dolar). Birleşik hücre yok — yerine yatay:'centerContinuous'
+//     ve kısmi kenarlık.
 //   stil: { b, boy, renk, alt, dolgu, kenar, yatay, dikey, sar, bicim }
-//     renk/dolgu 'RRGGBB'; bicim '0.00' gibi sayı biçimi.
+//     renk/dolgu 'RRGGBB'; bicim '0.00' gibi sayı biçimi; kenar true (dört yan) ya da
+//     yanların harfleri ('ltb': sol, üst, alt — birleşik görünüşlü kutu).
 //   gizle: içeriğin son satırından ve son sütunundan BİR sonrası görünür,
-//   ötesi gizli (sheetFormatPr zeroHeight + son sütundan sonrası hidden).
+//   ötesi gizli (sheetFormatPr zeroHeight + son sütundan sonrası hidden); gizle:'sutun'
+//   yalnız sütunlar (satırlar yazılmadıkça yazılmaz — büyük akış sayfası).
 //
 // ZIP: yerel başlık + merkezi dizin; sıkıştırmasız (stored) ya da varsa
 // CompressionStream('deflate-raw') ile (zaman uyumsuz yol). Okuyucunun saf
@@ -89,6 +96,19 @@ var veXlsxYaz = (function(){
   }
   // Sayfa içi bağlantının hedefi: 'Ad'!A1 (tırnak içindeki ' iki kez).
   function konum(ad, hucre){ return '\'' + String(ad).replace(/'/g, '\'\'') + '\'!' + (hucre || 'A1'); }
+  // Sayfa içi bağlantılar: [r, c, hedefSayfa, hedefHücre, c2?] — c2 verilirse bağlantı r. satırın
+  // c…c2 hücrelerini kaplar (birleşik görünüşlü düğmenin her yeri tıklanır).
+  function bagXml(b){
+    var ref = adres(b[0], b[1]) + (b[4] > b[1] ? ':' + adres(b[0], b[4]) : '');
+    return '<hyperlink ref="' + ref + '" location="' + kac(konum(b[2], b[3])) + '"/>';
+  }
+  function baglarXml(B){
+    if(typeof B === 'function') B = B();
+    if(!B || !B.length) return '';
+    var h = '<hyperlinks>';
+    for(var i = 0; i < B.length; i++) h += bagXml(B[i]);
+    return h + '</hyperlinks>';
+  }
 
   // ── stiller ──────────────────────────────────────────────────────────────
   // Yazı, dolgu, kenarlık ve hücre biçimi tekilleştirilir; 0 sırası Excel'in
@@ -97,6 +117,13 @@ var veXlsxYaz = (function(){
   var YERLESIK = { 'General':0, '0':1, '0.00':2, '#,##0':3, '#,##0.00':4 };
   function stilKaydi(){
     var yazi = ['b0|11||0'], dolgu = ['', 'gray125'], bicim = {}, xf = ['0|0|0|0||||'], dizin = {}, bicimSira = 164;
+    var kenar = ['', 'ltrb'], onbellek = (typeof WeakMap === 'function') ? new WeakMap() : null;
+    function kenarNo(s){
+      if(!s.kenar) return 0;
+      if(s.kenar === true) return 1;
+      var k = ['l', 't', 'r', 'b'].filter(function(y){ return String(s.kenar).indexOf(y) >= 0; }).join('');
+      var i = kenar.indexOf(k); if(i < 0){ kenar.push(k); i = kenar.length - 1; } return i;
+    }
     function yaziNo(s){
       var k = (s.b ? 'b1' : 'b0') + '|' + (s.boy || 11) + '|' + (s.renk || '') + '|' + (s.alt ? 1 : 0);
       var i = yazi.indexOf(k); if(i < 0){ yazi.push(k); i = yazi.length - 1; } return i;
@@ -111,12 +138,15 @@ var veXlsxYaz = (function(){
       if(!(f in bicim)) bicim[f] = bicimSira++;
       return bicim[f];
     }
+    // Aynı stil nesnesi tekrar sorulunca dizin önbellekten (biçimli akışta milyonlarca hücre);
+    // nesne kaydedildikten sonra değiştirilmez.
     function no(s){
       if(!s) return 0;
-      var k = [bicimNo(s), yaziNo(s), dolguNo(s), s.kenar ? 1 : 0, s.yatay || '', s.dikey || '', s.sar ? 1 : '', ''].join('|');
-      if(k in dizin) return dizin[k];
-      xf.push(k); dizin[k] = xf.length - 1;
-      return xf.length - 1;
+      if(onbellek){ var o = onbellek.get(s); if(o !== undefined) return o; }
+      var k = [bicimNo(s), yaziNo(s), dolguNo(s), kenarNo(s), s.yatay || '', s.dikey || '', s.sar ? 1 : '', ''].join('|');
+      var n = (k in dizin) ? dizin[k] : (xf.push(k), dizin[k] = xf.length - 1);
+      if(onbellek) onbellek.set(s, n);
+      return n;
     }
     function xml(){
       var h = BAS + '<styleSheet xmlns="' + NS_MAIN + '">';
@@ -134,9 +164,10 @@ var veXlsxYaz = (function(){
         return '<fill><patternFill patternType="solid"><fgColor rgb="FF' + d + '"/><bgColor indexed="64"/></patternFill></fill>';
       }).join('') + '</fills>';
       var ince = '<color rgb="FF000000"/>';
-      h += '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
-        + '<border><left style="thin">' + ince + '</left><right style="thin">' + ince + '</right><top style="thin">' + ince
-        + '</top><bottom style="thin">' + ince + '</bottom><diagonal/></border></borders>';
+      var yan = function(k, y, ad){ return k.indexOf(y) >= 0 ? '<' + ad + ' style="thin">' + ince + '</' + ad + '>' : '<' + ad + '/>'; };
+      h += '<borders count="' + kenar.length + '">' + kenar.map(function(k){
+        return '<border>' + yan(k, 'l', 'left') + yan(k, 'r', 'right') + yan(k, 't', 'top') + yan(k, 'b', 'bottom') + '<diagonal/></border>';
+      }).join('') + '</borders>';
       h += '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>';
       h += '<cellXfs count="' + xf.length + '">' + xf.map(function(k, i){
         var p = k.split('|');
@@ -163,6 +194,21 @@ var veXlsxYaz = (function(){
       xml:function(){
         return BAS + '<sst xmlns="' + NS_MAIN + '" count="' + adet + '" uniqueCount="' + L.length + '">'
           + L.map(function(s){ return '<si><t xml:space="preserve">' + kac(s) + '</t></si>'; }).join('') + '</sst>';
+      },
+      // Parça parça (on binlerce metin): xml() ile bayt bayt aynı.
+      uretec:function(){
+        var i = -1;
+        return {
+          sonraki:function(){
+            if(i > L.length) return null;
+            if(i < 0){ i = 0; return BAS + '<sst xmlns="' + NS_MAIN + '" count="' + adet + '" uniqueCount="' + L.length + '">'; }
+            var h = '';
+            while(i < L.length && h.length < PARCA) h += '<si><t xml:space="preserve">' + kac(L[i++]) + '</t></si>';
+            if(i >= L.length){ i = L.length + 1; h += '</sst>'; }
+            return h;
+          },
+          oran:function(){ return i < 0 ? 0 : Math.min(1, i / Math.max(1, L.length)); }
+        };
       }
     };
   }
@@ -180,6 +226,38 @@ var veXlsxYaz = (function(){
     else if(typeof v === 'number' && sayi(v) !== null) deger = '<v>' + sayi(v) + '</v>';
     return '<c r="' + ref + '"' + so + t + '>' + f + deger + '</c>';
   }
+  // Hücre: boş (yalnız stil) · formül · sayı · paylaşılan metin.
+  function hucreXml(ref, v, st, stil, metin, durum){
+    var s = stil.no(st), so = s ? ' s="' + s + '"' : '';
+    if(v === null || v === undefined || v === '') return '<c r="' + ref + '"' + so + '/>';
+    if(formulMu(v)){ durum.formul = true; return formulXml(ref, so, v); }
+    if(typeof v === 'number'){
+      var n = sayi(v);
+      return n === null ? '<c r="' + ref + '"' + so + '/>' : '<c r="' + ref + '"' + so + '><v>' + n + '</v></c>';
+    }
+    return '<c r="' + ref + '"' + so + ' t="s"><v>' + metin.no(v) + '</v></c>';
+  }
+  // Sayfanın başı: boyut, görünüm (ızgara, yakınlık, seçili sekme), satır biçimi, sütunlar.
+  function basXml(S, ilk, sonR, sonC, gizle, gizleSutun){
+    if(gizleSutun === undefined) gizleSutun = gizle;
+    var h = BAS + '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">';
+    h += '<dimension ref="A1:' + adres(sonR, sonC) + '"/>';
+    var yakin = S.yakin && S.yakin !== 100 ? ' zoomScale="' + S.yakin + '" zoomScaleNormal="' + S.yakin + '"' : '';
+    h += '<sheetViews><sheetView workbookViewId="0"' + (ilk ? ' tabSelected="1"' : '') + (S.izgara === false ? ' showGridLines="0"' : '')
+      + yakin + '/></sheetViews>';
+    h += '<sheetFormatPr defaultRowHeight="15"' + (gizle ? ' zeroHeight="1"' : '') + '/>';
+    var sut = S.sutun || {}, ck = Object.keys(sut).map(Number).filter(function(c){ return c >= 1; }).sort(function(a, b){ return a - b; });
+    if(ck.length || gizleSutun){
+      h += '<cols>';
+      ck.forEach(function(c){
+        if(gizleSutun && c > sonC + 1) return;
+        h += '<col min="' + c + '" max="' + c + '" width="' + (+sut[c]).toFixed(4) + '" customWidth="1"/>';   // makine: XML özniteliği
+      });
+      if(gizleSutun && sonC + 2 <= 16384) h += '<col min="' + (sonC + 2) + '" max="16384" width="9.140625" hidden="1"/>';
+      h += '</cols>';
+    }
+    return h + '<sheetData>';
+  }
   // ── sayfa üreteci ────────────────────────────────────────────────────────
   // Sayfanın XML'i PARÇA PARÇA: sonraki() en çok ~PARCA karakterlik parça döndürür
   // ('' = bu adımda çıktı yok, sürüyor; null = bitti). Dilimli yazımın (is) ve tek
@@ -187,6 +265,7 @@ var veXlsxYaz = (function(){
   var PARCA = 1 << 17;                       // ~128 K karakter: bir parçanın üretimi, kodlaması ve sıkıştırması birkaç ms
   var GRUP = 50000;                          // bir adımda satırına dağıtılan hücre
   function sayfaUretec(S, ilk, stil, metin, notVar, durum){
+    if(S.akis && typeof S.akis.hucre === 'function') return akisStilUretec(S, ilk, stil, metin, durum);
     if(S.akis) return akisUretec(S);
     var H = S.hucre || [], satirlar = {}, sonR = 1, sonC = 1, gi = 0, evre = 0, r = 1, gorR = 1;
     var gizle = !!S.gizle, yuk = S.satir || {};
@@ -208,23 +287,7 @@ var veXlsxYaz = (function(){
         if(c2 > sonC) sonC = c2;
       });
       gorR = gizle ? sonR + 1 : sonR;
-      var h = BAS + '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">';
-      h += '<dimension ref="A1:' + adres(sonR, sonC) + '"/>';
-      var yakin = S.yakin && S.yakin !== 100 ? ' zoomScale="' + S.yakin + '" zoomScaleNormal="' + S.yakin + '"' : '';
-      h += '<sheetViews><sheetView workbookViewId="0"' + (ilk ? ' tabSelected="1"' : '') + (S.izgara === false ? ' showGridLines="0"' : '')
-        + yakin + '/></sheetViews>';
-      h += '<sheetFormatPr defaultRowHeight="15"' + (gizle ? ' zeroHeight="1"' : '') + '/>';
-      var sut = S.sutun || {}, ck = Object.keys(sut).map(Number).filter(function(c){ return c >= 1; }).sort(function(a, b){ return a - b; });
-      if(ck.length || gizle){
-        h += '<cols>';
-        ck.forEach(function(c){
-          if(gizle && c > sonC + 1) return;
-          h += '<col min="' + c + '" max="' + c + '" width="' + (+sut[c]).toFixed(4) + '" customWidth="1"/>';   // makine: XML özniteliği
-        });
-        if(gizle && sonC + 2 <= 16384) h += '<col min="' + (sonC + 2) + '" max="16384" width="9.140625" hidden="1"/>';
-        h += '</cols>';
-      }
-      return h + '<sheetData>';
+      return basXml(S, ilk, sonR, sonC, gizle);
     }
     function satirXml(r){
       var L = satirlar[r], ht = yuk[r];
@@ -233,17 +296,7 @@ var veXlsxYaz = (function(){
       if(!L) return '<row' + ozn + '/>';
       L.sort(function(a, b){ return a[1] - b[1]; });
       var h = '<row' + ozn + '>';
-      L.forEach(function(x){
-        var s = stil.no(x[3]), v = x[2], ref = adres(x[0], x[1]), so = s ? ' s="' + s + '"' : '';
-        if(v === null || v === undefined || v === '') { h += '<c r="' + ref + '"' + so + '/>'; return; }
-        if(formulMu(v)){ durum.formul = true; h += formulXml(ref, so, v); return; }
-        if(typeof v === 'number'){
-          var n = sayi(v);
-          h += n === null ? '<c r="' + ref + '"' + so + '/>' : '<c r="' + ref + '"' + so + '><v>' + n + '</v></c>';
-          return;
-        }
-        h += '<c r="' + ref + '"' + so + ' t="s"><v>' + metin.no(v) + '</v></c>';
-      });
+      L.forEach(function(x){ h += hucreXml(adres(x[0], x[1]), x[2], x[3], stil, metin, durum); });
       return h + '</row>';
     }
     function son(){
@@ -251,8 +304,7 @@ var veXlsxYaz = (function(){
       if(S.filtre) h += '<autoFilter ref="' + S.filtre + '"/>';
       if(S.birlesik && S.birlesik.length) h += '<mergeCells count="' + S.birlesik.length + '">'
         + S.birlesik.map(function(b){ return '<mergeCell ref="' + b + '"/>'; }).join('') + '</mergeCells>';
-      if(S.bag && S.bag.length) h += '<hyperlinks>' + S.bag.map(function(b){
-        return '<hyperlink ref="' + adres(b[0], b[1]) + '" location="' + kac(konum(b[2], b[3])) + '"/>'; }).join('') + '</hyperlinks>';
+      h += baglarXml(S.bag);
       h += '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>';
       if(notVar) h += '<legacyDrawing r:id="rId2"/>';
       return h + '</worksheet>';
@@ -312,6 +364,47 @@ var veXlsxYaz = (function(){
       oran: function(){ return A.n ? i / A.n : 1; }
     };
   }
+  // Biçimli akış: r. satırın hücreleri A.hucre(r)'den ([[c, değer, stil]], sütuna göre sıralı),
+  // yüksekliği A.ht(r)'den; her satır yazılır — gizle'de yüksekliğiyle (zeroHeight'ta yazılmayan
+  // satır gizli) ve son satırdan bir sonrası görünür. Bağlantılar en sonda (bag işlevse o an),
+  // paylaşılan metin gibi parça parça.
+  function akisStilUretec(S, ilk, stil, metin, durum){
+    var A = S.akis, gizle = S.gizle === true, gizleSutun = !!S.gizle, n = A.n, sonC = Math.max(1, A.sutun || 1);
+    var gorR = gizle ? n + 1 : n, r = 1, evre = 0, B = null, bi = 0;
+    function satirXml(r){
+      // boş satır da yazılır (satırın yerini r'den değil sırasından okuyan okuyucu için)
+      var L = r <= n ? A.hucre(r) : null, ht = A.ht ? A.ht(r) : undefined;
+      var ozn = ' r="' + r + '"' + ((ht != null || gizle) ? ' ht="' + (ht != null ? ht : 15) + '" customHeight="1"' : '');
+      if(!L || !L.length) return '<row' + ozn + '/>';
+      var h = '<row' + ozn + '>';
+      for(var i = 0; i < L.length; i++) h += hucreXml(adres(r, L[i][0]), L[i][1], L[i][2], stil, metin, durum);
+      return h + '</row>';
+    }
+    return {
+      sonraki: function(){
+        if(evre === 0){ evre = 1; return basXml(S, ilk, Math.max(1, n), sonC, gizle, gizleSutun); }
+        if(evre === 1){
+          var h = '';
+          while(r <= gorR && h.length < PARCA) h += satirXml(r++);
+          if(r > gorR){ evre = 2; B = typeof S.bag === 'function' ? S.bag() : S.bag; B = B || []; }
+          return h;
+        }
+        if(evre === 2){                       // bağlantılar parça parça (on binlerce)
+          var g = bi === 0 ? '</sheetData>' + (B.length ? '<hyperlinks>' : '') : '';
+          while(bi < B.length && g.length < PARCA) g += bagXml(B[bi++]);
+          if(bi >= B.length){ evre = 3; g += (B.length ? '</hyperlinks>' : '') + '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'; }
+          return g;
+        }
+        return null;
+      },
+      oran: function(){ return evre >= 2 ? 1 : (r - 1) / Math.max(1, gorR); }
+    };
+  }
+  // Paylaşılan metin: üreteci ilk istendiğinde kurulur (sayfalar bitince sayılar kesin).
+  function metinUretec(metin){
+    var U = null;
+    return { sonraki:function(){ if(!U) U = metin.uretec(); return U.sonraki(); }, oran:function(){ return U ? U.oran() : 0; } };
+  }
   // Tek parçalık dosya: üretimi sırası gelince (sayfalardan sonra yazılanlar
   // — stiller, paylaşılan metin, kitap — sayfaların kaydını okur).
   function tekUretec(f){
@@ -356,12 +449,16 @@ var veXlsxYaz = (function(){
     if(!S.length) throw new Error('Sayfa yok');
     var adEsle = {};
     (kitap.sayfalar || []).forEach(function(s, i){ adEsle[s.ad] = S[i].ad; });
-    S.forEach(function(s){ if(s.bag) s.bag = s.bag.map(function(b){ return [b[0], b[1], adEsle[b[2]] || b[2], b[3]]; }); });
+    var esle = function(b){ return [b[0], b[1], adEsle[b[2]] || b[2], b[3], b[4]]; };
+    S.forEach(function(s){
+      if(typeof s.bag === 'function'){ var f = s.bag; s.bag = function(){ return (f() || []).map(esle); }; }
+      else if(s.bag) s.bag = s.bag.map(esle);
+    });
     var F = [], notNo = 0, tur = [];
     S.forEach(function(s, i){
       var notVar = !!(s.not && s.not.length);
       F.push({ yol:'xl/worksheets/sheet' + (i + 1) + '.xml', uretec:sayfaUretec(s, i === 0, stil, metin, notVar, durum),
-               agirlik:s.akis ? s.akis.n * 40 : (s.hucre || []).length });
+               agirlik:s.akis ? s.akis.n * (typeof s.akis.hucre === 'function' ? 8 : 40) : (s.hucre || []).length });
       tur.push('<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>');
       if(notVar){
         var no = ++notNo;
@@ -413,8 +510,10 @@ var veXlsxYaz = (function(){
         + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
     }
     var BASI = [['[Content_Types].xml', ct], ['_rels/.rels', rels], ['xl/workbook.xml', wb], ['xl/_rels/workbook.xml.rels', wbr],
-                ['xl/styles.xml', function(){ return stil.xml(); }], ['xl/sharedStrings.xml', function(){ return metin.xml(); }]];
-    var uretim = F.concat(BASI.map(function(b){ return { yol:b[0], uretec:tekUretec(b[1]) }; }));
+                ['xl/styles.xml', function(){ return stil.xml(); }], ['xl/sharedStrings.xml', null]];
+    var uretim = F.concat(BASI.map(function(b){
+      return { yol:b[0], uretec:b[1] ? tekUretec(b[1]) : metinUretec(metin) };
+    }));
     uretim.forEach(function(d){ if(!(d.agirlik > 1)) d.agirlik = 1; });
     return { uretim:uretim, sira:BASI.map(function(b){ return b[0]; }).concat(F.map(function(d){ return d.yol; })) };
   }

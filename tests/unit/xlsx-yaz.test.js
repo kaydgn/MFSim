@@ -212,6 +212,61 @@ describe('XLSX YAZICI — formül, gizli sayfa, akış', () => {
   });
 });
 
+// BİÇİMLİ AKIŞ (2026-11-10): Takoz Excel'inin Sonuç sayfası — her konfigürasyonun bloğu,
+// milyonlarca hücre; hücreler istendikçe üretilir, birleştirme yerine centerContinuous ve
+// kısmi kenarlık, bağlantı düğmenin üç hücresini kaplar, bağlantılar yazımın sonunda okunur.
+describe('XLSX YAZICI — biçimli akış, kısmi kenarlık, çok hücreli bağlantı', () => {
+  const KUTU = [{ b: true, kenar: 'ltb', yatay: 'centerContinuous' }, { b: true, kenar: 'tb', yatay: 'centerContinuous' },
+    { b: true, kenar: 'trb', yatay: 'centerContinuous' }];
+  const SAYI = { kenar: true, bicim: '0.0' };
+  let baglar = null;
+  const yap = () => ({ sayfalar: [
+    { ad: 'Giriş', hucre: [[1, 1, { f: 'HYPERLINK("#\'Blok\'!$A$3:$A$5",1)', v: 1 }, { renk: '0563C1', alt: true }]] },
+    { ad: 'Blok', izgara: false, gizle: true, sutun: { 2: 12 }, bag: () => baglar,
+      akis: { n: 6, sutun: 4,
+        hucre: (r) => {
+          if (r === 1) baglar = [];
+          if (r === 3){ baglar.push([3, 2, 'Giriş', 'A1', 4]); return [[2, 'Düğme', KUTU[0]], [3, '', KUTU[1]], [4, '', KUTU[2]]]; }
+          if (r === 4) return [[2, -1.25, SAYI], [3, 'metin', SAYI]];
+          return null;
+        },
+        ht: (r) => (r === 5 ? 409 : r === 3 ? 22 : undefined) } }
+  ] });
+  const F = X.dosyalar(yap()), s2 = parca(F, 'xl/worksheets/sheet2.xml'), st = parca(F, 'xl/styles.xml');
+
+  test('satırlar istendikçe: stil, paylaşılan metin, yükseklik; gizle\'de her satır yazılı, sonrası gizli', () => {
+    expect(s2).toContain('<dimension ref="A1:D6"/>');
+    expect(s2).toContain('<sheetFormatPr defaultRowHeight="15" zeroHeight="1"/>');
+    expect(s2).toContain('<col min="2" max="2" width="12.0000" customWidth="1"/><col min="6" max="16384" width="9.140625" hidden="1"/>');
+    expect(s2).toMatch(/<row r="3" ht="22" customHeight="1"><c r="B3" s="\d+" t="s"><v>\d+<\/v><\/c><c r="C3" s="\d+"\/><c r="D3" s="\d+"\/><\/row>/);
+    expect(s2).toContain('<row r="5" ht="409" customHeight="1"/>');
+    expect(s2).toContain('<row r="7" ht="15" customHeight="1"/>');            // son satırdan bir sonrası görünür
+    expect(s2).not.toContain('<row r="8"');
+    expect(s2).not.toContain('<mergeCells');
+  });
+
+  test('bağlantı yazımın sonunda okunur ve düğmenin üç hücresini kaplar', () => {
+    expect(s2).toContain('<hyperlinks><hyperlink ref="B3:D3" location="\'Giriş\'!A1"/></hyperlinks>');
+    const F2 = X.dosyalar(yap());                                                 // ikinci yazım aynı (bağlantılar yeniden dolar)
+    expect(F2).toEqual(F);
+  });
+
+  test('kısmi kenarlık ve centerContinuous stil tablosunda; tam kenarlık 1. sırada kalır', () => {
+    expect(st).toContain('<borders count="5">');
+    expect(st).toContain('<border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>');
+    expect(st).toContain('<border><left/><right/><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>');
+    expect((st.match(/horizontal="centerContinuous"/g) || []).length).toBe(3);
+    const X1 = parca(X.dosyalar(KITAP), 'xl/styles.xml');
+    expect(X1).toContain('<borders count="2">');                                 // kısmi kenarlıksız kitap eskisi gibi
+  });
+
+  test('okuyucu biçimli akışı okur; iyi biçimli XML', () => {
+    const W = R.veXlsOpen(X.yaz(yap()));
+    expect(W.readSheet(1).rows.slice(2, 4).map((r) => r.slice(1, 4))).toEqual([['Düğme', null, null], [-1.25, 'metin', null]]);
+    [s2, st].forEach((m) => expect(new DOMParser().parseFromString(m, 'application/xml').getElementsByTagName('parsererror').length).toBe(0));
+  });
+});
+
 // DİLİMLİ YAZIM (2026-11-10): 13.824 satırlık kitap tek görevde 1,7 sn donduruyordu.
 // is.adim() bir parça işler (sayfanın ~256 K karakterlik satırları ya da küçük bir
 // dosya); tek seferlik yolla (yaz) aynı bayt, büyük sayfa çok adımda.

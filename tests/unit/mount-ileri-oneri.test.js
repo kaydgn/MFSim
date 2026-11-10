@@ -2,10 +2,11 @@
  * mount-ileri-oneri.test.js — İLERİ YÖNÜN ÖNERİSİ güç grubunun dizilişinden (F048)
  * ─────────────────────────────────────────────────────────────────────
  * Hüküm: aracın ileri yönü motor ile şanzımanın (yoksa transfer kutusunun)
- * X sırasından ÖNERİLİR — motorun önü aracın önüne bakar varsayımıyla — ve
- * Çözücü'de ONAYLANIR. Onaysız modelde etkin yön önerinin kendisi; onay
- * `data.ileri`dir (−X de yazılır). Motorun önü geriye bakan araçta (TTAR)
- * öneri tutmaz: onay o yüzden ayrı ve onaysız yön durumla söylenir.
+ * X sırasından BELİRLENİR — motorun önü aracın önüne bakar varsayımıyla.
+ * KENDİLİĞİNDEN (kullanıcı 2026-11-10, Canlı Not 121: *"manuel olarak girdiğimizde
+ * de otomatik olarak belirlensin ve bu kısım kalksın"*): Çözücü'de Araç ekseni
+ * bölümü ve onay YOK; projede yazılı yön (`data.ileri`, örneklerin Adams yönü —
+ * TTAR/Siper +X) önde gelir, yoksa dizilişin önerisi, o da yoksa −X.
  *
  *   · ÖNERİ — bütün örneklerde motor şanzımandan −X tarafta → −X; CAD ekseni
  *     Z etrafında 180° dönük modelde → +X; şanzımansız güç grubunda transfer;
@@ -15,10 +16,10 @@
  *     ve yanal durumlarda ters çıkıyordu (fark burada ölçülür).
  *   · ESKİ PROJE — örneklerin hepsinde öneri eski varsayılanla (−X) aynı ya da
  *     yön onaylı: kayıtlı hiçbir projenin sonucu değişmez.
- *   · PENCERE — onaysız yön "Onaylanmadı." + Onayla; Onayla yazar ve not
- *     düşer; gövde taşınınca seçici ve not yerinde izler; onaylı yön öneriyle
- *     ayrışıyorsa öneri durum satırında (TTAR).
- *   · İmza önerili yönü taşır; rapor onaysız yönü söyler.
+ *   · PENCERE — Araç ekseni bölümü, seçicisi ve onayı yok; etkin yön yük kitabının
+ *     başlığında, gövde taşınınca yerinde izler; projede yazılı yön (Siper) öneriyle
+ *     ayrışsa da yazılı yön.
+ *   · İmza önerili yönü taşır; rapor dizilişten gelen yönü söyler.
  */
 const fs = require('fs');
 const path = require('path');
@@ -37,7 +38,6 @@ global._mntRepCaseTr = rep._mntRepCaseTr;
 global._mntRepIsolation = rep._mntRepIsolation;
 global._mntRepEngine = rep._mntRepEngine;
 global._mntRepZeta = rep._mntRepZeta;
-global.veMntIleriOnayla = cp.veMntIleriOnayla;           // pencerenin onclick'i
 
 const ORNEKLER = ['asfat', 'hafif', 'kamyon', 'siper', 'tta10', 'tulga', 'kutu'];
 const ornek = (ad) => JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples', ad + '_topoloji.json'), 'utf8'));
@@ -148,60 +148,44 @@ describe('ETKİN YÖN — onaysız modelde öneri, onaylıda onay', () => {
   });
 });
 
-describe('PENCERE — onay', () => {
+describe('PENCERE — Araç ekseni yok, yön kendiliğinden (Canlı Not 121)', () => {
   const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
-  const not = (n) => document.getElementById('ve-mnt-ileri-not-' + n.id);
+  const kunye = (n) => document.querySelector('#ve-mnt-cdur-' + n.id + ' .ve-fp-sect em').textContent;
 
-  test('onaysız: seçici öneride, "Onaylanmadı." + Onayla; Onayla yazar, not düşer', () => {
-    kur(dondur(ornek('tulga')));
-    const n = cozucu();
-    delete n.data.ileri;
-    ac(n);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id).value).toBe('+x');
-    expect(not(n).querySelector('.ve-fp-not').getAttribute('data-d')).toBe('warn');
-    expect(not(n).textContent).toContain('Onaylanmadı.');
-    expect(not(n).textContent).toContain('+X');
-    not(n).querySelector('button').click();
-    expect(n.data.ileri).toBe('+x');
-    cp.veMntPencereTazele();
-    expect(not(n).textContent).toBe('');
-  });
-
-  test('onaysız modelde gövde taşınınca seçici ve not yerinde izler; seçici kurulmaz', () => {
+  test('bölüm, seçici ve onay yok; etkin yön yük kitabının başlığında, gövde taşınınca yerinde izler', () => {
     kur(ornek('tulga'));
     const n = cozucu();
     delete n.data.ileri;
     ac(n);
-    const sec = document.getElementById('ve-mnt-ileri-' + n.id);
-    expect(sec.value).toBe('-x');
-    govde('mnt-motor').data.cgx = 2000;
+    const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
+    expect(bolumler).toEqual(['Kaldırım darbesi', 'Yük kitabı']);
+    expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
+    expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Onaylanmadı|Onayla|Diziliş önerisi/);
+    expect(kunye(n)).toMatch(/ · ileri −X · tork \+X$/);                       // Tulga: tork projede +X
+    govde('mnt-motor').data.cgx = 2000;                                           // motor şanzımanın öbür yanında
     expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBe(sec);
-    expect(sec.value).toBe('+x');
-    expect(not(n).textContent).toContain('+X');
+    expect(kunye(n)).toMatch(/ · ileri \+X · tork \+X$/);
   });
 
-  test('TTAR: onaylı +X öneriyle (−X) ayrışır — öneri uyarısız durum satırında', () => {
+  test('TTAR: projede yazılı +X öneriyle (−X) ayrışsa da yazılı yön', () => {
     kur(ornek('siper'));
     const n = cozucu();
     ac(n);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id).value).toBe('+x');
-    const s = not(n).querySelector('.ve-fp-not');
-    expect(s.hasAttribute('data-d')).toBe(false);
-    expect(s.textContent).toBe('Diziliş önerisi −X.');
-    expect(not(n).querySelector('button')).toBeNull();
+    expect(kunye(n)).toMatch(/ · ileri \+X · tork −X$/);
   });
 });
 
-describe('RAPOR — onaysız yön söylenir', () => {
-  test('R.ileriOnay false → "(onaylanmadı)"; onaylıda yok', () => {
+describe('RAPOR — dizilişten gelen yön söylenir', () => {
+  test('yazılı yönde kaynak yok; dizilişten gelende "(güç grubunun dizilişinden …)"', () => {
     kur(ornek('tulga'));
     let R = cp._mntComputeResults(cozucu().id);
-    expect(R.ileriOnay).toBe(true);
-    expect(rep._mntRepYonCumle(R)).not.toContain('onaylanmadı');
+    expect([R.ileriOnay, R.ileriKaynak]).toEqual([true, 'proje']);
+    expect(rep._mntRepYonCumle(R)).not.toContain('dizilişinden');
     delete cozucu().data.ileri;
     R = cp._mntComputeResults(cozucu().id);
-    expect(R.ileriOnay).toBe(false);
-    expect(rep._mntRepYonCumle(R)).toContain('ileri yön −X (onaylanmadı)');
+    expect([R.ileriOnay, R.ileriKaynak]).toEqual([false, 'dizilis']);
+    expect(rep._mntRepYonCumle(R)).toContain('ileri yön −X (güç grubunun dizilişinden: motorun önü şanzımanın karşı yanında)');
   });
 });
+

@@ -413,7 +413,6 @@ var _GM_PENCERE_UST = [
 ];
 
 var _GM_COZUCU = [
-  { k: 'eksen', bolum: 'Araç ekseni', ad: 'Araç ekseni', not: 'İleri yön ve tork yönü.' },
   { k: 'kaldirim', bolum: 'Kaldırım darbesi', ad: 'Kaldırım darbesi', not: 'Yanal darbenin ivmesi ve yönü.' },
   { k: 'kitap', bolum: 'Yük kitabı', ad: 'Yük kitabı', not: 'Çözülecek yük durumları: ivme n ve tork T.' },
   { k: 'yontem', bolum: 'Yöntem', ad: 'Yöntem', not: 'Çözüm modu ve sönüm oranı ζ.' },
@@ -1129,16 +1128,17 @@ function _gmSec10(){
     + 'onu sağa iter: n<sub>y</sub> = +0,6.');
   h += _gmH3('Aracın ileri yönü', 'ileri');
   h += '<p>Tablo, aracın ileri yönü modelin <strong>−X</strong> ekseni olan bir CAD düzenine '
-    + 'göre yazılıdır (sağ +Y). Modelin ekseninde araç <strong>+X</strong>’e gidiyorsa '
-    + 'Çözücü’de <strong>Araç ekseni → İleri yön</strong> ' + _gmNS('cozucu', _GM_COZUCU, 'eksen') + ' +X seçilir: '
-    + 'program boyuna ve yanal bileşenleri çevirir (n<sub>x</sub> → −n<sub>x</sub>, n<sub>y</sub> → '
-    + '−n<sub>y</sub>; düşey aynı). Yanlış yön fren ve viraj yükünü ters uygular — sayı makul görünür, '
-    + 'ama başka bir yük durumunun sonucudur.</p>';
+    + 'göre yazılıdır (sağ +Y). İleri yön <strong>kendiliğinden</strong> belirlenir: motorun önü '
+    + '(kasnak tarafı) şanzımanın — yoksa transfer kutusunun — karşı yanındadır ve araç o yana gider; '
+    + 'motor ile şanzıman aynı X’teyse −X. Araç +X’e gidiyorsa program boyuna ve yanal bileşenleri '
+    + 'çevirir (n<sub>x</sub> → −n<sub>x</sub>, n<sub>y</sub> → −n<sub>y</sub>; düşey aynı). Etkin yön '
+    + 'Çözücü’nün <strong>Yük kitabı</strong> başlığında ' + _gmNS('cozucu', _GM_COZUCU, 'kitap') + ' ve raporda '
+    + 'yazılıdır. Projede yazılı yön (örnekler) dizilişin önünde gelir.</p>';
   h += _gmAlanTablo('İleri yönün etkisi', [
     ['Fren · hızlanma · viraj · kaldırım', 'n<sub>x</sub> ve n<sub>y</sub> çevrilir',
       'Yük kitabının sütunlarında görünür'],
     ['Tasarım yük durumları ve ivme süpürmeleri', 'Aynı çeviri', 'Rapor ve Sonuçlar'],
-    ['Tork durumları', 'Değişmez — tork yönü ayrı ayardır', _gmB('tork-yonu')]
+    ['Tork durumları', 'Değişmez — tork yönü ayrıdır', _gmB('tork-yonu')]
   ], ['Ne', 'Nasıl', 'Nerede görünür']);
   h += _gmH3('Kaldırım darbesi', 'kaldirim');
   h += '<p>Kerb Strike L / R tekerleğin kaldırıma yandan çarpmasıdır. Büyüklüğü ve yönü '
@@ -1150,14 +1150,14 @@ function _gmSec10(){
   h += '<p>Tahrik torku güç grubuna X ekseni etrafında bir <strong>reaksiyon momenti</strong> '
     + 'olarak etkir: T<sub>x</sub> = ±T<sub>mil</sub>. İşareti aracın gidiş yönünden değil, '
     + '<strong>krankın modeldeki dönüş yönünden</strong> ve aktarmanın dönüşü çevirip '
-    + 'çevirmediğinden gelir. Çözücü’nün <strong>Tork yönü</strong> ayarı ileri vites '
-    + 'momentinin yönüdür; geri viteste moment kendiliğinden ters döner.</p>';
+    + 'çevirmediğinden gelir. Varsayılan −X’tir (projede yazılı yön önde gelir); geri viteste '
+    + 'moment kendiliğinden ters döner.</p>';
   h += _gmAlanTablo('Tork yönü', [
     ['−X (varsayılan)', 'Krank önden bakınca saat yönünde, motorun önü −X’te, çıkış krankla aynı yönde',
       'İleri viteste +Y tarafındaki takozlar basar'],
     ['+X', 'Motorun önü +X’te ya da güç grubundaki aktarma (iki dişlili transfer) dönüşü çeviriyor',
       'İleri viteste −Y tarafındaki takozlar basar']
-  ], ['Seçim', 'Ne zaman', 'Etkisi']);
+  ], ['Yön', 'Ne zaman', 'Etkisi']);
   h += _gmNot('Örneklerin ayarı',
       'Tulga örneği ileri −X, tork yönü +X ve varsayılan kaldırım darbesiyle; BMC SİPER örneği '
     + 'ileri +X, tork yönü −X ve 3,5 g virajla aynı yönde kaldırım darbesiyle gelir: ikisi de '
@@ -1167,12 +1167,10 @@ function _gmSec10(){
 
 function _gmSec11(){
   var h = _gmH2('m11');
-  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere beş bölümü alt alta taşır; '
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere dört bölümü alt alta taşır; '
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi (' + _gmS('cozucu') + '). Pencere '
     + 'sonucu göstermez — sonuç Sonuçlar sayfasında ve raporda (' + _gmB('rapor') + ').</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
-    [_gmN(_GM_COZUCU, 'eksen') + ' Araç ekseni', 'İleri yön ve tork yönü: −X · +X',
-      'Yük kitabı hemen değişir (' + _gmB('ileri') + ' · ' + _gmB('tork-yonu') + ')'],
     [_gmN(_GM_COZUCU, 'kaldirim') + ' Kaldırım darbesi', 'Yanal ivme (g) ve yönü: virajın tersi · virajla aynı',
       'Kerb Strike L / R satırları (' + _gmB('kaldirim') + ')'],
     [_gmN(_GM_COZUCU, 'kitap') + ' Yük kitabı', 'Çözülecek durumlar, ivme (n) ve tork (T)',
@@ -1760,9 +1758,8 @@ function _gmSec17(){
       + '<strong>Hesapla</strong> ve ana rapor: Çözücü taramanın ölçtüğü modları ve sehimleri bulur.',
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
       + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.',
-    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması ve her '
-      + 'birinin sonucu, tarama tablosu ve Tarama’da seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', '
-      + '<em>Excel çıktısı</em>).'
+    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması, '
+      + 'tarama tablosu ve her kombinasyonun sonucu (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
@@ -1840,19 +1837,15 @@ function _gmSec17(){
     + '(max |δ<sub>z</sub>|). <em>Uygunluk</em>: dört kesin kriter sağlanıyorsa <em>Uygun</em>, statik sehimi en '
     + 'küçük olan <em>En uygun</em> (koyu yeşil); yeşil, sehim arttıkça açılır; <em>Uygun değil</em> renksizdir. '
     + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve <em>Sonuç</em> hücresi '
-    + 'konfigürasyonun kendi sayfasını (K0 … K9) açar: her yük durumunda takoz başına X, Y, Z yer değiştirmesi, '
-    + 'modlar ve TR; <em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. '
-    + '<strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter sayısına sonra statik sehime göre '
-    + 'sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, dört kriter (✓ / ✗), frekans payı, '
-    + 'grup başına statik ve azami yük, kapasite; başlık satırında filtre. <em>Sonuçlar →</em> Sonuç sayfasını '
-    + 'açar. <strong>Sonuç</strong>: Tarama’nın filtresinde TEK satır kalınca o kombinasyonun sonucu — dört '
-    + 'kriter, TR, statik sehim, frekans payı, her yük durumunda takoz başına X, Y, Z yer değiştirmesi ve modlar; '
-    + 'birden çok satır görünürken boştur. Tek satır bırakmak için kombinasyonun <em>No</em> hücresine sağ '
-    + 'tıklayıp Excel’in <em>Filtre</em> menüsünden seçili hücrenin değerine göre filtreleyin ya da grupların '
-    + 'sütunlarında birer tip seçin. Kitabın alt çubuğunda sayfa adları yoktur; sayfalar düğmelerle açılır. '
-    + 'Bütün kombinasyonların sonucu gizli '
-    + '<strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli '
-    + 'açılır.');
+    + 'konfigürasyonun sonucunu açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter '
+    + 'sayısına sonra statik sehime göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, '
+    + 'dört kriter (✓ / ✗), frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
+    + 'Satırın <em>No</em>’su ve takoz tipleri mavi bağlantıdır: tıklanınca o kombinasyonun sonucu açılır; '
+    + 'filtre ve sıralamadan sonra da. <strong>Sonuç</strong>: her konfigürasyonun ve Tarama’nın her satırının '
+    + 'sonucu — her yük durumunda takoz başına X, Y, Z yer değiştirmesi, modlar ve TR; '
+    + '<em>Özet sayfasına dön</em> ya da <em>Tarama sayfasına dön</em>, <em>Geri</em> ve <em>İleri '
+    + 'konfigürasyon</em> düğmeleri. Bağlantı ekranda yalnız o sonucu gösterir; sayfanın başı boştur. '
+    + 'Izgara çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli açılır.');
   h += _gmNot('Seçimi modele uygulamak',
       '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
     + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '
@@ -2102,7 +2095,7 @@ function _gmEkA(){
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Kuvvet–sehim</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
-      ['Aracın ileri yönü, tork yönü, kaldırım darbesi', 'Çözücü', '<strong>Araç ekseni</strong> · <strong>Kaldırım darbesi</strong>'],
+      ['Kaldırım darbesi; ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Kaldırım darbesi</strong> · <strong>Yük kitabı</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
