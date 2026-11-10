@@ -81,8 +81,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
   başla · Boş kanvas + örnek dizini + son değişiklikler). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
   kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
-  (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
-  Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
+  (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız Başlangıç
+  Sihirbazı bileşenini (`mnt-wizard`) taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Takoz'a girişte Bileşenler sütunu KAPALI** (kullanıcı 2026-11-06, Canlı
   Not 62: *"otomatik açık olarak geliyor. Gelmesin"*): `veMntPaletKapat` geçişsiz ve kadrajdan
   önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). Kapı:
@@ -93,7 +93,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   numarası satırda YAZILMAZ (kullanıcı 2026-11-05, Canlı Not 28 · 29). Kapı: `mount-baslangic.test.js` + `mount-ornek-kurgu.test.js` +
   `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
-  **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
+  **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici (sihirbazı tuvalden açan araç:
+  **Başlangıç Sihirbazı** bileşeni `mnt-wizard`, sihirli asa simgesi — kullanıcı 2026-11-10, Canlı
+  Not 110: *"Bu bileşeni tamamen kaldıralım … Onun yerine sihirbazı açan bir bileşen"*; kalkan
+  bileşen "Başlangıç ve Örnekler" / `mnt-example`, örnek listesi başlangıç sayfasında; eski projedeki
+  düğümü açılışta düşer. Kapı: `tek-tik-arac.test.js` → *EYLEM ARACI* + `mount-pencere.spec.js`
+  → *Başlangıç Sihirbazı bileşeni*): FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir); alt çubuk YOK — Geri · İleri (son adımda Modeli
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). **İlk hâl** —
@@ -792,6 +797,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   şeridi) sürüklemesiz tek tıkta pencereyi açar; öteki bileşende tek tık yalnız
   seçer, pencere çift tıkla. Sürükleme, Ctrl/Shift ve çoklu seçim açmaz. Kapı:
   `tek-tik-arac.test.js`.
+- **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
+  `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
+  olan araç (Takoz'un Başlangıç Sihirbazı) tek tıkta ve çift tıkta eylemi çalıştırır; özellikler
+  penceresi açılmaz ve seçim açık pencerenin konusunu değiştirmez. Kapı: `tek-tik-arac.test.js` →
+  *EYLEM ARACI*.
 - **KARTIN EN KÜÇÜK ÖLÇÜSÜNÜ TİPİ SÖYLER** (`componentDefs.minWidth/minHeight`
   → `js/node-resize.js` `veNodeMinSize`). Genel 50×50 tabanı içeriği olan bir
   kart için sessiz kayıp üretir (gövde tamamen örtülür, alanlar işaretsiz

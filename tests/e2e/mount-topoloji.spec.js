@@ -19,7 +19,7 @@ async function bootApp(page) {
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
-    typeof window.createNode === 'function' && typeof window.veMntLoadExample === 'function' &&
+    typeof window.createNode === 'function' && typeof window.veMntOrnekYukle === 'function' &&
     typeof window.veMntDecorateConnections === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => {
@@ -66,8 +66,7 @@ for (const ornek of ['tulga', 'siper', 'asfat']) {
   test(`${ornek}: ŞASİ çerçevesi adları da sarar, omurga kutuların içinden geçmez`, async ({ page }) => {
     await bootApp(page);
     await page.evaluate((k) => {
-      const ex = createNode('mnt-example', 300, 200);
-      ex.data = ex.data || {}; ex.data.exampleKey = k; veMntLoadExample(ex.id);
+      veMntOrnekYukle(k);
     }, ornek);
     await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-solver'), null, { timeout: 20000 });
     await page.waitForTimeout(800);

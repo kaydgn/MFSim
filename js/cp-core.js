@@ -114,7 +114,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield',
-  'mnt-mount', 'mnt-example', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
+  'mnt-mount', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
   // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
@@ -175,6 +175,10 @@ function veMufettisSil(id) {
 function showNodeProperties(node, opt) {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
+  // EYLEM ARACININ PENCERESİ YOK (componentDefs.eylem — Takoz'un Başlangıç Sihirbazı):
+  // seçimi pencereye çevirmez, açık pencerenin konusu ve içeriği yerinde kalır.
+  var _eylemDef = node && (node.def || componentDefs[node.type]);
+  if(_eylemDef && _eylemDef.eylem) return;
   opt = opt || {};
   var degisti = _veLastPropNodeId !== (node && node.id);
   // Yazılmış ama onaylanmamış girdi ESKİ bileşene yazılır — içerik değişmeden.
@@ -269,8 +273,6 @@ function showNodeProperties(node, opt) {
     html += getMntLibraryPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {
     html += getMntSolverPropertiesHTML(node);
-  } else if(node.type === 'mnt-example') {
-    html += getMntExamplePropertiesHTML(node);
   } else if(node.type === 'mnt-viewer') {
     html += getMntViewerPropertiesHTML(node);
   } else if(node.type === 'mnt-2dview') {
@@ -444,16 +446,6 @@ function showNodeProperties(node, opt) {
   if(node.type === 'mnt-parametric') {
     setTimeout(function() {
       if(typeof veMntParamCizKur === 'function') veMntParamCizKur();
-    }, 120);
-  }
-
-  // Takoz Örnek: mevcut model uyarılarını göster (yükleme öncesi durum)
-  if(node.type === 'mnt-example') {
-    setTimeout(function() {
-      if(typeof _mntExampleValidate === 'function' && typeof _mntRenderExampleReport === 'function') {
-        var g = (typeof _mntGatherForSolver === 'function') ? _mntGatherForSolver() : {components:[],mounts:[]};
-        if(g.components.length || g.mounts.length) _mntRenderExampleReport(_mntExampleValidate(), true);
-      }
     }, 120);
   }
 }

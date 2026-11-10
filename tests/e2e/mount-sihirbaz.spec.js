@@ -23,7 +23,7 @@ async function bootApp(page) {
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
     typeof window.createNode === 'function' && typeof window.veMntWizAc === 'function' &&
-    typeof window.veMntLoadExample === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
+    typeof window.veMntOrnekYukle === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => {
     const s = document.getElementById('mfsim-loading-screen');
@@ -48,8 +48,7 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => {
-    const ex = createNode('mnt-example', 300, 200);
-    ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);
+    veMntOrnekYukle('tulga');
   });
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-solver'), null, { timeout: 20000 });
   const adimlar = await page.evaluate(() => { veMntWizAc(); return VE_MW_STEPS.map((s) => s.key); });

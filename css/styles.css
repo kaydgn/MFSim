@@ -4472,14 +4472,26 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
    panelin TAMAMINI kullanır. Liste HTML'in parçası (JS yalnız gizler/gösterir
    ve DOM'da filtreler) → arama yazarken panel yeniden çizilmez, odak kaçmaz.
    Salt yerleşim; kütüphane mantığı değişmez. */
-.mntlib-bar{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;
+.mntlib-picker{ position:relative;min-width:0; }
+/* SEÇİCİ — Marka listesi (üstte, Yeni takoz yanında), altında seçili markanın tipleri tam
+   genişlikte (Canlı Not 105: satır boyuna geniş duruyordu — 30 px'lik üç satır + ad alanı;
+   106: önce marka, sonra o markanın tipleri). Üç denetim de 26 px, aralık 6 px; etiket
+   sütunu içeriği kadar. Yeni takoz görsel olarak üst satırda, sırası (Tab) Tip'ten sonra:
+   tipin satırı düğmenin yerini yemez ve uzun tip adı daha az kısalır. */
+.mntlib-sec{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+  gap:6px 8px;margin:0 0 8px;
 }
-.mntlib-picker{ position:relative;flex:1 1 340px;min-width:240px; }
+.mntlib-et{ font-size:var(--fs-tiny);font-weight:600;color:var(--text-muted);white-space:nowrap; }
+.mntlib-sec > .mntlib-marka{ grid-area:1 / 2;height:26px;padding-top:0;padding-bottom:0; }
+.mntlib-sec > .mntlib-et:first-child{ grid-area:1 / 1; }
+.mntlib-sec > .mntlib-et:nth-child(3){ grid-area:2 / 1; }
+.mntlib-sec > .mntlib-picker{ grid-area:2 / 2 / 3 / 4; }
+.mntlib-sec > .mntlib-add{ grid-area:1 / 3; }
 .mntlib-trigger{
-  display:flex;align-items:center;gap:8px;width:100%;
-  padding:7px 10px;cursor:pointer;text-align:left;
-  font-family:inherit;font-size:var(--fs-body) !important;
+  display:flex;align-items:center;gap:8px;width:100%;height:26px;
+  padding:0 8px;cursor:pointer;text-align:left;
+  font-family:inherit;font-size:var(--fs-tiny) !important;
   color:var(--text-primary);background:var(--bg-input);
   border:1px solid var(--border-color);border-radius:var(--radius-sm);
   transition:border-color var(--dur-fast) var(--ease-out);
@@ -4498,8 +4510,9 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 }
 .mntlib-trigger.open .mntlib-caret{ transform:rotate(180deg); }
 .mntlib-add{
-  flex:0 0 auto;padding:7px 12px;cursor:pointer;
-  font-family:inherit;font-size:var(--fs-body) !important;font-weight:700;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  height:26px;padding:0 10px;cursor:pointer;
+  font-family:inherit;font-size:var(--fs-tiny) !important;font-weight:700;
   letter-spacing:0.02em;color:var(--on-success);background:var(--accent-success);
   border:none;border-radius:var(--radius-sm);
   transition:filter var(--dur-fast) var(--ease-out);
@@ -4538,37 +4551,29 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 /* [hidden] tek başına yetmez: sınıf kuralları (display:flex) UA stilini ezer. */
 .mntlib-dd[hidden],.mntlib-dd [hidden]{ display:none !important; }
 .mntlib-search{
-  width:100%;box-sizing:border-box;padding:7px 10px;
-  font-family:inherit;font-size:var(--fs-body) !important;
+  width:100%;box-sizing:border-box;padding:5px 10px;
+  font-family:inherit;font-size:var(--fs-tiny) !important;
   color:var(--text-primary);background:var(--bg-input);
   border:none;border-bottom:1px solid var(--border-color);border-radius:0;
 }
 .mntlib-search:focus{ outline:none; }
 .mntlib-list{ overflow-y:auto;padding:4px; }
-.mntlib-group{
-  padding:7px 8px 3px;
-  font-size:var(--fs-micro);font-weight:700;color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:0.5px;
-}
-/* Arama sırasında eşleşen sayısına dönen grup sayacı (bkz. veMntLibFilter). */
-.mntlib-count{ font-variant-numeric:tabular-nums; }
 .mntlib-opt{
-  display:flex;align-items:center;gap:8px;padding:6px 9px;
+  display:flex;align-items:center;gap:8px;padding:5px 9px;
   border-radius:var(--radius-sm);cursor:pointer;
   transition:background var(--dur-fast) var(--ease-out);
 }
 .mntlib-opt:hover{ background:var(--bg-tertiary); }
 .mntlib-opt.sel{ background:var(--bg-tertiary); }
 .mntlib-opt-name{
-  flex:1;min-width:0;font-size:var(--fs-body);color:var(--text-primary);
+  flex:1;min-width:0;font-size:var(--fs-tiny);color:var(--text-primary);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .mntlib-opt.sel .mntlib-opt-name{ font-weight:700;color:var(--text-heading); }
-.mntlib-note,.mntlib-empty{
+.mntlib-empty{
   padding:8px 10px;font-size:var(--fs-tiny);color:var(--text-muted);
-  line-height:1.4;
+  line-height:1.4;text-align:center;
 }
-.mntlib-empty{ text-align:center; }
 /* ══ İÇERİK-YOĞUN BİLEŞEN PENCERELERİ — ORTAK İKİ SÜTUN SİSTEMİ ══
    Motor panelinden genelleştirildi. İçeriği çok olan paneller (motor, tork
    konvertörü, eşleştirme, solver, yol…) bu sınıfları paylaşır:
@@ -7084,10 +7089,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    Başlıkta KİMLİK (avatar + ad + saklama notu), altında eylemler. Ad
    değiştirmek tarayıcının `prompt` kutusunu açmıyor: başlık yerinde bir
    alana dönüşüyor — menüden çıkmadan, aynı yüzeyde. */
-.ve-avatar-menu{ min-width:248px; max-width:300px; padding:6px 0; }
+.ve-avatar-menu{ min-width:224px; max-width:300px; padding:4px 0; }
 .ve-avatar-menu-bas{
-  display:flex; align-items:center; gap:10px;
-  padding:8px 12px 10px;
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px;
 }
 .ve-avatar-menu-av{
   flex:none; width:36px; height:36px; border-radius:50%;
@@ -7107,7 +7112,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 }
 .ve-avatar-menu-kim b.bos{ color:var(--text-muted); font-weight:500; }
 /* Yerinde ad alanı — başlığın YERİNİ alır, altına eklenmez. */
-.ve-avatar-menu-ad{ display:flex; gap:6px; padding:8px 12px 10px; }
+.ve-avatar-menu-ad{ display:flex; gap:6px; padding:6px 12px; }
 /* `display:flex` `hidden` özniteliğini EZER (projede genel bir `[hidden]`
    kuralı yok) — gizlenmesi gereken iki blok bu yüzden açıkça yazılı. */
 .ve-avatar-menu-ad[hidden], .ve-avatar-menu-bas[hidden]{ display:none; }
@@ -7119,7 +7124,13 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   border:1px solid var(--accent-primary);
 }
 .ve-avatar-menu-ad button:hover{ background-color:var(--ink-accent); border-color:var(--ink-accent); }
-.ve-avatar-menu .ve-context-item{ font-size:var(--fs-body); }
+/* SIKI MENÜ (kullanıcı 2026-11-10, Canlı Not 109: *"boşluklar fazla … isimler çizgi
+   falan çok boşluklu"*): başlıkta 28 px avatar (bandın 24 px'lik avatarının yanında
+   36 px ikinci bir boy kalıyordu), satır 24 px (30 idi), ayraç payı 3 px (4 idi).
+   Menü 206 → 160 px. Avatarın 36 px boyu Ayarlar → Kimlik'te kalır. */
+.ve-avatar-menu .ve-avatar-menu-av{ width:28px; height:28px; font-size:var(--fs-tiny); }
+.ve-avatar-menu .ve-context-item{ font-size:var(--fs-body); padding:4px 10px; }
+.ve-avatar-menu .ve-context-divider{ margin:3px 8px; }
 .ve-avatar-menu .ve-context-item .mf-ico{ color:var(--text-muted); }
 .ve-avatar-menu .ve-context-item:hover .mf-ico,
 .ve-avatar-menu .ve-context-item:focus-visible .mf-ico{ color:var(--text-primary); }
@@ -9874,6 +9885,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-seg button[aria-pressed="true"]{ background:var(--accent-primary); color:var(--on-accent); font-weight:700; }
 /* Çizim kabın genişliğini alır; geniş pencerede yazı büyümesin diye tavanlı. */
 .ve-mnt-kroki > svg{ display:block; width:100%; max-width:480px; height:auto; margin:0 auto; }
+/* Kuvvet–sehim grafiği EKRANDA BİREBİR (Canlı Not 104: diyagram büyük, yazı büyük):
+   340 birimlik çizim 340 px'te durur, sütun daralırsa küçülür — yazıyı büyütmek için
+   gerilmez. */
+.ve-mnt-kroki > svg.ve-mnt-lib-svg{ width:340px; max-width:100%; }
 .ve-mnt-kroki-bos{ padding:14px 10px; font-size:var(--fs-tiny); color:var(--text-muted); text-align:center; }
 .ve-mnt-kroki-lej{
   display:flex; flex-wrap:wrap; gap:4px 10px; padding:4px 9px 5px;
@@ -9917,25 +9932,8 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 .ve-mnt-hover-ip--metin{ max-width:280px; padding:7px 10px; font-size:var(--fs-body); white-space:pre-line; }
 
-/* ÖRNEK — künyenin başı (araç adı, kısa etiket, açıklama) ve topoloji resmi. */
-.ve-mnt-ex-bas{ margin:2px 0 10px; }
-.ve-mnt-ex-bas b{ display:block; font-size:var(--fs-md); color:var(--text-heading); line-height:1.3; }
-.ve-mnt-ex-bas em{ display:block; font-style:normal; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); margin-top:2px; }
-.ve-mnt-ex-bas p{ margin:6px 0 0; font-size:var(--fs-tiny); line-height:1.5; color:var(--text-secondary); }
-.ve-mnt-ex-sema{
-  margin:0 0 10px; padding:8px; background:var(--bg-primary);
-  border:1px solid var(--border-color); border-radius:var(--radius-md);
-}
-/* Yalnız ŞEMANIN kendisi kabın eninde: `.ve-mnt-ex-sema svg` İÇTEKİ ikon
-   svg'lerini de büyütüyordu (40 → 137 px; kartlar ikonların altında kaldı). */
-.ve-mnt-ex-sema > img, .ve-mnt-ex-sema > svg, .ve-mnt-ex-sema > div > svg{ display:block; width:100%; height:auto; }
-.ve-mnt-ex-sema figcaption{ margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; }
-
-/* TAKOZ ÖZELLİKLERİ — üstte seçici, altında seçili tipin kimliği (ad · özel
-   tipte Sil; Canlı Not 65). Seçici sütunda tek satır: liste esner, "Yeni" sabit. */
-.ve-mnt-pencere .mntlib-bar{ margin-bottom:8px; flex-wrap:nowrap; }
-.ve-mnt-pencere .mntlib-picker{ flex:1 1 auto; min-width:0; }
-.ve-mnt-pencere .mntlib-add{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+/* TAKOZ ÖZELLİKLERİ — üstte seçici (`.mntlib-sec`), özel tipte altında kimlik (ad ·
+   Sil; Canlı Not 65 · 107: katalog tipinde kimlik satırı yok). */
 .ve-mnt-lib-kim{ display:flex; align-items:center; gap:6px; margin:0 0 10px; }
 .ve-mnt-lib-kim > .ve-fp-inp{ flex:1 1 auto; min-width:0; }
 .ve-mnt-lib-kim > .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
@@ -11605,13 +11603,6 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   .ve-bas-kapi, .ve-bas-karo, .ve-bas-kilavuz, .ve-bas-resim em,
   .ve-bas-satir-yukle, .ve-bas-satir-ac .mf-ico, .ve-bas-donus, .ve-bas-degisiklik-bas .mf-ico{ transition:none; }
 }
-/* "Başlangıç ve Örnekler" penceresinde aynı kapılar, sıkı: sayfa çekildikten
-   sonra sihirbaz ve STEP buradan açılır (js/cp-mount.js → _mntExampleKapilarHTML). */
-.ve-bas-kapilar.ve-mnt-ex-kapilar{ grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:8px; margin:0 0 12px; }
-.ve-mnt-ex-kapilar .ve-bas-kapi{ min-height:0; padding:9px 10px 8px; gap:9px; }
-.ve-mnt-ex-kapilar .ve-bas-kapi-ik{ width:28px; height:28px; }
-.ve-mnt-ex-kapilar .ve-bas-kapi-t b{ font-size:var(--fs-md); }
-
 /* ════════════════════════════════════════════════════════════════════════════
    TAKOZ BAŞLANGIÇ SİHİRBAZI (js/cp-mount-wizard.js) — kabuk FEAD sihirbazının
    (`.ve-fw-*`, kullanıcı: *"aynısını istiyorum"*). Burada yalnız Takoz'a özgü

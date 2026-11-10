@@ -4,7 +4,7 @@
   "nodes": [
     {
       "id": "comp-3",
-      "type": "mnt-example",
+      "type": "mnt-wizard",
       "x": 1240,
       "y": 163,
       "width": 60,
@@ -13,9 +13,7 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "data": {
-        "exampleKey": "tulga"
-      }
+      "data": {}
     },
     {
       "id": "comp-4",

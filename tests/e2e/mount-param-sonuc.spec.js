@@ -27,12 +27,11 @@ async function kur(page) {
   await githubFikstur(page);
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
-  await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntLoadExample === 'function'
+  await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntOrnekYukle === 'function'
     && typeof window.veMntParamTara === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
-  await page.evaluate(() => { let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-    ex.data = ex.data || {}; ex.data.exampleKey = 'asfat'; veMntLoadExample(ex.id); });
+  await page.evaluate(() => { veMntOrnekYukle('asfat'); });
   await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('57RS') >= 0), null, { timeout: 20000 });
   await page.waitForTimeout(500);
   return page.evaluate(() => {

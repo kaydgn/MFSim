@@ -53,14 +53,16 @@ describe('GÖRÜNÜRLÜK — modelden türer', () => {
   test('boş topoloji → sayfa', () => {
     expect(BS.veMntBaslangicGerekli([])).toBe(true);
   });
-  test('yalnız "Başlangıç ve Örnekler" taşıyan eski kayıt BOŞ sayılır', () => {
-    // 2026-10-14'e kadar açılış bu tek düğümü kendiliğinden kuruyordu
-    expect(componentDefs['mnt-example'].isMountExample).toBe(true);
-    expect(BS.veMntBaslangicGerekli([dugum('mnt-example')])).toBe(true);
+  test('yalnız Başlangıç Sihirbazı bileşenini taşıyan topoloji BOŞ sayılır', () => {
+    // Sihirbazı açan düğüm bir model değildir; kalkan "Başlangıç ve Örnekler" bileşeni
+    // (mnt-example) açılışta tanımsız tip olarak düşer (Canlı Not 110).
+    expect(componentDefs['mnt-wizard'].isMountWizard).toBe(true);
+    expect(componentDefs['mnt-example']).toBeUndefined();
+    expect(BS.veMntBaslangicGerekli([dugum('mnt-wizard')])).toBe(true);
   });
   test('araç düğümü de bir yol seçildi demektir (Boş kanvas onu kurar)', () => {
     expect(BS.veMntBaslangicGerekli([dugum('mnt-solver')])).toBe(false);
-    expect(BS.veMntBaslangicGerekli([dugum('mnt-example'), dugum('mnt-motor')])).toBe(false);
+    expect(BS.veMntBaslangicGerekli([dugum('mnt-wizard'), dugum('mnt-motor')])).toBe(false);
   });
   test('liste verilmezse canlı `nodes`', () => {
     global.nodes = [dugum('mnt-mount')];

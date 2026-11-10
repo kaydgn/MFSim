@@ -109,13 +109,17 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
     const o = dom(cp.getMntLibraryPropertiesHTML(lib));
     expect([...o.querySelectorAll('button')].some((x) => /Sil/.test(x.textContent))).toBe(true);
   });
-  test('Takoz penceresinin tip listesi: Katalog · Özel takozlar, sayaç yok', () => {
+  test('Takoz penceresinin tip listesi: katalog markaları · Özel takozlar, sayaç yok', () => {
     modelKur('kamyon');
     const t = global.nodes.find((n) => n.type === 'mnt-mount');
     const d = dom(cp.getMntMountPropertiesHTML(t));
     const gr = [...d.querySelectorAll('optgroup')].map((g) => g.getAttribute('label'));
-    expect(gr).toContain('Katalog');
+    // Takoz Özellikleri'nin Marka listesiyle aynı gruplar (Canlı Not 106)
+    expect(gr).toEqual(expect.arrayContaining(['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer']));
+    expect(gr).not.toContain('Katalog');
     expect(gr).not.toContain('Gömülü');
+    const say = (ad) => d.querySelector('optgroup[label="' + ad + '"]').querySelectorAll('option').length;
+    expect([say('AMC Mecanocaucho'), say('Angst+Pfister'), say('Diğer')]).toEqual([10, 7, 7]);
     const bas = [...d.querySelectorAll('.ve-fp-sect')].find((x) => /Takoz tipi/i.test(x.textContent));
     expect(bas.textContent).not.toMatch(/gömülü|\d+\s*özel/);
   });
@@ -124,7 +128,7 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
 // SADE PENCERE (kullanıcı 2026-11-06, Canlı Not 66: *"Burayı komple kaldır … gereksiz
 // bilgiler var"*): Takoz Özellikleri'nde Kullanım ve Katalog bölümleri, sağ sütun ve katalog
 // tipinin yasasının altındaki not YOK; pencere tek sütun. Bölümler: Takoz tipi · Rijitlik ·
-// Kuvvet–sehim (Yasa). Özel tipte eğri föyü durur.
+// Kuvvet–sehim (Canlı Not 103: Eksenlerin yasası kalktı). Özel tipte eğri föyü durur.
 describe('SADE PENCERE — Takoz Özellikleri tek sütun, Kullanım · Katalog · not yok', () => {
   const bolumler = (d) => [...d.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent.trim());
   test('katalog tipi: sağ sütun yok, bölüm başlıklarında Kullanım ve Katalog yok, "gömülü" hiç yok', () => {
@@ -144,7 +148,8 @@ describe('SADE PENCERE — Takoz Özellikleri tek sütun, Kullanım · Katalog �
     const lib = { id: 'lb', type: 'mnt-library', data: { mounts: [{ key: 'k1', name: 'Deneme', sx: 1, sy: 1, sz: 1, dx: 1, dy: 1, dz: 1 }], _selKey: 'k1' } };
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
     expect(d.querySelector('.ve-fp-side')).toBeNull();
-    expect(bolumler(d)).toEqual(expect.arrayContaining(['Takoz tipi', 'Rijitlik', 'Yasa', 'Düşey (z) eğrisi']));
+    expect(bolumler(d)).toEqual(expect.arrayContaining(['Takoz tipi', 'Rijitlik', 'Kuvvet–sehim', 'Düşey (z) eğrisi']));
+    expect(bolumler(d)).not.toContain('Yasa');
     const bos = dom(cp.getMntLibraryPropertiesHTML({ id: 'lb2', type: 'mnt-library', data: { mounts: [], _selKey: 'yok' } }));
     expect(bos.querySelector('.ve-fp-side')).toBeNull();
   });

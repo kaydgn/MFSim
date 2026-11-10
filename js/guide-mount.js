@@ -208,7 +208,7 @@ var _GM_SAHNE_CSS =
 var _GM_KURUCU = {
   'mnt-motor': 'getMntMassPropertiesHTML', 'mnt-gearbox': 'getMntMassPropertiesHTML',
   'mnt-mount': 'getMntMountPropertiesHTML', 'mnt-library': 'getMntLibraryPropertiesHTML',
-  'mnt-solver': 'getMntSolverPropertiesHTML', 'mnt-example': 'getMntExamplePropertiesHTML',
+  'mnt-solver': 'getMntSolverPropertiesHTML',
   'mnt-2dview': 'getMnt2DViewPropertiesHTML', 'mnt-report': 'getMntReportPropertiesHTML',
   'mnt-parametric': 'getMntParamPropertiesHTML'
 };
@@ -379,7 +379,7 @@ var _GM_TUVAL = [
   { k: 'motor', ad: 'Motor', not: 'Kütle gövdesi. Şasi çerçevesindeki öteki kutular da gövdedir: Şanzıman, Şaft payı, cradle’lar.' },
   { k: 'takoz', ad: 'Takozlar', not: 'Her biri konumu ve rijitliğiyle; altı takoz.', yer: 'sag' },
   { k: 'cozucu', ad: 'Çözücü', not: 'Yük kitabı, yöntem ve Hesapla.' },
-  { k: 'baslangic', ad: 'Başlangıç ve Örnekler', not: 'Örnek seçimi ve tutarlılık uyarıları.' },
+  { k: 'sihirbaz', ad: 'Başlangıç Sihirbazı', not: 'Tek tıkla Takoz Başlangıç Sihirbazı’nı açar.' },
   { k: 'rapor', ad: 'Rapor', not: 'Çevrimdışı HTML rapor.' },
   { k: 'gorunumler', ad: 'Görünümler', not: 'Modelin aksonometrik çizimi.' },
   { k: 'goruntuleyici', ad: '3D Görüntüleyici', not: 'Güç grubunun STEP dosyası.' },
@@ -410,14 +410,6 @@ var _GM_PENCERE_UST = [
   { k: 'adlandir', ad: 'Adı düzenle', not: 'Bileşenin tuvaldeki adı.', yer: 'sag' },
   { k: 'sil', ad: 'Bileşeni sil', not: 'Delete tuşu da siler; Ctrl+Z geri alır.', yer: 'sol-orta' },
   { k: 'ilkbolum', ad: 'Bölümler', not: 'Pencerenin bütün bölümleri alt alta: Kütle, Ağırlık merkezi …', yer: 'sol-orta' }
-];
-
-var _GM_ORNEK = [
-  { k: 'ornek', bolum: 'Örnek model', ad: 'Örnek model', not: 'Kayıtlı örneklerin listesi ve künyesi.' },
-  { k: 'kur', bolum: 'Modeli kur', ad: 'Modeli kur', not: 'Sihirbaz ve STEP — başlangıç sayfasının seçenekleri.' },
-  { k: 'tutarlilik', bolum: 'Tutarlılık uyarıları', ad: 'Tutarlılık uyarıları',
-    not: 'Tuvaldeki modelin denetimi: hata çözümü durdurur, uyarı durdurmaz.' },
-  { k: 'aktar', metin: 'Örneği aktar', ad: 'Örneği aktar', yer: 'sag', not: 'Listede seçili örneği tuvale kurar.' }
 ];
 
 var _GM_COZUCU = [
@@ -520,10 +512,10 @@ var _GM_TAKOZ = [
 ];
 
 var _GM_KUTUPHANE = [
-  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Katalog · Özel takozlar; seçili tipin adı.' },
+  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
-  { k: 'yasa', bolum: 'Yasa', ad: 'Yasa', not: 'Seçilen eksenin kuvvet–sehim grafiği; z-eğrisi özel takozda girilir.' }
+  { k: 'egri', bolum: 'Kuvvet–sehim', ad: 'Kuvvet–sehim', not: 'Üç eksen tek diyagramda; z-eğrisi özel takozda girilir.' }
 ];
 
 var _GM_GORUNUM = [
@@ -728,22 +720,21 @@ function _gmSec3(){
   h += _gmEkran('pencere', 'pencere', _GM_PENCERE, 'Motor’un penceresi sağ sütunda.');
   h += _gmEkran('pencere-ust', 'pencere-ust', _GM_PENCERE_UST, 'Pencerenin üst kısmı: başlık, kimlik ve ilk bölüm.', 380);
   h += _gmNot('Tek tık ve çift tık',
-      'Araçlar — Çözücü, Başlangıç ve Örnekler, Rapor, Görünümler, 3D Görüntüleyici, Takoz '
-    + 'Özellikleri ve Parametrik Analiz — <strong>tek tıkla</strong> açılır. Kütle gövdeleri ve '
+      'Araçlar — Çözücü, Rapor, Görünümler, 3D Görüntüleyici, Takoz '
+    + 'Özellikleri ve Parametrik Analiz — <strong>tek tıkla</strong> açılır; Başlangıç Sihirbazı '
+    + 'pencere değil sihirbazı açar. Kütle gövdeleri ve '
     + 'takozlarda tek tık seçer, <strong>çift tık</strong> pencereyi açar. Pencere seçim boşalınca da '
     + 'açık kalır; konusu tuvalde kesikli kenarla işaretlidir.');
-  h += _gmH3('Modeli denetlemek', 'tur-denetle');
+  h += _gmH3('Sihirbazı yeniden açmak', 'tur-sihirbaz');
   h += _gmAdimlar([
-    'Tuvalde <strong>Başlangıç ve Örnekler</strong>’e ' + _gmNS('tuval', _GM_TUVAL, 'baslangic') + ' tıklayın.',
-    'Penceredeki ' + _gmN(_GM_ORNEK, 'tutarlilik') + ' <strong>Tutarlılık uyarıları</strong> bölümüne '
-      + 'bakın (' + _gmS('ornek') + '): satır yoksa model iç tutarlıdır.'
+    'Tuvalde <strong>Başlangıç Sihirbazı</strong>’na ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' tıklayın.',
+    'Ekranda: Takoz Başlangıç Sihirbazı açılır; tuvaldeki model adımları doldurur. '
+      + '<strong>Modeli kur</strong> tuvaldeki düğümleri yerinde günceller.'
   ]);
-  h += _gmSahne('ornek', _gmPencere('mnt-example'), 'Başlangıç ve Örnekler penceresi.', null, _GM_ORNEK);
-  h += _gmNot('Tutarlılık uyarıları',
-      'Panel modeli sürekli denetler ve iki düzeyde konuşur: <strong>hata</strong> (kütle yok, '
-    + 'takoz yok, kütle tanımsız) çözümü durdurur; <strong>uyarı</strong> (üçten az takoz, '
-    + 'dörtten fazla takoz, tanımsız rijitlik, PTO kütlesinin iki kez sayılması) çözümü '
-    + 'durdurmaz ama sonucu şüpheli yapar. Uyarısız model iç tutarlıdır.');
+  h += _gmNot('Pencere açılmaz',
+      'Başlangıç Sihirbazı bir özellik penceresi taşımaz: tek tık (ya da çift tık) sihirbazı açar. '
+    + 'Örnek modeller başlangıç sayfasının listesindedir; model kurulduktan sonra başka örnek '
+    + 'yüklemek için tuval boşaltılır ya da yeni proje açılır.');
   h += _gmH3('Modeli çözmek', 'tur-coz');
   h += _gmAdimlar([
     'Tuvalde <strong>Çözücü</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'cozucu') + ' tıklayın: penceresi sağ '
@@ -849,7 +840,7 @@ function _gmSec5(){
     ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
       + 'yasası', _gmB('kutuphane')],
     ['<strong>Çözücü</strong>', 'Yük kitabı, çözüm modu, sönüm, şok', 'Tuvalde bir tane (' + _gmB('cozucu') + ')'],
-    ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller, tutarlılık uyarıları', _gmB('tur')],
+    ['<strong>Başlangıç Sihirbazı</strong>', 'Takoz Başlangıç Sihirbazı’nı açar; penceresi yoktur', _gmB('sihirbaz')],
     ['<strong>Görünümler</strong>', 'Modelin aksonometrik çizimi ve işaretlerin föyü', 'Hesaba girmez'],
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
       + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', _gmB('cad')],
@@ -1051,19 +1042,22 @@ function _gmSec9(){
   var h = _gmH2('m9');
   h += _gmH3('Takoz Özellikleri', 'ozellikler');
   h += '<p><strong>Takoz Özellikleri</strong> bileşeni takoz tiplerinin kataloğunu taşır: '
-    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). Seçilen tip takoza '
+    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). Tipler markaya '
+    + 'göre ayrılır: önce <strong>Marka</strong>, sonra o markanın tipi seçilir. Seçilen tip takoza '
     + 'uygulanınca rijitlikler dolar; <strong>konum dolmaz</strong> — o motorun verisidir, parçanın '
     + 'değil.</p>';
   h += _gmSahne('kutuphane', _gmPencere('mnt-library'), 'Takoz Özellikleri penceresi.', null, _GM_KUTUPHANE);
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
-    ['Takoz tipi', 'Takoz tipi seçici (Katalog · Özel takozlar) ve seçili tipin adı; özel '
-      + 'tipte <strong>Sil</strong>', 'Alttaki bölümler seçili tipin adını başlıklarında taşır'],
+    ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi ve <strong>Yeni takoz</strong>; özel '
+      + 'tipte ad alanı ve <strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler '
+      + 'seçili tipin adını başlıklarında taşır'],
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
       + 'girilmiş olabilir'],
-    ['Yasa', 'Seçilen eksenin kuvvet–sehim grafiği (X · Y · Z) ve üç eksenin yasası',
-      'Katalogdaki takozun yasası salt okunurdur; z-eğrisinin noktaları yalnız özel takozda girilir']
+    ['Kuvvet–sehim', 'X · Y · Z kuvvet–sehim eğrileri tek diyagramda; aynı eğriyi çizen eksenler tek çizgidir',
+      'Statik düz, dinamik kesikli çizgidir. Katalogdaki takozun eğrisi salt okunurdur; z-eğrisinin '
+      + 'noktaları yalnız özel takozda girilir']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   h += _gmNot('Künye kopya olarak gider',
       'Takoz Özellikleri’nden uygulanan değerler takoz düğümüne <strong>kopyalanır</strong>: '
@@ -1090,8 +1084,8 @@ function _gmSec9(){
     + 'takoz kuvvetini <strong>az</strong> gösterir. Raporun <em>Lineerlik (±10 mm)</em> '
     + 'satırı bunu bildirir; aşım varsa eğri girin.');
   h += _gmNot('Eğrinin noktaları',
-      'z-eğrisi özel bir takoz tipinde, ' + _gmN(_GM_KUTUPHANE, 'yasa') + ' <strong>Takoz Özellikleri → '
-    + 'Yasa</strong> bölümünde tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
+      'z-eğrisi özel bir takoz tipinde, ' + _gmN(_GM_KUTUPHANE, 'egri') + ' <strong>Takoz Özellikleri → '
+    + 'Kuvvet–sehim</strong> bölümünde tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
     + 'Çözücü noktaları sehime (δ) göre sıralar; monoton bir eğri girin (basma eksi).');
   return h;
 }
@@ -1322,7 +1316,7 @@ function _gmSec15(){
   h += '<p><strong>Takoz Başlangıç Sihirbazı</strong> modeli beş adımda kurar: girdiler sağda, '
     + 'model ortadaki önizlemede adım adım dolar (' + _gmS('sihirbaz') + '). Sihirbaz başlangıç '
     + 'sayfasının <strong>Sihirbazla kur</strong> seçeneğiyle ' + _gmNS('baslangic', _GM_BASLANGIC, 'sihirbaz') + ' ya da '
-    + 'Başlangıç ve Örnekler penceresinden açılır.</p>';
+    + 'tuvaldeki <strong>Başlangıç Sihirbazı</strong> bileşenine ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' tıklayarak açılır.</p>';
   h += _gmEkran('sihirbaz', 'sihirbaz', _GM_SIHIRBAZ, 'Sihirbazın ilk adımı, BMC Siper örneğiyle doldurulmuş.');
   h += _gmAlanTablo('Sihirbazın adımları', [
     ['1 · Başlangıç', 'Modelin kaynağı: ' + _gmN(_GM_SIHIRBAZ, 'step') + ' STEP dosyası, '
@@ -1879,10 +1873,9 @@ function _gmSec18(){
       ['Doğrusal model, büyük ivme', 'Sertleşme modellenmez',
         'Raporun <em>Lineerlik (±10 mm)</em> satırı “aşım” yazar']
     ], ['l', 'l', 'l']);
-  h += _gmOnay('Gözden geçirme: tutarlılık uyarıları ve raporun tutarlılık özeti',
-      'Yukarıdaki sınıfların çoğu bu iki yüzeyde adıyla görünür: Başlangıç ve Örnekler penceresinin '
-    + _gmN(_GM_ORNEK, 'tutarlilik') + ' <strong>Tutarlılık uyarıları</strong> bölümü (' + _gmS('ornek') + ') ve '
-    + 'raporun tutarlılık özeti. Çözülmüş model tek başına “model doğru” demek değildir.');
+  h += _gmOnay('Gözden geçirme: raporun tutarlılık özeti',
+      'Yukarıdaki sınıfların çoğu raporun tutarlılık özetinde adıyla görünür. Çözülmüş model tek '
+    + 'başına “model doğru” demek değildir.');
   return h;
 }
 
@@ -2061,8 +2054,6 @@ function _gmSec19(){
   h += _gmAdimlar([
     'Boş bir Takoz modülünde başlangıç sayfasının listesinde <strong>' + _gmE(ex.vehicle || ex.name) + '</strong> '
       + 'satırının <strong>Yükle</strong> düğmesine ' + _gmNS('baslangic', _GM_BASLANGIC, 'yukle') + ' basın.',
-    '<strong>Başlangıç ve Örnekler</strong> penceresinde tutarlılık uyarılarının boş olduğunu '
-      + 'doğrulayın.',
     'Çözücüde <strong>Hesapla</strong>’ya basın; bir kütle gövdesinin penceresinde toplam '
       + 'kütleyi ve birleşik CG farkını yukarıdaki birleşik kütle tablosuyla karşılaştırın.',
     'Ayrıntı için <strong>Rapor</strong> bileşeninden çevrimdışı HTML raporu üretin.'
@@ -2089,12 +2080,12 @@ function _gmEkA(){
       ['Takoz konumu', 'Takoz', '<strong>Konum</strong>'],
       ['Statik ve dinamik rijitlik', 'Takoz', '<strong>Rijitlik</strong>'],
       ['Taşıma kapasitesi', 'Takoz', '<strong>Kapasite</strong>'],
-      ['Kuvvet–sehim eğrisi', 'Takoz Özellikleri', '<strong>Yasa</strong> (takozda <strong>Rijitlik</strong>’in altındaki not)'],
-      ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Yasa</strong>'],
+      ['Kuvvet–sehim eğrisi', 'Takoz Özellikleri', '<strong>Kuvvet–sehim</strong> (takozda <strong>Rijitlik</strong>’in altındaki not)'],
+      ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Kuvvet–sehim</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
       ['Aracın ileri yönü, tork yönü, kaldırım darbesi', 'Çözücü', '<strong>Araç ekseni</strong> · <strong>Kaldırım darbesi</strong>'],
-      ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em> · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
+      ['Örnek modeller', 'Başlangıç sayfası', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],

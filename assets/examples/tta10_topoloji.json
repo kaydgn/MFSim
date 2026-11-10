@@ -471,15 +471,13 @@
     },
     {
       "id": "n17",
-      "type": "mnt-example",
+      "type": "mnt-wizard",
       "x": 1320,
       "y": 163,
       "width": 60,
       "height": 56,
       "customName": "",
-      "data": {
-        "exampleKey": "tta10"
-      },
+      "data": {},
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false

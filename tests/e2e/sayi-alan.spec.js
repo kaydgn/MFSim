@@ -106,8 +106,7 @@ const ilkAlan = (page, onek, nid) => page.evaluate(([onek, nid]) => {
 }, [onek, nid]);
 
 for (const [modul, ornek, tip, onek] of [
-  ['mount-analysis', "let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);"
-    + " ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);", 'mnt-motor', 've-mnt-'],
+  ['mount-analysis', "veMntOrnekYukle('tulga');", 'mnt-motor', 've-mnt-'],
   ['fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025');",
     'fead-tensioner', 've-fead-'],
 ]) {

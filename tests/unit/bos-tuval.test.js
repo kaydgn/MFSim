@@ -15,7 +15,7 @@ const stubs = stubGlobals();
 eval(loadSource('shortcuts-help.js'));
 global._veHelpGroups = _veHelpGroups;
 global.componentDefs = {
-  'ap-example': { isApExample: true }, 'mnt-example': { isMountExample: true },
+  'ap-example': { isApExample: true }, 'mnt-wizard': { isMountWizard: true },
   engine: {}, 'mnt-motor': {}, 'mnt-mount': {}, 'mnt-solver': {}, 'mnt-report': {}, 'fead-layout': {}
 };
 global.VE_MNT_ARAC_TIPLERI = ['mnt-solver', 'mnt-report'];
@@ -37,7 +37,7 @@ describe('görünürlük kapsamdan ve modelden', () => {
   test('Takoz: analiz araçları boş sayılır, gövde ya da takoz değil; başlangıç sayfası açıkken yazı yok', () => {
     const araclar = [d('mnt-solver'), d('mnt-report')];
     expect(B.veBosTuvalKapsami('mount-analysis', araclar, false)).toBe('mount-analysis');
-    expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-example')), false)).toBe('mount-analysis');
+    expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-wizard')), false)).toBe('mount-analysis');
     expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-motor')), false)).toBeNull();
     expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-mount')), false)).toBeNull();
     expect(B.veBosTuvalKapsami('mount-analysis', [], true)).toBeNull();

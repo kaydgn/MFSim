@@ -351,7 +351,8 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       expect([d.x, d.y, d.z, d.kxs, d.kys, d.kzs, d.kxd, d.kyd, d.kzd]).toEqual(m.pos.concat(m.kstat, m.kdyn));
     });
     expect(+TOPO.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(M.cozucu.zeta);
-    expect(TOPO.nodes.find((n) => n.type === 'mnt-example').data.exampleKey).toBe('tta10');
+    expect(TOPO.nodes.filter((n) => n.type === 'mnt-wizard')).toHaveLength(1);       // sihirbazı açan bileşen (Canlı Not 110)
+    expect(TOPO.nodes.some((n) => n.type === 'mnt-example')).toBe(false);
   });
   test('programatik kurucu (JSON\'suz yol) bağlantı yüzünü de kurar', () => {
     jest.useFakeTimers();
@@ -361,7 +362,7 @@ describe('KAYIT — JSON ile kayıt defteri birebir', () => {
       global.confirm = () => true;
       global.nodes = [];
       global.connections = [];
-      cp._mntLoadExampleFromModel(null, 'tta10');
+      cp._mntLoadExampleFromModel('tta10');
       const s = global.nodes.find((n) => n.type === 'mnt-gearbox').data;
       expect([s.bagX, s.bagY, s.bagZ]).toEqual([428.5, -0.58, 493.96]);
       expect([s.egSinir, s.g1, s.gR, s.Rstall]).toEqual([1350, 4.695, -5.552, 1.897]);

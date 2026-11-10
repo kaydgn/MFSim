@@ -53,15 +53,15 @@ const dugum = (type, data) => {
   return n;
 };
 
-// Takoz'un palet tipleri (kökteki alt-sistem kartı ve sihirbaz hariç).
+// Takoz'un pencere taşıyan palet tipleri (kökteki alt-sistem kartı ve eylem araçları —
+// Başlangıç Sihirbazı: pencere değil sihirbazı açar — hariç).
 const TAKOZ_TIPLERI = Object.keys(componentDefs)
-  .filter((t) => /^mnt-/.test(t) && !componentDefs[t].isSubsystem && !/wizard$/.test(t));
+  .filter((t) => /^mnt-/.test(t) && !componentDefs[t].isSubsystem && !componentDefs[t].eylem);
 function pencere(n) {
   if (n.type === 'mount-analysis') return cp.getMntModulePropertiesHTML(n);
   if (n.type === 'mnt-mount') return cp.getMntMountPropertiesHTML(n);
   if (n.type === 'mnt-solver') return cp.getMntSolverPropertiesHTML(n);
   if (n.type === 'mnt-library') return cp.getMntLibraryPropertiesHTML(n);
-  if (n.type === 'mnt-example') return cp.getMntExamplePropertiesHTML(n);
   if (n.type === 'mnt-viewer') return cad.getMntViewerPropertiesHTML(n);
   if (n.type === 'mnt-2dview') return cp.getMnt2DViewPropertiesHTML(n);
   if (n.type === 'mnt-report') return cp.getMntReportPropertiesHTML(n);
@@ -77,8 +77,10 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     return (new Function('return ' + m[1]))();
   };
 
-  test('tarama gerçekten tarıyor: yirmi Takoz tipi (dördü motorun aksesuarı; Koordinat Düzlemi yok — Canlı Not 63)', () => {
-    expect(TAKOZ_TIPLERI.length).toBe(20);
+  test('tarama gerçekten tarıyor: on dokuz pencereli Takoz tipi (dördü motorun aksesuarı; Koordinat Düzlemi yok — Canlı Not 63; Başlangıç ve Örnekler yok, Başlangıç Sihirbazı eylem aracı — Canlı Not 110)', () => {
+    expect(TAKOZ_TIPLERI.length).toBe(19);
+    expect(Object.keys(componentDefs).filter((t) => /^mnt-/.test(t) && !componentDefs[t].isSubsystem && componentDefs[t].eylem))
+      .toEqual(['mnt-wizard']);
     expect(TAKOZ_TIPLERI.filter((t) => componentDefs[t].isMountAksesuar))
       .toEqual(['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield']);
   });
@@ -217,15 +219,15 @@ describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve tipten sapma', () => {
     expect(cp._mntTakozTipGovde(tk)).toContain('<b>Deneme</b> ile 5/6 değer aynı; kz stat. elle değiştirildi.');
   });
 
-  test('eksen seçimi görünüm durumu: grafik o ekseni çizer, model değişmez', () => {
+  test('üç eksen TEK diyagramda: eksen seçici yok, model değişmez', () => {
     const lib = kutuphane({ sx: 665, sy: 335, sz: 290, dx: 1165, dy: 590, dz: 490 });
     const once = JSON.stringify(lib.data);
-    cp.veMntLibEksen(lib.id, 'x');
     const h = cp.getMntLibraryPropertiesHTML(lib);
-    expect(h).toContain('F<sub>x</sub>');
-    expect(h).toMatch(/aria-pressed="true" onclick="veMntLibEksen\('[^']+','x'\)"/);
+    expect(h).not.toContain('veMntLibEksen');
+    expect(h).not.toContain('class="ve-mnt-seg"');
+    const lej = h.slice(h.indexOf('ve-mnt-kroki-lej'));
+    ['x radyal', 'y radyal', 'z eksenel'].forEach((a) => expect(lej).toContain(a));
     expect(JSON.stringify(lib.data)).toBe(once);
-    cp.veMntLibEksen(lib.id, 'z');
   });
 });
 
@@ -299,18 +301,29 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
   });
 });
 
+// Örnek yüklenince bildirilen tutarlılık denetimi. Eskiden "Başlangıç ve Örnekler"
+// penceresinin Tutarlılık uyarıları bölümünde de görünürdü; bileşen kalktı (Canlı Not 110).
 describe('ÖRNEK — kanvastaki modelin denetimi', () => {
-  test('boş kanvas bir hata değil: "model yok"', () => {
+  test('boş kanvas: gövde ve takoz hatası, çözücü uyarısı', () => {
     global.nodes = [];
-    const h = cp.getMntExamplePropertiesHTML({ id: 'e1', type: 'mnt-example', data: {} });
-    expect(h).toContain('Kanvasta model yok.');
+    const w = cp._mntExampleValidate();
+    expect(w.filter((x) => x.level === 'err').map((x) => x.msg)).toEqual(['Kütle gövdesi yok.', 'Takoz yok (en az 3).']);
+    expect(w.filter((x) => x.level === 'warn')).toHaveLength(1);
   });
 
-  test('uyarılar ve hatalar ayrı satırlarda, hata çözücünün reddi', () => {
+  test('hata ve uyarı ayrı düzeyde: kütlesiz gövde hatadır', () => {
     tulga();
     bul((n) => n.type === 'mnt-motor').data.mass = '';
-    const h = cp.getMntExamplePropertiesHTML(dugum('mnt-example'));
-    expect(h).toMatch(/<b>1 hata<\/b> — çözücü modeli reddeder\.<ul><li>Motor: kütle tanımsız\/sıfır\.<\/li><\/ul>/);
-    expect(h).toMatch(/<b>\d+ uyarı<\/b>/);
+    const w = cp._mntExampleValidate();
+    expect(w.filter((x) => x.level === 'err').map((x) => x.msg)).toEqual(['Motor: kütle tanımsız/sıfır.']);
+  });
+
+  test('sağlam modelde hata yok; bildirim yalnız uyarı varken çıkar', () => {
+    tulga();
+    expect(cp._mntExampleValidate().filter((x) => x.level === 'err')).toEqual([]);
+    cp._mntRenderExampleReport([], false);
+    expect(stubs.showToast).not.toHaveBeenCalled();
+    cp._mntRenderExampleReport([{ level: 'warn', msg: 'x' }], false);
+    expect(stubs.showToast).toHaveBeenCalledTimes(1);
   });
 });

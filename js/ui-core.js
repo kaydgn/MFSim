@@ -33,6 +33,18 @@ function veTekTikAcar(node, e, bas) {
   if(Math.abs(e.clientX - bas.x) + Math.abs(e.clientY - bas.y) >= VE_TEK_TIK_ESIK) return false;
   return typeof selectedNodes === 'undefined' || (selectedNodes.length === 1 && selectedNodes[0] === node);
 }
+// EYLEM ARACI (componentDefs.eylem = global işlevin adı; kullanıcı 2026-11-10, Canlı Not
+// 110: Takoz'un Başlangıç Sihirbazı bileşeni): işi bir pencere değil bir eylemdir. Tek
+// tık (ve çift tık) eylemi çalıştırır, özellikler penceresi açılmaz. Dönüş: eylem
+// çalıştıysa true — çağıran pencereyi ancak false dönünce açar.
+function veTekTikEylem(node) {
+  var d = node && (node.def || (typeof componentDefs !== 'undefined' && componentDefs[node.type]));
+  var ad = d && d.eylem;
+  if(!ad) return false;
+  var f = (typeof window !== 'undefined') ? window[ad] : null;
+  if(typeof f === 'function') f();
+  return true;
+}
 
 function veAttachNodeDrag(nodeEl, node) {
   // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
@@ -54,6 +66,7 @@ function veAttachNodeDrag(nodeEl, node) {
       veFeadOpenEditor(node.id);
       return;
     }
+    if(veTekTikEylem(node)) return;                  // eylem aracı: pencere değil eylem
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
@@ -133,7 +146,7 @@ function veAttachNodeDrag(nodeEl, node) {
     _veNodeDrag.anchor = null;
     var t = _veNodeDrag.tik;
     _veNodeDrag.tik = null;
-    if(t && veTekTikAcar(t.node, e, t) && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+    if(t && veTekTikAcar(t.node, e, t) && !veTekTikEylem(t.node) && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
 })();
 
