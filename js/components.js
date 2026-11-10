@@ -1038,7 +1038,7 @@ var VE_FEAD_LAYOUT_DAR_H = 650;
 // PAFTA (2026-09-26): KAYIŞ TABLOSU KARTIN İÇİNDE, çizimin altında — ve tablolu
 // kart GENİŞ. Kullanıcı: *"o tablonun olduğu kanvas, diğer kanvasa göre daha
 // geniş olsun… daha rahat okunsun tablodakiler."* Genişlik tablonun
-// sütunlarından: 424 px sabit sütun + 194 px KASNAK + 2×10 dolgu + 2×1 kutu kenarı
+// sütunlarından: 428 px sabit sütun + 190 px KASNAK + 2×10 dolgu + 2×1 kutu kenarı
 // (cp-fead.js → VE_FEAD_TABLE_COLS). Tablosuz kart VE_FEAD_LAYOUT_W'de kalır.
 // Tipin varsayılanı bu: varsayılan ön ayar (geometri) tabloyu gösteriyor.
 var VE_FEAD_PAFTA_W = 640;

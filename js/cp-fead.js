@@ -7333,8 +7333,11 @@ function veFeadTableRows(build){
 var VE_FEAD_TABLE_COLS = [
   { k:'no',    t:'#',                  u:'',   w:34, al:'c', yer:'kim' },
   { k:'ad',    t:'KASNAK',             u:'',   w:0,  al:'l', yer:'kim' },
-  { k:'x',     t:'X',                  u:'mm', w:62, al:'r', yer:'gir' },
-  { k:'y',     t:'Y',                  u:'mm', w:62, al:'r', yer:'gir' },
+  // X · Y 64 px (girdinin yan dolgusu 2 px): üç basamak + iki ondalık + eksi
+  // ("-161,97", gergi) 62 px'te 2 px kesiliyordu (fead-tablo.spec.js → PAFTA);
+  // KASNAK tabanı 190 px'te kalır.
+  { k:'x',     t:'X',                  u:'mm', w:64, al:'r', yer:'gir' },
+  { k:'y',     t:'Y',                  u:'mm', w:64, al:'r', yer:'gir' },
   { k:'eff',   t:'Efektif Çap',        u:'mm', w:50, al:'r', coz:1, yer:'coz', kt:'Ø eff' },
   { k:'od',    t:'D',                  u:'mm', w:44, al:'r', yer:'gir' },
   { k:'yon',   t:'Kasnak Dönüş Yönü',  u:'',   w:50, al:'c', yer:'gir', kt:'Yön' },
