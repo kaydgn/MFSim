@@ -296,6 +296,11 @@ const DURAKLAR = [
       await p.locator('#ve-results-browser .vsig-row[data-sid="T_2"]').first().waitFor();
       await p.locator('#ve-results-browser .vsig-row[data-sid="T_2"] .vsig-ck[data-act="toggle"]').first().click();
       await bekle(p, 1200);
+      // ÖLÇÜ AĞACIN BAŞINDA (CI, kaydgn/MFSim#1307): tıklama ağaç yeniden kurulurken
+      // "kararsız" bulunup satırı görünüşe kaydırınca ağaç 227 px aşağıda kaldı (ağaç
+      // kaydırmayı korur) ve Sonuçlar'ın üç işareti künyeden kaydı. Yerelde ağaç zaten başta.
+      await p.evaluate(() => { const t = document.getElementById('ve-results-tree'); if (t) t.scrollTop = 0; });
+      await bekle(p, 200);
       await sus(p);
       await bekle(p, 300);
     },
