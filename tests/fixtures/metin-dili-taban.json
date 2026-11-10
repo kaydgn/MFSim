@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 121,
+ "sayi": 120,
  "dosyalar": {
   "js/command-palette.js": {
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
@@ -62,7 +62,6 @@
    "1f23b039e7": "Modeli bir STEP dosyasından ya da bir örnekten başlatın.",
    "524a00b447": "Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.",
    "7214a8cfc7": "Transfer oranı ve aks paylarını girin; boş alan 1 sayılır.",
-   "76e833be92": "Simetrik takozu Aynalı eşini ekle ile çoğaltın.",
    "a42491d626": "Hesapla ile rollü birimlerin kütle ve konumlarını ölçün.",
    "a9e696c260": "Sihirbaza aktar ile birimleri gövde ve takoz olarak alın.",
    "c1b0e6210d": "Konumu üst bağlantı yüzeyinin merkezinden girin.",

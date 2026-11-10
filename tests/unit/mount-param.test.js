@@ -349,8 +349,8 @@ describe('PENCERE — yalnız girdi', () => {
   test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod, önek + numara ve sertlik bölünmez', () => {
     modelKur('asfat');
     const d = dom(P.getMntParamPropertiesHTML(node()));
-    // Aday yalnız TAM tip (altı rijitlik): AMC'nin radyal değerini yayımlamadığı kodlar listede yok.
-    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib).filter((k) => cp._mntLibTam(lib[k]));
+    // Aday yalnız TAM ve TAHMİNSİZ tip: radyali tahmini AMC kodları (Canlı Not 113) listede yok.
+    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib).filter((k) => cp._mntLibTam(lib[k]) && !cp._mntLibTahmin(lib[k]).length);
     const aday = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] tbody tr')].map((r) => r.children[1]);
     const grup = [...d.querySelectorAll('.ve-fp-kat[data-k="grup"] tbody tr')].flatMap((r) => [r.children[1], r.children[3]]);
     expect(aday.map((td) => td.textContent)).toEqual(keys.map((k) => lib[k].name));

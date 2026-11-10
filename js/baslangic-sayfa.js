@@ -320,14 +320,25 @@ function _veBasDegAc(el, v){
 // büyütülebilmesini istiyorum."*): ayrıntıdaki küçük görsel bir düğme; tık pencere
 // ailesinin penceresinde görseli dosyasının ölçüsünde açar (ekrandan büyükse
 // sığdırılır). Kapatan ✕ · Esc · perdeye tık; odak küçük görsele döner.
+// Küçük görseli olmayan çağıran (Takoz Özellikleri'nin (i) düğmesi, Canlı Not 111)
+// aynı pencereyi veBasResimGoster ile adres ve adıyla açar — pencerenin ikinci
+// bir yazımı kurulmaz.
 var _veBasResim = null;        // { perde, dugme }
 function veBasResimAc(dugme){
   if(typeof document === 'undefined' || !dugme) return false;
   var kucuk = dugme.querySelector('img');
   if(!kucuk) return false;
+  return veBasResimGoster({
+    src: kucuk.getAttribute('src') || '', ad: kucuk.getAttribute('alt') || '', odak: dugme,
+    g: kucuk.naturalWidth || (kucuk.getAttribute('width') | 0) * 2,
+    y: kucuk.naturalHeight || (kucuk.getAttribute('height') | 0) * 2
+  });
+}
+// o: { src, ad, odak (kapanınca odak dönen öğe), g · y (dosyanın ölçüsü; yoksa görsel kendi ölçüsünde açılır) }
+function veBasResimGoster(o){
+  if(typeof document === 'undefined' || !o || !o.src) return false;
   veBasResimKapat();
-  var ad = kucuk.getAttribute('alt') || '';
-  var g = kucuk.naturalWidth || (kucuk.getAttribute('width') | 0) * 2, y = kucuk.naturalHeight || (kucuk.getAttribute('height') | 0) * 2;
+  var ad = o.ad || '';
   var perde = document.createElement('div');
   perde.id = 've-bas-buyuk-perde';
   perde.className = 've-bas-buyuk-perde';
@@ -335,13 +346,13 @@ function veBasResimAc(dugme){
     + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-image"></span>'
     + '<b id="ve-bas-buyuk-baslik">' + veBasEsc(ad) + '</b></span>'
     + '<button type="button" class="ve-settings-close" aria-label="Kapat" title="Kapat (Esc)"><span class="mf-ico mf-ico-x"></span></button></div>'
-    + '<div class="ve-bas-buyuk-govde"><img src="' + veBasEsc(kucuk.getAttribute('src') || '') + '" width="' + g + '" height="' + y
-    + '" alt="' + veBasEsc(ad) + '" decoding="async"></div></div>';
+    + '<div class="ve-bas-buyuk-govde"><img src="' + veBasEsc(o.src) + '"' + (o.g > 0 && o.y > 0 ? ' width="' + o.g + '" height="' + o.y + '"' : '')
+    + ' alt="' + veBasEsc(ad) + '" decoding="async"></div></div>';
   // Perdenin kendisine basmak kapatır; pencerenin içi değil.
   perde.addEventListener('mousedown', function(e){ if(e.target === perde) veBasResimKapat(); });
   perde.querySelector('.ve-settings-close').onclick = function(){ veBasResimKapat(); };
   document.body.appendChild(perde);
-  _veBasResim = { perde: perde, dugme: dugme };
+  _veBasResim = { perde: perde, dugme: o.odak || null };
   // YAKALAMA evresinde: alttaki katmanların Esc'i (müfettiş, tuval) bu tuşu görmesin.
   window.addEventListener('keydown', _veBasResimTus, true);
   var k = perde.querySelector('.ve-settings-close');
@@ -502,7 +513,7 @@ if(typeof module !== 'undefined' && module.exports){
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
     veBasSayfaHTML: veBasSayfaHTML, veBasOrnekHTML: veBasOrnekHTML, veBasAltHTML: veBasAltHTML,
     veBasDegisiklikHTML: veBasDegisiklikHTML, _veBasSekmeSec: _veBasSekmeSec, _veBasDegAc: _veBasDegAc,
-    veBasResimAc: veBasResimAc, veBasResimKapat: veBasResimKapat,
+    veBasResimAc: veBasResimAc, veBasResimGoster: veBasResimGoster, veBasResimKapat: veBasResimKapat,
     veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik,
     _veBasAc: _veBasAc, _veBasRayEsitle: _veBasRayEsitle,
     _veBasSifirla: function(){ _veBasAcikSatir = {}; _veBasSekme = {}; }

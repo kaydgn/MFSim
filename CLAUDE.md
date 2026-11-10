@@ -101,7 +101,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   → *Başlangıç Sihirbazı bileşeni*): FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir); alt çubuk YOK — Geri · İleri (son adımda Modeli
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
-  alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). **İlk hâl** —
+  alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
+  Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
+  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
@@ -346,22 +348,34 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   veritabanımız"* · *"Takoz resimlerini de al"*): 5 aile · 51 tip · 148 kod; envanter
   (kod, sertlik, maks. yük, sıkma torku, ağırlık) üreticinin tablosundan, eksenel kz
   üreticinin yük–sehim grafiğinden (log-log çizgi F = kz·δ, g = 9,81; AMC-EO'yla 9'da 7
-  birebir). **Radyal rijitlik yayımlanmıyor**: yalnız AMC-EO'daki 10 kodda; ötekiler
-  kütüphanede EKSİK tip (sx/sy/dx/dy boş), taramaya aday olmaz (`_mntLibTam`), Takoz
-  Özellikleri'nden tamamlanır — tahmin YAZILMAZ. Kütüphane girdileri modülden üretilir
+  birebir). **Radyal rijitlik yayımlanmıyor**: AMC-EO'daki 10 kodda ve BMC teknik resimlerinin
+  3 kodunda ölçülü; öteki 129 kodda TAHMİNİ (kullanıcı 2026-11-10, Canlı Not 113: *"Programın
+  çözmesi gerek … program reddeder diye bir kıstas olmaması lazım"*): kx = rx·kz, ky = ry·kz, oran
+  AMC'nin ölçümünden — aynı tipin ölçülmüş sertlikleri arasında doğrusal, dışında en yakınınki
+  (resimler oranın sertlikle değiştiğini gösterdi: Cone 38 40 ShA 2,67 ↔ 60 ShA 1,57) → aynı
+  ailesi → bütün tiplerin medyanı, dinamik = statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
+  değer tahminden çıkar; tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
+  olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
-  tablosundan (E4 · E9'u ölçtürür). Görseller `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
+  teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
+  (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65). **BMC teknik resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu
-  137061 · 137062 · 137961'i tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC
-  parça numarası ne ekranda ne kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js`
-  (→ *TEKNİK RESİM*) + `mount-param.test.js` → *AMC KAPASİTESİ*.
+  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112). **BMC teknik
+  resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
+  tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
+  kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
+  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* +
+  `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` → *AMC KAPASİTESİ*.
 - `js/mount-ap.js` + `assets/takoz/ap/` — **Angst+Pfister APSOvib® takoz veritabanı** (kullanıcı
   2026-11-10: *"kayıtlı olan Angst-Pfister takozlarını da araştır"*): konik · HD konik · H-takoz ·
   marine · jeneratör — 24 tip, 86 kod, e-mağazanın güncel tablosundan (föylerle çapraz); A+P'nin
-  kg'ı daN. **Dinamik yayımlanmıyor**: dx/dy/dz boş, tip EKSİK (taramaya aday değil) — statiği
-  dinamik saymak YAZILMAZ. LMT-1433-00 (LASPAR kodu) ↔ konik 026 S 1 flanşla eşleşir (`ESLES`,
-  künyede katalog eşi). Görseller `tools/takoz-gorsel.js --ap`. Kapı: `mount-ap.test.js`.
+  kg'ı daN. **Dinamik yayımlanmıyor**: TAHMİNİ (Canlı Not 113'ün kuralı) — NR'de (Sh+20)/50 (AMC'nin
+  NR yasası), CR H-takozda AMC-EO'nun 9 NR kodunun medyanı (`DIN_MEDYAN`); işaretli, çözülür,
+  taramaya aday olmaz; statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
+  ölçülmüş benzeri yok → eksik. Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --ap`).
+  LMT-1433-00 (LASPAR kodu) ↔ konik 026 S 1 flanşla eşleşir (`ESLES`, künyede katalog eşi). Kapı:
+  `mount-ap.test.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
@@ -391,22 +405,25 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
 - `js/mount-param-excel.js` + `js/xlsx-yaz.js` — Parametrik Analiz'in **Excel çıktısı**
   (kullanıcı kararı 2026-11-09: *"Kullanıcı bu Excel formatında çıktı alacak"*; düzen Canlı
-  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç · Veri (gizli).
-  Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı başlığın
-  NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara kapalı, kullanılmayan
-  satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk STATİK SEHİMDEN**
-  (kullanıcı 2026-11-10): dört kesin kriteri sağlayanlar 1 g'nin max |δz|'sine göre sıralı, ilki
-  En uygun, kalanı Uygun (Kısmen uygun YOK); Tarama kriter sayısı → sehim. **Konfigürasyonun
-  sayfası YOK, sonucu Sonuç'ta** (kullanıcı 2026-11-10: *"Tıklandığında açılsın, gizli olsun"* —
-  gizli sayfa makrosuz bağla açılmaz): üstte seçili kombinasyonun panosu (No alanı, boşsa
-  Tarama'nın süzgecinde kalan ilk satır; formül son değeriyle yazılır), altında K0…K9 blokları
-  (Özet · Geri · İleri); Tarama'nın HER satırının sonucu gizli Veri'de (yük durumu başına paketli,
-  mm/100; panonun MID penceresi paketli metnin boyundan uzun — sabit 40, altı takozda 5. ve 6.
-  takozu yanlış okuyordu). Yazıcı DOM'suz ve bağımlılıksız (okuyucunun karşılığı; formül, gizli
-  ve akışlı sayfa); kitap ve dosya DİLİMLİ (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*).
-  Kapı: `mount-param-excel.test.js` (→ *SONUÇ* · *VERİ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js`
-  (→ *SEÇİM ve ONAY* · *TEK YOL* · *TARAMA* · *PANO*) + `xlsx-yaz.test.js` + `mount-param-sonuc.spec.js` →
-  *EXCEL* · *EXCEL DİLİMLİ*.
+  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç · K0…K9 ·
+  Veri ve Seçim (gizli). Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz),
+  kriterin tanımı başlığın NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara
+  kapalı, kullanılmayan satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk
+  STATİK SEHİMDEN** (kullanıcı 2026-11-10): dört kesin kriteri sağlayanlar 1 g'nin max |δz|'sine
+  göre sıralı, ilki En uygun, kalanı Uygun (Kısmen uygun YOK); Tarama kriter sayısı → sehim.
+  **Sonuç TEK konfigürasyon, açılışta BOŞ** (kullanıcı 2026-11-10: *"Sonuç kısmı Excel açıldığında
+  boş gelsin … hangi konfigürasyona tıklarsa, sadece o"* — No alanlı pano No 1'i varsayılan
+  gösteriyordu ve mevcut tasarım sanıldı): Özet'in K'sı kendi sayfasını (K0…K9: Özet · Geri ·
+  İleri) açar; Sonuç yalnız Tarama'nın süzgecinde TEK satır kalınca o satır (gizli Seçim:
+  SUBTOTAL(103)), yoksa yönlendirme — Excel makrosuz bir tıkı başka sayfaya taşıyamaz; kitabın
+  SEKME ÇUBUĞU GİZLİ (gizli sayfaya bağlantı gitmez), sayfalar düğmelerle. Tarama'nın HER
+  satırının sonucu gizli Veri'de (yük durumu başına paketli, mm/100; MID penceresi paketli metnin
+  boyundan uzun — sabit 40, altı takozda 5. ve 6. takozu yanlış okuyordu). Yazıcı DOM'suz ve
+  bağımlılıksız (okuyucunun karşılığı; formül, gizli ve akışlı sayfa); kitap ve dosya DİLİMLİ
+  (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*). Kapı: `mount-param-excel.test.js` (→ *SONUÇ* ·
+  *K SAYFALARI* · *VERİ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js` (→ *SEÇİM ve ONAY* · *TEK
+  YOL* · *TARAMA* · *SONUÇ*; formül HESAPLANIR, önbellek değil: `tests/helpers/xlsx-formul.js`) +
+  `xlsx-yaz.test.js` + `mount-param-sonuc.spec.js` → *EXCEL* · *EXCEL DİLİMLİ*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık
@@ -824,14 +841,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sebebi söyler, pencere çöp kutusunu çizmez (`cp-core.js`). Delete tuşu,
   çöp kutusu ve toplu seçim aynı kapıdan geçer. İlk kullanıcısı kutusuz FEAD
   kayışı. Kapı: `fead-cizim-masasi.test.js` → *"kayış SİLİNMEZ"*.
-- **TEK TIKLA AÇILAN ARAÇ KENDİNİ BEYAN EDER** (`componentDefs.tekTik` →
-  `js/ui-core.js` `veTekTikAcar`): işi penceresi olan araç (Takoz'un araç
-  şeridi) sürüklemesiz tek tıkta pencereyi açar; öteki bileşende tek tık yalnız
-  seçer, pencere çift tıkla. Sürükleme, Ctrl/Shift ve çoklu seçim açmaz. Kapı:
-  `tek-tik-arac.test.js`.
+- **TEK TIK SEÇER, ÇİFT TIK AÇAR — her bileşende** (kullanıcı 2026-11-10, Canlı Not 116:
+  *"Başlangıç sihirbazı gibi pop-up olarak açılan bileşenlere iki kere tıklamak durumunda
+  kalalım. Tek tıkla açılınca garip duruyor."*): Takoz'un araç şeridinin tek tıkta pencere açan
+  beyanı (`tekTik`, kullanım notu T20) kalktı; hiçbir tip tek tıkta açmaz. Kapı:
+  `tek-tik-arac.test.js` → *ÇİFT TIK*.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
-  olan araç (Takoz'un Başlangıç Sihirbazı) tek tıkta ve çift tıkta eylemi çalıştırır; özellikler
+  olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler
   penceresi açılmaz ve seçim açık pencerenin konusunu değiştirmez. Kapı: `tek-tik-arac.test.js` →
   *EYLEM ARACI*.
 - **KARTIN EN KÜÇÜK ÖLÇÜSÜNÜ TİPİ SÖYLER** (`componentDefs.minWidth/minHeight`

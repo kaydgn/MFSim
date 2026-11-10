@@ -278,11 +278,12 @@ async function takozTuru(page, olc) {
   await page.evaluate(() => veMntWizKapat(false));
   const p = await pencereler(page, olc);
   expect(p.olculen).toBeGreaterThan(300);
-  // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — ölçülü çizim, ürün
-  // ve uygulama fotoğrafları, veri tablosu; tam tip (Cone 38 60 ShA) ve radyali boş tip
-  // (Cone 38 40 ShA). Varsayılan seçim (LMT-1433-37) künyesiz; tur onu açıyordu.
-  // A+P (2026-11-10): konik yatak, H-takoz (tolerans satırı) ve LMT-1433-00'ın katalog eşi.
-  for (const k of ['amc137963', 'amc137961', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh']) {
+  // AMC KÜNYESİ (2026-11-10): Takoz Özellikleri bir AMC tipinde — veri tablosu (görsel yok,
+  // Canlı Not 111) ve Tip satırının (i) düğmesinin penceresi (teknik resim); tam tip (Cone 38
+  // 60 ShA), resimli tip (Cone 38 40 ShA: sönüm, Z eğrisi) ve radyali tahmini tip (Cone 38
+  // 50 ShA). Varsayılan seçim (LMT-1433-37) künyesiz. A+P (2026-11-10): konik yatak ve
+  // H-takoz (dinamik tahmini, tolerans satırı), LMT-1433-00'ın katalog eşi.
+  for (const k of ['amc137963', 'amc137961', 'amc137962', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh']) {
     await page.evaluate((kk) => {
       const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
       n.data = n.data || {}; n.data._selKey = kk;
@@ -297,6 +298,13 @@ async function takozTuru(page, olc) {
       await page.evaluate(([ss, B]) => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = ss * (ic.clientHeight - B); }, [s, SAYFA_BINDIRME]);
       await page.waitForTimeout(100);
       await olc('#ve-properties', 'Takoz Özellikleri · ' + k + (s ? ' ↓' + (s + 1) : ''));
+    }
+    if (k === 'amc137963') {
+      await page.evaluate(() => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = 0; });
+      await page.click('#ve-properties .mntlib-bilgi');
+      await page.waitForFunction(() => { const i = document.querySelector('#ve-bas-buyuk-perde img'); return i && i.complete; }, null, { timeout: 10000 });
+      await olc('#ve-bas-buyuk-perde', 'Takoz Özellikleri · teknik resim');
+      await page.keyboard.press('Escape');
     }
     await page.evaluate(() => veTogglePropertiesPanel(false));
   }

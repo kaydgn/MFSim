@@ -52,8 +52,7 @@ var VE_MW_STEPS = [
   { key:'takoz',  ad:'Takozlar', girdi:'Konum · katalog · statik ve dinamik rijitlik', talimat:[
     'Takoz ekle ile her takozu ekleyin.',
     'Konumu üst bağlantı yüzeyinin merkezinden girin.',
-    'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.',
-    'Simetrik takozu Aynalı eşini ekle ile çoğaltın.'] },
+    'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.'] },
   { key:'tork',   ad:'Tork ve çalışma', girdi:'Motor torku · vites oranları · transfer · aks payı', talimat:[
     'Motor’u katalogdan seçin ya da tepe tork ve devirleri girin.',
     'Şanzıman’ın vites oranlarını ve stall oranını girin.',
@@ -597,29 +596,8 @@ function veMntWizTakozSil(key){
   if(_mwSec.takoz === key) _mwSec.takoz = null;
   veMntWizRender();
 }
-// Aynalı eş: y işareti döner, ad Sağ ↔ Sol. Takozlar çoğunlukla çift durur.
-var _MW_AYNA = [['Sağ', 'Sol'], ['sağ', 'sol'], ['SAĞ', 'SOL'], ['Right', 'Left'], ['right', 'left']];
-function _mwAynaAd(ad){
-  var s = String(ad || '');
-  for(var i = 0; i < _MW_AYNA.length; i++){
-    var a = _MW_AYNA[i][0], b = _MW_AYNA[i][1];
-    if(s.indexOf(a) >= 0) return s.split(a).join(b);
-    if(s.indexOf(b) >= 0) return s.split(b).join(a);
-  }
-  return s + ' (eş)';
-}
-function veMntWizTakozAyna(key){
-  var t = _mwSatir('takoz', key); if(!t || !(Math.abs(_mwNum(t.y)) >= 1)) return null;
-  var e = _mwKopya(t);
-  e.key = _mwKey('t'); delete e._dugum; delete e.kaynak;
-  e.ad = _mwAynaAd(t.ad);
-  e.y = -_mwNum(t.y);
-  var i = _mwState.takozlar.indexOf(t);
-  _mwState.takozlar.splice(i + 1, 0, e);
-  _mwSec.takoz = e.key;
-  veMntWizRender();
-  return e;
-}
+// "Aynalı eşini ekle" YOK (kullanıcı 2026-11-10, Canlı Not 120: *"'Aynalı Eşini Ekle' gibi bir
+// saçmalığı kaldıralım."*): takoz Takoz ekle ile eklenir. Kapı: mount-wizard.test.js → *TAKOZ İŞLEMLERİ*.
 // Takoz kataloğu — panelle TEK yazıcı (cp-mount.js → _mntLibUygula).
 function veMntWizTakozKatalog(key, libKey){
   var t = _mwSatir('takoz', key); if(!t) return;
@@ -872,6 +850,22 @@ function _mwInp(path, v, opt){
 }
 function _mwAlan(et, ic, sinif){
   return '<div class="ve-fw-ed-alan' + (sinif ? ' ' + sinif : '') + '"><span>' + et + '</span>' + ic + '</div>';
+}
+// SEÇİLİ GÖVDE · SEÇİLİ TAKOZ BÖLÜMLÜ (kullanıcı 2026-11-10, Canlı Not 117 · 118: *"Çok düz
+// olmuş … Başlıklar yok, bold yazılar yok. Neyin ne olduğu belli olmadığı için karışık
+// duruyor"* · *"Diğer kısımları da"*): alanlar başlıklı bölümlerde, etiket kalın; üçlünün her
+// kutusu kendi eksenini taşır — yer tutucu kutu dolunca kayboluyordu. Kapı: mount-wizard.test.js
+// → *DÜZENLEYİCİ BÖLÜMLÜ*.
+function _mwBolum(baslik, ic){
+  return '<div class="ve-mw-ed-bolum"><div class="ve-mw-ed-bas">' + baslik + '</div>' + ic + '</div>';
+}
+function _mwEks(on, inp){
+  return '<label class="ve-mw-eks' + (on.length > 1 ? ' ve-mw-eks--iki' : '') + '"><i aria-hidden="true">' + on + '</i>' + inp + '</label>';
+}
+function _mwUclu(et, P, r, alanlar, adlar, sinif){
+  return _mwAlan(et, alanlar.map(function(a, i){
+    return _mwEks(adlar[i], _mwInp(P + a[0], r[a[0]], { baslik:a[1] }));
+  }).join(''), 've-mw-ed-xyz' + (sinif ? ' ' + sinif : ''));
 }
 // Alanın STEP geometrisinden geldiğini söyleyen işaret — `.ve-fw-kun`un dili
 // (künyeden gelen "K"): sebep `title`da. Gövdede dayanağı kaydın `not`u
@@ -2222,21 +2216,17 @@ function _mwGovdeEditorHTML(g){
   var nokta = '<div class="ve-fw-seg" role="group" aria-label="Nokta kütle">'
     + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!g.pointMass) + '" onclick="veMntWizNokta(\'' + k + '\', false)">Atalet tensörü</button>'
     + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!!g.pointMass) + '" onclick="veMntWizNokta(\'' + k + '\', true)">Nokta kütle</button></div>';
-  var h = '<div class="ve-fw-ed">'
-    + _mwAlan('Tip', tip)
-    + _mwAlan('Ad', _mwInp(P + 'ad', g.ad, { text:true, baslik:'Ad' }))
-    + _mwAlan('Kütle [kg]' + _mwKaynakIsaret(g, 'mass'), _mwInp(P + 'mass', g.mass, { ph:'zorunlu', baslik:'Kütle' }))
-    + _mwAlan('CG [mm]' + _mwKaynakIsaret(g, 'cg'),
-        _mwInp(P + 'cgx', g.cgx, { ph:'x', baslik:'CG x' }) + _mwInp(P + 'cgy', g.cgy, { ph:'y', baslik:'CG y' })
-        + _mwInp(P + 'cgz', g.cgz, { ph:'z', baslik:'CG z' }), 've-mw-ed-xyz')
-    + _mwAlan('Atalet', nokta);
+  var atalet = _mwAlan('Model', nokta);
   if(!g.pointMass){
-    h += _mwAlan('I [kg·m²]' + _mwKaynakIsaret(g, 'I'),
-        _mwInp(P + 'Ixx', g.Ixx, { ph:'Ixx', baslik:'Ixx' }) + _mwInp(P + 'Iyy', g.Iyy, { ph:'Iyy', baslik:'Iyy' })
-        + _mwInp(P + 'Izz', g.Izz, { ph:'Izz', baslik:'Izz' }), 've-mw-ed-xyz')
-      + _mwAlan('Çarpım' + _mwKaynakIsaret(g, 'I'), _mwInp(P + 'Ixy', g.Ixy, { ph:'Ixy', baslik:'Ixy' }) + _mwInp(P + 'Ixz', g.Ixz, { ph:'Ixz', baslik:'Ixz' })
-        + _mwInp(P + 'Iyz', g.Iyz, { ph:'Iyz', baslik:'Iyz' }), 've-mw-ed-xyz');
+    atalet += _mwUclu('Eksenel <u>[kg·m²]</u>' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixx', 'Ixx'], ['Iyy', 'Iyy'], ['Izz', 'Izz']], ['xx', 'yy', 'zz'])
+      + _mwUclu('Çarpım <u>[kg·m²]</u>' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixy', 'Ixy'], ['Ixz', 'Ixz'], ['Iyz', 'Iyz']], ['xy', 'xz', 'yz']);
   }
+  var h = '<div class="ve-fw-ed ve-mw-ed">'
+    + _mwBolum('Kimlik', _mwAlan('Tip', tip) + _mwAlan('Ad', _mwInp(P + 'ad', g.ad, { text:true, baslik:'Ad' })))
+    + _mwBolum('Kütle ve ağırlık merkezi',
+        _mwAlan('Kütle <u>[kg]</u>' + _mwKaynakIsaret(g, 'mass'), _mwInp(P + 'mass', g.mass, { ph:'zorunlu', baslik:'Kütle' }))
+      + _mwUclu('CG <u>[mm]</u>' + _mwKaynakIsaret(g, 'cg'), P, g, [['cgx', 'CG x'], ['cgy', 'CG y'], ['cgz', 'CG z']], ['x', 'y', 'z']))
+    + _mwBolum('Atalet', atalet);
   h += '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizGovdeSil(\'' + k + '\')">'
     + _mwIkon('trash') + ' Sil</button></div></div>';
   return h;
@@ -2298,25 +2288,19 @@ function _mwTakozEditorHTML(t){
     var f = t['fit' + a], p = t['curve' + a];
     return (f && (f.form === 'poly' || f.form === 'asym')) || (Array.isArray(p) && p.length >= 2);
   });
-  var aynaOlur = Math.abs(_mwNum(t.y)) >= 1;
-  var h = '<div class="ve-fw-ed">'
-    + _mwAlan('Ad', _mwInp(P + 'ad', t.ad, { text:true, baslik:'Ad' }))
-    + _mwAlan('Konum [mm]' + _mwKaynakIsaret(t, 'konum'),
-        _mwInp(P + 'x', t.x, { ph:'x', baslik:'Konum x' }) + _mwInp(P + 'y', t.y, { ph:'y', baslik:'Konum y' })
-        + _mwInp(P + 'z', t.z, { ph:'z', baslik:'Konum z' }), 've-mw-ed-xyz')
-    + _mwAlan('Katalog', _mwKatalogSecHTML(t))
-    + (veMntWizTakozElle(t) ? '<div class="ve-mw-not">Rijitlik katalogdan farklı — elle girildi.</div>' : '')
-    + _mwAlan('Statik [N/mm]',
-        _mwInp(P + 'kxs', t.kxs, { ph:'kx', baslik:'Statik kx' }) + _mwInp(P + 'kys', t.kys, { ph:'ky', baslik:'Statik ky' })
-        + _mwInp(P + 'kzs', t.kzs, { ph:'kz', baslik:'Statik kz' }), 've-mw-ed-xyz')
-    + _mwAlan('Dinamik [N/mm]',
-        _mwInp(P + 'kxd', t.kxd, { ph:'kx', baslik:'Dinamik kx' }) + _mwInp(P + 'kyd', t.kyd, { ph:'ky', baslik:'Dinamik ky' })
-        + _mwInp(P + 'kzd', t.kzd, { ph:'kz', baslik:'Dinamik kz' }), 've-mw-ed-xyz')
-    + _mwAlan('Kapasite [kg]', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'isteğe bağlı', baslik:'Kapasite' }))
-    + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni · katalogdan</div>' : '')
+  var h = '<div class="ve-fw-ed ve-mw-ed">'
+    + _mwBolum('Kimlik', _mwAlan('Ad', _mwInp(P + 'ad', t.ad, { text:true, baslik:'Ad' })))
+    + _mwBolum('Konum <u>[mm]</u>' + _mwKaynakIsaret(t, 'konum'),
+        _mwUclu('Üst yüzeyin merkezi', P, t, [['x', 'Konum x'], ['y', 'Konum y'], ['z', 'Konum z']], ['x', 'y', 'z']))
+    + _mwBolum('Rijitlik <u>[N/mm]</u>',
+        _mwAlan('Katalog', _mwKatalogSecHTML(t))
+      + (veMntWizTakozElle(t) ? '<div class="ve-mw-not">Rijitlik katalogdan farklı — elle girildi.</div>' : '')
+      + _mwUclu('Statik', P, t, [['kxs', 'Statik kx'], ['kys', 'Statik ky'], ['kzs', 'Statik kz']], ['x', 'y', 'z'])
+      + _mwUclu('Dinamik', P, t, [['kxd', 'Dinamik kx'], ['kyd', 'Dinamik ky'], ['kzd', 'Dinamik kz']], ['x', 'y', 'z'])
+      + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni · katalogdan</div>' : ''))
+    + _mwBolum('Kapasite <u>[kg]</u>',
+        _mwAlan('Maks. yük', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'isteğe bağlı', baslik:'Kapasite' })))
     + '<div class="ve-fw-ed-ops">'
-    + '<button type="button" class="ve-fw-btn"' + (aynaOlur ? '' : ' disabled title="Takoz y = 0 düzleminde"')
-      + ' onclick="veMntWizTakozAyna(\'' + k + '\')">' + _mwIkon('arrow-left-right') + ' Aynalı eşini ekle</button>'
     + '<button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizTakozSil(\'' + k + '\')">' + _mwIkon('trash') + ' Sil</button>'
     + '</div></div>';
   return h;
@@ -2933,12 +2917,12 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizGo: veMntWizGo, veMntWizGoto: veMntWizGoto, veMntWizRender: veMntWizRender, veMntWizLive: veMntWizLive,
     veMntWizGovdeEkle: veMntWizGovdeEkle, veMntWizGovdeSil: veMntWizGovdeSil, veMntWizGovdeTip: veMntWizGovdeTip,
     veMntWizNokta: veMntWizNokta, veMntWizTakozEkle: veMntWizTakozEkle, veMntWizTakozSil: veMntWizTakozSil,
-    veMntWizTakozAyna: veMntWizTakozAyna, veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
+    veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
     veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
-    veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim, _mwAynaAd: _mwAynaAd,
+    veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim,
     _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
     _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML, veMntWizEylemHTML: veMntWizEylemHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,

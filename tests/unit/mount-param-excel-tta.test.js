@@ -9,7 +9,9 @@
 //   TEK YOL  — K blokunun ve Veri'deki HER tarama satırının yer değiştirmeleri, modları ve
 //              TR'si o kombinasyon modele uygulanıp Çözücü'yle çözülünce bulunanın aynısı
 //   TARAMA   — çözülen her kombinasyon bir satır; sağlanan kriter sayısı, sonra statik sehim
-//   PANO     — Sonuç'un önbelleği Veri'nin ilk satırı; süzgeç formülü Tarama'nın tamamını görür
+//   SONUÇ    — açılışta boş; Tarama'nın süzgecinde TEK satır kalınca o satırın sonucu
+//              (formüller hesaplanır: tests/helpers/xlsx-formul.js), iki satırda yine boş;
+//              Özet'in K'sı kendi sayfasını açar
 //   KOŞUCU   — dilim dilim, ilerleme eylem satırında; eskimiş taramadan Excel üretilmez
 const H = require('../helpers/takoz-dogrulama.js');
 const { cp, rp } = H.kur();
@@ -32,6 +34,7 @@ Object.keys(PS).forEach((k) => { if (global[k] === undefined) global[k] = PS[k];
 global.veIkon = global.veIkon || require('../../js/ikon.js').veIkon;
 global.veDurumIkon = global.veDurumIkon || require('../../js/ikon.js').veDurumIkon;
 const R = require('../../js/xlsx-read.js');
+const XF = require('../helpers/xlsx-formul.js');
 const K = global.veMntKatalog;
 
 // ONAY: Canlı Not'ta onaylanan Excel (R12) 10 Ton TTA'nın ilk kitabındaki üç takozlu
@@ -65,14 +68,26 @@ function coz(tip) {
 const kesinBit = () => { let b = 0; K.KISITLAR.forEach((Q, i) => { if (Q.zorunlu) b |= (1 << i) >>> 0; }); return b; };
 
 describe('SEÇİM ve ONAY', () => {
-  test('sayfalar: Özet, Tarama, Sonuç ve gizli Veri; konfigürasyon sayfası yok', () => {
-    expect(wb.sheets.map((s) => s.name)).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri']);
+  test('sayfalar: Özet, Tarama, Sonuç, K0–K9; gizli Veri ve Seçim; sekme çubuğu gizli', () => {
+    const KS = Array.from({ length: 10 }, (_, k) => 'K' + k);
+    expect(wb.sheets.map((s) => s.name)).toEqual(['Özet', 'Tarama', 'Sonuç'].concat(KS, ['Veri', 'Seçim']));
     const z = R.veXlsZipRead(bayt), w = R.veXlsUtf8(z.read('xl/workbook.xml'));
-    expect(w).toContain('name="Veri" sheetId="4" state="hidden"');
+    expect(w).toContain('name="Veri" sheetId="14" state="hidden"');
+    expect(w).toContain('name="Seçim" sheetId="15" state="hidden"');
+    expect((w.match(/state="hidden"/g) || [])).toHaveLength(2);
+    expect(w).toContain('showSheetTabs="0"');
+    // Özet'in K ve ad hücresi kendi K sayfasına; Tarama'ya ve Tarama'dan Sonuç'a düğme
+    const s1 = R.veXlsUtf8(z.read('xl/worksheets/sheet1.xml'));
+    KS.forEach((k, i) => {
+      expect(s1).toContain('<hyperlink ref="B' + (7 + i) + '" location="\'' + k + '\'!A1"/>');
+      expect(s1).toContain('<hyperlink ref="C' + (7 + i) + '" location="\'' + k + '\'!A1"/>');
+    });
+    expect(s1).toContain('<hyperlink ref="C4" location="\'Tarama\'!A1"/>');
+    expect(R.veXlsUtf8(z.read('xl/worksheets/sheet2.xml'))).toContain('<hyperlink ref="F3" location="\'Sonuç\'!A1"/>');
   });
 
   test('K1–K9: onaylanan R12\'nin dokuzu, statik sehim küçükten büyüğe; K1 en uygun, kalanı uygun', () => {
-    const oz = satirlar('Özet').slice(5, 14);
+    const oz = satirlar('Özet').slice(7, 16);
     expect(oz.map((r) => r[3] + ' + ' + r[4]).sort()).toEqual([
       'Cone 39 40 ShA (AMC 137981) + 57RS313773 (A26)', 'LMT-1433-00 40 ShA + Cone 39 50 ShA (AMC 137982)',
       'LMT-1433-00 55 ShA + 57RS313773 (A26)', 'LMT-1433-00 55 ShA + Cone 39 50 ShA (AMC 137982)',
@@ -89,37 +104,40 @@ describe('SEÇİM ve ONAY', () => {
 
   test('statik sehim taramanın ölçüsü (δ_s = max |δz|, 1 g) ve K0 kesin kriteri bozuyor', () => {
     const m = ad2key(), oz = satirlar('Özet');
-    oz.slice(5, 14).forEach((r) => {
+    oz.slice(7, 16).forEach((r) => {
       const x = ent.D.indeks([r[3], r[4]].map((ad) => ent.D.adaylar.findIndex((a) => a.key === m[ad])));
       expect(r[6]).toBeCloseTo(ent.D.d[x], 9);
     });
-    expect(oz[4].slice(1, 6)).toEqual(['K0', 'K0 Mevcut', '57RS313774', '57RS313773', 'Uygun değil']);
-    expect(oz[4].slice(7, 11)).toEqual(['Uygun', 'Uygun', 'Uygun değil', 'Uygun']);
+    expect(oz[6].slice(1, 6)).toEqual(['K0', 'K0 Mevcut', '57RS313774', '57RS313773', 'Uygun değil']);
+    expect(oz[6].slice(7, 11)).toEqual(['Uygun', 'Uygun', 'Uygun değil', 'Uygun']);
   });
 });
 
 describe('TEK YOL — Excel Çözücü\'nün bulduğu', () => {
-  test('K1 bloku: 14 yük durumunda üç takozun X/Y/Z yer değiştirmesi, altı mod ve TR birebir', () => {
-    const son = satirlar('Sonuç');
-    const b = son.findIndex((r) => typeof r[2] === 'string' && r[2].startsWith('K1 — '));
-    expect(b).toBeGreaterThan(40);
-    const m = ad2key(), tip = [m['TK040 45 ShA (57RS329001M)'], m['Cone 121 NP 55 ShA (AMC 137829)']];
-    const Rk = coz(tip);
+  test('K0–K9 sayfaları: 14 yük durumunda üç takozun X/Y/Z yer değiştirmesi, altı mod ve TR birebir', () => {
+    const m = ad2key(), oz = satirlar('Özet');
     let n = 0;
-    Rk.allCases.slice(0, 14).forEach((rc, q) => {
-      const r = son[b + 7 + q];
-      expect(r[2]).toBe(rc.name);
-      rc.res.perMount.forEach((pm, i) => [0, 1, 2].forEach((j) => {
-        expect(Math.abs(r[3 + 4 * i + j] - pm.delta[j] * 1000)).toBeLessThan(1e-9); n++;
-      }));
-    });
-    expect(n).toBe(14 * 9);
-    const mh = b + 7 + 14 + 4;
-    expect(son[mh][1]).toBe('Mod');
-    Rk.modes.forEach((md, i) => expect(Math.abs(son[mh + 1 + i][3] - md.f_Hz)).toBeLessThan(1e-9));
-    expect(son[mh + 6 + 3][1]).toBe('TR (%)');
-    expect(Math.abs(son[mh + 6 + 3][2] - rp._mntRepIsolation(Rk, rp.veMntRaporOpts()).T * 100)).toBeLessThan(1e-9);
-  });
+    for (let k = 0; k <= 9; k++) {
+      const son = satirlar('K' + k), r0 = oz[6 + k];
+      expect(r0[1]).toBe('K' + k);
+      expect(son[1][2]).toBe('K' + k + ' — Ön takoz: ' + r0[3] + ' · Sağ/Sol arka takoz: ' + r0[4]);
+      const Rk = k ? coz([m[r0[3]], m[r0[4]]]) : H.coz(JSON.parse(JSON.stringify(TOPO)));   // K0: modelin kendisi
+      const b = 1;
+      Rk.allCases.slice(0, 14).forEach((rc, q) => {
+        const r = son[b + 7 + q];
+        expect(r[2]).toBe(rc.name);
+        rc.res.perMount.forEach((pm, i) => [0, 1, 2].forEach((j) => {
+          expect(Math.abs(r[3 + 4 * i + j] - pm.delta[j] * 1000)).toBeLessThan(1e-9); n++;
+        }));
+      });
+      const mh = b + 7 + 14 + 4;
+      expect(son[mh][1]).toBe('Mod');
+      Rk.modes.forEach((md, i) => expect(Math.abs(son[mh + 1 + i][3] - md.f_Hz)).toBeLessThan(1e-9));
+      expect(son[mh + 6 + 3][1]).toBe('TR (%)');
+      expect(Math.abs(son[mh + 6 + 3][2] - rp._mntRepIsolation(Rk, rp.veMntRaporOpts()).T * 100)).toBeLessThan(1e-9);
+    }
+    expect(n).toBe(10 * 14 * 9);
+  }, 60000);
 
   test('Veri: örneklenen tarama satırlarının tam sonucu Çözücü\'nün (mm/100 · 0,001 Hz)', () => {
     const veri = satirlar('Veri'), ta = satirlar('Tarama'), m = ad2key();
@@ -151,7 +169,7 @@ describe('TARAMA', () => {
     expect(L).toHaveLength(576);
     const iK = ta[4].indexOf('Kriter 1'), iD = ta[4].indexOf('Statik sehim [mm]'), iH = ta[4].indexOf('Dört kriter');
     expect(L.filter((r) => r[iH] === 'Uygun')).toHaveLength(9);
-    const oz = satirlar('Özet').slice(5, 14);
+    const oz = satirlar('Özet').slice(7, 16);
     expect(L.slice(0, 9).map((r) => r[1] + ' + ' + r[2])).toEqual(oz.map((r) => r[3] + ' + ' + r[4]));
     const gec = (r) => r.slice(iK, iK + 4).filter((v) => v === '✓').length;
     for (let i = 1; i < L.length; i++) {
@@ -166,17 +184,64 @@ describe('TARAMA', () => {
   });
 });
 
-describe('PANO — Sonuç\'un seçili kombinasyonu', () => {
-  test('önbellek Veri\'nin ilk satırı (K1 ile aynı kombinasyon); süzgeç formülü Tarama\'nın 576 satırını görür', () => {
-    const son = satirlar('Sonuç'), veri = satirlar('Veri');
-    expect(son[1][2]).toBe('No 1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
-    expect([son[5][3], son[7][3]]).toEqual([1, 1]);
-    const t = String(veri[1][veri[0].indexOf('Static [mm/100]')]).split(';').map(Number);
-    expect(son[15][2]).toBe('Static');
-    [0, 1, 2].forEach((i) => [0, 1, 2].forEach((j) => expect(son[15][3 + 4 * i + j]).toBeCloseTo(t[3 * i + j] / 100, 9)));
-    const z = R.veXlsZipRead(bayt), s3 = R.veXlsUtf8(z.read('xl/worksheets/sheet3.xml'));
-    expect(s3).toContain('SUBTOTAL(103,OFFSET(\'Tarama\'!$A$6,ROW(\'Tarama\'!$A$6:$A$581)-ROW(\'Tarama\'!$A$6),0))');
-    expect(s3).toContain('INDEX(\'Veri\'!$X$2:$X$577,$D$6)');
+describe('SONUÇ — Tarama\'nın süzgecinde kalan tek satır', () => {
+  const BOS = 'Tarama’da süzgeçle tek satır bırakın.';
+  // Sonuç'un formüllü hücreleri, Tarama'nın görünen satırlarıyla HESAPLANIR (önbellek değil).
+  const panel = (gorunen) => {
+    const gizli = gorunen ? (ad, r) => ad === 'Tarama' && r >= 6 && !gorunen.includes(r - 5) : null;
+    const O = XF.dosyaOrtami(R, bayt, gizli);
+    return { O, d: (r, c) => O.oku('Sonuç', r, c), F: O.formuller('Sonuç') };
+  };
+  test('açılışta boş: başlık yönlendirme, öteki her formül boş; önbellek de öyle', () => {
+    const P = panel(null), son = satirlar('Sonuç');
+    expect(P.d(2, 3)).toBe(BOS);
+    expect(son[1][2]).toBe(BOS);
+    expect(P.F.size).toBeGreaterThan(14 * 9);
+    P.F.forEach((f, k) => {
+      const [r, c] = k.split(',').map(Number);
+      if (r === 2 && c === 3) return;
+      expect([k, P.d(r, c)]).toEqual([k, '']);
+      expect([k, son[r - 1][c - 1] == null ? '' : son[r - 1][c - 1]]).toEqual([k, '']);
+    });
+    expect(XF.dosyaOrtami(R, bayt, null).oku('Seçim', 1, 1)).toBe(576);
+  });
+
+  test('tek satır kalınca o satır: başlık, kriterler, 14 yük durumu × üç takoz × X/Y/Z, modlar ve TR Çözücü\'nün', () => {
+    const ta = satirlar('Tarama'), m = ad2key(), iD = ta[4].indexOf('Statik sehim [mm]');
+    let n = 0;
+    [1, 9, 137, 576].forEach((no) => {
+      const P = panel([no]), tr = ta[4 + no];
+      expect(P.d(2, 3)).toBe('No ' + no + ' — Ön takoz: ' + tr[1] + ' · Sağ/Sol arka takoz: ' + tr[2]);
+      expect([P.d(7, 4), P.d(7, 5), P.d(7, 6), P.d(7, 7)]).toEqual(tr.slice(ta[4].indexOf('Kriter 1'), ta[4].indexOf('Kriter 1') + 4));
+      expect(P.d(7, 10)).toBeCloseTo(tr[iD], 3);
+      [0, 1, 2].forEach((i) => expect(P.d(9, 4 + 4 * i)).toBe([tr[1], tr[2], tr[2]][i]));
+      const Rz = coz([m[tr[1]], m[tr[2]]]);
+      Rz.allCases.slice(0, 14).forEach((rc, q) => {
+        expect(P.d(12 + q, 3)).toBe(rc.name);
+        rc.res.perMount.forEach((pm, i) => [0, 1, 2].forEach((j) => {
+          expect(Math.abs(P.d(12 + q, 4 + 4 * i + j) - pm.delta[j] * 1000)).toBeLessThanOrEqual(0.005 + 1e-9); n++;
+        }));
+      });
+      const mh = 5 + 7 + 14 + 4, f = Rz.modes.map((md) => md.f_Hz).sort((a, b) => a - b);
+      f.forEach((v, j) => expect(Math.abs(P.d(mh + 1 + j, 4) - v)).toBeLessThanOrEqual(0.0005 + 1e-12));
+      expect(Math.abs(P.d(mh + 6 + 3, 3) - rp._mntRepIsolation(Rz, rp.veMntRaporOpts()).T * 100)).toBeLessThan(1e-4);
+    });
+    expect(n).toBe(4 * 14 * 9);
+  }, 60000);
+
+  test('iki satır görünürken yine boş (yalnız tek satır gösterilir)', () => {
+    const P = panel([1, 2]);
+    expect(P.O.oku('Seçim', 1, 1)).toBe(2);
+    expect(P.O.oku('Seçim', 2, 1)).toBe('');
+    expect(P.d(2, 3)).toBe(BOS);
+    expect([P.d(12, 4), P.d(7, 4), P.d(9, 4)]).toEqual(['', '', '']);
+  });
+
+  test('formüller Tarama\'nın 576 satırını ve Veri\'nin 576 satırını görür', () => {
+    const z = R.veXlsZipRead(bayt);
+    const sec = R.veXlsUtf8(z.read('xl/worksheets/sheet15.xml')), s3 = R.veXlsUtf8(z.read('xl/worksheets/sheet3.xml'));
+    expect(sec).toContain('SUBTOTAL(103,OFFSET(\'Tarama\'!$A$6,ROW(\'Tarama\'!$A$6:$A$581)-ROW(\'Tarama\'!$A$6),0))');
+    expect(s3).toContain('INDEX(\'Veri\'!$X$2:$X$577,\'Seçim\'!$A$2)');
   });
 });
 
@@ -186,7 +251,8 @@ describe('AD ve DOSYA', () => {
     z.names.forEach((ad) => {
       const m = R.veXlsUtf8(z.read(ad));
       expect([ad, /ASR/.test(m)]).toEqual([ad, false]);
-      if (/worksheets\/sheet[123]\.xml$/.test(ad)) {
+      const no = /worksheets\/sheet(\d+)\.xml$/.exec(ad);
+      if (no && +no[1] <= 13) {                                        // görünen sayfalar: Özet · Tarama · Sonuç · K0–K9
         expect(m).toContain('showGridLines="0"');
         expect(m).toContain('zeroHeight="1"');
       }

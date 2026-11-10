@@ -194,6 +194,47 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
   // gerektiğini talimat gibi yazsak … Adım eksikliklerini de ekleyelim. Yani güzel ayrı bir yapı
   // olsun."*): adım listesinin altında açık adımın talimatı ve eksikleri. Önce eksikler girdilerin
   // sütunundaydı (Başlangıç ve Özet'te hiç yoktu) ve talimat yoktu; şimdi tek yerde, beş adımda da.
+  // DÜZENLEYİCİ BÖLÜMLÜ (kullanıcı 2026-11-10, Canlı Not 117 · 118: *"Çok düz olmuş … Başlıklar yok,
+  // bold yazılar yok. Neyin ne olduğu belli olmadığı için karışık duruyor"* · *"Diğer kısımları da"*):
+  // Seçili gövde ve Seçili takoz başlıklı bölümlerde; üçlünün her kutusu kendi eksenini taşır.
+  test('DÜZENLEYİCİ BÖLÜMLÜ: gövde ve takoz düzenleyicisinde başlıklı bölümler, kalın etiket, üçlüde eksen', () => {
+    W.veMntWizAc();
+    const bolumler = () => [...document.querySelectorAll('#ve-mw-yan .ve-mw-ed > .ve-mw-ed-bolum > .ve-mw-ed-bas')].map((b) => b.textContent);
+    const eksenler = () => [...document.querySelectorAll('#ve-mw-yan .ve-mw-ed .ve-mw-ed-xyz')].map((r) => [...r.querySelectorAll('.ve-mw-eks > i')].map((i) => i.textContent));
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'govde'));
+    W.veMntWizGovdeEkle('mnt-motor');
+    expect(bolumler()).toEqual(['Kimlik', 'Kütle ve ağırlık merkezi', 'Atalet']);
+    expect(eksenler()).toEqual([['x', 'y', 'z'], ['xx', 'yy', 'zz'], ['xy', 'xz', 'yz']]);
+    // her kutu kendi etiketinin içinde: ekran okuyucunun adı girdide
+    [...document.querySelectorAll('#ve-mw-yan .ve-mw-eks')].forEach((l) => {
+      expect(l.querySelector('input.ve-fw-inp').getAttribute('aria-label')).toBeTruthy();
+      expect(l.querySelector('i').getAttribute('aria-hidden')).toBe('true');
+    });
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'takoz'));
+    W.veMntWizTakozEkle();
+    expect(bolumler()).toEqual(['Kimlik', 'Konum [mm]', 'Rijitlik [N/mm]', 'Kapasite [kg]']);
+    expect(eksenler()).toEqual([['x', 'y', 'z'], ['x', 'y', 'z'], ['x', 'y', 'z']]);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-ed \.ve-fw-ed-alan > span:first-child\{ font-weight:600;/);
+    expect(css).toMatch(/\.ve-mw-ed-bas\{[^}]*text-transform:uppercase/);
+    W.veMntWizKapat(false);
+  });
+
+  // TAKOZ İŞLEMLERİ (kullanıcı 2026-11-10, Canlı Not 120: *"'Aynalı Eşini Ekle' gibi bir saçmalığı
+  // kaldıralım."*): takozun düzenleyicisinde yalnız Sil; takoz Takoz ekle ile eklenir.
+  test('TAKOZ İŞLEMLERİ: Aynalı eşini ekle yok — düzenleyicide yalnız Sil, listede Takoz ekle; talimatta da yok', () => {
+    W.veMntWizAc();
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'takoz'));
+    W.veMntWizTakozEkle();
+    const yan = document.getElementById('ve-mw-yan');
+    const ops = [...yan.querySelectorAll('.ve-fw-ed-ops')].map((o) => [...o.querySelectorAll('button')].map((b) => b.textContent.trim()));
+    expect(ops).toEqual([['Takoz ekle'], ['Sil']]);
+    expect(yan.textContent).not.toMatch(/Aynal/);
+    expect(W.veMntWizTakozAyna).toBeUndefined();
+    expect(W.VE_MW_STEPS.find((x) => x.key === 'takoz').talimat.join(' ')).not.toMatch(/Aynal/);
+    W.veMntWizKapat(false);
+  });
+
   test('TALİMAT: adım listesinin altında açık adımın talimatı ve eksikleri; eksikler sütunda ikinci kez yok', () => {
     W.veMntWizAc();
     W.VE_MW_STEPS.forEach((s) => {

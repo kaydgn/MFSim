@@ -31,16 +31,19 @@
 //     dinamik rijitlik frekansa bağlı (katalog s.36–37): oran YAZILMADI.
 //   • RADYAL RİJİTLİK (kx, ky) YAYIMLANMIYOR — "Our Technical Department can
 //     provide you with the elastical constants for each axis". Yalnız AMC-EO
-//     dökümündeki 10 kodda var (EO tablosu); öteki kodlarda BOŞ: kütüphanede
-//     eksik tip, Takoz Özellikleri'nden girilir, taramaya aday olmaz.
+//     dökümündeki 10 kodda ve teknik resimlerin 3 kodunda ölçülü (EO · RESIM);
+//     öteki kodlarda TAHMİNİ (aşağıda
+//     RADYAL TAHMİN — Canlı Not 113): tip çözülür, Takoz Özellikleri'nde girilen
+//     değer tahminin yerine geçer; tahminli tip taramaya aday olmaz.
 //   • DSM çift rijitlikli (ön sıkıştırma · statik · dinamik bölge): yük–sehim
 //     eğrisi doğrusal değil, kz YAZILMADI.
 //   • BMC TEKNİK RESİMLERİ (kullanıcı 2026-11-10, dokuz resim): AMC'nin kendi
 //     çizimi + kodun veri kutusu (RESIM tablosu, aşağıda). Grafik kz'si resmin
 //     Z'siyle beş kodun beşinde birebir — sayısallaştırmanın bağımsız doğrulaması.
-//   • GÖRSELLER — tipin ölçülü çizimi ve ailenin fotoğrafları, üreticinin
-//     sitesinden: assets/takoz/amc/ (tools/takoz-gorsel.js üretir, elle
-//     düzenlenmez); derleme gömer (build.js → __MFSIM_TAKOZ).
+//   • GÖRSEL — yalnız tipin TEKNİK RESMİ (ölçülü çizim), üreticinin sitesinden:
+//     assets/takoz/amc/ (tools/takoz-gorsel.js üretir, elle düzenlenmez);
+//     derleme gömer (build.js → __MFSIM_TAKOZ). Ürün ve uygulama fotoğrafları
+//     YOK (kullanıcı 2026-11-10, Canlı Not 111: "Sadece teknik resmi kalsa yeter").
 //
 // ANAHTAR 'amc' + kod — kayıtlı projeler takozu node.data.libKey ile bağlar,
 // DEĞİŞMEZ. Ad: "<ürün> <sertlik> ShA (AMC <kod>)"; sertliği yazılmayan üründe
@@ -50,13 +53,13 @@
 var VE_MNT_AMC = (function() {
   'use strict';
 
-  // aile → [üreticinin aile adı, ürün fotoğrafı, uygulama fotoğrafı sayısı]
+  // aile → [üreticinin aile adı]
   var AILE = {
-    masif:    ['Solid cone', 'urun-masif', 9],
-    kesikli:  ['Cone with cutouts', 'urun-kesikli', 6],
-    flansli:  ['Cone with fixation flange', 'urun-flansli', 6],
-    hidrolik: ['Hydraulic cone', 'urun-hidrolik', 0],
-    dsm:      ['DSM (dual stiffness mount)', 'urun-dsm', 0]
+    masif:    ['Solid cone'],
+    kesikli:  ['Cone with cutouts'],
+    flansli:  ['Cone with fixation flange'],
+    hidrolik: ['Hydraulic cone'],
+    dsm:      ['DSM (dual stiffness mount)']
   };
   // tip → [aile, ürün adı, çizim, sıkma torku maks. (N·m), ağırlık (g)] — sitedeki tablo
   var TIP = {
@@ -336,29 +339,145 @@ var VE_MNT_AMC = (function() {
     var k = KOD[kod], t = TIP[k[0]];
     return t[1] + (k[1] != null ? ' ' + k[1] + ' ShA' : '') + ' (AMC ' + kod + ')';
   }
-  // Kütüphane girdisi (VE_MOUNT_LIBRARY biçimi). Bilinmeyen eksen null: çözücü
-  // boş rijitliği reddeder, Takoz penceresi eksik der.
+  // ── RADYAL TAHMİN (kullanıcı 2026-11-10, Canlı Not 113: *"X ve Y eksenlerinde
+  // değerlerimiz yok. Programın çözmesi gerek, yani program reddeder diye bir kıstas
+  // olmaması lazım"*). Radyal değeri yayımlanmayan kodda kx = rx·kz, ky = ry·kz
+  // (5 N/mm'ye yuvarlı), dinamik = statik × kodun din./stat. oranı (eksenelinkiyle
+  // aynı). Oran AMC'nin KENDİ ölçümünden: AMC-EO dökümü + teknik resimlerin kutuları
+  // (RESIM; EO'dakiler bir kez sayılır). Aynı tipte oran SERTLİKLE değişebilir:
+  // Cone 39'da az (1,86 · 1,91 · 1,78), resimlerde çok (Cone 38 x: 40 ShA 2,67 ·
+  // 60 ShA 1,57 · 70 ShA 1,46; Cone 31 60 ShA 2,74 · 70 ShA 1,72) — kodun oranı
+  // tipin ölçülmüş sertlikleri arasında DOĞRUSAL ara değer, dışında en yakın ölçülmüş
+  // sertliğinki (öteleme yok); bir sertliği dışarıda bırakan sınamada ortalamadan
+  // yakın (kapı). Sıra: aynı tipin ölçümü → aynı ailenin ölçülmüş tiplerinin
+  // medyanı (tip ortalaması, eksen başına; kesikli konide x ≠ y) → bütün ölçülmüş
+  // tiplerin medyanı (x = y). Hidrolik konide din./stat. yayımlanmıyor: ailenin
+  // ölçümü (177296: 2,0). DSM'de kz yok, tahmin de yok. Tahmin edilen alanlar
+  // girdinin `tahmin` dizisinde; Takoz Özellikleri'nde girilen değer o alanı
+  // tahminden çıkarır, kalan tahmin girilen değerden yeniden kurulur (tamamla).
+  // Kapı: tests/unit/mount-amc.test.js → *RADYAL TAHMİN*.
+  // Kodun ölçülmüş statik üçlüsü ve belgesi (EO önce; resimde yeni olan kutular).
+  function olcum(kod) {
+    if (EO[kod]) return { s: EO[kod][0], belge: 'AMC-EO' };
+    var r = RESIM[kod];
+    return (r && r.s) ? { s: r.s, belge: 'AMC çizimi' } : null;
+  }
+  var ORAN = (function() {
+    var ort = function(v) { return v.reduce(function(t, x) { return t + x; }, 0) / v.length; };
+    var med = function(v) {
+      v = v.slice().sort(function(a, b) { return a - b; });
+      var n = v.length; return n % 2 ? v[(n - 1) / 2] : (v[n / 2 - 1] + v[n / 2]) / 2;
+    };
+    var olc = {}, din = {};
+    Object.keys(KOD).forEach(function(kod) {
+      var o = olcum(kod); if (!o) return;
+      var t = KOD[kod][0], s = o.s;
+      (olc[t] = olc[t] || []).push({ kod: kod, sh: KOD[kod][1], x: s[0] / s[2], y: s[1] / s[2], belge: o.belge });
+    });
+    // din./stat. yalnız dinamiği ölçülen EO'dan (yalnız hidrolik okur; NR'de kodun oranı)
+    Object.keys(EO).forEach(function(kod) {
+      var s = EO[kod][0], d = EO[kod][1], a = TIP[KOD[kod][0]][0];
+      (din[a] = din[a] || []).push(ort([d[0] / s[0], d[1] / s[1], d[2] / s[2]]));
+    });
+    var tip = {}, aile = {}, tum = [];
+    var belgeler = function(L) { return ['AMC-EO', 'AMC çizimi'].filter(function(b) { return L.some(function(o) { return o.belge === b; }); }); };
+    Object.keys(olc).forEach(function(t) {
+      var L = olc[t].sort(function(a, b) { return (a.sh || 0) - (b.sh || 0); });
+      var r = { x: ort(L.map(function(o) { return o.x; })), y: ort(L.map(function(o) { return o.y; })), n: L.length, olc: L, belge: belgeler(L) };
+      tip[t] = r;
+      var a = TIP[t][0]; (aile[a] = aile[a] || []).push(r);
+      tum.push(r);
+    });
+    var A = {};
+    Object.keys(aile).forEach(function(a) {
+      var R = aile[a];
+      A[a] = { x: med(R.map(function(r) { return r.x; })), y: med(R.map(function(r) { return r.y; })), n: R.length,
+               belge: belgeler([].concat.apply([], R.map(function(r) { return r.olc; }))) };
+    });
+    var D = {};
+    Object.keys(din).forEach(function(a) { D[a] = ort(din[a]); });
+    var hx = med(tum.map(function(r) { return (r.x + r.y) / 2; }));
+    return { tip: tip, aile: A, hepsi: { x: hx, y: hx, n: tum.length, belge: belgeler([].concat.apply([], tum.map(function(r) { return r.olc; }))) }, din: D };
+  })();
+  // Tipin oranı kodun sertliğinde: ölçülmüş sertlikler arasında doğrusal, dışında en
+  // yakınınki; sertliği yazılmayan kodda (ya da ölçümde) tipin ortalaması.
+  function tipOrani(T, sh) {
+    var L = T.olc, son = L[L.length - 1];
+    if (sh == null || L.some(function(o) { return o.sh == null; })) return { x: T.x, y: T.y, sh: null, olc: L };
+    if (sh <= L[0].sh) return { x: L[0].x, y: L[0].y, sh: [L[0].sh], olc: [L[0]] };
+    if (sh >= son.sh) return { x: son.x, y: son.y, sh: [son.sh], olc: [son] };
+    for (var i = 0; i < L.length - 1; i++) {
+      var a = L[i], b = L[i + 1];
+      if (sh >= a.sh && sh <= b.sh) {
+        var u = (sh - a.sh) / (b.sh - a.sh);
+        return { x: a.x + u * (b.x - a.x), y: a.y + u * (b.y - a.y), sh: [a.sh, b.sh], olc: [a, b] };
+      }
+    }
+    return { x: T.x, y: T.y, sh: null, olc: L };
+  }
+  var bes = function(v) { return Math.max(5, Math.round(v / 5) * 5); };
+  // Kodun tahmin oranı: { x, y, din, kaynak:{ tur:'tip'|'aile'|'hepsi', ad, n, sh, belge } } —
+  // ölçülü kodda null. sh: oranın alındığı ölçülmüş sertlik(ler) (tipte).
+  function tahminOrani(kod) {
+    var k = KOD[kod]; if (!k || olcum(kod)) return null;
+    var t = k[0], a = TIP[t][0], r, kaynak;
+    if (ORAN.tip[t]) {
+      r = tipOrani(ORAN.tip[t], k[1]);
+      kaynak = { tur: 'tip', ad: TIP[t][1], n: ORAN.tip[t].n, sh: r.sh,
+                 belge: ['AMC-EO', 'AMC çizimi'].filter(function(b) { return r.olc.some(function(o) { return o.belge === b; }); }) };
+    }
+    else if (ORAN.aile[a]) { r = ORAN.aile[a]; kaynak = { tur: 'aile', ad: AILE[a][0], n: r.n, belge: r.belge }; }
+    else { r = ORAN.hepsi; kaynak = { tur: 'hepsi', ad: null, n: r.n, belge: r.belge }; }
+    var dn = k[4] != null ? k[4] : (ORAN.din[a] != null ? Math.round(ORAN.din[a] * 100) / 100 : null);
+    return { x: Math.round(r.x * 1000) / 1000, y: Math.round(r.y * 1000) / 1000, din: dn, dinTahmin: k[4] == null && dn != null, kaynak: kaynak };
+  }
+  // Tahminli alanları girdinin KENDİ eksenelinden yeniden kur (girilmiş değer tahmin değil).
+  function tamamla(e) {
+    var R = e && e.amc && e.amc.radyal, T = e && e.tahmin;
+    if (!R || !T || !T.length || !(e.sz > 0)) return e;
+    var var_ = function(f) { return T.indexOf(f) >= 0; };
+    if (var_('sx')) e.sx = bes(R.x * e.sz);
+    if (var_('sy')) e.sy = bes(R.y * e.sz);
+    if (R.din != null) {
+      if (var_('dz')) e.dz = Math.round(e.sz * R.din);
+      if (var_('dx') && e.sx > 0) e.dx = Math.round(e.sx * R.din);
+      if (var_('dy') && e.sy > 0) e.dy = Math.round(e.sy * R.din);
+    }
+    return e;
+  }
+
+  // Kütüphane girdisi (VE_MOUNT_LIBRARY biçimi). Radyal yayımlanmayan kodda tahmin
+  // (`tahmin` alanları, `amc.radyal` oranı); kz'si olmayan kodda (DSM) eksen null:
+  // çözücü boş rijitliği reddeder, Takoz penceresi eksik der.
   // Kütüphanenin marka grubu (cp-mount.js → VE_MNT_LIB_MARKALAR'ın ilki, Canlı Not 106).
   var MARKA = 'AMC Mecanocaucho';
   function girdi(kod) {
     var k = KOD[kod]; if (!k) return null;
     var t = TIP[k[0]], eo = EO[kod], kz = k[3], din = k[4], r = RESIM[kod] || null, rs = r && r.s;
     var e = { marka: MARKA, name: ad(kod), maxLoad: k[2] };
-    if (eo) {
-      e.sx = eo[0][0]; e.sy = eo[0][1]; e.sz = eo[0][2]; e.dx = eo[1][0]; e.dy = eo[1][1]; e.dz = eo[1][2];
-    } else if (rs) {
-      var dn = (r.din != null) ? r.din : din;
-      e.sx = rs[0]; e.sy = rs[1]; e.sz = rs[2];
-      e.dx = Math.round(rs[0] * dn); e.dy = Math.round(rs[1] * dn); e.dz = Math.round(rs[2] * dn);
-    } else {
-      e.sx = null; e.sy = null; e.sz = (kz != null ? kz : null);
-      e.dx = null; e.dy = null; e.dz = (kz != null && din != null) ? Math.round(kz * din) : null;
-    }
-    // Eğri model konvansiyonunda (δ < 0 = BASMA): [−δ, −F] … [0, 0].
-    if (r && r.egriZ) e.curves = { z: r.egriZ.slice().reverse().map(function(p) { return [-p[0], -p[1]]; }).concat([[0, 0]]) };
     e.amc = { kod: kod, tip: k[0], aile: t[0], sh: k[1], tork: t[3], gr: t[4],
               kzKaynak: eo ? (kod === '137829' ? 'bmc' : 'eo') : (rs ? 'resim' : k[5]), kzGrafik: kz, din: din,
               sonum: (r && r.sonum != null) ? r.sonum : null };
+    // Eğri model konvansiyonunda (δ < 0 = BASMA): [−δ, −F] … [0, 0].
+    if (r && r.egriZ) e.curves = { z: r.egriZ.slice().reverse().map(function(p) { return [-p[0], -p[1]]; }).concat([[0, 0]]) };
+    if (eo) {
+      e.sx = eo[0][0]; e.sy = eo[0][1]; e.sz = eo[0][2]; e.dx = eo[1][0]; e.dy = eo[1][1]; e.dz = eo[1][2];
+      return e;
+    }
+    if (rs) {
+      var dn = (r.din != null) ? r.din : din;
+      e.sx = rs[0]; e.sy = rs[1]; e.sz = rs[2];
+      e.dx = Math.round(rs[0] * dn); e.dy = Math.round(rs[1] * dn); e.dz = Math.round(rs[2] * dn);
+      return e;
+    }
+    e.sx = null; e.sy = null; e.sz = (kz != null ? kz : null);
+    e.dx = null; e.dy = null; e.dz = (kz != null && din != null) ? Math.round(kz * din) : null;
+    var R = kz != null ? tahminOrani(kod) : null;
+    if (R) {
+      e.amc.radyal = R;
+      e.tahmin = ['sx', 'sy'].concat(R.din != null ? ['dx', 'dy'] : []).concat(R.dinTahmin ? ['dz'] : []);
+      tamamla(e);
+    }
     return e;
   }
   // Bütün kodlar, ailenin/tipin/sertliğin sırasıyla (eski 10 kod da yerinde).
@@ -376,17 +495,16 @@ var VE_MNT_AMC = (function() {
     var G = (typeof window !== 'undefined' && window.__MFSIM_TAKOZ) || null;
     return (G && G[rel]) || ('assets/' + rel);
   }
-  // Künye: Takoz Özellikleri'nin gösterdiği veri ve görseller.
+  // Künye: Takoz Özellikleri'nin gösterdiği veri ve tipin teknik resmi.
   function kunye(kod) {
     var k = KOD[kod]; if (!k) return null;
-    var t = TIP[k[0]], a = AILE[t[0]], e = girdi(kod), uyg = [];
-    for (var i = 1; i <= a[2]; i++) uyg.push(gorsel('uyg-' + t[0] + '-' + i));
+    var t = TIP[k[0]], a = AILE[t[0]], e = girdi(kod);
     return { kod: kod, ad: e.name, urun: t[1], aile: a[0], sh: k[1], maxLoad: k[2], tork: t[3], gr: t[4],
-             cizim: gorsel('cizim-' + t[2]), foto: gorsel(a[1]), uyg: uyg,
-             kaynak: KAYNAK[e.amc.kzKaynak] || null, sonum: e.amc.sonum, egriZ: !!e.curves };
+             cizim: gorsel('cizim-' + t[2]), kaynak: KAYNAK[e.amc.kzKaynak] || null, sonum: e.amc.sonum, egriZ: !!e.curves };
   }
   return { MARKA: MARKA, AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, RESIM: RESIM, ESKI: ESKI, KAYNAK: KAYNAK,
-           ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye };
+           ORAN: ORAN, ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye,
+           olcum: olcum, tipOrani: tipOrani, tahminOrani: tahminOrani, tamamla: tamamla };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = VE_MNT_AMC;

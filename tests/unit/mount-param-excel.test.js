@@ -5,12 +5,14 @@
 // Kullanıcı kararları: 2026-11-09 "Kullanıcı bu Excel formatında çıktı alacak" (düzen
 // Canlı Not'ta 19 notla, 10 Ton TTA, R12); 2026-11-10 sıralamanın ana ölçütü statik
 // sehim, Tarama'nın her satırının sonucu görülebilir, K sonuçları açık sayfa değil. Kapılar:
-//   DÜZEN     — Özet · Tarama · Sonuç · gizli Veri; K sayfası YOK; Özet'in sütunları ve
-//               başlık notları; ızgara kapalı; kullanılmayan satır/sütun gizli
+//   DÜZEN     — Özet · Tarama · Sonuç · K0…Kn · gizli Veri · gizli Seçim; sekme çubuğu gizli
+//               (kullanıcı 2026-11-10: Sonuç açılışta boş, tıklanan konfigürasyon yalnız o);
+//               Özet'in sütunları ve başlık notları; ızgara kapalı; kullanılmayan satır/sütun gizli
 //   UYGUNLUK  — tek renkli sütun: en uygun koyu yeşil (beyaz yazı), öteki uygunlar
 //               sırayla açılan yeşil, uygun olmayan renksiz; başka hücre boyanmaz
-//   SONUÇ     — pano: gösterilen No = girilen No, yoksa Tarama süzgecinin ilk satırı;
-//               değerler Veri'den formülle, önbellek No 1'in; K blokları ve bağlantıları
+//   SONUÇ     — tek konfigürasyon: Tarama'nın süzgecinde tek satır kalınca o (Seçim!A2), yoksa
+//               boş; açılışta boş (önbellek), başlık yönlendirme
+//   K SAYFALARI — Özet'in K'sı kendi sayfasına; sayfada yalnız o (Özet · geri · ileri)
 //   VERİ      — Tarama'nın her satırı bir satır; yük durumu başına tek hücre
 //               (mm'nin yüzde biri, ';' ayraçlı); panonun formülü doğru belirteci okur
 //   AD        — "ASR…" eki hiçbir yerde yok
@@ -84,29 +86,35 @@ const VERI = sayfa('Veri');
 const veriSatir = (i) => VERI.akis.satir(i);
 
 describe('DÜZEN', () => {
-  test('sayfalar: Özet, Tarama, Sonuç ve gizli Veri — konfigürasyon başına sayfa yok', () => {
-    expect(KITAP.sayfalar.map((s) => s.ad)).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri']);
-    expect(KITAP.sayfalar.map((s) => !!s.gizli)).toEqual([false, false, false, true]);
+  test('sayfalar: Özet, Tarama, Sonuç, K0…K3, gizli Veri ve Seçim; sekme çubuğu gizli', () => {
+    expect(KITAP.sayfalar.map((s) => s.ad)).toEqual(['Özet', 'Tarama', 'Sonuç', 'K0', 'K1', 'K2', 'K3', 'Veri', 'Seçim']);
+    expect(KITAP.sayfalar.map((s) => !!s.gizli)).toEqual([false, false, false, false, false, false, false, true, true]);
+    expect(KITAP.sekmeGizli).toBe(true);
     const wb = X.dosyalar(KITAP).find((f) => f[0] === 'xl/workbook.xml')[1];
-    expect(wb).toContain('<sheet name="Veri" sheetId="4" state="hidden" r:id="rId4"/>');
+    expect(wb).toContain('<workbookView activeTab="0" showSheetTabs="0"/>');
+    expect(wb).toContain('<sheet name="Veri" sheetId="8" state="hidden" r:id="rId8"/>');
+    expect(wb).toContain('<sheet name="Seçim" sheetId="9" state="hidden" r:id="rId9"/>');
     expect(wb).toContain('fullCalcOnLoad="1"');
   });
 
-  test('Özet: başlık B2 (14 pt), tablo 4. satırda; Uygunluk\'un yanında Statik sehim', () => {
+  test('Özet: başlık B2 (14 pt), "Tarama →" 4. satırda, tablo 6. satırda; Uygunluk\'un yanında Statik sehim', () => {
     const S = sayfa('Özet');
     expect(hucre(S, 2, 2)[2]).toBe('10 Ton TTA — takoz konfigürasyonları');
     expect(hucre(S, 2, 2)[3].boy).toBe(14);
-    const bas = S.hucre.filter((h) => h[0] === 4).sort((a, b) => a[1] - b[1]).map((h) => h[2]);
+    expect(hucre(S, 4, 3)[2]).toBe('Tarama →');
+    expect(S.bag).toEqual(expect.arrayContaining([[4, 3, 'Tarama', 'A1']]));
+    const bas = S.hucre.filter((h) => h[0] === 6).sort((a, b) => a[1] - b[1]).map((h) => h[2]);
     expect(bas).toEqual(['K', 'Sonuç', 'Ön takoz', 'Sağ/Sol arka takoz', 'Uygunluk', 'Statik sehim [mm]',
       'Kriter 1 · Modal bant < 17,50 Hz', 'Kriter 1a · Mod ayrıklığı > 0,5 Hz', 'Kriter 1b · 8–10 Hz bandında mod yok',
       'Kriter 2 · TR < %50', 'Frekans payı [Hz]', 'TR [%]', 'En düşük mod [Hz]']);
-    expect(hucre(S, 6, 7)[2]).toBeCloseTo(5.9178, 4);
-    expect(hucre(S, 6, 7)[3].bicim).toBe('0.00');
+    expect(hucre(S, 8, 7)[2]).toBeCloseTo(5.9178, 4);
+    expect(hucre(S, 8, 7)[3].bicim).toBe('0.00');
   });
 
   test('kriterlerin tanımı başlığın notunda; Uygunluk notu statik sehim sırasını söyler', () => {
     const S = sayfa('Özet');
     expect(S.not.map((n) => n[1])).toEqual([6, 7, 8, 9, 10, 11, 12]);   // Uygunluk · Statik sehim · 1 · 1a · 1b · 2 · Frekans payı
+    expect(new Set(S.not.map((n) => n[0]))).toEqual(new Set([6]));
     const u = S.not.find((n) => n[1] === 6)[2];
     expect(u).toContain('En uygun: dört kesin kriteri sağlayanlar arasında statik sehimi en küçük olan.');
     expect(u).toContain('Sıra: statik sehim küçükten büyüğe');
@@ -114,21 +122,21 @@ describe('DÜZEN', () => {
     expect(S.not.find((n) => n[1] === 7)[2]).toContain('max |δz|');
     expect(S.not.find((n) => n[1] === 8)[2]).toContain('f_ateş = 700 d/dk (rölanti) / 60 × 6 silindir / 2 = 35,00 Hz');
     expect(S.not.find((n) => n[1] === 11)[2]).toContain('ζ = 0,020;  m = 1.739,1 kg');
-    expect(Math.max(...S.hucre.map((h) => h[0]))).toBe(8);
+    expect(Math.max(...S.hucre.map((h) => h[0]))).toBe(10);
   });
 
   test('her sayfada ızgara kapalı, kullanılmayan satır ve sütun gizli', () => {
-    KITAP.sayfalar.filter((S) => !S.akis).forEach((S) => { expect([S.ad, S.izgara, S.gizle]).toEqual([S.ad, false, true]); });
+    KITAP.sayfalar.filter((S) => !S.akis && !S.gizli).forEach((S) => { expect([S.ad, S.izgara, S.gizle]).toEqual([S.ad, false, true]); });
     const F = X.dosyalar(KITAP);
     const s1 = F.find((f) => f[0] === 'xl/worksheets/sheet1.xml')[1];
     expect(s1).toContain('showGridLines="0"');
     expect(s1).toContain('zeroHeight="1"');
   });
 
-  test('Tarama: "Sonuçlar →" panoya gider; statik sehim sütunu', () => {
+  test('Tarama: "← Özet" ve "Sonuçlar →"; statik sehim sütunu', () => {
     const S = sayfa('Tarama');
-    expect(hucre(S, 3, 6)[2]).toBe('Sonuçlar →');
-    expect(S.bag).toEqual([[3, 6, 'Sonuç', 'C2']]);
+    expect([hucre(S, 2, 6)[2], hucre(S, 3, 6)[2]]).toEqual(['← Özet', 'Sonuçlar →']);
+    expect(S.bag).toEqual([[2, 6, 'Özet', 'A1'], [3, 6, 'Sonuç', 'A1']]);
     const bas = S.hucre.filter((h) => h[0] === 5).map((h) => h[2]);
     expect(bas).toContain('Statik sehim [mm]');
     expect(bas).not.toContain('Statik sehim maks [mm]');
@@ -138,102 +146,117 @@ describe('DÜZEN', () => {
 describe('UYGUNLUK — tek renkli sütun', () => {
   const S = sayfa('Özet');
   test('en uygun koyu yeşil ve beyaz yazı; uygunlar sırayla açılan yeşil; uygun olmayan renksiz', () => {
-    expect(hucre(S, 5, 6)[2]).toBe('Uygun değil');
-    expect(hucre(S, 5, 6)[3].dolgu).toBeUndefined();
-    expect(hucre(S, 6, 6)[3]).toMatchObject({ dolgu: '1F7A3D', renk: 'FFFFFF', b: true });
-    expect(hucre(S, 7, 6)[3].dolgu).toBe('6BC782');
-    expect(hucre(S, 8, 6)[3].dolgu).toBe('7BCD90');
+    expect(hucre(S, 7, 6)[2]).toBe('Uygun değil');
+    expect(hucre(S, 7, 6)[3].dolgu).toBeUndefined();
+    expect(hucre(S, 8, 6)[3]).toMatchObject({ dolgu: '1F7A3D', renk: 'FFFFFF', b: true });
+    expect(hucre(S, 9, 6)[3].dolgu).toBe('6BC782');
+    expect(hucre(S, 10, 6)[3].dolgu).toBe('7BCD90');
   });
-  test('Uygunluk sütunundan başka hiçbir hücre boyanmaz (Not 15)', () => {
-    const boyali = S.hucre.filter((h) => h[3] && h[3].dolgu).map((h) => h[1]);
+  test('tabloda Uygunluk sütunundan başka hiçbir hücre boyanmaz (Not 15); tablonun dışında yalnız "Tarama →" düğmesi', () => {
+    const boyali = S.hucre.filter((h) => h[0] >= 6 && h[3] && h[3].dolgu).map((h) => h[1]);
     expect(new Set(boyali)).toEqual(new Set([6]));
+    expect(S.hucre.filter((h) => h[0] < 6 && h[3] && h[3].dolgu).map((h) => h[2])).toEqual(['Tarama →']);
   });
 });
 
-describe('SONUÇ — seçili kombinasyon panosu', () => {
-  test('gösterilen No: girilen No, yoksa süzgecin ilk satırı (dizi formülü, görünmeyen satırı saymaz)', () => {
-    expect(hucre(SON, 6, 3)[2]).toBe('Gösterilen No');
-    expect(hucre(SON, 6, 4)[2]).toEqual({ f: 'IF(ISNUMBER($D$7),$D$7,$D$8)', v: 1 });
-    expect(hucre(SON, 7, 3)[2]).toBe('No');
-    expect(hucre(SON, 7, 4)[2]).toBe('');
-    expect(hucre(SON, 7, 4)[3].dolgu).toBe('FFF2CC');
-    const ilk = hucre(SON, 8, 4)[2];
-    expect(ilk.dizi).toBe(true);
-    expect(ilk.v).toBe(1);
-    expect(ilk.f).toBe('IFERROR(INDEX(\'Tarama\'!$A$6:$A$8,MATCH(1,SUBTOTAL(103,OFFSET(\'Tarama\'!$A$6,ROW(\'Tarama\'!$A$6:$A$8)-ROW(\'Tarama\'!$A$6),0)),0)),"")');
+describe('SONUÇ — tek konfigürasyon, açılışta boş', () => {
+  const SEC = sayfa('Seçim');
+  test('seçim: Tarama\'da görünen satır sayısı (A1) ve tekse No\'su (A2, dizi formülü); başka girdi yok', () => {
+    expect(hucre(SEC, 1, 1)[2]).toEqual({ f: 'SUBTOTAL(103,\'Tarama\'!$A$6:$A$8)', v: 3 });
+    const a2 = hucre(SEC, 2, 1)[2];
+    expect(a2).toEqual({ f: 'IF(A1=1,INDEX(\'Tarama\'!$A$6:$A$8,MATCH(1,SUBTOTAL(103,OFFSET(\'Tarama\'!$A$6,ROW(\'Tarama\'!$A$6:$A$8)-ROW(\'Tarama\'!$A$6),0)),0)),"")',
+      v: '', dizi: true });
+    expect(SON.hucre.some((h) => h[3] && h[3].dolgu === 'FFF2CC')).toBe(false);       // No yazma alanı yok
   });
 
-  test('başlık: No ve grupların tipi Veri\'den', () => {
+  test('açılışta boş: başlık yönlendirme, her değer hücresi boş önbellekle', () => {
     const b = hucre(SON, 2, 3)[2];
-    expect(b.v).toBe('No 1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
-    expect(b.f).toContain('INDEX(\'Veri\'!$B$2:$B$4,$D$6)');
-    expect(b.f).toContain('INDEX(\'Veri\'!$C$2:$C$4,$D$6)');
-    expect(SON.bag).toEqual(expect.arrayContaining([[4, 3, 'Özet', 'A1'], [4, 4, 'Tarama', 'A1']]));
+    expect(b.v).toBe('Tarama’da süzgeçle tek satır bırakın.');
+    expect(b.f).toBe('IF(\'Seçim\'!$A$2="","Tarama’da süzgeçle tek satır bırakın.",IFERROR("No "&\'Seçim\'!$A$2&" — "&"Ön takoz: "&INDEX(\'Veri\'!$B$2:$B$4,\'Seçim\'!$A$2)&" · "&"Sağ/Sol arka takoz: "&INDEX(\'Veri\'!$C$2:$C$4,\'Seçim\'!$A$2),""))');
+    const formul = SON.hucre.filter((h) => h[2] && typeof h[2] === 'object' && !(h[0] === 2 && h[1] === 3));
+    expect(formul.length).toBeGreaterThan(40);
+    formul.forEach((h) => expect([h[0], h[1], h[2].v]).toEqual([h[0], h[1], '']));
+    expect(SON.hucre.some((h) => typeof h[2] === 'string' && /^K\d+ — /.test(h[2]))).toBe(false);   // K blokları burada değil
+    expect(SON.bag).toEqual([[4, 3, 'Özet', 'A1'], [4, 4, 'Tarama', 'A1']]);
   });
 
-  test('kriterler ve sayılar: başlık 10. satırda, değer 11. satırda (önbellek No 1)', () => {
-    const bas = [4, 5, 6, 7, 8, 9, 10, 11].map((c) => hucre(SON, 10, c)[2]);
+  test('kriterler 6–7. satırda; tablo: tip 9, ad 10, X/Y/Z 11, yük durumları 12\'den; belirteç Veri\'den', () => {
+    const bas = [4, 5, 6, 7, 8, 9, 10, 11].map((c) => hucre(SON, 6, c)[2]);
     expect(bas).toEqual(['Kriter 1', '1a', '1b', '2', 'Dört kriter', 'TR [%]', 'Statik sehim [mm]', 'Frekans payı [Hz]']);
-    expect([4, 5, 6, 7, 8].map((c) => deger(hucre(SON, 11, c)))).toEqual(['✓', '✓', '✓', '✓', 'Uygun']);
-    expect(deger(hucre(SON, 11, 9))).toBeCloseTo(12.1701, 4);
-    expect(deger(hucre(SON, 11, 10))).toBeCloseTo(5.918, 3);
-  });
-
-  test('tablo: takoz tipi 13. satırda Veri\'den, yük durumları 16\'dan; belirteç doğru yerden', () => {
-    expect(deger(hucre(SON, 13, 8))).toBe('Cone 121 NP 55 ShA (AMC 137829)');
-    expect(hucre(SON, 13, 8)[2].olc).toBe('Cone 121 NP 55 ShA (AMC 137829)');     // en uzun aday adı genişliği belirler
-    expect(hucre(SON, 14, 8)[2]).toBe('Sağ arka takoz');
-    expect([16, 17].map((r) => hucre(SON, r, 3)[2])).toEqual(['Static', 'Max Bump']);
+    expect(hucre(SON, 7, 9)[2].f).toBe('IFERROR(INDEX(\'Veri\'!$I$2:$I$4,\'Seçim\'!$A$2),"")');
+    expect(hucre(SON, 9, 8)[2]).toMatchObject({ f: 'IFERROR(INDEX(\'Veri\'!$C$2:$C$4,\'Seçim\'!$A$2),"")', olc: 'Cone 121 NP 55 ShA (AMC 137829)' });
+    expect(hucre(SON, 10, 8)[2]).toBe('Sağ arka takoz');
+    expect([12, 13].map((r) => hucre(SON, r, 3)[2])).toEqual(['Static', 'Max Bump']);
     // Static · Sağ arka takoz (2. takoz) · Z → belirteç 3·1 + 2 = 5; pencere W = (7 + 1) · 9 = 72 → MID başı 5·72 + 1
-    const z = hucre(SON, 16, 10)[2];
-    expect(z.f).toBe('IFERROR(VALUE(TRIM(MID(SUBSTITUTE(INDEX(\'Veri\'!$X$2:$X$4,$D$6),";",REPT(" ",72)),361,72)))/100,"")');
-    expect(z.v).toBeCloseTo(-5.43, 6);
-    expect(hucre(SON, 16, 10)[3].bicim).toBe('0.0');
-    expect(deger(hucre(SON, 17, 12))).toBe('');                                   // 3. takozun Max Bump'ı yok
-  });
-
-  test('modlar ve TR: Veri\'den, frekansa göre sıralı', () => {
-    const mh = 16 + 2 + 4;
+    const z = hucre(SON, 12, 10)[2];
+    expect(z.f).toBe('IFERROR(VALUE(TRIM(MID(SUBSTITUTE(INDEX(\'Veri\'!$X$2:$X$4,\'Seçim\'!$A$2),";",REPT(" ",72)),361,72)))/100,"")');
+    expect(hucre(SON, 12, 10)[3].bicim).toBe('0.0');
+    const mh = 5 + 7 + 2 + 4;
     expect([2, 3, 4].map((c) => hucre(SON, mh, c)[2])).toEqual(['Mod', 'Mod Tipi', 'Hz']);
-    expect(deger(hucre(SON, mh + 1, 3))).toBe('Pitch + Bounce');
-    expect(deger(hucre(SON, mh + 2, 4))).toBeCloseTo(7.981, 3);                  // Veri'de 3 ondalık, ekranda 2
     expect(hucre(SON, mh + 6 + 3, 2)[2]).toBe('TR (%)');
-    expect(deger(hucre(SON, mh + 6 + 3, 3))).toBeCloseTo(12.1701, 4);
   });
 });
 
-describe('SONUÇ — K blokları', () => {
-  const Oz = sayfa('Özet');
-  const capa = (n) => Oz.bag.find((b) => b[0] === 5 + n && b[1] === 2)[3];
-  const satir = (n) => +capa(n).slice(1);
-  test('Özet\'in K ve adı Sonuç\'taki bloka gider; blokun başlığı o konfigürasyon', () => {
-    [0, 1, 2, 3].forEach((n) => {
-      expect(Oz.bag).toEqual(expect.arrayContaining([[5 + n, 2, 'Sonuç', capa(n)], [5 + n, 3, 'Sonuç', capa(n)]]));
-      expect(hucre(SON, satir(n), 3)[2]).toMatch(new RegExp('^K' + n + ' — '));
+describe('SONUÇ — formüller hesaplanınca (tests/helpers/xlsx-formul.js)', () => {
+  const XF = require('../helpers/xlsx-formul.js');
+  const ortam = (gorunen) => XF.kitapOrtami(KITAP, gorunen ? (ad, r) => ad === 'Tarama' && r >= 6 && !gorunen.includes(r - 5) : null);
+  test('süzgeç yokken ve iki satır görünürken boş; tek satırda o satır (uzun belirteç dâhil)', () => {
+    [null, [1, 3]].forEach((g) => {
+      const O = ortam(g);
+      expect(O.oku('Seçim', 2, 1)).toBe('');
+      expect(O.oku('Sonuç', 2, 3)).toBe('Tarama’da süzgeçle tek satır bırakın.');
+      expect([O.oku('Sonuç', 7, 4), O.oku('Sonuç', 9, 4), O.oku('Sonuç', 12, 4), O.oku('Sonuç', 19, 4)]).toEqual(['', '', '', '']);
     });
-    expect(hucre(Oz, 6, 3)[2]).toBe('K1 TK040-45 + Cone121NP-55');
-    expect(hucre(SON, satir(1), 3)[2]).toBe('K1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
+    [1, 2, 3].forEach((no) => {
+      const O = ortam([no]), x = E.tarama.satirlar[no - 1], V = E.tarama.veri;
+      expect(O.oku('Seçim', 1, 1)).toBe(1);
+      expect(O.oku('Seçim', 2, 1)).toBe(no);
+      expect(O.oku('Sonuç', 2, 3)).toBe('No ' + no + ' — Ön takoz: ' + x.tipler[0] .replace(/\s*\(ASR[^)]*\)/, '') + ' · Sağ/Sol arka takoz: ' + x.tipler[1]);
+      expect([4, 5, 6, 7].map((c) => O.oku('Sonuç', 7, c))).toEqual(x.k.map((v) => (v ? '✓' : '✗')));
+      [0, 1].forEach((q) => [0, 1, 2].forEach((m) => [0, 1, 2].forEach((a) => {
+        const k = V.kod[((((no - 1) * 2 + q) * 3 + m) * 3) + a];
+        expect([q, m, a, O.oku('Sonuç', 12 + q, 4 + 4 * m + a)]).toEqual([q, m, a, k === BOS ? '' : k / 100]);
+      })));
+      const mh = 5 + 7 + 2 + 4, f = x.f.slice().sort((p, r) => p - r);
+      f.forEach((v, j) => expect(O.oku('Sonuç', mh + 1 + j, 4)).toBeCloseTo(v, 3));
+      expect(O.oku('Sonuç', mh + 6 + 3, 3)).toBeCloseTo(x.T * 100, 4);
+    });
+  });
+});
+
+describe('K SAYFALARI — Özet\'in konfigürasyonu kendi sayfasında, yalnız o', () => {
+  const Oz = sayfa('Özet');
+  test('Özet\'in K ve adı o K\'nın sayfasına gider; sayfanın başlığı o konfigürasyon', () => {
+    [0, 1, 2, 3].forEach((n) => {
+      expect(Oz.bag).toEqual(expect.arrayContaining([[7 + n, 2, 'K' + n, 'A1'], [7 + n, 3, 'K' + n, 'A1']]));
+      expect(hucre(sayfa('K' + n), 2, 3)[2]).toMatch(new RegExp('^K' + n + ' — '));
+    });
+    expect(hucre(Oz, 8, 3)[2]).toBe('K1 TK040-45 + Cone121NP-55');
+    expect(hucre(sayfa('K1'), 2, 3)[2]).toBe('K1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
   });
 
-  test('blokun düğmeleri: Özet\'e, önceki ve sonraki bloka; ilkte Geri, sonda İleri yok', () => {
-    const b = satir(1);
-    expect(hucre(SON, b + 2, 3)[2]).toBe('← Özet sayfasına dön');
-    expect(hucre(SON, b + 2, 4)[2]).toBe('← Geri konfigürasyon (K0)');
-    expect(hucre(SON, b + 2, 12)[2]).toBe('İleri konfigürasyon (K2) →');
-    expect(SON.bag).toEqual(expect.arrayContaining([[b + 2, 3, 'Özet', 'A1'], [b + 2, 4, 'Sonuç', capa(0)], [b + 2, 12, 'Sonuç', capa(2)]]));
-    expect(hucre(SON, satir(0) + 2, 4)).toBeUndefined();
-    expect(hucre(SON, satir(3) + 2, 12)).toBeUndefined();
+  test('düğmeler: Özet\'e, önceki ve sonraki K\'nın sayfasına; ilkte Geri, sonda İleri yok', () => {
+    const K1 = sayfa('K1');
+    expect(hucre(K1, 4, 3)[2]).toBe('← Özet sayfasına dön');
+    expect(hucre(K1, 4, 4)[2]).toBe('← Geri konfigürasyon (K0)');
+    expect(hucre(K1, 4, 12)[2]).toBe('İleri konfigürasyon (K2) →');
+    expect(K1.bag).toEqual([[4, 3, 'Özet', 'A1'], [4, 4, 'K0', 'A1'], [4, 12, 'K2', 'A1']]);
+    expect(hucre(sayfa('K0'), 4, 4)).toBeUndefined();
+    expect(hucre(sayfa('K3'), 4, 12)).toBeUndefined();
   });
 
-  test('blokun tablosu: çözümün değerleri (formülsüz)', () => {
-    const b = satir(1);
-    expect(hucre(SON, b + 5, 8)[2]).toBe('Sağ arka takoz');
-    expect([8, 9, 10].map((c) => hucre(SON, b + 6, c)[2])).toEqual(['X', 'Y', 'Z']);
-    expect(hucre(SON, b + 7, 3)[2]).toBe('Static');
-    expect(hucre(SON, b + 7, 10)[2]).toBe(-5.43);
-    expect(hucre(SON, b + 7 + 1 + 4 + 6 + 3, 3)[2]).toBeCloseTo(12.1701, 4);
-    const sonra = SON.hucre.filter((h) => h[0] >= satir(0));
-    expect(sonra.some((h) => h[2] && typeof h[2] === 'object')).toBe(false);
+  test('tablo: çözümün değerleri (formülsüz), yalnız o konfigürasyon', () => {
+    const K1 = sayfa('K1');
+    expect(hucre(K1, 7, 8)[2]).toBe('Sağ arka takoz');
+    expect([8, 9, 10].map((c) => hucre(K1, 8, c)[2])).toEqual(['X', 'Y', 'Z']);
+    expect(hucre(K1, 9, 3)[2]).toBe('Static');
+    expect(hucre(K1, 9, 10)[2]).toBe(-5.43);
+    expect(hucre(K1, 2 + 7 + 1 + 4 + 6 + 3, 3)[2]).toBeCloseTo(12.1701, 4);
+    ['K0', 'K1', 'K2', 'K3'].forEach((ad) => {
+      const S = sayfa(ad);
+      expect(S.hucre.some((h) => h[2] && typeof h[2] === 'object')).toBe(false);
+      expect(S.hucre.filter((h) => typeof h[2] === 'string' && /^K\d+ — /.test(h[2])).length).toBe(1);
+    });
   });
 });
 
@@ -261,7 +284,7 @@ describe('VERİ — gizli sayfa, Tarama\'nın her satırı', () => {
   const MID = (m, bas, n) => m.substr(bas - 1, n);
   const TRIM = (m) => m.trim().replace(/ +/g, ' ');
   const hesapla = (f, veriMetni) => {
-    const x = /^IFERROR\(VALUE\(TRIM\(MID\(SUBSTITUTE\(INDEX\('Veri'!\$[A-Z]+\$2:\$[A-Z]+\$\d+,\$D\$6\),";",REPT\(" ",(\d+)\)\),(\d+),(\d+)\)\)\)\/100,""\)$/.exec(f);
+    const x = /^IFERROR\(VALUE\(TRIM\(MID\(SUBSTITUTE\(INDEX\('Veri'!\$[A-Z]+\$2:\$[A-Z]+\$\d+,'Seçim'!\$A\$2\),";",REPT\(" ",(\d+)\)\),(\d+),(\d+)\)\)\)\/100,""\)$/.exec(f);
     expect(x).not.toBeNull();
     const t = TRIM(MID(SUBSTITUTE(veriMetni, ';', ' '.repeat(+x[1])), +x[2], +x[3]));
     return t === '' ? '' : Number(t) / 100;                    // VALUE("") hata → IFERROR → ""
@@ -272,22 +295,22 @@ describe('VERİ — gizli sayfa, Tarama\'nın her satırı', () => {
     for (let n = 1; n < VERI.akis.n; n++) {
       const r = veriSatir(n);
       vSut.forEach((c, q) => E.takozlar.forEach((t, i) => [0, 1, 2].forEach((a) => {
-        const h = hucre(SON, 16 + q, 4 + 4 * i + a)[2];
+        const h = hucre(SON, 12 + q, 4 + 4 * i + a)[2];
         const bek = String(r[c]).split(';')[3 * i + a];
         expect(hesapla(h.f, String(r[c]))).toBe(bek === '' || bek === undefined ? '' : Number(bek) / 100);
         say++;
       })));
     }
     expect(say).toBe(3 * 2 * 3 * 3);
-    expect(hesapla(hucre(SON, 17, 14)[2].f, String(veriSatir(3)[24]))).toBeCloseTo(-9123.45, 6);   // son takozun Z'si (4 + 4·2 + 2)
+    expect(hesapla(hucre(SON, 13, 14)[2].f, String(veriSatir(3)[24]))).toBeCloseTo(-9123.45, 6);   // son takozun Z'si (4 + 4·2 + 2)
   });
   test('pencere paketlerken tutulan en küçük/en büyük belirteçten (veri.uc) de aynı', () => {
     let ek = 0, en = 0;
     kod.forEach((v) => { if (v !== BOS) { ek = Math.min(ek, v); en = Math.max(en, v); } });
     const E3 = Object.assign({}, E, { tarama: Object.assign({}, E.tarama, { veri: Object.assign({}, E.tarama.veri, { uc: [ek, en] }) }) });
     const S3 = E_.kitap(E3).sayfalar.find((x) => x.ad === 'Sonuç');
-    expect(S3.hucre.filter((h) => h[0] >= 16 && h[0] <= 17).map((h) => h[2] && h[2].f))
-      .toEqual(SON.hucre.filter((h) => h[0] >= 16 && h[0] <= 17).map((h) => h[2] && h[2].f));
+    expect(S3.hucre.filter((h) => h[0] >= 12 && h[0] <= 13).map((h) => h[2] && h[2].f))
+      .toEqual(SON.hucre.filter((h) => h[0] >= 12 && h[0] <= 13).map((h) => h[2] && h[2].f));
   });
   test('sabit 40 boşluklu pencere uzun belirteçte YANLIŞ okurdu (kapının düşebildiği)', () => {
     const m = String(veriSatir(3)[24]);
@@ -333,7 +356,7 @@ describe('AD', () => {
     for (let i = 0; i < VERI.akis.n; i++) veriSatir(i).forEach((v) => expect(String(v)).not.toMatch(/ASR/));
     const F = X.dosyalar(KITAP);
     F.forEach(([ad, m]) => expect([ad, /ASR/.test(m)]).toEqual([ad, false]));
-    expect(hucre(sayfa('Özet'), 5, 4)[2]).toBe('57RS313774');
+    expect(hucre(sayfa('Özet'), 7, 4)[2]).toBe('57RS313774');
   });
 
   test('kısa tip adı ve konfigürasyonun adı (bütün grupların tipi)', () => {
@@ -356,9 +379,9 @@ describe('AD', () => {
 describe('SAYI — onaylanan Excel\'in (R12) değerleri', () => {
   test('frekans payı: K0 −0,488 (Özet)', () => {
     expect(E_.frekansPayi(F_K0, 35)).toBeCloseTo(-0.4885, 4);
-    expect(hucre(sayfa('Özet'), 5, 12)[2]).toBeCloseTo(-0.4885, 4);
-    expect(hucre(sayfa('Özet'), 6, 13)[2]).toBeCloseTo(12.1701, 4);    // TR [%]
-    expect(hucre(sayfa('Özet'), 6, 14)[2]).toBeCloseTo(6.8219, 4);     // en düşük mod
+    expect(hucre(sayfa('Özet'), 7, 12)[2]).toBeCloseTo(-0.4885, 4);
+    expect(hucre(sayfa('Özet'), 8, 13)[2]).toBeCloseTo(12.1701, 4);    // TR [%]
+    expect(hucre(sayfa('Özet'), 8, 14)[2]).toBeCloseTo(6.8219, 4);     // en düşük mod
   });
   test('kapasite: grup başına yük ↔ azami yük', () => {
     expect(E_.kapasite([470, 661], [null, 600])).toBe('Aşıyor');
@@ -402,17 +425,22 @@ describe('SIĞAR — kenarlıklı her hücrenin yazısı sütununa sığar', () 
 });
 
 describe('DOSYA — programın okuyucusuyla gidiş-dönüş', () => {
-  test('okunan Özet, Sonuç panosu (önbellek) ve Veri kurucunun değerlerini taşır', () => {
+  test('okunan Özet, boş Sonuç, K sayfası ve Veri kurucunun değerlerini taşır', () => {
     const wb = R.veXlsOpen(X.yaz(KITAP));
-    expect(wb.sheets.map((s) => s.name)).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri']);
+    const ad = wb.sheets.map((s) => s.name);
+    expect(ad).toEqual(['Özet', 'Tarama', 'Sonuç', 'K0', 'K1', 'K2', 'K3', 'Veri', 'Seçim']);
     const oz = wb.readSheet(0).rows;
-    expect(oz[5].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
+    expect(oz[7].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
     const son = wb.readSheet(2).rows;
-    expect(son[5][3]).toBe(1);
-    expect(son[15][2]).toBe('Static');
-    expect(son[15][9]).toBeCloseTo(-5.43, 6);
-    const veri = wb.readSheet(3).rows;
+    expect(son[1][2]).toBe('Tarama’da süzgeçle tek satır bırakın.');
+    expect(son[11][2]).toBe('Static');
+    expect([null, '']).toContain(son[11][9]);
+    const k1 = wb.readSheet(ad.indexOf('K1')).rows;
+    expect(k1[8][2]).toBe('Static');
+    expect(k1[8][9]).toBeCloseTo(-5.43, 6);
+    const veri = wb.readSheet(ad.indexOf('Veri')).rows;
     expect(veri[1].slice(0, 3)).toEqual([1, 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)']);
     expect(veri[1][23]).toBe('-30;10;-390;1;0;-543;4;0;-592');
+    expect(R.veXlsUtf8(R.veXlsZipRead(X.yaz(KITAP)).read('xl/workbook.xml'))).toContain('showSheetTabs="0"');
   });
 });

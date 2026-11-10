@@ -494,14 +494,15 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
   const acik = () => [...el().querySelectorAll('.ve-bas-satir')].filter((r) => r.classList.contains('acik')).map((r) => r.getAttribute('data-v'));
   beforeEach(() => K._veBasSifirla());
   // KAPI KOMPAKT (kullanıcı 2026-11-10, Canlı Not 102: *"Şu butonlar da çok büyük.
-  // Bunları da küçültelim."*): masanın panelinde kapı 62 → 40 px, ikon 24 px, ad
-  // 13 px; sütun düzeninin (FEAD) kapısına dokunulmaz.
-  test('KAPI KOMPAKT — masada kapı 40 px, ikon 24 px, ad 13 px; sütun düzeninin kapısı değişmez', () => {
+  // Bunları da küçültelim."* → 62 → 40 px; Canlı Not 115: *"bir tık büyültelim"* →
+  // 48 px): masanın panelinde kapı 48 px, ikon 28 px, ad 14 px; sütun düzeninin (FEAD)
+  // kapısına dokunulmaz.
+  test('KAPI KOMPAKT — masada kapı 48 px, ikon 28 px, ad 14 px; sütun düzeninin kapısı değişmez', () => {
     // Kural satırın başında aranır: ".ve-bas-kapi-ik" masanın ".ve-bas-ic--masa .ve-bas-kapi-ik"ine takılmasın.
     const kural = (sel) => (CSS.match(new RegExp('(?:^|\\n)' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}')) || [])[1] || '';
-    expect(kural('.ve-bas-ic--masa .ve-bas-kapi')).toMatch(/min-height:\s*40px/);
-    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-ik')).toMatch(/width:\s*24px[^}]*height:\s*24px/);
-    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-t b')).toMatch(/font-size:\s*var\(--fs-md\)/);
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi')).toMatch(/min-height:\s*48px/);
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-ik')).toMatch(/width:\s*28px[^}]*height:\s*28px/);
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-t b')).toMatch(/font-size:\s*var\(--fs-lg\)/);
     // Sütun düzeni (FEAD) taban kuralında: 64 px kapı, 36 px ikon.
     expect(kural('.ve-bas-kapi')).toMatch(/min-height:\s*64px/);
     expect(kural('.ve-bas-kapi-ik')).toMatch(/width:\s*36px[^}]*height:\s*36px/);

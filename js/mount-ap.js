@@ -26,10 +26,20 @@
 //
 // RİJİTLİK [N/mm]: konik yatakta k = F/S her eksende (Fz/Sz · Fx/Sx · Fy/Sy; üretici
 // "yay değerleri önceliklidir" diyor, sertlik yaklaşık); H-takozda yazılı Cz ve Cx,y
-// (±%20); marine ve jeneratörde yalnız Z (Fz/Sz · yazılı Cz). DİNAMİK RİJİTLİK
-// YAYIMLANMIYOR: dx/dy/dz BOŞ — tip kütüphanede eksik, Takoz Özellikleri'nden
-// tamamlanır, taramaya aday olmaz. Statiği dinamik saymak modal frekansı sessizce
-// düşürürdü; oran tahmin YAZILMAZ. Kapasite = statik Fz (N/9,81 kg).
+// (±%20); marine ve jeneratörde yalnız Z (Fz/Sz · yazılı Cz). Kapasite = statik Fz
+// (N/9,81 kg).
+// DİNAMİK TAHMİN (Canlı Not 113'ün kuralı: yayımlanmayan değer modeli reddettirmez,
+// tahminle çözülür ve işaretlenir; tahminli tip taramaya aday olmaz). A+P dinamik
+// rijitlik yayımlamıyor: NR takozda (konik · HD · marine · jeneratör) din./stat. =
+// (Sh+20)/50 — AMC'nin NR konilerinde doğal frekans grafiklerinden ölçülen yasa
+// (js/mount-amc.js; sertlik A+P'nin yaklaşık değeri, "~45 Shore A"). H-takoz CR ve
+// sertliği yazılmıyor: AMC-EO'nun dinamiği ölçülmüş 9 NR kodunun medyanı (DIN_MEDYAN,
+// hidrolik hariç; kapı ölçümden yeniden hesaplar). Statiği dinamik saymak modal
+// frekansı sessizce düşürürdü — oran 1 YAZILMAZ.
+// RADYAL yalnız yazılı olduğu yerde: marine ve jeneratörde X · Y yayımlanmıyor ve
+// ölçülmüş benzer tip yok (üretici marinede yalnız "dikey rijitlik yataydan büyük"
+// diyor; AMC'nin bütün oranları > 1) — tip eksik kalır; Takoz Özellikleri'nden girilen
+// X · Y'nin dinamiği aynı oranla kurulur (tamamla).
 //
 // PROGRAMDAKİ BMC GİRDİLERİ (cp-mount.js: LMT-1433-00 · "Mount 1" · LMT-1433-37):
 //   • "LMT-" önekli kodlar LASPAR'ın (Bursa; LMT-1412-30, LMT-1443-40, LMT-1444,
@@ -59,34 +69,34 @@ var VE_MNT_AP = (function() {
     gen:    ['APSOvib® HD Generator bearing', 'HD Generator bearing', 'gen']
   };
   var AILE_SIRA = ['konus', 'hd', 'h', 'marine', 'gen'];
-  // tip → [aile, tip adı, e-mağaza no, çizim, e-mağaza fotoğrafı, ölçüler mm]
+  // tip → [aile, tip adı, e-mağaza no, çizim, ölçüler mm]
   //   ölçüler: boy × en · delik aralığı (boy × en) · delik Ø · yükseklik · diş;
   //   H-takoz: montaj deliği Ø (sd) · levha kalınlığı (T) · boy (H) · dış Ø (D2) · iç Ø (d1) · vida
   var TIP = {
-    "021": ["konus", "021", "12214020", "k-021", "297364", {"boy": 84, "en": 50, "dBoy": 64, "dCap": 6.5, "yuk": 23.5}],
-    "021-s1": ["konus", "021 S 1", "12214022", "k-021-s1", "297365", {"boy": 84, "en": 50, "dBoy": 64, "dCap": 6.5, "yuk": 26.5}],
-    "025": ["konus", "025", "12214023", "k-025", "297366", {"boy": 106, "en": 68, "dBoy": 80, "dCap": 11, "yuk": 45}],
-    "025-s1": ["konus", "025 S 1", "12214024", "k-025-s1", "297367", {"boy": 106, "en": 68, "dBoy": 80, "dCap": 11, "yuk": 45}],
-    "026-s1": ["konus", "026 S 1", "12214025", "k-026-s1", "297368", {"boy": 107, "en": 90, "dBoy": 80, "dEn": 65, "dCap": 11, "yuk": 49.5}],
-    "026-s3": ["konus", "026 S 3", "12214026", "k-026-s3", "297369", {"boy": 107, "en": 90, "dBoy": 80, "dEn": 65, "dCap": 11, "yuk": 49.5}],
-    "027-s5": ["konus", "027 S 5", "12214027", "k-027-s5", "297370", {"boy": 120, "en": 100, "dBoy": 90, "dEn": 74, "dCap": 11, "yuk": 73}],
-    "030": ["konus", "030", "12214028", "k-030", "297371", {"boy": 140, "en": 120, "dBoy": 112, "dEn": 92, "dCap": 11, "yuk": 85}],
-    "05719": ["konus", "05719", "12214030", "k-05719", "297372", {"boy": 122, "en": 122, "dBoy": 100, "dEn": 100, "dCap": 11, "yuk": 128}],
-    "hd-1": ["hd", "1", "12214009", "k-hd-1", "297362", {"boy": 105, "en": 91.5, "dBoy": 82.7, "dEn": 69.4, "dCap": 10.4, "yuk": 65.6}],
-    "hd-2": ["hd", "2", "12214010", "k-hd-2", "297363", {"boy": 105, "en": 91.5, "dBoy": 82.7, "dEn": 69.4, "dCap": 10.4, "yuk": 65.6}],
-    "h-i-090": ["h", "I 090-205-090", "12214701", "h-1", "297382", {"sd": 20.5, "T": 9, "H": 30, "D2": 33, "d1": 9, "vida": "M6/M8"}],
-    "h-ii-135": ["h", "II 135-335-120", "12214702", "h-2", "297383", {"sd": 33.5, "T": 12, "H": 50, "D2": 48, "d1": 13.5, "vida": "M10/M12"}],
-    "h-ii-140": ["h", "II 140-405-200", "12214703", "h-2", "297384", {"sd": 40.5, "T": 20, "H": 61.7, "D2": 64.8, "d1": 14, "vida": "M10/M12"}],
-    "h-ii-167": ["h", "II 167-405-200", "12214704", "h-2", "297385", {"sd": 40.5, "T": 20, "H": 61.7, "D2": 64.8, "d1": 16.7, "vida": "3/8\"/M12"}],
-    "h-ii-238": ["h", "II 238-588-290", "12214705", "h-2", "297386", {"sd": 58.8, "T": 29, "H": 73, "D2": 89, "d1": 23.8, "vida": "M16/M20"}],
-    "h-ii-250": ["h", "II 250-658-250", "12214706", "h-2", "297387", {"sd": 65.8, "T": 25, "H": 87, "D2": 124, "d1": 25, "vida": "M20/M22"}],
-    "h-ii-270": ["h", "II 270-658-250", "12214707", "h-2", "297388", {"sd": 65.8, "T": 25, "H": 87, "D2": 124, "d1": 27, "vida": "M24"}],
-    "h-iii-135": ["h", "III 135-315-130", "12214708", "h-3", "297389", {"sd": 31.5, "T": 13, "H": 50, "D2": 48, "d1": 13.5, "vida": "M10/M12"}],
-    "marine-1": ["marine", "1", "12214404", "m-1", "297378", {"boy": 120, "en": 60, "dBoy": 100, "yuk": 38, "dis": "M12"}],
-    "marine-2": ["marine", "2", "12214405", "m-2", "297379", {"boy": 183, "en": 75, "dBoy": 140, "yuk": 50, "dis": "M16"}],
-    "marine-3": ["marine", "3", "12214406", "m-3", "297380", {"boy": 230, "en": 112, "dBoy": 182, "yuk": 70, "dis": "M20"}],
-    "gl-1": ["gen", "1", "12206462", "g-1", "297335", {"boy": 200, "en": 200, "dBoy": 165, "dEn": 165, "dCap": 14.5, "yuk": 84, "dis": "M20"}],
-    "gl-2": ["gen", "2", "12206463", "g-2", "297336", {"boy": 270, "en": 270, "dBoy": 230, "dEn": 180, "dCap": 19, "yuk": 106, "dis": "M24"}],
+    "021": ["konus", "021", "12214020", "k-021", {"boy": 84, "en": 50, "dBoy": 64, "dCap": 6.5, "yuk": 23.5}],
+    "021-s1": ["konus", "021 S 1", "12214022", "k-021-s1", {"boy": 84, "en": 50, "dBoy": 64, "dCap": 6.5, "yuk": 26.5}],
+    "025": ["konus", "025", "12214023", "k-025", {"boy": 106, "en": 68, "dBoy": 80, "dCap": 11, "yuk": 45}],
+    "025-s1": ["konus", "025 S 1", "12214024", "k-025-s1", {"boy": 106, "en": 68, "dBoy": 80, "dCap": 11, "yuk": 45}],
+    "026-s1": ["konus", "026 S 1", "12214025", "k-026-s1", {"boy": 107, "en": 90, "dBoy": 80, "dEn": 65, "dCap": 11, "yuk": 49.5}],
+    "026-s3": ["konus", "026 S 3", "12214026", "k-026-s3", {"boy": 107, "en": 90, "dBoy": 80, "dEn": 65, "dCap": 11, "yuk": 49.5}],
+    "027-s5": ["konus", "027 S 5", "12214027", "k-027-s5", {"boy": 120, "en": 100, "dBoy": 90, "dEn": 74, "dCap": 11, "yuk": 73}],
+    "030": ["konus", "030", "12214028", "k-030", {"boy": 140, "en": 120, "dBoy": 112, "dEn": 92, "dCap": 11, "yuk": 85}],
+    "05719": ["konus", "05719", "12214030", "k-05719", {"boy": 122, "en": 122, "dBoy": 100, "dEn": 100, "dCap": 11, "yuk": 128}],
+    "hd-1": ["hd", "1", "12214009", "k-hd-1", {"boy": 105, "en": 91.5, "dBoy": 82.7, "dEn": 69.4, "dCap": 10.4, "yuk": 65.6}],
+    "hd-2": ["hd", "2", "12214010", "k-hd-2", {"boy": 105, "en": 91.5, "dBoy": 82.7, "dEn": 69.4, "dCap": 10.4, "yuk": 65.6}],
+    "h-i-090": ["h", "I 090-205-090", "12214701", "h-1", {"sd": 20.5, "T": 9, "H": 30, "D2": 33, "d1": 9, "vida": "M6/M8"}],
+    "h-ii-135": ["h", "II 135-335-120", "12214702", "h-2", {"sd": 33.5, "T": 12, "H": 50, "D2": 48, "d1": 13.5, "vida": "M10/M12"}],
+    "h-ii-140": ["h", "II 140-405-200", "12214703", "h-2", {"sd": 40.5, "T": 20, "H": 61.7, "D2": 64.8, "d1": 14, "vida": "M10/M12"}],
+    "h-ii-167": ["h", "II 167-405-200", "12214704", "h-2", {"sd": 40.5, "T": 20, "H": 61.7, "D2": 64.8, "d1": 16.7, "vida": "3/8\"/M12"}],
+    "h-ii-238": ["h", "II 238-588-290", "12214705", "h-2", {"sd": 58.8, "T": 29, "H": 73, "D2": 89, "d1": 23.8, "vida": "M16/M20"}],
+    "h-ii-250": ["h", "II 250-658-250", "12214706", "h-2", {"sd": 65.8, "T": 25, "H": 87, "D2": 124, "d1": 25, "vida": "M20/M22"}],
+    "h-ii-270": ["h", "II 270-658-250", "12214707", "h-2", {"sd": 65.8, "T": 25, "H": 87, "D2": 124, "d1": 27, "vida": "M24"}],
+    "h-iii-135": ["h", "III 135-315-130", "12214708", "h-3", {"sd": 31.5, "T": 13, "H": 50, "D2": 48, "d1": 13.5, "vida": "M10/M12"}],
+    "marine-1": ["marine", "1", "12214404", "m-1", {"boy": 120, "en": 60, "dBoy": 100, "yuk": 38, "dis": "M12"}],
+    "marine-2": ["marine", "2", "12214405", "m-2", {"boy": 183, "en": 75, "dBoy": 140, "yuk": 50, "dis": "M16"}],
+    "marine-3": ["marine", "3", "12214406", "m-3", {"boy": 230, "en": 112, "dBoy": 182, "yuk": 70, "dis": "M20"}],
+    "gl-1": ["gen", "1", "12206462", "g-1", {"boy": 200, "en": 200, "dBoy": 165, "dEn": 165, "dCap": 14.5, "yuk": 84, "dis": "M20"}],
+    "gl-2": ["gen", "2", "12206463", "g-2", {"boy": 270, "en": 270, "dBoy": 230, "dEn": 180, "dCap": 19, "yuk": 106, "dis": "M24"}],
   };
   var TIP_SIRA = Object.keys(TIP);
   // kod → [tip, sertlik sınıfı, ShA (yaklaşık; H-takozda yok), Fz N, Sz mm, Fx N, Sx mm, Fy N, Sy mm,
@@ -195,6 +205,25 @@ var VE_MNT_AP = (function() {
     return a[1] + ' ' + t[1] + ' ' + (k[2] != null ? k[2] + ' ShA' : k[1]) + ' (A+P ' + noktali(kod) + ')';
   }
   var yuvarla = function(v) { return Math.round(v); };
+  // AMC-EO'nun dinamiği ölçülmüş NR kodlarında din./stat. medyanı (eksenlerin ortalaması).
+  var DIN_MEDYAN = { din: 1.52, n: 9 };
+  // Kodun din./stat. tahmini: { din, tur: 'sertlik' | 'medyan', sh, n }.
+  function dinOrani(kod) {
+    var k = KOD[kod]; if (!k) return null;
+    if (k[2] != null) return { din: Math.round((k[2] + 20) / 50 * 100) / 100, tur: 'sertlik', sh: k[2] };
+    return { din: DIN_MEDYAN.din, tur: 'medyan', n: DIN_MEDYAN.n };
+  }
+  // Tahminli dinamiği girdinin statiğinden kur (girilen değer tahmin değil, listeden düşer).
+  function tamamla(e) {
+    var D = e && e.ap && e.ap.dinamik, T = e && e.tahmin;
+    if (!D || !T || !T.length) return e;
+    ['x', 'y', 'z'].forEach(function(a) {
+      if (T.indexOf('d' + a) < 0) return;
+      var st = e['s' + a];
+      e['d' + a] = (st > 0) ? Math.round(st * D.din) : null;
+    });
+    return e;
+  }
   // Kütüphane girdisi (VE_MOUNT_LIBRARY biçimi). Bilinmeyen eksen null.
   function girdi(kod) {
     var k = KOD[kod]; if (!k) return null;
@@ -205,8 +234,9 @@ var VE_MNT_AP = (function() {
     else if (aile === 'h') { e.sx = k[10]; e.sy = k[10]; e.sz = k[9]; }
     else if (aile === 'marine') { e.sz = yuvarla(k[3] / k[4]); }
     else { e.sz = k[9]; }
-    e.ap = { kod: kod, tip: k[0], aile: aile, sinif: k[1], sh: k[2] };
-    return e;
+    e.ap = { kod: kod, tip: k[0], aile: aile, sinif: k[1], sh: k[2], dinamik: dinOrani(kod) };
+    e.tahmin = ['dx', 'dy', 'dz'];
+    return tamamla(e);
   }
   // Bütün kodlar: ailenin · tipin · sertliğin sırasıyla.
   function kodlar() {
@@ -223,11 +253,12 @@ var VE_MNT_AP = (function() {
     var G = (typeof window !== 'undefined' && window.__MFSIM_TAKOZ) || null;
     return (G && G[rel]) || ('assets/' + rel);
   }
-  // Künye: Takoz Özellikleri'nin gösterdiği veri ve görseller (kapasite YAZILMAZ — Canlı Not 65).
+  // Künye: Takoz Özellikleri'nin gösterdiği veri ve tipin teknik resmi — (i) düğmesinin
+  // penceresinde, fotoğraf yok (Canlı Not 111). Kapasite YAZILMAZ (Canlı Not 65).
   function tipKunye(tip) {
     var t = TIP[tip], a = AILE[t[0]];
-    return { tip: tip, urun: a[1] + ' ' + t[1], aile: a[0], tipAdi: t[1], olcu: t[5],
-             cizim: gorsel('cizim-' + t[3]), foto: gorsel('urun-' + tip), kaynak: KAYNAK[a[2]] };
+    return { tip: tip, urun: a[1] + ' ' + t[1], aile: a[0], tipAdi: t[1], olcu: t[4],
+             cizim: gorsel('cizim-' + t[3]), kaynak: KAYNAK[a[2]] };
   }
   function kunye(kod) {
     var k = KOD[kod]; if (!k) return null;
@@ -244,7 +275,8 @@ var VE_MNT_AP = (function() {
     return K;
   }
   return { MARKA: MARKA, AILE: AILE, AILE_SIRA: AILE_SIRA, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, KAYNAK: KAYNAK, ESLES: ESLES,
-           noktali: noktali, ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye, kunyeEs: kunyeEs };
+           DIN_MEDYAN: DIN_MEDYAN, noktali: noktali, ad: ad, dinOrani: dinOrani, tamamla: tamamla, girdi: girdi,
+           kodlar: kodlar, gorsel: gorsel, kunye: kunye, kunyeEs: kunyeEs };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = VE_MNT_AP;

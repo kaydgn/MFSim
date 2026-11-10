@@ -799,18 +799,33 @@ function _mntRepMassTable(geom){
   return h;
 }
 
-// Tablo 2 — takoz konum + rijitlik
+// Tablo 2 — takoz konum + rijitlik. Tahmini rijitlik (Canlı Not 113: üreticinin
+// yayımlamadığı değer — AMC'de radyal, A+P'de dinamik; cp-mount.js → _mntTakozTahmin)
+// "≈" ile ve tablonun altında üreticisinin yöntemiyle yazılır — modelin varsayımıdır.
 function _mntRepMountTable(R){
-  var g=(R.gather.mounts||[]);
+  var g=(R.gather.mounts||[]), byId={}, tahminli=[], tahminliAp=[];
+  ((typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : []).forEach(function(n){ byId[n.id]=n; });
   var h='<table><caption>Tablo '+_rTbl()+' — Takoz konumları ve rijitlikleri (statik / dinamik, üç eksen)</caption>';
   h+='<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k<sub>x,s</sub></th><th>k<sub>y,s</sub></th><th>k<sub>z,s</sub></th><th>k<sub>x,d</sub></th><th>k<sub>y,d</sub></th><th>k<sub>z,d</sub> [N/mm]</th></tr>';
   g.forEach(function(m){
+    var T=(byId[m.id] && typeof _mntTakozTahmin==='function') ? _mntTakozTahmin(byId[m.id]) : [];
+    var k=function(a){ return '<td>'+(T.indexOf(a)>=0 ? '≈' : '')+_rF(m[a],0)+'</td>'; };
+    if(T.length){
+      var E=(typeof _mntKutuphaneEslesme==='function') ? _mntKutuphaneEslesme(byId[m.id]) : null;
+      (E && E.e && E.e.ap ? tahminliAp : tahminli).push(_rEsc(m.name||'takoz'));
+    }
     h+='<tr><td class="l">'+_rEsc(m.name||'takoz')+'</td>'
       +'<td>'+_rF(m.x,2)+'</td><td>'+_rF(m.y,2)+'</td><td>'+_rF(m.z,2)+'</td>'
-      +'<td>'+_rF(m.kxs,0)+'</td><td>'+_rF(m.kys,0)+'</td><td>'+_rF(m.kzs,0)+'</td>'
-      +'<td>'+_rF(m.kxd,0)+'</td><td>'+_rF(m.kyd,0)+'</td><td>'+_rF(m.kzd,0)+'</td></tr>';
+      +k('kxs')+k('kys')+k('kzs')+k('kxd')+k('kyd')+k('kzd')+'</tr>';
   });
   h+='</table>';
+  if(tahminli.length) h+='<p>≈ Tahmini rijitlik — '+tahminli.join(', ')+': üretici radyal rijitliği yayımlamıyor; '
+    +'k<sub>x</sub>, k<sub>y</sub> eksenel rijitlik × AMC’nin ölçtüğü radyal/eksenel oran (AMC-EO ve AMC çizimleri; '
+    +'aynı tipin ölçülmüş sertlikleri arasında doğrusal, yoksa aynı ailenin, yoksa ölçülmüş bütün tiplerin medyanı), '
+    +'dinamik değer statik × din./stat. oranı.</p>';
+  if(tahminliAp.length) h+='<p>≈ Tahmini rijitlik — '+tahminliAp.join(', ')+': üretici dinamik rijitliği yayımlamıyor; '
+    +'dinamik değer statik × (Sh + 20)/50 (AMC’nin NR konilerdeki ölçümü; sertliği yazılmayan CR takozda '
+    +'AMC-EO’daki NR kodların din./stat. medyanı).</p>';
   return h;
 }
 

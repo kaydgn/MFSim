@@ -553,14 +553,13 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="12" width="68" height="76" rx="6" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="5"/><path d="M40 30 Q34 35 43 39 Q34 43 43 47 Q34 51 40 55" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="54" y1="34" x2="74" y2="34" stroke="var(--text-secondary, #535c67)" stroke-width="4" stroke-linecap="round"/><line x1="54" y1="44" x2="74" y2="44" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="68" x2="74" y2="68" stroke="var(--text-muted, #5f6873)" stroke-width="3.5" stroke-linecap="round"/><line x1="26" y1="78" x2="60" y2="78" stroke="var(--text-muted, #5f6873)" stroke-width="3.5" stroke-linecap="round"/></svg>',
     // Takoz'un araç şeridi TEK ölçü (kullanım notu T13: 60×54 · 65×60 · 56×56 ·
     // 60×56 yan yana duruyordu, adlar 6 px'e kadar farklı yükseklikte).
-    // `tekTik`: aracın işi penceresi — tek tık (sürüklemesiz) pencereyi açar
-    // (kullanım notu T20; js/ui-core.js → veAttachNodeDrag)
-    inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    // Pencere çift tıkla açılır (Canlı Not 116; js/ui-core.js → veAttachNodeDrag).
+    inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 56
   },
   'mnt-solver': {
     name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #cf222e)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #cf222e)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #9a6700)"/></svg>',
-    inputs: 0, outputs: 0, isMountSolver: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountSolver: true, defaultWidth: 60, defaultHeight: 56
   },
   // Araç Performans "Başlangıç ve Örnekler" — güç aktarma modülünün örnek yükleyicisi.
   // Kayıt defteri ve panel js/cp-arac-example.js içinde.
@@ -569,17 +568,17 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="42" width="14" height="11" rx="2" fill="var(--text-muted, #5f6873)"/><line x1="48" y1="47" x2="56" y2="47" stroke="var(--text-muted, #5f6873)" stroke-width="3"/><circle cx="61" cy="47" r="5" fill="none" stroke="var(--text-muted, #5f6873)" stroke-width="3"/><line x1="36" y1="66" x2="66" y2="66" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="76" x2="54" y2="76" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isApExample: true, defaultWidth: 56, defaultHeight: 56
   },
-  // BAŞLANGIÇ SİHİRBAZI — tek tıkla Takoz Başlangıç Sihirbazı'nı açan araç (kullanıcı
+  // BAŞLANGIÇ SİHİRBAZI — çift tıkla Takoz Başlangıç Sihirbazı'nı açan araç (kullanıcı
   // 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen kaldıralım … Onun yerine sihirbazı
   // açan bir bileşen oluşturalım. Sembolü de sihirli falan"*; kalkan bileşen "Başlangıç ve
   // Örnekler" — `mnt-example`: örnek listesi başlangıç sayfasında). İşi bir pencere değil
-  // bir EYLEM: `eylem` tek tıkta ve çift tıkta çalışır (js/ui-core.js → veTekTikEylem),
+  // bir EYLEM: `eylem` çift tıkta çalışır (Canlı Not 116; js/ui-core.js → veTekTikEylem),
   // özellikler penceresi yok. Kayıtlı projedeki `mnt-example` düğümü açılışta düşer
   // (tanımsız tip — Koordinat Düzlemi gibi). Çizim: asa, ucunda yıldız, çevresinde kıvılcım.
   'mnt-wizard': {
     name: 'Başlangıç Sihirbazı',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="16" y1="86" x2="58" y2="44" stroke="var(--text-secondary, #535c67)" stroke-width="11" stroke-linecap="round"/><line x1="16" y1="86" x2="35" y2="67" stroke="var(--accent-primary, #1f5fd6)" stroke-width="11" stroke-linecap="round"/><path d="M71 5 L77.5 23.5 L96 30 L77.5 36.5 L71 55 L64.5 36.5 L46 30 L64.5 23.5 Z" fill="var(--accent-warning, #9a6700)"/><path d="M83 61 L85.6 68.4 L93 71 L85.6 73.6 L83 81 L80.4 73.6 L73 71 L80.4 68.4 Z" fill="var(--accent-primary, #1f5fd6)"/><path d="M30 14 L32.4 21.6 L40 24 L32.4 26.4 L30 34 L27.6 26.4 L20 24 L27.6 21.6 Z" fill="var(--accent-success, #1a7f37)"/><circle cx="92" cy="50" r="3" fill="var(--accent-warning, #9a6700)"/><circle cx="14" cy="52" r="2.6" fill="var(--accent-primary, #1f5fd6)"/><circle cx="58" cy="82" r="2.6" fill="var(--accent-success, #1a7f37)"/></svg>',
-    inputs: 0, outputs: 0, isMountWizard: true, maxInstances: 1, tekTik: true, eylem: 'veMntWizAc', defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountWizard: true, maxInstances: 1, eylem: 'veMntWizAc', defaultWidth: 60, defaultHeight: 56
   },
   'mnt-viewer': {
     name: '3D Görüntüleyici',
@@ -588,7 +587,7 @@ var componentDefs = {
     // açılır, rolleri burada (ve sihirbazın kartında) verilir ve bileşenin
     // verisine (`data.cad`) yazılır — dosya projeye girmez. Modülün CAD'i tek:
     // maxInstances 1. Pencere: js/cp-mount-cad.js.
-    inputs: 0, outputs: 0, isMountViewer: true, maxInstances: 1, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountViewer: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 56
   },
   // Koordinat Düzlemi (mnt-coordframe) YOK (kullanıcı 2026-11-06, Canlı Not 63:
   // *"Koordinat Düzlemi bileşenini kaldıralım. Gerek yok."*): eksenin dili 3B'nin ve
@@ -600,7 +599,7 @@ var componentDefs = {
   'mnt-2dview': {
     name: 'Görünümler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 25 A40 15 0 0 1 80 20" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="4" stroke-linecap="round"/><path d="M84 13 L84 26 L72 22 Z" fill="var(--accent-primary, #1f5fd6)"/><path d="M20 44 L50 33 L80 44 L50 55 Z" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="4" stroke-linejoin="round"/><path d="M20 44 V70 L50 81 L80 70 V44 M50 55 V81" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="63" r="7" fill="var(--bg-input, #ffffff)" stroke="var(--accent-danger, #cf222e)" stroke-width="3.5"/><rect x="12" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #1a7f37)"/><rect x="76" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #1a7f37)"/></svg>',
-    inputs: 0, outputs: 0, isMount2DView: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
   },
   // Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML
   // rapora döker (teori + bu modelin sayısal örneği). Çözülmemişse uyarır.
@@ -608,7 +607,7 @@ var componentDefs = {
   'mnt-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #1f5fd6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #1f5fd6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #1f5fd6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #5f6873)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isMountReport: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountReport: true, defaultWidth: 60, defaultHeight: 56
   },
   // Parametrik Analiz — ilk analizi "Katalogdan seçim": takoz gruplarına
   // kütüphanedeki tipleri takıp her kombinasyonu Çözücü'nün yolundan geçirir;
@@ -617,7 +616,7 @@ var componentDefs = {
   'mnt-parametric': {
     name: 'Parametrik Analiz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M18 14 V82 H88" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 24 Q38 62 82 72" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="4" stroke-linecap="round"/><circle cx="58" cy="36" r="4.5" fill="var(--text-muted, #5f6873)"/><circle cx="74" cy="50" r="4.5" fill="var(--text-muted, #5f6873)"/><circle cx="30" cy="24" r="5" fill="var(--accent-success, #1a7f37)"/><circle cx="82" cy="72" r="5" fill="var(--accent-success, #1a7f37)"/><circle cx="44" cy="55" r="7.5" fill="var(--accent-primary, #1f5fd6)"/></svg>',
-    inputs: 0, outputs: 0, isMountParametric: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountParametric: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca

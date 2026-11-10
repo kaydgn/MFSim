@@ -382,21 +382,21 @@ describe('KESİK — renk temadan bağımsız', () => {
     expect(oran(bant, hex('--sinema-vurgu-yazi'))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // İNCE BİRİNCİL DÜĞME (kullanıcı 2026-11-09, Canlı Not 67: *"Şu buton çok kalın
-  // olmuş. Bu butonu biraz daha inceltebilir miyiz?"*): 52 px'lik dolu düğme
-  // modül satırları kadar iriydi. Kural: ≤ 36 px ve kısa ekranın modül satırından
-  // (48 px) bile ince; yazı ve ikon boyla birlikte küçülür.
-  test('İNCE BİRİNCİL DÜĞME — ≤ 36 px, modül satırından ince; yazı 13 px, ikon 16 px', () => {
+  // BİRİNCİL DÜĞMENİN BOYU (kullanıcı 2026-11-09, Canlı Not 67: *"Şu buton çok kalın
+  // olmuş"* — 52 px'lik dolu düğme modül satırları kadar iriydi → 36 px; Canlı Not 114,
+  // 2026-11-10: *"Bu sefer de çok küçülmüş. Biraz büyültelim"* → 44 px). Kural: kısa
+  // ekranın modül satırından (48 px) ince; yazı ve ikon boyla birlikte büyür.
+  test('BİRİNCİL DÜĞMENİN BOYU — 44 px, modül satırından ince; yazı 14 px, ikon 18 px', () => {
     const d = kural(CSS_WELCOME, '.ve-welcome-open');
     const boy = parseFloat(d.match(/(?:^|;|\s)height:(\d+)px/)[1]);
-    expect(boy).toBeLessThanOrEqual(36);
+    expect(boy).toBe(44);
     const satir = parseFloat(kural(CSS_WELCOME, '.ve-module-card').match(/(?:^|;|\s)height:(\d+)px/)[1]);
     expect(boy).toBeLessThan(satir);
     expect(boy).toBeLessThan(48);                                        // kısa ekranın satırı
-    expect(d).toContain('font-size:var(--fs-md)');
+    expect(d).toContain('font-size:var(--fs-lg)');
     const ik = kural(CSS_WELCOME, '.ve-welcome-open .mf-ico');
-    expect(ik).toContain('width:16px');
-    expect(ik).toContain('height:16px');
+    expect(ik).toContain('width:18px');
+    expect(ik).toContain('height:18px');
   });
 
   test('üstüne gelinen satırın zemininde yazı ≥ 4,5:1', () => {

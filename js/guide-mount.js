@@ -379,7 +379,7 @@ var _GM_TUVAL = [
   { k: 'motor', ad: 'Motor', not: 'Kütle gövdesi. Şasi çerçevesindeki öteki kutular da gövdedir: Şanzıman, Şaft payı, cradle’lar.' },
   { k: 'takoz', ad: 'Takozlar', not: 'Her biri konumu ve rijitliğiyle; altı takoz.', yer: 'sag' },
   { k: 'cozucu', ad: 'Çözücü', not: 'Yük kitabı, yöntem ve Hesapla.' },
-  { k: 'sihirbaz', ad: 'Başlangıç Sihirbazı', not: 'Tek tıkla Takoz Başlangıç Sihirbazı’nı açar.' },
+  { k: 'sihirbaz', ad: 'Başlangıç Sihirbazı', not: 'Çift tıkla Takoz Başlangıç Sihirbazı’nı açar.' },
   { k: 'rapor', ad: 'Rapor', not: 'Çevrimdışı HTML rapor.' },
   { k: 'gorunumler', ad: 'Görünümler', not: 'Modelin aksonometrik çizimi.' },
   { k: 'goruntuleyici', ad: '3D Görüntüleyici', not: 'Güç grubunun STEP dosyası.' },
@@ -720,24 +720,23 @@ function _gmSec3(){
   h += _gmEkran('pencere', 'pencere', _GM_PENCERE, 'Motor’un penceresi sağ sütunda.');
   h += _gmEkran('pencere-ust', 'pencere-ust', _GM_PENCERE_UST, 'Pencerenin üst kısmı: başlık, kimlik ve ilk bölüm.', 380);
   h += _gmNot('Tek tık ve çift tık',
-      'Araçlar — Çözücü, Rapor, Görünümler, 3D Görüntüleyici, Takoz '
-    + 'Özellikleri ve Parametrik Analiz — <strong>tek tıkla</strong> açılır; Başlangıç Sihirbazı '
-    + 'pencere değil sihirbazı açar. Kütle gövdeleri ve '
-    + 'takozlarda tek tık seçer, <strong>çift tık</strong> pencereyi açar. Pencere seçim boşalınca da '
+      'Her bileşende tek tık seçer, <strong>çift tık</strong> açar: kütle gövdeleri, takozlar ve '
+    + 'araçlar — Çözücü, Rapor, Görünümler, 3D Görüntüleyici, Takoz Özellikleri ve Parametrik '
+    + 'Analiz — penceresini, Başlangıç Sihirbazı sihirbazı. Pencere seçim boşalınca da '
     + 'açık kalır; konusu tuvalde kesikli kenarla işaretlidir.');
   h += _gmH3('Sihirbazı yeniden açmak', 'tur-sihirbaz');
   h += _gmAdimlar([
-    'Tuvalde <strong>Başlangıç Sihirbazı</strong>’na ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' tıklayın.',
+    'Tuvalde <strong>Başlangıç Sihirbazı</strong>’na ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' çift tıklayın.',
     'Ekranda: Takoz Başlangıç Sihirbazı açılır; tuvaldeki model adımları doldurur. '
       + '<strong>Modeli kur</strong> tuvaldeki düğümleri yerinde günceller.'
   ]);
   h += _gmNot('Pencere açılmaz',
-      'Başlangıç Sihirbazı bir özellik penceresi taşımaz: tek tık (ya da çift tık) sihirbazı açar. '
+      'Başlangıç Sihirbazı bir özellik penceresi taşımaz: çift tık sihirbazı açar. '
     + 'Örnek modeller başlangıç sayfasının listesindedir; model kurulduktan sonra başka örnek '
     + 'yüklemek için tuval boşaltılır ya da yeni proje açılır.');
   h += _gmH3('Modeli çözmek', 'tur-coz');
   h += _gmAdimlar([
-    'Tuvalde <strong>Çözücü</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'cozucu') + ' tıklayın: penceresi sağ '
+    'Tuvalde <strong>Çözücü</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'cozucu') + ' çift tıklayın: penceresi sağ '
       + 'sütunda açılır (' + _gmS('cozucu') + ').',
     'Sağ sütundaki ' + _gmN(_GM_COZUCU, 'hesapla') + ' <strong>Hesapla</strong>’ya basın. İlerleme '
       + 'düğmenin solundaki çubukta akar: çözülen yük durumu, sırası ve oranı.',
@@ -760,7 +759,7 @@ function _gmSec3(){
   h += _gmH3('Raporu üretmek', 'tur-rapor');
   h += _gmAdimlar([
     'Rayda <strong>Topoloji</strong>’ye dönün ve tuvalde <strong>Rapor</strong>’a ' + _gmNS('tuval', _GM_TUVAL, 'rapor')
-      + ' tıklayın: penceresi açılır (' + _gmS('rapor-p') + ').',
+      + ' çift tıklayın: penceresi açılır (' + _gmS('rapor-p') + ').',
     _gmN(_GM_RAPOR_P, 'indir') + ' <strong>Raporu oluştur ve indir</strong>’e basın. Rapor tek dosyalık '
       + 'HTML olarak indirilir; dosya internet bağlantısı olmadan açılır (' + _gmS('rapor') + ').'
   ]);
@@ -787,8 +786,8 @@ function _gmSec4(){
   h += _gmEkran('ekran', 'tuval', _GM_EKRAN, 'Ekranın bölümleri.');
   h += _gmH3('Fare ve klavye', 'fare');
   h += _gmAlanTablo('Tuvalde fare', [
-    ['Tek tık', 'Bileşeni seçer; araçlarda penceresini de açar', 'Ctrl + tık seçime ekler'],
-    ['Çift tık', 'Kütle gövdesinin ve takozun penceresini açar', 'Ana tuvaldeki Takoz kartında modüle girer'],
+    ['Tek tık', 'Bileşeni seçer', 'Ctrl + tık seçime ekler'],
+    ['Çift tık', 'Bileşenin penceresini açar; Başlangıç Sihirbazı’nda sihirbazı', 'Ana tuvaldeki Takoz kartında modüle girer'],
     ['Sürükle', 'Bileşeni taşır; boşlukta seçim kutusu çizer', 'Hesabı etkilemez'],
     ['Sağ tık + sürükle', 'Görünümü kaydırır', ''],
     ['Tekerlek', 'Yakınlaştırır ve uzaklaştırır', 'Durum çubuğunda ölçek; tık %100’e döner']
@@ -1054,7 +1053,8 @@ function _gmSec9(){
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
-      + 'girilmiş olabilir'],
+      + 'girilmiş olabilir. Eğik ve soluk yazılı değer <strong>tahminidir</strong>; '
+      + '<strong>Radyal tahmini</strong> (A+P’de <strong>Dinamik tahmini</strong>) satırı oranı ve kaynağını yazar'],
     ['Kuvvet–sehim', 'X · Y · Z kuvvet–sehim eğrileri tek diyagramda; aynı eğriyi çizen eksenler tek çizgidir',
       'Statik düz, dinamik kesikli çizgidir. Katalogdaki takozun eğrisi salt okunurdur; z-eğrisinin '
       + 'noktaları yalnız özel takozda girilir']
@@ -1066,6 +1066,15 @@ function _gmSec9(){
     + 'penceresinin tip notu kaç değerin tiple aynı olduğunu yazar. Taşıma kapasitesi de kopyalanır; tipte '
     + 'tanımsızsa takozdaki eski değer silinir. Katalogdaki bir takozda yapılan değişiklik bu '
     + 'Takoz Özellikleri düğümüne yazılır, katalogun kendi değeri bozulmaz.');
+  h += _gmNot('Radyal rijitlik tahmini',
+      'AMC radyal rijitliği (k<sub>x</sub>, k<sub>y</sub>) yalnız ölçtüğü on kod için verir; eksenel '
+    + 'k<sub>z</sub> = Z, dik takılı takozda yukarı–aşağı. Öteki kodlarda radyal rijitlik '
+    + '<strong>eksenel × oran</strong> alınır: aynı geometride bütün yönler kauçuğun sertliğiyle birlikte '
+    + 'değiştiği için oran tipin özelliğidir (Cone 39’un üç sertliğinde 1,86 · 1,91 · 1,78). Oran sırayla '
+    + 'aynı tipin AMC değerinden, yoksa aynı ailenin AMC-EO’daki tiplerinden, yoksa AMC-EO’daki bütün '
+    + 'tiplerden (medyan) gelir; dinamik değer statik × dinamik/statik oranıdır. Tahminli tip çözülür, '
+    + 'raporda değeri ≈ ile yazılır; katalog taramasına aday olmaz. Üreticinin değeri girilince o eksen '
+    + 'tahmin olmaktan çıkar.');
   h += _gmH3('Nonlineer z-eğrisi', 'egri');
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
     + 'doğru değil, yukarı bükülen bir eğridir. Takoza <strong>kuvvet–sehim eğrisi</strong> '
@@ -1158,7 +1167,7 @@ function _gmSec10(){
 
 function _gmSec11(){
   var h = _gmH2('m11');
-  h += '<p><strong>Çözücü</strong> bileşenine tıklayın. Pencere beş bölümü alt alta taşır; '
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere beş bölümü alt alta taşır; '
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi (' + _gmS('cozucu') + '). Pencere '
     + 'sonucu göstermez — sonuç Sonuçlar sayfasında ve raporda (' + _gmB('rapor') + ').</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
@@ -1286,7 +1295,7 @@ function _gmSec14(){
     + 've uygunluk hükmü (' + _gmS('rapor') + ').</p>';
   h += _gmAdimlar([
     'Önce modeli <strong>çözün</strong> — rapor bir sonuç belgesidir ve çözümsüz üretilmez.',
-    'Rapor bileşenine tıklayın (' + _gmS('rapor-p') + '): ' + _gmN(_GM_RAPOR_P, 'cozum') + ' <strong>Çözüm</strong> '
+    'Rapor bileşenine çift tıklayın (' + _gmS('rapor-p') + '): ' + _gmN(_GM_RAPOR_P, 'cozum') + ' <strong>Çözüm</strong> '
       + 'bölümü raporun hangi çözümden üretileceğini, ' + _gmN(_GM_RAPOR_P, 'frekans') + ' <strong>Frekans '
       + 'yerleşimi ve izolasyon</strong> bölümü raporun §8.8’indeki girdilerin (rölanti devri, '
       + 'silindir sayısı, ζ) nereden geldiğini gösterir; çözümün güncel olup olmadığı sağ '
@@ -1366,7 +1375,7 @@ function _gmSec16(){
     + 'okumanın çubuğu ve <strong>Vazgeç</strong> tuvalin sağ altındaki iş kartındadır. Roller ve hesap 3B’de '
     + 'verilir; <strong>Sihirbaza aktar</strong> sihirbazı takoz tipleri ve yükler için açar.</p>';
   h += _gmAdimlar([
-    'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'goruntuleyici') + ' tıklayın; penceresinde '
+    'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye ' + _gmNS('tuval', _GM_TUVAL, 'goruntuleyici') + ' çift tıklayın; penceresinde '
       + '<strong>STEP dosyası seç…</strong>’e basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',
     'Okunurken eylem satırında çubuk ve <strong>Vazgeç</strong> durur; okuma ekranı dondurmaz.',
     'Dosya okununca 3B tam ekran açılır (' + _gmS('3b') + '). Dosyada henüz rol yoksa tuvalin sol üstünde '
@@ -1751,8 +1760,9 @@ function _gmSec17(){
       + '<strong>Hesapla</strong> ve ana rapor: Çözücü taramanın ölçtüğü modları ve sehimleri bulur.',
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
       + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.',
-    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması, '
-      + 'tarama tablosu ve seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
+    '<strong>Excel’i indir</strong> (<strong>Öneri</strong> bölümünde): konfigürasyonların karşılaştırması ve her '
+      + 'birinin sonucu, tarama tablosu ve Tarama’da seçilen kombinasyonun sonucu (' + _gmB('p-sonuc') + ', '
+      + '<em>Excel çıktısı</em>).'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
@@ -1830,16 +1840,19 @@ function _gmSec17(){
     + '(max |δ<sub>z</sub>|). <em>Uygunluk</em>: dört kesin kriter sağlanıyorsa <em>Uygun</em>, statik sehimi en '
     + 'küçük olan <em>En uygun</em> (koyu yeşil); yeşil, sehim arttıkça açılır; <em>Uygun değil</em> renksizdir. '
     + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve <em>Sonuç</em> hücresi '
-    + 'konfigürasyonun sonucunu açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter '
-    + 'sayısına sonra statik sehime göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, '
-    + 'dört kriter (✓ / ✗), frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
-    + '<em>Sonuçlar →</em> Sonuç sayfasını açar. <strong>Sonuç</strong>: üstte bir kombinasyonun sonucu — '
-    + '<em>No</em> alanına Tarama’nın numarası yazılırsa o kombinasyon, alan boşsa Tarama’nın filtresinde kalan '
-    + 'ilk satır (<em>Süzgecin ilk satırı</em>); dört kriter, TR, statik sehim, frekans payı, her yük durumunda '
-    + 'takoz başına X, Y, Z yer değiştirmesi ve modlar. Altında K0 … K9 aynı tabloyla; her birinde '
-    + '<em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. Bütün '
-    + 'kombinasyonların sonucu gizli <strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun '
-    + 'dışındaki satır ve sütunlar gizli açılır.');
+    + 'konfigürasyonun kendi sayfasını (K0 … K9) açar: her yük durumunda takoz başına X, Y, Z yer değiştirmesi, '
+    + 'modlar ve TR; <em>Özet sayfasına dön</em>, <em>Geri</em> ve <em>İleri konfigürasyon</em> düğmeleri. '
+    + '<strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter sayısına sonra statik sehime göre '
+    + 'sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, dört kriter (✓ / ✗), frekans payı, '
+    + 'grup başına statik ve azami yük, kapasite; başlık satırında filtre. <em>Sonuçlar →</em> Sonuç sayfasını '
+    + 'açar. <strong>Sonuç</strong>: Tarama’nın filtresinde TEK satır kalınca o kombinasyonun sonucu — dört '
+    + 'kriter, TR, statik sehim, frekans payı, her yük durumunda takoz başına X, Y, Z yer değiştirmesi ve modlar; '
+    + 'birden çok satır görünürken boştur. Tek satır bırakmak için kombinasyonun <em>No</em> hücresine sağ '
+    + 'tıklayıp Excel’in <em>Filtre</em> menüsünden seçili hücrenin değerine göre filtreleyin ya da grupların '
+    + 'sütunlarında birer tip seçin. Kitabın alt çubuğunda sayfa adları yoktur; sayfalar düğmelerle açılır. '
+    + 'Bütün kombinasyonların sonucu gizli '
+    + '<strong>Veri</strong> sayfasındadır. Izgara çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli '
+    + 'açılır.');
   h += _gmNot('Seçimi modele uygulamak',
       '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
     + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '
