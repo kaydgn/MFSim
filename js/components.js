@@ -165,7 +165,7 @@ function veStartModule(type) {
   // işin yapıldığını sanmanın bir yolu olurdu.
   if(acici && typeof veModuleLoaderRun === 'function') {
     var kurulan = null;
-    // Simge tıklanan SATIRDAN: kesikte tek renkli, vurgu renginde çiziliyor.
+    // Simge tıklanan SATIRDAN: kesikte tek renkli, yazının renginde çiziliyor.
     // componentDefs'in sembolü temanın renkleriyle çizili ve açık temanın
     // koyu tonları siyah kesikte kaybolurdu; satır yoksa (karşılama dışı
     // çağrı) o sembol.

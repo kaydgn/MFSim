@@ -1231,11 +1231,11 @@
       to{ opacity:0; }
     }
     /* Sembol tıklanan satırın tek renkli SVG'si (veStartModule) — ikon FONTU
-       değil; kesikte satırdaki gibi vurgu renginde. */
+       değil; kesikte satırdaki gibi yazının renginde. */
     .mfsim-modload-ico{
       display:inline-flex; align-items:center; justify-content:center;
       width:34px; height:34px; flex:none;
-      color:var(--sinema-vurgu);
+      color:var(--sinema-yazi);
     }
     .mfsim-modload-ico svg{ width:100%; height:100%; display:block; }
     @media (prefers-reduced-motion: reduce){
@@ -2402,7 +2402,9 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 .ve-welcome-logo-ico{
   width:0.54em;
   height:0.54em;
-  color:var(--sinema-vurgu);
+  /* Yazının rengi: marka da modül simgeleri gibi mavi değil (Canlı Not 97).
+     Açılıştan inen çark rengini uçuşta hedefinkine geçirir (veWelcomeSplashUc). */
+  color:var(--sinema-yazi);
 }
 .ve-welcome-tagline{
   flex:none;
@@ -2716,8 +2718,9 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 .ve-module-card:nth-child(4){ animation-delay:calc(var(--dur-step) * 3); }
 .ve-module-card:hover,
 .ve-module-card:focus-visible{ background-color:var(--kesik-kabar); border-left-color:var(--sinema-vurgu); }
-/* Simge kiremidi yok: kesik zaten bir yüzey, kalan tek şey vurgu renkli
-   çizim. */
+/* Simge kiremidi yok: kesik zaten bir yüzey, kalan tek şey çizim — yazının
+   renginde (kullanıcı 2026-11-10, Canlı Not 97: "çok mavi … beyaz yapalım").
+   Mavi vurgu etkileşimin rengi: üstüne gelme, odak, ana düğme. */
 .ve-module-card-icon{
   flex-shrink:0;
   width:32px;
@@ -2725,7 +2728,7 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   display:flex;
   align-items:center;
   justify-content:center;
-  color:var(--sinema-vurgu);
+  color:var(--sinema-yazi);
 }
 /* Simgeler markup'ta 38px genişlik/yükseklik NİTELİĞİYLE geliyor (kutu
    ölçüsü buradan sürülür, dosyadan değil). */

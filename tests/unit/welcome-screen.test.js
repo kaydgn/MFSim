@@ -438,6 +438,19 @@ describe('KESİK — yapı', () => {
     expect(loadSource('components.js')).not.toContain('_veWelcomeInstallCardSheen');
   });
 
+  // SİMGE RENGİ (kullanıcı 2026-11-10, Canlı Not 97: *"semboller renkler falan çok
+  // mavi ya. Beyaz yapalım"*): modül simgeleri, markanın çarkı ve modül giriş
+  // ekranındaki simge yazının renginde. Mavi vurgu etkileşimin rengi (üstüne gelme,
+  // odak, ana düğme), çizimin süsü değil — geri gelirse aynı şikâyet.
+  test('SİMGE RENGİ: modül simgeleri, marka çarkı ve giriş ekranının simgesi yazının renginde, mavi vurguda DEĞİL', () => {
+    ['.ve-module-card-icon', '.ve-welcome-logo-ico'].forEach((sec) => {
+      expect(kural(CSS_WELCOME, sec)).toContain('color:var(--sinema-yazi)');
+      expect(kural(CSS_WELCOME, sec)).not.toContain('--sinema-vurgu');
+    });
+    expect(kural(CSS, '.mfsim-modload-ico')).toContain('color:var(--sinema-yazi)');
+    expect(kural(CSS, '.mfsim-modload-ico')).not.toContain('--sinema-vurgu');
+  });
+
   // SİMGE (kullanıcı 2026-11-05, Canlı Not 3: "Modüllerin sembolleri çok hoşuma
   // gitmiyor"): karşılama sembolü modülün TANIMINDAN alır. index.html'de ayrı
   // çizilen kopya ayrışırdı — paletin sembolü bir kez tam böyle ayrışmıştı
