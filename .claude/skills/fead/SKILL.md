@@ -216,7 +216,8 @@ olurdu.
       eski 440 × 500 dokunulmamış kart yükselir) — yalnız VARSAYILAN ölçüdeki
       kart (kullanıcının ölçüsüne dokunulmaz); aynı satırda sağdaki kartlar
       fark kadar kayar. Kapı: `cp-fead.test.js` → *"TABLOSUZ KART UZUN"*. 640'ta
-      KASNAK sütunu 194 px. Eski kayıt şema 7 → 8 göçüyle büyür
+      KASNAK sütunu 190 px (X · Y 64 px, girdinin yan dolgusu 2 px: "-161,97"
+      62 px'te kesiliyordu). Eski kayıt şema 7 → 8 göçüyle büyür
       (`veFeadMigratePafta`); göç DOM'a dokunmaz — alt topolojinin
       kimlikleri ana tuvaldekilerle çakışabiliyor.
     - **PAFTA KALICI KAP, ÇİZİM DEĞİŞİR**: kart her model değişiminde
