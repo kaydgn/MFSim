@@ -12,7 +12,9 @@
  *       arkasında → mfsim.html; sayfa (canli-not.html) çekirdek ve künyeyle.
  *       YALNIZ ANA DALDAN: HEAD origin/main değilse ya da commit edilmemiş
  *       değişiklik varsa DURUR (--dal: yerel deneme, YAYINLANMAZ).
- *       Artifact'in dosya sınırı 16 MB: aşılırsa DURUR.
+ *       İKİ SINIR: programın güncellemesi (varlık) 20 MB'a kadar gider; sayfanın
+ *       gömdüğü kopya (sayfa yayını) 16 MB'a. Program 16 MB'ı aşarsa varlık yine
+ *       hazırlanır, sayfa yayını UYARIYLA kapalı söylenir; 20 MB'ı aşarsa DURUR.
  *
  *   node tools/canli-not.js yayin --program <varlık kimliği> [--notlar 6,8-21]
  *                           [--kaynak <mfsim.html>] [--cikti <json>]
@@ -64,7 +66,17 @@ const CEKIRDEK = path.join(__dirname, 'canli-not-cekirdek.js');
 const KOPRU = path.join(__dirname, 'canli-not-kopru.js');
 const CEKIRDEK_CAPA = '/*__CEKIRDEK__*/';
 const AYAR_CAPA = '/*__AYAR__*/null';
-const SINIR = 16 * 1024 * 1024;   // Artifact: sayfa ve her metin dosyası
+// Artifact'in iki sınırı BİRBİRİNDEN BAĞIMSIZ (Canlı Not 103–110 sonrası: AMC görselleri
+// programı 14,5 → 17,8 MB yaptı; tek 16 MB denetimi programın güncellemesini de durdurdu,
+// oysa güncelleme varlık olarak gidiyor ve 17,8 MiB'lık metin varlığı kabul edildi):
+//   SINIR          sayfa yayını — sayfanın `files` ile gömdüğü mfsim.html (sayfa ve her metin dosyası)
+//   VARLIK_SINIRI  programın güncellemesi — varlık deposundaki metin kopyası
+const SINIR = 16 * 1024 * 1024;
+const VARLIK_SINIRI = 20 * 1024 * 1024;
+// Boyutun hükmü: varlık yüklenebilir mi, sayfa gömebilir mi. SAF — hazirla'nın kararı ve testi.
+function sinirHukmu(boyut) {
+  return { varlik: boyut <= VARLIK_SINIRI, sayfa: boyut <= SINIR };
+}
 const VARSAYILAN_CIKTI = path.join(KOK, '.canli-not', 'yayin');
 
 function ayristir(argv) {
@@ -311,8 +323,9 @@ function hazirla(o) {
   const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
   fs.writeFileSync(mfsim, html);
   const boyut = Buffer.byteLength(html);
-  if (boyut > SINIR) {
-    throw new Error('mfsim.html ' + (boyut / 1048576).toFixed(2) + ' MB — Artifact sınırı 16 MB. ' +
+  const hukum = sinirHukmu(boyut);
+  if (!hukum.varlik) {
+    throw new Error('mfsim.html ' + (boyut / 1048576).toFixed(2) + ' MB — Artifact metin varlığı sınırı 20 MB. ' +
       'Büyüyen parçayı bulun (build çıktısı gömülenleri sayıyor).');
   }
   const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
@@ -329,12 +342,19 @@ function hazirla(o) {
   console.log('Canlı Not yayını hazır · ' + (ayar.surum || '(git yok)') + (ayar.pr ? ' · PR #' + ayar.pr : '') +
     (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
   console.log('  sayfa   ' + goreli(sayfaYol) + ' (' + (Buffer.byteLength(sayfa) / 1024).toFixed(1) + ' KB)');
-  console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB / sınır 16 MB)');
+  console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB · sayfa sınırı 16 MB' +
+    (hukum.sayfa ? '' : ' AŞILDI') + ' · varlık sınırı 20 MB)');
   console.log('  varlık  ' + goreli(varlik));
+  if (!hukum.sayfa) {
+    console.log('! Program 16 MB\'ı aşıyor: sayfa bu programı gömemez. Yalnız programın güncellemesi (varlık) ' +
+      'yapılır; sayfa değişirse gömülü kopya küçültülmeden sayfa yayınlanamaz.');
+  }
   console.log('\nProgramın güncellemesi (sayfa yenilenmez): Artifact publish url:<adres> asset:true file_path=' + goreli(varlik) +
     '\n  → node tools/canli-not.js yayin --program <id> --notlar <…>  → ArtifactData set yayin/son');
-  console.log('Sayfanın yayını (yalnız sayfa değiştiyse): file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}');
-  return { sayfa: sayfaYol, mfsim: mfsim, varlik: varlik, boyut: boyut, ayar: ayar };
+  console.log('Sayfanın yayını (yalnız sayfa değiştiyse): ' + (hukum.sayfa
+    ? 'file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}'
+    : 'YAPILAMAZ (program 16 MB\'ı aşıyor)'));
+  return { sayfa: sayfaYol, mfsim: mfsim, varlik: varlik, boyut: boyut, ayar: ayar, hukum: hukum };
 }
 
 // ── notlar ─────────────────────────────────────────────────────────────────
@@ -549,4 +569,4 @@ if (require.main === module) {
 }
 
 module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
-  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
+  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR, VARLIK_SINIRI, sinirHukmu };

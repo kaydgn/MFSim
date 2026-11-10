@@ -91,7 +91,7 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
      `ArtifactData set` `collection: yayin` `doc_id: son` `data: <dosyanın içeriği>` —
      pencere çıktığında Notlar hazır olsun.
   4. Önceki programın varlığı silinir (`Artifact delete url:<adres> path:<eski id>`):
-     her program 11,4 MB; açık görünüm eskisini zaten yüklemiş.
+     her program 11–18 MB; açık görünüm eskisini zaten yüklemiş.
 - **Denetim:** `ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum`
   → `node tools/canli-not.js denetle <döküm>`: *Güncel* · *ESKİ … programı güncelle*
   (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi; güncelleme
@@ -103,9 +103,14 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
 - **Açılış:** sayfa kayıttaki yayını gömülü programla (`mfsim.html`) karşılaştırır;
   başkaysa varlığı yükler (açılışta kaybolacak iş yok), değilse dosyayı.
 
-- `mfsim.html` = karşılama karesiz tek dosya (`MFSIM_KARSILAMA=yok`, 29,8 → 11,4 MB;
-  Artifact'in dosya sınırı 16 MB — aşılırsa betik DURUR) + köprü `<meta charset>`'ın
-  arkasında (önüne girince kodlama kayboluyordu: "MFSim aÃ§Ä±lÄ±yor").
+- `mfsim.html` = karşılama karesiz tek dosya (`MFSIM_KARSILAMA=yok`) + köprü `<meta charset>`'ın
+  arkasında (önüne girince kodlama kayboluyordu: "MFSim aÃ§Ä±lÄ±yor"). **İKİ SINIR, birbirinden
+  bağımsız** (`sinirHukmu`; kullanıcı 2026-11-10, "Canlı notu güncelleyelim": AMC görselleri
+  programı 14,5 → 17,8 MB yaptı ve tek 16 MB denetimi güncellemeyi de durduruyordu): programın
+  güncellemesi (varlık) 20 MiB'a kadar; sayfanın `files` ile gömdüğü kopya (sayfa yayını) 16 MB'a
+  kadar. Program 16 MB'ı aşarsa `hazirla` varlığı yine hazırlar ve sayfa yayınını kapalı söyler —
+  sayfa (`tools/canli-not*`) değişirse gömülü kopya küçültülmeden sayfa yayınlanamaz; 20 MiB'ı
+  aşarsa DURUR. Kapı: `canli-not.test.js` → *SINIR*.
 - **Sayfanın ilk yayını:** `Artifact` publish, `file_path: .canli-not/yayin/canli-not.html`,
   `files: {"mfsim.html": ".canli-not/yayin/mfsim.html"}`,
   `capabilities: {db: {}, user: {}, comments: {}, assets: {}, downloads: true}`, `icon: "pen"`.
@@ -218,8 +223,8 @@ turun ölçüm kaydıdır — ayrıca rapor sayfası gerekmez.
 - **Yazı tipi:** fotoğraf konteynerde Inter'le çizilir, kullanıcı Windows'ta
   Segoe UI görür — satır kırılımı bulgusu iki yerde ayrışabilir.
 - Kayıt sınırı: belge 256 KiB (sayfa seçimi kırpar), depo 25.000 belge; fotoğraf
-  varlık deposunda (gzip + base64, bir not ~0,7 MB); program varlığı 11,4 MB (metin
-  varlığının sınırı 20 MiB) — yalnız sonuncusu tutulur.
+  varlık deposunda (gzip + base64, bir not ~0,7 MB); program varlığı 11–18 MB (metin
+  varlığının sınırı 20 MiB; 17,8 MiB kabul edildi) — yalnız sonuncusu tutulur.
 
 ## 4 · Notun belgesi (`notlar/<id>`)
 
