@@ -22,7 +22,7 @@ beforeEach(() => resetStubs(stubs));
 
 const ORNEKLER = ['tulga', 'siper', 'asfat', 'tta10', 'kutu', 'hafif', 'kamyon'];   // son üçü kurgu (mount-ornek-kurgu.test.js)
 const oku = (ad) => JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/' + ad + '_topoloji.json'), 'utf8'));
-const ARAC = cp.VE_MNT_ARAC_TIPLERI.concat(['mnt-example']);
+const ARAC = cp.VE_MNT_ARAC_TIPLERI;     // Takoz Özellikleri · 3D · Görünümler · Çözücü · Başlangıç Sihirbazı · Rapor
 const yakin = (a, b, t = 0.5) => Math.abs(a - b) <= t;
 
 describe('araç kartları: tipin ölçüsü, sıra ve sütun', () => {
@@ -67,11 +67,11 @@ describe('araç kartları: tipin ölçüsü, sıra ve sütun', () => {
 });
 
 // Kullanıcı kararı S5·B (2026-10-15): çerçeveler YALNIZ ASFAT'taydı. Üç örnek
-// AYNI düzeni taşır: Araçlar (Takoz Özellikleri · Çözücü · Örnek · Rapor) ve
+// AYNI düzeni taşır: Araçlar (Takoz Özellikleri · Çözücü · Başlangıç Sihirbazı · Rapor) ve
 // Görselleştirici (Görünümler · 3D; Koordinat Düzlemi Canlı Not 63'te kalktı), ikisi
 // de tek sıra. Tek sıra bir seçim
-// değil ölçü: "Başlangıç ve Örnekler" adı 123 px, "Takoz Özellikleri" 92 px —
-// 105 px adımda yan yana gelirlerse adlar 2,5 px üst üste biner.
+// değil ölçü: en uzun ad ("Başlangıç Sihirbazı" ≈ 112 px; kalkan "Başlangıç ve Örnekler" 123 px
+// idi) 105 px adımda yan yana gelen komşusunun adına yaklaşır.
 describe('üç örnekte iki çerçeve: Araçlar ve Görselleştirici (S5·B)', () => {
   const GORSEL = ['mnt-2dview', 'mnt-viewer'];
   const icinde = (n, f) => n.x >= f.x && n.x + n.width <= f.x + f.width && n.y >= f.y && n.y + n.height <= f.y + f.height;
@@ -86,17 +86,19 @@ describe('üç örnekte iki çerçeve: Araçlar ve Görselleştirici (S5·B)', (
     const uye = (f) => j.nodes.filter((n) => icinde(n, f)).map((n) => n.type).sort();
     expect(uye(gor)).toEqual(GORSEL.slice().sort());
     expect(uye(arac)).toEqual(j.nodes.filter((n) => ARAC.includes(n.type) && !GORSEL.includes(n.type)).map((n) => n.type).sort());
-    expect(uye(arac)).toContain('mnt-example');
+    expect(uye(arac)).toContain('mnt-wizard');
     expect(kesisir(arac, gor)).toBe(false);
     // gövde ve takozlar çerçevenin dışında
     j.nodes.filter((n) => !ARAC.includes(n.type)).forEach((n) => {
       expect(`${n.type} ${n.id}: ${kesisir(n, arac) || kesisir(n, gor)}`).toBe(`${n.type} ${n.id}: false`);
     });
   });
-  test.each(ORNEKLER)('%s: Örnek kartı kendi örneğini seçili tutar', (ad) => {
-    const ex = oku(ad).nodes.filter((n) => n.type === 'mnt-example');
-    expect(ex.length).toBe(1);
-    expect(ex[0].data.exampleKey).toBe(ad);
+  test.each(ORNEKLER)('%s: Başlangıç Sihirbazı kartı örnekte tek ve veri taşımaz; Başlangıç ve Örnekler kartı yok', (ad) => {
+    const j = oku(ad);
+    const sih = j.nodes.filter((n) => n.type === 'mnt-wizard');
+    expect(sih.length).toBe(1);
+    expect(sih[0].data).toEqual({});
+    expect(j.nodes.some((n) => n.type === 'mnt-example')).toBe(false);
   });
   test('üç örnekte Görselleştirici aynı ölçüde; Araçlar sütun sayısıyla', () => {
     const olc = ORNEKLER.map((ad) => {

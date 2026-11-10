@@ -312,14 +312,14 @@ describe('ÖRNEKLER — iki kopya aynı ayarı taşır', () => {
       global.confirm = () => true;
       global.nodes = [{ id: 'cz', type: 'mnt-solver', def: componentDefs['mnt-solver'], data: { torkYon: '+x' } }];
       global.connections = [];
-      cp._mntLoadExampleFromModel(null, 'siper');
+      cp._mntLoadExampleFromModel('siper');
       const d = cozucu().data;
       expect(cp._mntYonAyari(d)).toEqual({ ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni', torkYon: '-x' });
       expect('torkYon' in d).toBe(false);
       const mo = global.nodes.find((x) => x.type === 'mnt-motor').data;
       expect([mo.mass, mo.idleRpm, mo.cylinders]).toEqual([1386.26, 700, 6]);
       global.nodes = [];                                             // çözücü yoksa kurulur ve ayar ona yazılır
-      cp._mntLoadExampleFromModel(null, 'tulga');
+      cp._mntLoadExampleFromModel('tulga');
       expect(cp._mntYonAyari(cozucu().data).torkYon).toBe('+x');
     } finally {
       jest.clearAllTimers();

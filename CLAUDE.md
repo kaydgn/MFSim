@@ -81,8 +81,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
   başla · Boş kanvas + örnek dizini + son değişiklikler). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
   kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
-  (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
-  Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
+  (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız Başlangıç
+  Sihirbazı bileşenini (`mnt-wizard`) taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Takoz'a girişte Bileşenler sütunu KAPALI** (kullanıcı 2026-11-06, Canlı
   Not 62: *"otomatik açık olarak geliyor. Gelmesin"*): `veMntPaletKapat` geçişsiz ve kadrajdan
   önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). Kapı:
@@ -93,7 +93,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   numarası satırda YAZILMAZ (kullanıcı 2026-11-05, Canlı Not 28 · 29). Kapı: `mount-baslangic.test.js` + `mount-ornek-kurgu.test.js` +
   `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
-  **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
+  **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici (sihirbazı tuvalden açan araç:
+  **Başlangıç Sihirbazı** bileşeni `mnt-wizard`, sihirli asa simgesi — kullanıcı 2026-11-10, Canlı
+  Not 110: *"Bu bileşeni tamamen kaldıralım … Onun yerine sihirbazı açan bir bileşen"*; kalkan
+  bileşen "Başlangıç ve Örnekler" / `mnt-example`, örnek listesi başlangıç sayfasında; eski projedeki
+  düğümü açılışta düşer. Kapı: `tek-tik-arac.test.js` → *EYLEM ARACI* + `mount-pencere.spec.js`
+  → *Başlangıç Sihirbazı bileşeni*): FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir); alt çubuk YOK — Geri · İleri (son adımda Modeli
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). **İlk hâl** —
@@ -374,14 +379,22 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
 - `js/mount-param-excel.js` + `js/xlsx-yaz.js` — Parametrik Analiz'in **Excel çıktısı**
   (kullanıcı kararı 2026-11-09: *"Kullanıcı bu Excel formatında çıktı alacak"*; düzen Canlı
-  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · K0…K9. Düzen o
-  notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı başlığın
+  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç · Veri (gizli).
+  Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı başlığın
   NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara kapalı, kullanılmayan
-  satır/sütun gizli, adlar sayfaya bağlı, K sayfasında Özet · Geri · İleri düğmeleri,
-  "ASR…" eki yazılmaz. Konfigürasyonlar: mevcut + kesin kriterleri sağlayanlar (önce bütün
-  açık kısıtları sağlayanlar, sonra toplam ihlal); hücre değer taşır, formül YOK. Yazıcı
-  DOM'suz ve bağımlılıksız (okuyucunun karşılığı). Kapı: `mount-param-excel.test.js` +
-  `mount-param-excel-tta.test.js` (→ *TEK YOL* · *ONAY*) + `xlsx-yaz.test.js`.
+  satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk STATİK SEHİMDEN**
+  (kullanıcı 2026-11-10): dört kesin kriteri sağlayanlar 1 g'nin max |δz|'sine göre sıralı, ilki
+  En uygun, kalanı Uygun (Kısmen uygun YOK); Tarama kriter sayısı → sehim. **Konfigürasyonun
+  sayfası YOK, sonucu Sonuç'ta** (kullanıcı 2026-11-10: *"Tıklandığında açılsın, gizli olsun"* —
+  gizli sayfa makrosuz bağla açılmaz): üstte seçili kombinasyonun panosu (No alanı, boşsa
+  Tarama'nın süzgecinde kalan ilk satır; formül son değeriyle yazılır), altında K0…K9 blokları
+  (Özet · Geri · İleri); Tarama'nın HER satırının sonucu gizli Veri'de (yük durumu başına paketli,
+  mm/100; panonun MID penceresi paketli metnin boyundan uzun — sabit 40, altı takozda 5. ve 6.
+  takozu yanlış okuyordu). Yazıcı DOM'suz ve bağımlılıksız (okuyucunun karşılığı; formül, gizli
+  ve akışlı sayfa); kitap ve dosya DİLİMLİ (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*).
+  Kapı: `mount-param-excel.test.js` (→ *SONUÇ* · *VERİ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js`
+  (→ *SEÇİM ve ONAY* · *TEK YOL* · *TARAMA* · *PANO*) + `xlsx-yaz.test.js` + `mount-param-sonuc.spec.js` →
+  *EXCEL* · *EXCEL DİLİMLİ*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık
@@ -804,6 +817,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   şeridi) sürüklemesiz tek tıkta pencereyi açar; öteki bileşende tek tık yalnız
   seçer, pencere çift tıkla. Sürükleme, Ctrl/Shift ve çoklu seçim açmaz. Kapı:
   `tek-tik-arac.test.js`.
+- **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
+  `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
+  olan araç (Takoz'un Başlangıç Sihirbazı) tek tıkta ve çift tıkta eylemi çalıştırır; özellikler
+  penceresi açılmaz ve seçim açık pencerenin konusunu değiştirmez. Kapı: `tek-tik-arac.test.js` →
+  *EYLEM ARACI*.
 - **KARTIN EN KÜÇÜK ÖLÇÜSÜNÜ TİPİ SÖYLER** (`componentDefs.minWidth/minHeight`
   → `js/node-resize.js` `veNodeMinSize`). Genel 50×50 tabanı içeriği olan bir
   kart için sessiz kayıp üretir (gövde tamamen örtülür, alanlar işaretsiz
@@ -917,9 +935,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   parçacığını dilim dilim bırakır ve ilerlemesini eylem satırında söyler
   (`vePencereIlerleme`): parametrik tarama ≤ 10 ms'lik dilimler, dönüş
   MessageChannel'la (iç içe `setTimeout(0)` 4 ms'ye kenetlenir); Hesapla yük
-  durumu başına. Taramanın 50 ms'lik parçası ana iş parçacığını kesintisiz
-  tutuyordu. Kapı: `mount-param.test.js` → *KOŞUCU* (dilim bütçesi) +
-  `mount-param-sonuc.spec.js` → *EYLEM SATIRI* (tarama boyunca uzun görev yok).
+  durumu başına; Excel çıktısında satırların çözümü, kitabın kurulumu ve dosyanın
+  yazımı (XML · UTF-8 · CRC · sıkıştırma, ~256 K'lık parçalar, dilim başına
+  ≤ 512 KB) — tek görevde yazılan 13.824 satırlık kitap 1,7 sn donduruyordu.
+  Taramanın 50 ms'lik parçası ana iş parçacığını kesintisiz tutuyordu. Kapı:
+  `mount-param.test.js` → *KOŞUCU* (dilim bütçesi) + `mount-param-sonuc.spec.js` →
+  *EYLEM SATIRI* · *EXCEL DİLİMLİ* (uzun görev yok) + `xlsx-yaz.test.js` → *dilimli yazım*.
 - **TAKOZ PENCERESİ SONUÇ GÖSTERMEZ** (kullanıcı kararı 2026-10-16: *"kullanıcı
   sadece detaylı sonuç raporu ile yetinecek"*): hiçbir Takoz penceresi (sihirbaz
   dâhil) Uygunluk, sehim, yük, mod, kuvvet taşımaz — sonuç yalnız raporda. Çözümle

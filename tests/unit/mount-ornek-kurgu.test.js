@@ -207,6 +207,10 @@ describe('iki kopya sayı sayı aynı: kayıt defteri ↔ JSON', () => {
       ['x', 'y', 'z'].forEach((a) => expect(d['fit' + a.toUpperCase()] || null).toEqual((t.fits && t.fits[a]) || null));
     });
     expect(j.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(M.cozucu.zeta);
-    expect(j.nodes.find((n) => n.type === 'mnt-example').data.exampleKey).toBe(id);
+    // Başlangıç Sihirbazı bileşeni örnekte durur ve veri taşımaz (Canlı Not 110)
+    const sih = j.nodes.filter((n) => n.type === 'mnt-wizard');
+    expect(sih).toHaveLength(1);
+    expect(sih[0].data).toEqual({});
+    expect(j.nodes.some((n) => n.type === 'mnt-example')).toBe(false);
   });
 });

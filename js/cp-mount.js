@@ -247,7 +247,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // YALNIZ ÜRETİCİNİN KATALOĞUNDAN: AMC girdileri sitenin tablosundaki "Max. Load"u
 // taşır (js/mount-amc.js). Ötekilerde boş — elimizdeki kaynakların hiçbiri o
 // girdiler için kapasite vermiyor, makul bir sayı UYDURULMADI; kapasite
-// tanımsızken sütun, çizgi ve cümle hiç görünmez.
+// tanımsızken sütun, çizgi ve cümle hiç görünmez. Kullanıcı datasheet'ten
+// okuduğu değeri Takoz panelinden ya da Takoz Özellikleri'nden girer.
 //
 // ── AMC MECANOCAUCHO® — js/mount-amc.js (148 kod, üreticinin bütün konik aileleri)
 // Girdiler veri modülünden üretilir; eski 10 kod (aşağıdaki (A) tablosu ve 137829)
@@ -256,28 +257,43 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // Takoz Özellikleri'nden tamamlanır, taramaya aday olmaz (_mntLibTam).
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
+// ── MARKA (kullanıcı 2026-11-10, Canlı Not 106: *"Takoz tiplerini markalarına
+// göre kategorize edelim. Kullanıcı marka seçsin, ona göre seçeneklerini
+// seçsin."*) ───────────────────────────────────────────────────────────────
+// Her katalog girdisi bir `marka` taşır; Takoz Özellikleri önce markayı, sonra
+// o markanın tiplerini sorar. Kaynak:
+//   • AMC Mecanocaucho — üreticinin altı haneli kodu ("(AMC 137963)"); girdiler
+//     js/mount-amc.js'ten markasıyla gelir (VE_MNT_AMC.girdi).
+//   • Angst+Pfister — LMT-1433-xx ve "Mount 1": BMC FEA raporlarının teknik
+//     resimleri A+P logosu taşıyor (KATALOGLA TEYİT EDİLMEDİ, yukarıdaki
+//     LMT-1433-00 bloğu); marka yanlışsa düzeltme TEK alan: `marka`.
+//   • Diğer — 57RS… ve TK035/040/050: kaynak belgelerde marka yazılı değil.
+// Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
+// Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
+var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer'];
+var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
-  'amc55sha':         { name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  'amc55sha':         { marka:'Angst+Pfister', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
+  '57RS313773':       { marka:'Diğer', name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  '57RS313774':       { marka:'Diğer', name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  '57RS313773-sr116': { marka:'Diğer', name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  '57RS313774-sr116': { marka:'Diğer', name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
-  'TK035': { name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+  'TK035': { marka:'Diğer', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
       z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
   // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
-  'TK040': { name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+  'TK040': { marka:'Diğer', name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
       z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
   // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
-  'TK050': { name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+  'TK050': { marka:'Diğer', name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
@@ -292,16 +308,16 @@ var VE_MOUNT_LIBRARY = {
   // ── LMT-1433-00 — BMC güç grubu FEA raporlarının takozu ─────────────────
   // TEK RİJİTLİK TABANI: kaynak statik/dinamik AYRIMI YAPMIYOR → sx = dx.
   // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
-  'lmt1433-00-40sh': { name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
-  'lmt1433-00-55sh': { name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
-  'lmt1433-00-70sh': { name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
+  'lmt1433-00-40sh': { marka:'Angst+Pfister', name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
+  'lmt1433-00-55sh': { marka:'Angst+Pfister', name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
+  'lmt1433-00-70sh': { marka:'Angst+Pfister', name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
   // ── "Mount 1" — aynı raporun ÖTEKİ standart parçası, PARÇA NUMARASI YOK ──
   // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
   // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
   // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
-  'bmc-mount1-40sh': { name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
-  'bmc-mount1-55sh': { name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
-  'bmc-mount1-70sh': { name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
+  'bmc-mount1-40sh': { marka:'Angst+Pfister', name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { marka:'Angst+Pfister', name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { marka:'Angst+Pfister', name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 // AMC girdileri: eski 10 kod TK050'nin ardındaki yerine (sözlüğün sırası korunur),
 // kalan kodlar sona — ailenin, tipin, sertliğin sırasıyla.
@@ -333,7 +349,7 @@ function veMntGetLibraryMap(){
   var cv=function(a){ return (Array.isArray(a)&&a.length>=2)?a:null; };   // geçerli eğri (≥2 nokta) veya null
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
     var m=VE_MOUNT_LIBRARY[k], c=m.curves||{}, f=m.fits||{};
-    map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
+    map[k]={ key:k, name:m.name, marka:(m.marka||'Diğer'), sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
@@ -350,7 +366,7 @@ function veMntGetLibraryMap(){
         var base=map[k]; if(!base) return;                // yalnız var olan gömülü girdiler
         var o=ov[k]||{}; if(!o || Object.keys(o).length===0) return;
         var pick=function(f){ return (o[f]!==undefined && o[f]!==null && o[f]!=='') ? (f==='name'?o[f]:_mntNum(o[f])) : base[f]; };
-        map[k]={ key:k, name:pick('name'), sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
+        map[k]={ key:k, name:pick('name'), marka:base.marka, sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
           dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
@@ -361,7 +377,7 @@ function veMntGetLibraryMap(){
     if(Array.isArray(n.data.mounts)){
       n.data.mounts.forEach(function(e){
         if(!e || !e.key) return;
-        map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'),
+        map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'), marka:VE_MNT_LIB_MARKA_OZEL,
           sx:_mntNum(e.sx), sy:_mntNum(e.sy), sz:_mntNum(e.sz),
           dx:_mntNum(e.dx), dy:_mntNum(e.dy), dz:_mntNum(e.dz), builtin:false,
           maxLoad:(e.maxLoad===undefined||e.maxLoad===null||e.maxLoad==='')?null:_mntNum(e.maxLoad),
@@ -372,6 +388,18 @@ function veMntGetLibraryMap(){
     }
   });
   return map;
+}
+// Girdileri markaya göre gruplar: [{ ad, girdiler:[…] }] — katalog markaları
+// sabit sırada, Özel takozlar sonda; girdisiz marka listede yok. Takoz
+// Özellikleri'nin Marka listesi ve Takoz penceresinin tip listesi AYNI
+// gruplamadan okur; marka içinde sıra _mntLibSirali'den (AMC: aile · tip · sertlik).
+function veMntLibMarkalar(girdiler){
+  var out=[], L=_mntLibSirali(girdiler||[]);
+  VE_MNT_LIB_MARKALAR.concat([VE_MNT_LIB_MARKA_OZEL]).forEach(function(ad){
+    var g=L.filter(function(e){ return e.marka===ad; });
+    if(g.length) out.push({ ad:ad, girdiler:g });
+  });
+  return out;
 }
 function veMntGetLibraryList(){
   var map=veMntGetLibraryMap(), out=[];
@@ -564,18 +592,17 @@ function getMntModulePropertiesHTML(node){
 }
 
 // REFERANS yerleşim (yerel px) — güç grubunun düzenli üstten-görünüş şeması ve
-// analiz araçlarının konumları. Model açılışında bu yerleşimin TAMAMI artık
-// KURULMAZ; yalnız "Başlangıç ve Örnekler" bileşeni gelir (aşağıdaki
-// veMntPopulateStarter). Buradaki koordinatlar hâlâ (a) tek bileşenin konumu ve
-// (b) "Örneği Aktar" ile kurulan topolojinin görünür alana ortalanması için
-// koordinat çerçevesi olarak kullanılır.
+// analiz araçlarının konumları. Model açılışında bu yerleşimin TAMAMI KURULMAZ
+// (boş topolojiyi başlangıç sayfası karşılar). Buradaki koordinatlar (a) Sihirbaz
+// bileşeninin konumu ve (b) örnek yüklenince kurulan topolojinin görünür alana
+// ortalanması için koordinat çerçevesi olarak kullanılır.
 var VE_MNT_STARTER_LAYOUT = [
   // ── Üst şerit: analiz araçları (tek sıra, eşit aralık) ──
   { type:'mnt-library',                        lx:40,  ly:20 },
   { type:'mnt-viewer',                         lx:190, ly:20 },
   { type:'mnt-2dview',                         lx:340, ly:20 },
   { type:'mnt-solver',   name:'Çözücü',         lx:490, ly:20 },
-  { type:'mnt-example',                        lx:640, ly:20 },
+  { type:'mnt-wizard',                         lx:640, ly:20 },
   { type:'mnt-report',                         lx:790, ly:20 },
   // ── Sağ takozlar (şasi sağ tarafı → şemada üstte) ──
   { type:'mnt-mount',    name:'Sağ Yan Takoz',  lx:300, ly:190 },
@@ -614,26 +641,25 @@ function _mntRemoveNode(id){
   }
 }
 
-// "BAŞLANGIÇ VE ÖRNEKLER" BİLEŞENİ YOKSA EKLE — örnek yükleyicisinin yardımcısı
-// (örneğin JSON'u onu taşımayabilir: ASFAT taşımıyor). Referans yerleşimdeki
-// sağ-üst yuvasına konur; "Örneği Aktar" güç grubunu sol-orta bölgeye
-// kurduğundan çakışmaz.
+// BAŞLANGIÇ SİHİRBAZI BİLEŞENİ YOKSA EKLE — örnek yükleyicisinin yardımcısı (örneğin
+// JSON'u onu taşımayabilir). Referans yerleşimdeki yuvasına konur; örnek güç grubunu
+// sol-orta bölgeye kurduğundan çakışmaz. Kalkan "Başlangıç ve Örnekler" bileşeninin
+// (`mnt-example`, Canlı Not 110) yerini tutar: örnek listesi başlangıç sayfasında, model
+// kurulduktan sonra sihirbaza bu bileşenle dönülür.
 //
-// AÇILIŞ ARTIK BUNU ÇAĞIRMAZ (2026-10-14, kullanıcı: *"FEAD modülünün
-// başlangıç ekranı çok güzel, aynı onun gibi bir ekran istiyorum"*): boş bir
-// Takoz topolojisini BAŞLANGIÇ SAYFASI karşılar (js/cp-mount-baslangic.js).
-// Bileşen kendiliğinden kurulsaydı sayfanın "model boş" sorusu bir düğümle
-// cevaplanmış olurdu; sayfa onu ayrıca "boş" sayar, çünkü 2026-10-14'ten önce
-// kaydedilmiş boş topolojiler bu tek düğümü taşıyor.
+// AÇILIŞ BUNU ÇAĞIRMAZ (2026-10-14, kullanıcı: *"FEAD modülünün başlangıç ekranı çok
+// güzel, aynı onun gibi bir ekran istiyorum"*): boş bir Takoz topolojisini BAŞLANGIÇ
+// SAYFASI karşılar (js/cp-mount-baslangic.js). Bileşen kendiliğinden kurulsaydı sayfanın
+// "model boş" sorusu bir düğümle cevaplanmış olurdu; sayfa onu ayrıca "boş" sayar.
 function veMntPopulateStarter(){
   if(typeof createNode!=='function') return [];
   var base = (typeof veArrangeModuleBase==='function')
     ? veArrangeModuleBase(VE_MNT_STARTER_LAYOUT.map(function(it){ return {lx:it.lx, ly:it.ly}; }))
     : { x:3000, y:3000 };
-  var slot = VE_MNT_STARTER_LAYOUT.find(function(it){ return it.type==='mnt-example'; }) || { lx:790, ly:20 };
+  var slot = VE_MNT_STARTER_LAYOUT.find(function(it){ return it.type==='mnt-wizard'; }) || { lx:640, ly:20 };
   var created=[];
   var before=nodes.length;
-  createNode('mnt-example', base.x+slot.lx, base.y+slot.ly);
+  createNode('mnt-wizard', base.x+slot.lx, base.y+slot.ly);
   if(nodes.length>before){
     var n=nodes[nodes.length-1];
     if(slot.name) _mntSetNodeName(n, slot.name);
@@ -698,15 +724,14 @@ function veMntKanvasBos(){
   return created;
 }
 
-// ÖRNEĞİ ANAHTARIYLA YÜKLE — başlangıç sayfasının karoları ve "Başlangıç ve
-// Örnekler" panelinin "Örneği aktar"ı. Kayıt girişinde JSON topolojisi varsa
-// ondan (birebir), yoksa programatik model kurucusundan.
+// ÖRNEĞİ ANAHTARIYLA YÜKLE — başlangıç sayfasının örnek satırları. Kayıt girişinde
+// JSON topolojisi varsa ondan (birebir), yoksa programatik model kurucusundan.
 function veMntOrnekYukle(key){
   if(typeof veMountCore==='undefined' || !key) return false;
   var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
   if(!ex) return false;
   if(ex.topology){ _mntLoadExampleFromJSON(ex.topology, ex); return true; }
-  _mntLoadExampleFromModel(null, key);
+  _mntLoadExampleFromModel(key);
   return true;
 }
 
@@ -1866,7 +1891,6 @@ function _mntKutuphaneNotu(node){
 function _mntTakozTipGovde(node){
   var d=node.data||{};
   var lib=veMntGetLibraryList();
-  var B=_mntLibSirali(lib.filter(function(e){ return e.builtin; })), Cu=lib.filter(function(e){ return !e.builtin; });
   // Seçili tip notun eşleşmesinden (_mntKutuphaneEslesme): bağsız ama altı
   // değeri bir tiple aynı takoz o tipi gösterir. Örnek modellerin takozları
   // bağsız kaydedilmişti; liste "— elle gir —" derken not tipi adlandırıyordu
@@ -1875,9 +1899,12 @@ function _mntTakozTipGovde(node){
   var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(secili===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
   var sel='<select class="ve-fp-sel" id="ve-mnt-libKey-'+node.id+'" onchange="veMntApplyLib(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>';
-  // Takoz Özellikleri'nin listesiyle aynı adlar; sayaç yok (Canlı Not 65)
-  if(B.length) sel+='<optgroup label="Katalog">'+B.map(opt).join('')+'</optgroup>';
-  if(Cu.length) sel+='<optgroup label="Özel takozlar">'+Cu.map(opt).join('')+'</optgroup>';
+  // Takoz Özellikleri'nin Marka listesiyle aynı gruplar: katalog markaları, sonda Özel
+  // takozlar (Canlı Not 106: *"Takoz tiplerini markalarına göre kategorize edelim"*);
+  // sayaç yok (Canlı Not 65)
+  veMntLibMarkalar(lib).forEach(function(g){
+    sel+='<optgroup label="'+_mntEsc(g.ad)+'">'+g.girdiler.map(opt).join('')+'</optgroup>';
+  });
   sel+='</select>';
   var h=_mntBolum('Takoz tipi', '',
       _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kütüphane</span>'+sel+'</label>')
@@ -2071,14 +2098,6 @@ function veMntSet(nodeId, key, val){
   node.data[key]=val;
   if(typeof saveState==='function') saveState();
 }
-// Örnek seçimi: kalıcı yaz + paneli yeniden çiz (görsel/detay canlı değişsin).
-function veMntSetExample(nodeId, key){
-  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
-  if(!node.data) node.data={};
-  node.data.exampleKey=key;
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
-}
 function veMntSetCheck(nodeId, key, checked){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
@@ -2147,24 +2166,13 @@ function _mntLibGirdiYaz(d, m, key){
 //  veMntLibCurve* — takoz TİPİNE bağlı; veMntApplyLib uygulanınca Takoz'a kopyalar.)
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ÖRNEK — hazır doğrulama modellerini seç, önizle ve topolojiye yükle
+//  ÖRNEK YÜKLEYİCİ — hazır doğrulama modellerini topolojiye kurar
 // ════════════════════════════════════════════════════════════════════════════
-// "Örnek" bileşeni: gömülü örnek modelleri (veMountCore.MOUNT_EXAMPLES) seçip
-// önizler ve tek tıkla iç topolojiye kurar. Panel yukarıdan aşağı: preset seçici
-// → topoloji görseli → araç detayları → "Örneği Aktar" → tutarlılık raporu.
-// Yeni örnek eklemek: mount-core.js MOUNT_EXAMPLES defterine bir giriş ekle —
-// başka hiçbir yeri değiştirmeye gerek yoktur (panel + yükleyici buradan okur).
-
-// Kayıt defteri erişimi — çekirdeğe bağlı, çekirdek yoksa güvenli düşüş.
-function _mntExampleReg(key){
-  if(typeof veMountCore!=='undefined' && veMountCore.getMountExample) return veMountCore.getMountExample(key);
-  var m=(typeof veMountCore!=='undefined') ? veMountCore.TTAR_EXAMPLE : null;
-  return { id:'ttar', name:'BMC TTAR 2031', vehicle:'BMC TTAR 2031', model:m };
-}
-function _mntExampleList(){
-  if(typeof veMountCore!=='undefined' && veMountCore.getMountExampleList) return veMountCore.getMountExampleList();
-  return [_mntExampleReg('ttar')];
-}
+// Örnek modelleri başlangıç sayfası seçer (js/cp-mount-baslangic.js → veMntOrnekYukle).
+// "Başlangıç ve Örnekler" bileşeni ve penceresi KALKTI (Canlı Not 110): kayıt defteri
+// erişimi, topoloji şeması, künye föyü ve pencere kapıları onunla birlikte gitti.
+// Yeni örnek eklemek: mount-core.js MOUNT_EXAMPLES defterine bir giriş ekle — başka
+// hiçbir yeri değiştirmeye gerek yoktur (başlangıç sayfası + yükleyici buradan okur).
 
 // Örnek adı → kanvas kütle-gövdesi tipi (test buildTTARTopology ile aynı eşleme).
 // Yükleyici önce c.kind'i, yoksa bu adı kullanır.
@@ -2200,142 +2208,6 @@ function _mntExampleLayout(model){
   return { bodies:bodies, mnts:mnts, bodyY:bodyY, half:half };
 }
 
-// componentDefs ikonunun iç SVG içeriğini çıkar (varsa) — nested <svg> ile gömmek için.
-function _mntIconInner(type){
-  var def=(typeof componentDefs!=='undefined') ? componentDefs[type] : null;
-  var svg=def && def.svg;
-  if(!svg) return null;
-  var m=svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-  return m ? m[1] : null;
-}
-
-// Modelden tema-uyumlu şematik topoloji SVG'si üret (örnek kendi görselini
-// vermediğinde). Kütle/takoz düğümleri uygulamanın GERÇEK ikonlarıyla
-// (componentDefs) çizilir; ikon yoksa (ör. Jest) kutu/daireye düşer. tools[] =
-// önizleme süsü (yardımcı araçlar; yükleyici bunları KURMAZ). Yükleyiciyle aynı
-// at:[lx,ly] yerleşimini kullanır → görsel ile kurulan kanvas birebir örtüşür.
-function _mntExampleDiagramSVG(model, tools){
-  if(!model || !model.components || !model.components.length) return '';
-  var L=_mntExampleLayout(model), comps=model.components, mounts=model.mounts||[];
-  var items=[];
-  comps.forEach(function(c,i){ items.push({type:(c.kind||_mntExampleBodyType(c.name)), name:c.name, x:L.bodies[i].lx, y:L.bodies[i].ly, role:'body'}); });
-  mounts.forEach(function(m,i){ items.push({type:'mnt-mount', name:m.name, x:L.mnts[i].lx, y:L.mnts[i].ly, role:'mount'}); });
-  // Araç adı bileşenin KENDİ adı (componentDefs): kayıtta elle yazılmış kopya
-  // bayatlıyordu — "2D Görünüm" → "Görünümler" yeniden adlandırmasında kurgu
-  // örnekler eski adda kaldı; "Örnek" de kanvasa kurulan düğümün adı değildi.
-  (tools||[]).forEach(function(t){
-    var d=(typeof componentDefs!=='undefined') ? componentDefs[t.type] : null;
-    if(t && t.at && t.at.length===2) items.push({type:t.type, name:(d && d.name) || t.type, x:t.at[0], y:t.at[1], role:'tool'});
-  });
-  var CARD=54, IC=40, M=22, xs=[], ys=[];
-  items.forEach(function(it){ xs.push(it.x-CARD/2, it.x+CARD/2); ys.push(it.y-CARD/2, it.y+CARD/2); });
-  var minX=Math.round(Math.min.apply(null,xs)-M), maxX=Math.round(Math.max.apply(null,xs)+M);
-  var minY=Math.round(Math.min.apply(null,ys)-M), maxY=Math.round(Math.max.apply(null,ys)+M);
-  var s='<svg viewBox="'+minX+' '+minY+' '+(maxX-minX)+' '+(maxY-minY)+'" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;font-family:inherit;">';
-  // Takoz → en yakın kütle ince kılavuz çizgisi (arka planda)
-  var bodies=items.filter(function(it){ return it.role==='body'; });
-  items.filter(function(it){ return it.role==='mount'; }).forEach(function(mo){
-    var nb=bodies[0], bd=Infinity;
-    bodies.forEach(function(bp){ var dx=bp.x-mo.x, dy=bp.y-mo.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; nb=bp; } });
-    if(nb) s+='<line x1="'+mo.x+'" y1="'+mo.y+'" x2="'+nb.x+'" y2="'+nb.y+'" stroke="var(--border-hover)" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.55"/>';
-  });
-  // Düğümler: kart + gerçek ikon (yoksa yedek). Ad GÖRÜNÜR YAZI DEĞİL, <title>:
-  // şema sütunda ~0,45 ölçekle çiziliyor ve 10,5 birimlik ad ekranda 4,8 px
-  // kalıyordu (okunmuyor, çizgilere karışıyordu); ad fare üstünde ve künyede.
-  items.forEach(function(it){
-    var x0=it.x-CARD/2, y0=it.y-CARD/2, tool=it.role==='tool';
-    s+='<g><title>'+_mntEsc(it.name)+'</title>';
-    var stroke=tool?'var(--border-color)':(it.role==='mount'?'var(--accent-success)':'var(--accent-primary)');
-    s+='<rect x="'+x0+'" y="'+y0+'" width="'+CARD+'" height="'+CARD+'" rx="9" fill="var(--bg-secondary)" stroke="'+stroke+'" stroke-width="'+(tool?1.2:1.6)+'"'+(tool?' opacity="0.9"':'')+'/>';
-    var inner=_mntIconInner(it.type);
-    if(inner){
-      s+='<svg x="'+(it.x-IC/2)+'" y="'+(it.y-IC/2)+'" width="'+IC+'" height="'+IC+'" viewBox="0 0 100 100">'+inner+'</svg>';
-    } else if(it.role==='mount'){
-      s+='<circle cx="'+it.x+'" cy="'+it.y+'" r="13" fill="var(--accent-success)" fill-opacity="0.16" stroke="var(--accent-success)" stroke-width="2"/><circle cx="'+it.x+'" cy="'+it.y+'" r="4" fill="var(--accent-success)"/>';
-    } else {
-      s+='<rect x="'+(it.x-16)+'" y="'+(it.y-9)+'" width="32" height="18" rx="3" fill="var(--bg-tertiary)" stroke="var(--accent-primary)" stroke-width="1.5"/>';
-    }
-    s+='</g>';
-  });
-  s+='</svg>';
-  return s;
-}
-
-// Örneğin KÜNYESİ — araç adı, kısa etiket, açıklama ve künye föyü (örnek
-// kaydının `specs` satırları: büyüklük · değer).
-function _mntExampleDetailsHTML(ex){
-  var h='<div class="ve-mnt-ex-bas"><b>'+_mntEsc(ex.vehicle||ex.name||'')+'</b>'
-    + (ex.subtitle ? '<em>'+_mntEsc(ex.subtitle)+'</em>' : '')
-    + (ex.description ? '<p>'+_mntEsc(ex.description)+'</p>' : '')+'</div>';
-  var specs=ex.specs||[];
-  if(specs.length){
-    h+=_mntFoyAc([{ b:'Künye', gen:'50%' }, { b:'Değer', gen:'50%' }], 'Örneğin künyesi');
-    specs.forEach(function(r){ h+='<tr><td>'+_mntEsc(r[0])+'</td><td>'+_mntEsc(r[1])+'</td></tr>'; });
-    h+=_MNT_FOY_KAPA;
-  }
-  return h;
-}
-
-// BAŞLANGIÇ KAPILARI — boş topolojiyi karşılayan başlangıç sayfası model
-// kurulunca çekilir; aynı iki yol (sihirbaz · STEP) burada da açık kalır.
-// Kapı sayfanınkiyle AYNI üreticiden (js/baslangic-sayfa.js → veBasKapiHTML).
-function _mntExampleKapilarHTML(){
-  if(typeof veBasKapiHTML!=='function') return '';
-  return '<div class="ve-bas-kapilar ve-mnt-ex-kapilar">'
-    + veBasKapiHTML({ ey:'sihirbaz', ikon:'wand', ad:'Sihirbazla kur', birincil:true, onclick:'veMntWizAc()' })
-    + veBasKapiHTML({ ey:'step', ikon:'box', ad:'STEP\'ten başla', onclick:'veMntWizAcStep()' })
-    + '</div>';
-}
-
-// ÖRNEK PENCERESİ — iki kategori, pencerenin adı gibi (Başlangıç ve Örnekler):
-// ÖRNEK (seçim, künye ve kanvasa kurulacak topolojinin resmi) · BAŞLANGIÇ
-// (modeli kurmanın öteki yolları: sihirbaz · STEP — başlangıç sayfasıyla aynı
-// kapılar). Sağ sütun KANVASTAKİ modelin denetimi ve eylem ("Örneği aktar"
-// kanvası değiştirir — birincil düğme). İki kategori (Örnek · Başlangıç)
-// gövdede alt alta.
-function getMntExamplePropertiesHTML(node){
-  if(!node.data) node.data={};
-  var list=_mntExampleList();
-  var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'siper';
-  var ex=_mntExampleReg(sel);
-  var nid=node.id;
-  // Topolojinin resmi HER ZAMAN modelden çizilen şema (kullanıcı kararı
-  // S3·B, 2026-10-15): temaya uyar, tek dosyaya gömülü, ad fare üstünde. Ekran
-  // görüntüsü (PNG) koyu temada ~5 px yazı taşıyordu ve tek dosyada hiç
-  // yüklenmiyordu — kullanıcı onu hiç görmemişti.
-  var diagram=_mntExampleDiagramSVG(ex.model, ex.tools);
-  var secim='<label class="ve-fp-f"><span class="ve-fp-l">Örnek model</span>'
-    + '<select class="ve-fp-sel" id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)">'
-    + _mntOrnekSecenekleri(list, sel)
-    + '</select></label>';
-  var mdl=ex.model||{};
-  var ornek=_mntBolum('Örnek model', (mdl.components||[]).length+' gövde · '+(mdl.mounts||[]).length+' takoz',
-      secim+_mntExampleDetailsHTML(ex)
-    + (diagram ? '<figure class="ve-mnt-ex-sema">'+diagram+'<figcaption>Kanvasa kurulacak topoloji</figcaption></figure>' : ''));
-  var kapilar=_mntExampleKapilarHTML();
-  var baslangic=_mntBolum('Modeli kur', '', kapilar || _mntNot('Başlangıç kiti yüklenmedi.', 'warn'));
-  // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (tutarlılık) → ikincil
-  // eylem → eylem satırı (sütunun sonu, dar kapta yapışık). Uygunluk yok —
-  // sonuç yalnız raporda.
-  var yan=_mntBolum('Tutarlılık uyarıları', 'kanvastaki model', '<div id="ve-mnt-example-report">'+_mntExampleDenetimIc(_mntExampleValidate(), true)+'</div>')
-    + '<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntExportTopology()"'
-    + '>'
-    + veIkon('download')+' İç topolojiyi JSON dışa aktar</button></div>'
-    + vePencereEylem('<button type="button" class="ve-fp-solve" onclick="veMntLoadExample(\''+nid+'\')">'+veIkon('play')+' Örneği aktar</button>');
-  return _mntPencereKabuk(node, [{ k:'ornek', ad:'Örnek', govde:ornek },
-                                 { k:'bas', ad:'Başlangıç', govde:baslangic }], yan);
-}
-
-// Seçenekler başlangıç sayfasıyla AYNI iki grupta: gerçek araçlar · kurgu
-// doğrulama modelleri (kayıtta `kurgu`). Kurgu yoksa düz liste.
-function _mntOrnekSecenekleri(list, sel){
-  var opt=function(e){ return '<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
-  var kurgu=list.filter(function(e){ return e.kurgu; });
-  if(!kurgu.length) return list.map(opt).join('');
-  return '<optgroup label="Gerçek araç modelleri">'+list.filter(function(e){ return !e.kurgu; }).map(opt).join('')+'</optgroup>'
-    + '<optgroup label="Doğrulama örnekleri — kurgu">'+kurgu.map(opt).join('')+'</optgroup>';
-}
-
 // Örnek modeli tutarlılık kontrolü — uyarı nesneleri döner ({level,msg}).
 function _mntExampleValidate(){
   var g = _mntGatherForSolver();
@@ -2358,23 +2230,9 @@ function _mntExampleValidate(){
   return out;
 }
 
-// Denetimin satırları — pencere kurulurken ve örnek yüklenince AYNI üretici.
-// Boş kanvas bir hata değil başlangıçtır: "henüz model yok" der. Hüküm
-// pencerenin CEVABI: FEAD'in durum kutusu (`.ve-fp-durum`), maddeler liste.
-function _mntExampleDenetimIc(warnings, kurulus){
-  var g=_mntGatherForSolver();
-  if(kurulus && !g.components.length && !g.mounts.length) return _mntNot('Kanvasta model yok.', '');
-  if(!warnings.length) return _mntDurumKutu('<b>Model tutarlı</b> — uyarı yok.', 'ok');
-  // Çözücünün ön denetimiyle aynı dil: tek durum satırı, maddeler liste.
-  var hata=warnings.filter(function(w){ return w.level==='err'; });
-  var uyari=warnings.filter(function(w){ return w.level!=='err'; });
-  var liste=function(L){ return '<ul>'+L.map(function(w){ return '<li>'+w.msg+'</li>'; }).join('')+'</ul>'; };
-  return (hata.length ? _mntDurumKutu('<b>'+hata.length+' hata</b> — çözücü modeli reddeder.'+liste(hata), 'no') : '')
-    + (uyari.length ? _mntDurumKutu('<b>'+uyari.length+' uyarı</b>'+liste(uyari), 'warn') : '');
-}
+// Örnek yüklenince tutarsızlık varsa tek bildirim (hata sayısıyla). Eskiden denetim
+// "Başlangıç ve Örnekler" penceresinin Tutarlılık uyarıları bölümünde de görünürdü.
 function _mntRenderExampleReport(warnings, silent){
-  var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
-  if(el) el.innerHTML=_mntExampleDenetimIc(warnings, false);
   var errN=warnings.filter(function(w){return w.level==='err';}).length;
   if(!silent && warnings.length && typeof showToast==='function') showToast('Örnek yüklendi — '+warnings.length+' uyarı ('+errN+' hata).', errN?'warning':'info');
 }
@@ -2469,8 +2327,8 @@ function _mntLoadExampleFromJSON(ref, ex){
     if(_once && !_once.length && typeof saveState==='function'){ saveState(); _once = undoStack; }
     if(_once) _once = _once.slice();
     if(typeof veLoadTabState==='function') veLoadTabState({ state: state });
-    // Başka örnek yüklenebilsin diye "Başlangıç ve Örnekler" düğümü yoksa ekle.
-    if(typeof nodes!=='undefined' && !nodes.some(function(n){ return (_mntDef(n)||{}).isMountExample; }) && typeof veMntPopulateStarter==='function'){
+    // Sihirbaza dönülebilsin diye Başlangıç Sihirbazı bileşeni yoksa ekle.
+    if(typeof nodes!=='undefined' && !nodes.some(function(n){ return (_mntDef(n)||{}).isMountWizard; }) && typeof veMntPopulateStarter==='function'){
       veMntPopulateStarter();
     }
     if(_once){ undoStack = _once; redoStack = []; }
@@ -2484,16 +2342,6 @@ function _mntLoadExampleFromJSON(ref, ex){
     if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
     if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+'.','info');
   });
-}
-
-// "Örneği Aktar" yönlendiricisi: kayıt girişinde JSON topolojisi (topology) varsa
-// ondan yükle; yoksa mevcut programatik model kurucusuna düş.
-function veMntLoadExample(nodeId){
-  if(typeof veMountCore==='undefined') return;
-  var node = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
-  var key = (node && node.data && node.data.exampleKey)
-    || ((veMountCore.getMountExampleList && veMountCore.getMountExampleList()[0]||{}).id) || 'siper';
-  veMntOrnekYukle(key);
 }
 
 // ── Otomatik destek bağlantıları (GÖRSEL) ───────────────────────────────────
@@ -2763,15 +2611,14 @@ function _mntChassisGlyph(g, n, side){
 
 // Programatik model kurucusu (kayıt girişinde JSON yoksa): model'den kütle/takoz
 // düğümlerini oluşturur.
-function _mntLoadExampleFromModel(nodeId, anahtar){
+function _mntLoadExampleFromModel(anahtar){
   if(typeof veMountCore==='undefined' || typeof createNode!=='function') return;
-  var node = nodeId ? nodes.find(function(n){ return n.id===nodeId; }) : null;
-  var key = anahtar || (node && node.data && node.data.exampleKey) || 'siper';
+  var key = anahtar || 'siper';
   // Seçilen örneğin modelini kayıt defterinden çöz (bilinmezse ilk örneğe düşer).
   var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
   var EX = (ex && ex.model) || veMountCore.TTAR_EXAMPLE; if(!EX) return;
 
-  // Mevcut kütle/takoz bileşenlerini bul (Çözücü/Örnek/Görüntüleyici korunur).
+  // Mevcut kütle/takoz bileşenlerini bul (Çözücü/Sihirbaz/Görüntüleyici korunur).
   var toRemove = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMountBody || d.isMount; });
   if(toRemove.length){
     var ok = (typeof confirm==='undefined') ? true : confirm(toRemove.length+' kütle/takoz bileşeni silinecek. Devam edilsin mi?');
@@ -2780,7 +2627,7 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
   }
 
   // Örnek düğümlerini STARTER ile aynı tabana göre yerleştir ki yardımcı araçlarla
-  // (3D / Görünümler / Örnek / Çözücü — sağ ve üst kenarda) çakışmasın.
+  // (3D / Görünümler / Sihirbaz / Çözücü — sağ ve üst kenarda) çakışmasın.
   // Yerleşim panel önizlemesiyle AYNI (_mntExampleLayout) → görsel ile kurulan
   // topoloji birebir örtüşür; bileşen/takoz kendi at:[lx,ly]'sini taşıyabilir.
   var LAY=_mntExampleLayout(EX);
@@ -2849,21 +2696,8 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
   if(typeof updateAllConnections==='function') updateAllConnections();
   _mntOrnekPaletKapat();
 
-  // createNode +20ms otomatik seçimi paneli son eklenen düğüme çevirir → Örnek
-  // düğümünü yeniden seçip raporu bas ki kullanıcı uyarıları (fazla takoz vs)
-  // görsün. setTimeout/DOM yoksa (Jest) doğrudan bas.
-  var exNode = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
-  if(typeof setTimeout==='function' && typeof document!=='undefined'){
-    setTimeout(function(){
-      if(exNode && typeof clearSelection==='function' && typeof addToSelection==='function'){
-        clearSelection(); addToSelection(exNode);
-        if(typeof showNodeProperties==='function') showNodeProperties(exNode);
-      }
-      _mntRenderExampleReport(_mntExampleValidate(), false);
-    }, 90);
-  } else {
-    _mntRenderExampleReport(_mntExampleValidate(), false);
-  }
+  // Tutarsızlık varsa kullanıcıya tek bildirim (fazla takoz vb.).
+  _mntRenderExampleReport(_mntExampleValidate(), false);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4149,29 +3983,35 @@ function _mntLibTrigger(node, sel){
   h+=veIkon('chevron-down', 'mntlib-caret')+'</button>';
   return h;
 }
-// Açılır liste gövdesi: arama kutusu + iki grup (Özel takozlar / Katalog) + satırlar.
-// Gizli olarak basılır; veMntLibDropdownToggle yalnız hidden'ı kaldırır.
-function _mntLibDropdown(node, custom, builtins, sel){
+// Açılır liste gövdesi: arama kutusu + SEÇİLİ MARKANIN satırları (Canlı Not 106:
+// marka Marka listesinde seçilir, bu liste onun tiplerini sorar — grup başlığı ve
+// sayaç markayı ikinci kez söylerdi). Gizli olarak basılır; veMntLibDropdownToggle
+// yalnız hidden'ı kaldırır.
+function _mntLibDropdown(node, girdiler, sel){
   var h='<div class="mntlib-dd" id="mntlib-dd-'+node.id+'" role="listbox" hidden>';
   h+='<input type="text" class="mntlib-search" id="mntlib-q-'+node.id+'" placeholder="Takoz ara… (ad ya da kod)"'
     +' autocomplete="off" oninput="veMntLibFilter(\''+node.id+'\')"'
     +' onkeydown="veMntLibSearchKey(event,\''+node.id+'\')">';
-  // Grup sayacı ayrı bir span: arama sırasında EŞLEŞEN sayısına döner (aksi
-  // hâlde "Gömülü Katalog · 27" başlığı 3 satırın üstünde asılı kalır ve
-  // listenin süzüldüğünü yalanlar). data-total ile aramasız hâline geri döner.
-  var cnt=function(n){ return '<span class="mntlib-count" data-total="'+n+'">'+n+'</span>'; };
   h+='<div class="mntlib-list" id="mntlib-list-'+node.id+'">';
-  h+='<div class="mntlib-group">Özel takozlar · '+cnt(custom.length)+'</div>';
-  if(!custom.length){
-    h+='<div class="mntlib-note">Özel takoz yok.</div>';
-  } else {
-    custom.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
-  }
-  h+='<div class="mntlib-group">Katalog · '+cnt(builtins.length)+'</div>';
-  builtins.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
+  girdiler.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
   h+='<div class="mntlib-empty" id="mntlib-none-'+node.id+'" hidden>Eşleşen takoz yok.</div>';
   h+='</div></div>';
   return h;
+}
+// SEÇİCİ — Marka listesi, onun altında seçili markanın tipleri ve Yeni takoz
+// (Canlı Not 105: sıkı iki satır; 106: önce marka, sonra o markanın tipleri).
+function _mntLibSecici(node, markalar, grup, sel){
+  var mk='<select class="ve-fp-sel mntlib-marka" id="mntlib-marka-'+node.id+'" aria-label="Marka"'
+    +' onchange="veMntLibMarka(\''+node.id+'\',this.value)">'
+    + markalar.map(function(g){
+        return '<option value="'+_mntEsc(g.ad)+'"'+((grup && g.ad===grup.ad)?' selected':'')+'>'+_mntEsc(g.ad)+'</option>';
+      }).join('')+'</select>';
+  return '<div class="mntlib-sec">'
+    + '<span class="mntlib-et">Marka</span>'+mk
+    + '<span class="mntlib-et">Tip</span>'
+    + '<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
+    + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
+    + '</div>';
 }
 // Kütüphane girdisinin eksenleri — takozun KENDİ eksenleri (radyal/eksenel);
 // uygulanınca takozun kxs…kzd alanlarına aynı sırayla kopyalanır.
@@ -4201,17 +4041,18 @@ function _mntLibRijitlikHTML(node, e, setter){
     + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
   return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi);
 }
-// TAŞIMA KAPASİTESİ — tipin özelliği, Tip kategorisinde. Takoza uygulanınca
-// kopyalandığı (tanımsızsa takozdaki eski değerin silindiği) kılavuzda.
-// Grafiğin göstergesi — statik (lineer ya da eğri), dinamik, ölçüm noktaları.
-// Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
-function _mntLibLejant(hasCurve, hasMarkers){
+// Grafiğin göstergesi — çizilen eksen grupları (renk), statik (düz), dinamik
+// (kesikli) ve ölçüm noktaları. Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
+function _mntLibLejant(G){
   function sw(inner){ return '<svg class="ve-mnt-lej-cizgi" viewBox="0 0 16 9" aria-hidden="true">'+inner+'</svg>'; }
-  var statColor=hasCurve?'var(--accent-danger)':'var(--accent-primary)';
+  function cizgi(renk, kalin, kesik){
+    return '<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="'+renk+'" stroke-width="'+kalin+'"'+(kesik?' stroke-dasharray="4 2.5"':'')+'/>';
+  }
   return '<div class="ve-mnt-kroki-lej">'
-    + '<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="'+statColor+'" stroke-width="2"/>')+'statik'+(hasCurve?' (eğri)':' (lineer)')+'</span>'
-    + '<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="var(--accent-warning)" stroke-width="1.6" stroke-dasharray="4 2.5"/>')+'dinamik</span>'
-    + (hasMarkers ? '<span>'+sw('<circle cx="8" cy="4.5" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.3"/>')+'ölçüm noktası</span>' : '')
+    + G.gruplar.map(function(g){ return '<span>'+sw(cizgi(g.renk, 2))+g.ad+'</span>'; }).join('')
+    + '<span>'+sw(cizgi('var(--text-secondary)', 2))+'statik</span>'
+    + '<span>'+sw(cizgi('var(--text-secondary)', 1.4, true))+'dinamik</span>'
+    + (G.nokta ? '<span>'+sw('<circle cx="8" cy="4.5" r="2.6" fill="var(--bg-primary)" stroke="var(--text-secondary)" stroke-width="1.3"/>')+'ölçüm noktası</span>' : '')
     + '</div>';
 }
 // Analitik fit değerlendiricisi (x: sehim mm → kuvvet N) — çekirdek makeAxisLaw ile
@@ -4238,29 +4079,25 @@ function _mntFitDomain(fit){
   var h=reach(1)||15;
   return [-h, h];
 }
-// Kuvvet–sehim GRAFİĞİ (eksen bazlı: 'x'|'y'|'z'): statik yasa (analitik fit, ya da
-// PCHIP nokta eğrisi, ya da lineer k_s·δ), dinamik referans slope (k_d·δ, kesikli) ve
-// (nokta eğrisi için) ölçüm noktaları. Salt-görsel SVG.
-function _mntLibForceChart(e, axis){
-  axis=axis||'z';
+// Eksenlerin renkleri — 3B'nin ve Görünümler'in eksen işaretinin dili: x kırmızı ·
+// y yeşil · z mavi (Canlı Not 108).
+var _MNT_LIB_EKS_RENK = { x:'var(--accent-danger)', y:'var(--accent-success)', z:'var(--accent-primary)' };
+// Bir eksenin çizim verisi: statik yasa (analitik fit, PCHIP nokta eğrisi ya da
+// lineer k_s·δ), dinamik eğim (k_d·δ), kendi çizim aralığı (lineerde yok: ortak).
+function _mntLibEksenVeri(e, axis){
   var A=axis.toUpperCase();
   var sz=_mntNum(e['s'+axis]), dz=_mntNum(e['d'+axis]);
-  var fit=e['fit'+A]||null;
-  var rawc=e['curve'+A];
+  var fit=e['fit'+A]||null, rawc=e['curve'+A];
   var raw=(!fit && Array.isArray(rawc) && rawc.length>=2)?rawc:null;
   var pts=raw?raw.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; }).sort(function(a,b){ return a[0]-b[0]; }):null;
-  var hasCurve=!!fit || !!pts;
-  var dmin, dmax;
-  if(fit){ var dm=_mntFitDomain(fit); dmin=dm[0]; dmax=dm[1]; }
-  else if(pts){ dmin=pts[0][0]; dmax=pts[pts.length-1][0]; }
-  else { dmin=-15; dmax=15; }
-  if(!(dmax>dmin)){ dmin-=1; dmax+=1; }
-  // Statik yasa değerlendiricisi
+  var dom=null;
+  if(fit) dom=_mntFitDomain(fit);
+  else if(pts) dom=[pts[0][0], pts[pts.length-1][0]];
   var spline=null;
   if(!fit && pts && pts.length>=3 && typeof veBuildPchipSpline==='function'){
     try{ spline=veBuildPchipSpline(pts.map(function(p){ return {rpm:p[0], torque:p[1]}; })); }catch(_e){ spline=null; }
   }
-  function fStat(x){
+  function f(x){
     var v;
     if(fit) v=_mntFitForce(fit, x);
     else if(!pts) v=sz*x;
@@ -4268,25 +4105,60 @@ function _mntLibForceChart(e, axis){
     else v=_mntLinInterp(pts, x);
     return isFinite(v)?v:0;
   }
-  // Örnekle
-  var N=64, i, x, statPts=[], dynPts=[], allF=[0];
-  for(i=0;i<=N;i++){ x=dmin+(dmax-dmin)*i/N; var fs=fStat(x), fd=dz*x; statPts.push([x,fs]); dynPts.push([x,fd]); allF.push(fs); allF.push(fd); }
-  if(pts) pts.forEach(function(p){ allF.push(p[1]); });
+  return { axis:axis, sz:sz, dz:dz, fit:fit, pts:pts, dom:dom, f:f, egri:!!(fit||pts),
+           imza:JSON.stringify([sz, dz, fit, pts]) };
+}
+// Kuvvet–sehim GRAFİĞİ: üç eksenin statik yasası (kalın) ve dinamik referans eğimi
+// (kesikli) AYNI diyagramda (kullanıcı 2026-11-10, Canlı Not 108: *"X, Y, Z
+// değerlerini aynı diyagram üzerinden verelim"*). Aynı eğriyi çizen eksenler
+// (k_x = k_y gibi) TEK çizgi ve tek künyedir ("x · y radyal") — üst üste binip
+// birini gizlemez. `axis` verilirse yalnız o eksen çizilir. ÇİZİM EKRANDA BİREBİR
+// (Canlı Not 104: *"Diyagram büyük çok … yazı tipleri de büyük, tutarlı olsun"*):
+// 340 birimlik çizim 340 px'te durur, yazı --fs-micro; eskiden 300 birim sütuna
+// gerilip yazıyı %20 büyütüyordu ve yükseklik 212'ydi, şimdi 172.
+function _mntLibGrafik(e, axis){
+  var ev=(axis ? [axis] : ['x','y','z']).map(function(a){ return _mntLibEksenVeri(e, a); })
+    .filter(function(v){ return v.sz>0 || v.dz>0 || v.egri; });
+  if(!ev.length) ev=[_mntLibEksenVeri(e, axis||'z')];
+  var dmin=Infinity, dmax=-Infinity;
+  ev.forEach(function(v){ if(v.dom){ dmin=Math.min(dmin, v.dom[0]); dmax=Math.max(dmax, v.dom[1]); } });
+  if(!isFinite(dmin)){ dmin=-15; dmax=15; }
+  if(!(dmax>dmin)){ dmin-=1; dmax+=1; }
+  var gruplar=[];
+  ev.forEach(function(v){
+    var g=gruplar.filter(function(x){ return x.imza===v.imza; })[0];
+    if(g) g.eksenler.push(v.axis); else gruplar.push({ imza:v.imza, v:v, eksenler:[v.axis] });
+  });
+  var TUR={ x:'radyal', y:'radyal', z:'eksenel' };
+  // Örnekle — her grup kendi aralığında (lineer: ortak aralık)
+  var N=64, allF=[0];
+  gruplar.forEach(function(g){
+    var v=g.v, lo=v.dom?v.dom[0]:dmin, hi=v.dom?v.dom[1]:dmax;
+    g.stat=[]; g.dyn=[];
+    for(var i=0;i<=N;i++){
+      var x=lo+(hi-lo)*i/N, fs=v.f(x), fd=v.dz*x;
+      g.stat.push([x,fs]); g.dyn.push([x,fd]); allF.push(fs); allF.push(fd);
+    }
+    if(v.pts) v.pts.forEach(function(p){ allF.push(p[1]); });
+    g.renk=_MNT_LIB_EKS_RENK[g.eksenler[0]];
+    var tur=[]; g.eksenler.forEach(function(a){ if(tur.indexOf(TUR[a])<0) tur.push(TUR[a]); });
+    g.ad=g.eksenler.join(' · ')+(tur.length===1 ? ' '+tur[0] : '');
+  });
   var fmin=Math.min.apply(null, allF), fmax=Math.max.apply(null, allF);
   if(!(fmax>fmin)){ fmin-=1; fmax+=1; }
   var fpad=(fmax-fmin)*0.10; fmin-=fpad; fmax+=fpad;
-  // Geometri (yan yana 3 grafik için kompakt). Yazı ölçeğin tabanında
-  // (veThemeFs('micro')): 9–9,5 birim ekranda 9,1 px kalıyordu.
-  var W=300, H=212, plotL=44, plotR=292, plotT=12, plotB=172;
+  // Geometri — yazı ölçeğin tabanında (veThemeFs('micro')), ekranda 1:1.
+  var W=340, H=172, plotL=40, plotR=332, plotT=8, plotB=138;
   function px(xx){ return plotL+(xx-dmin)/(dmax-dmin)*(plotR-plotL); }
   function py(ff){ return plotB-(ff-fmin)/(fmax-fmin)*(plotB-plotT); }
-  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block; font-family:'+_MNT2D_YUZ+';">';
+  var fs=_mnt2DFs('micro');
+  var s='<svg class="ve-mnt-lib-svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Kuvvet–sehim eğrileri"'
+    + ' style="display:block; font-family:'+_MNT2D_YUZ+';">';
   s+='<rect x="'+plotL+'" y="'+plotT+'" width="'+(plotR-plotL)+'" height="'+(plotB-plotT)+'" fill="var(--bg-input)" opacity="0.3"/>';
-  // Izgara + eksen etiketleri (4 işaret hedefi — kalabalık olmasın)
-  var xticks=_mnt2DNiceTicks(dmin,dmax,4), yticks=_mnt2DNiceTicks(fmin,fmax,4);
+  var xticks=_mnt2DNiceTicks(dmin,dmax,5), yticks=_mnt2DNiceTicks(fmin,fmax,4);
   xticks.forEach(function(tv){ var gx=px(tv); if(gx<plotL-0.5||gx>plotR+0.5) return;
     s+='<line x1="'+_mnt2DR(gx)+'" y1="'+plotT+'" x2="'+_mnt2DR(gx)+'" y2="'+plotB+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
-    s+=_mnt2DText(gx, plotB+14, _mnt2DTick(tv), 'middle', 'var(--text-muted)', _mnt2DFs('micro'));
+    s+=_mnt2DText(gx, plotB+12, _mnt2DTick(tv), 'middle', 'var(--text-muted)', fs);
   });
   // BİRİM EKSENİN BAŞLIĞINDA, DEĞERDE SONEK YOK: kuvvet bin newtonu aşınca
   // eksen kN'dir ("10k" yazılıyordu, başlık [N] derken). Ondalık adımdan.
@@ -4295,59 +4167,43 @@ function _mntLibForceChart(e, axis){
   var fBas=fAdim>=1 ? 0 : (fAdim>=0.1 ? 1 : 2);
   yticks.forEach(function(tv){ var gy=py(tv); if(gy<plotT-0.5||gy>plotB+0.5) return;
     s+='<line x1="'+plotL+'" y1="'+_mnt2DR(gy)+'" x2="'+plotR+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
-    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3.5, veSayi(kN ? tv/1000 : tv, fBas, { eksi:'−' }), 'end', 'var(--text-muted)', _mnt2DFs('micro'));
+    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3.5, veSayi(kN ? tv/1000 : tv, fBas, { eksi:'−' }), 'end', 'var(--text-muted)', fs);
   });
   // Sıfır eksenleri (vurgulu)
   var y0=py(0), x0=px(0);
   if(y0>=plotT&&y0<=plotB) s+='<line x1="'+plotL+'" y1="'+_mnt2DR(y0)+'" x2="'+plotR+'" y2="'+_mnt2DR(y0)+'" stroke="var(--text-muted)" stroke-width="1"/>';
   if(x0>=plotL&&x0<=plotR) s+='<line x1="'+_mnt2DR(x0)+'" y1="'+plotT+'" x2="'+_mnt2DR(x0)+'" y2="'+plotB+'" stroke="var(--text-muted)" stroke-width="1"/>';
-  // Dinamik referans (kesikli) + statik yasa (kalın) + ölçüm noktaları
-  s+='<polyline points="'+dynPts.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' ')+'" fill="none" stroke="var(--accent-warning)" stroke-width="1.6" stroke-dasharray="5 3" opacity="0.9"/>';
-  var statColor=hasCurve?'var(--accent-danger)':'var(--accent-primary)';
-  s+='<polyline points="'+statPts.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' ')+'" fill="none" stroke="'+statColor+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
-  if(pts) pts.forEach(function(p){ s+='<circle cx="'+_mnt2DR(px(p[0]))+'" cy="'+_mnt2DR(py(p[1]))+'" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.5"/>'; });
-  // Eksen başlıkları
-  s+=_mnt2DText((plotL+plotR)/2, H-3, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', _mnt2DFs('micro'));
-  var yc=(plotT+plotB)/2;
-  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="'+_mnt2DFs('micro')+'" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f ['+(kN ? 'kN' : 'N')+']</text>';
-  s+='</svg>';
-  return s;
-}
-// Eksenin yasası — grafiğin başlığı ve yasa föyü AYNI okumadan.
-function _mntLibYasa(e, ax){
-  var A=ax.toUpperCase(), f=e['fit'+A], c=e['curve'+A];
-  if(f) return { tur:'fit', ad:'analitik fit', ayr:(f.form==='asym' ? 'asimetrik · basma sınırı' : 'polinom') };
-  if(Array.isArray(c) && c.length>=2) return { tur:'nokta', ad:'nokta tablosu', ayr:c.length+' nokta' };
-  return { tur:'lineer', ad:'lineer', ayr:_mntSym('k<sub>s</sub>·δ') };
-}
-// SEÇİLİ EKSEN GÖRÜNÜM DURUMUDUR, modelde değil: kaydedilmez, geri alınmaz.
-var VE_MNT_LIB_EKSEN = {};
-function veMntLibEksen(nodeId, ax){
-  if(['x','y','z'].indexOf(ax)<0) return;
-  VE_MNT_LIB_EKSEN[nodeId]=ax;
-  veMntPencereTazele();                    // yalnız grafik bloğu değişir — pencere kurulmaz
-}
-// KUVVET–SEHİM — tek eksen sütun genişliğinde (eskiden üç grafik yan
-// yana 1040 px'lik modaldaydı). Altında üç eksenin yasası; özel girdide
-// düşey (z) eğrinin noktaları bir föyde düzenlenir.
-function _mntLibEgriHTML(node, e){
-  var ax=VE_MNT_LIB_EKSEN[node.id] || 'z';
-  var Y=_mntLibYasa(e, ax), eksen=_MNT_LIB_EKS.filter(function(a){ return a[0]===ax; })[0];
-  var seg='<div class="ve-mnt-seg" role="group" aria-label="Eksen">'+_MNT_LIB_EKS.map(function(a){
-      return '<button type="button" aria-pressed="'+(a[0]===ax)+'" onclick="veMntLibEksen(\''+node.id+'\',\''+a[0]+'\')">'+a[0].toUpperCase()+'</button>';
-    }).join('')+'</div>';
-  var h='<div class="ve-mnt-kroki" id="ve-mnt-lib-gr-'+node.id+'" data-tazele>'
-    + '<div class="ve-mnt-kroki-bas"><b>'+_mntSym('F<sub>'+ax+'</sub>')+' · '+eksen[2]+'</b><em>'+Y.ad+'</em>'+seg+'</div>'
-    + _mntLibForceChart(e, ax)
-    + _mntLibLejant(Y.tur!=='lineer', Y.tur==='nokta')+'</div>';
-  var f=_mntFoyAc([{ b:'Eksen', gen:'30%' }, { b:'Yasa', gen:'38%', sinif:'sol' }, { b:'Ayrıntı', gen:'32%', sinif:'sol' }], 'Eksenlerin yasası');
-  _MNT_LIB_EKS.forEach(function(a){
-    var y=_mntLibYasa(e, a[0]);
-    f+='<tr><td>'+a[1]+' <span class="sf">'+a[2]+'</span></td><td class="sol">'+y.ad+'</td><td class="sol sf">'+y.ayr+'</td></tr>';
+  var yol=function(P){ return P.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' '); };
+  // Dinamik referanslar (kesikli) önce, statik yasalar (düz) üstüne; sonra ölçüm noktaları
+  gruplar.forEach(function(g){
+    s+='<polyline points="'+yol(g.dyn)+'" fill="none" stroke="'+g.renk+'" stroke-width="1.3" stroke-dasharray="5 3" opacity="0.8"/>';
   });
-  h+=_mntBolum('Yasa', _mntEsc(e.name)+' · δ [mm] · f [N]', f+_MNT_FOY_KAPA);
-  // Katalog tipinde yasanın altında not YOK (kullanıcı 2026-11-06, Canlı Not 66):
-  // yasa föyü zaten "lineer" yazıyor; salt okunurluk kılavuzda (7.1).
+  gruplar.forEach(function(g){
+    s+='<polyline points="'+yol(g.stat)+'" fill="none" stroke="'+g.renk+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  });
+  var nokta=false;
+  gruplar.forEach(function(g){
+    if(!g.v.pts) return;
+    nokta=true;
+    g.v.pts.forEach(function(p){ s+='<circle cx="'+_mnt2DR(px(p[0]))+'" cy="'+_mnt2DR(py(p[1]))+'" r="2.4" fill="var(--bg-primary)" stroke="'+g.renk+'" stroke-width="1.4"/>'; });
+  });
+  // Eksen başlıkları
+  s+=_mnt2DText((plotL+plotR)/2, H-4, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', fs);
+  var yc=(plotT+plotB)/2;
+  s+='<text x="10" y="'+yc+'" text-anchor="middle" font-size="'+fs+'" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 10 '+yc+')">kuvvet f ['+(kN ? 'kN' : 'N')+']</text>';
+  s+='</svg>';
+  return { svg:s, gruplar:gruplar.map(function(g){ return { ad:g.ad, renk:g.renk }; }), nokta:nokta, birim:kN?'kN':'N' };
+}
+function _mntLibForceChart(e, axis){ return _mntLibGrafik(e, axis).svg; }
+// KUVVET–SEHİM — üç eksen tek diyagramda, sütun genişliğinde; eksen seçici ve
+// eksenlerin yasası tablosu YOK (Canlı Not 108 · 103: *"Kaldıralım. Gerek yok."*).
+// Özel girdide düşey (z) eğrinin noktaları altta bir föyde düzenlenir.
+function _mntLibEgriHTML(node, e){
+  var G=_mntLibGrafik(e);
+  var h=_mntBolum('Kuvvet–sehim', _mntEsc(e.name),
+    '<div class="ve-mnt-kroki" id="ve-mnt-lib-gr-'+node.id+'" data-tazele>'+G.svg+_mntLibLejant(G)+'</div>');
+  // Katalog tipinde diyagramın altında not YOK (kullanıcı 2026-11-06, Canlı Not 66):
+  // salt okunurluk kılavuzda (7.1).
   if(!e.builtin) h+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key) || e);
   return h;
 }
@@ -4365,13 +4221,15 @@ function _mntLibDurumlari(node, e){
 }
 // SADE KİMLİK (kullanıcı 2026-11-06, Canlı Not 65: *"Çok karışık duruyor. 'Fabrika'
 // falan yazıyor. 'Gömülü' falan yazıyor. Kaldıralım … Taşıma kapasitesi kısmını da
-// kaldır"*): ad + (özel tipte) Sil; tür rozeti, Fabrika düğmesi, tipin sayacı ve
-// Taşıma kapasitesi bölümü YOK. Tipin kapasite alanı kayıtta durur (uygulanınca
-// takoza geçer), pencerede yazılmaz. Kapı: mount-yon.test.js → *SADE TİP*.
+// kaldır"*): özel tipte ad + Sil; tür rozeti, Fabrika düğmesi, tipin sayacı ve
+// Taşıma kapasitesi bölümü YOK. KATALOG TİPİNDE KİMLİK SATIRI YOK (Canlı Not 107:
+// *"İsim değiştirme gömülü takozlar için mümkün değil … Özel takoz olursa belki"*):
+// katalog adı seçicide okunur, değiştirilmez. Tipin kapasite alanı kayıtta durur
+// (uygulanınca takoza geçer), pencerede yazılmaz. Kapı: mount-yon.test.js →
+// *SADE TİP*.
 function _mntLibKimlikHTML(node, e, setter){
-  var eylem=(!e.builtin)
-    ? '<button type="button" class="ve-fp-dugme" onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">'+veIkon('trash')+' Sil</button>'
-    : '';
+  if(e.builtin) return '';
+  var eylem='<button type="button" class="ve-fp-dugme" onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">'+veIkon('trash')+' Sil</button>';
   return '<div class="ve-mnt-lib-kim">'
     + '<input class="ve-fp-inp ve-fp-inp--text" type="text" id="ve-mnt-lib-name-'+node.id+'" value="'+_mntEsc(e.name)+'"'
     + ' aria-label="Takoz tipinin adı" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'name\',this.value)">'
@@ -4418,17 +4276,28 @@ function _mntLibAmcKunyeHTML(e){
 // söyler. Gövdenin üstünde yalnız eksik bandı durur (aile kuralı); alttaki iki
 // kategori seçili tipin adını bölüm künyesinde taşır. Kapı: mount-yon.test.js →
 // *SADE PENCERE*.
+// Bu pencerenin tipleri: düğümün özel takozları (kayıtlı ham girdinin marka etiketli
+// KOPYASI — kayıtlı veriye alan eklenmez) ve gömülü katalog. Marka listesi ve seçili
+// tip AYNI listeden okur.
+function _mntLibGirdileri(node){
+  var d=_mntLibEnsure(node);
+  var custom=d.mounts.map(function(e){
+    var c={}; Object.keys(e).forEach(function(k){ c[k]=e[k]; });
+    c.marka=VE_MNT_LIB_MARKA_OZEL;
+    return c;
+  });
+  var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
+  return { custom:custom, builtins:builtins, hepsi:custom.concat(builtins) };
+}
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
-  var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
-  var builtins=_mntLibSirali(veMntGetLibraryList().filter(function(e){ return e.builtin; }));
+  var G=_mntLibGirdileri(node);
   var sel=null;
-  if(d._selKey) sel=custom.concat(builtins).find(function(e){ return e.key===d._selKey; });
-  if(!sel) sel=custom[0]||builtins[0]||null;
-  var secici='<div class="mntlib-bar">'
-    + '<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, custom, builtins, sel)+'</div>'
-    + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
-    + '</div>';
+  if(d._selKey) sel=G.hepsi.find(function(e){ return e.key===d._selKey; });
+  if(!sel) sel=G.custom[0]||G.builtins[0]||null;
+  var markalar=veMntLibMarkalar(G.hepsi);
+  var grup=(sel && markalar.filter(function(g){ return g.ad===sel.marka; })[0]) || markalar[0] || null;
+  var secici=_mntLibSecici(node, markalar, grup, sel);
   if(!sel){
     return _mntPencereKabuk(node, [
       { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntNot('Takoz seçilmedi.', '')) },
@@ -4492,37 +4361,20 @@ function veMntLibDropdownToggle(nodeId, ev){
   document.addEventListener('mousedown', onDown, true);
   document.addEventListener('keydown', onKey, true);
 }
-// Arama: satırları DOM'da gizler/gösterir; boşalan grup başlığı gizlenir,
-// dolu başlığın sayacı EŞLEŞEN sayısına döner (arama silinince toplama geri).
+// Arama: seçili markanın satırlarını DOM'da gizler/gösterir; hiç eşleşme yoksa
+// "eşleşen yok" satırı görünür.
 function veMntLibFilter(nodeId){
   if(typeof document==='undefined') return;
   var list=document.getElementById('mntlib-list-'+nodeId);
   if(!list) return;
   var q=document.getElementById('mntlib-q-'+nodeId);
   var needle=_mntLibNorm(q?q.value:'').trim();
-  // Grubu kapat: başlığı gizle ya da sayacını güncelle (opt sayısı; not satırı sayılmaz).
-  var closeGrp=function(g, nOpt, nRow){
-    if(!g) return;
-    g.hidden=(nRow===0);
-    var c=g.querySelector('.mntlib-count');
-    if(c) c.textContent = needle ? String(nOpt) : (c.getAttribute('data-total')||String(nOpt));
-  };
-  var kids=list.children, grp=null, grpOpt=0, grpRow=0, hits=0;
-  for(var i=0;i<kids.length;i++){
-    var el=kids[i], cl=el.classList;
-    if(cl.contains('mntlib-group')){
-      closeGrp(grp, grpOpt, grpRow);
-      grp=el; grpOpt=0; grpRow=0;
-    } else if(cl.contains('mntlib-opt')){
-      var ok=!needle || (el.getAttribute('data-search')||'').indexOf(needle)>=0;
-      el.hidden=!ok;
-      if(ok){ grpOpt++; grpRow++; hits++; }
-    } else if(cl.contains('mntlib-note')){
-      el.hidden=!!needle;                  // "henüz özel takoz yok" notu yalnız aramasız görünür
-      if(!needle) grpRow++;
-    }
-  }
-  closeGrp(grp, grpOpt, grpRow);
+  var opts=list.querySelectorAll('.mntlib-opt'), hits=0;
+  Array.prototype.forEach.call(opts, function(el){
+    var ok=!needle || (el.getAttribute('data-search')||'').indexOf(needle)>=0;
+    el.hidden=!ok;
+    if(ok) hits++;
+  });
   var none=document.getElementById('mntlib-none-'+nodeId);
   if(none) none.hidden=(hits>0);
 }
@@ -4604,6 +4456,23 @@ function veMntLibSelect(nodeId, key){
   d._selKey=key;
   if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
   veMntLibDropdownClose();                 // dış-tık/Escape dinleyicileri sökülsün
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
+// Marka seç → seçili tip o markanın ilk tipine geçer (seçili tip zaten o markadaysa
+// kalır); Tip listesi o markanın tiplerini sorar. Marka SEÇİLİ TİPTEN türer —
+// ayrı bir durum tutulmaz, seçim her zaman geçerli bir tipte durur.
+function veMntLibMarka(nodeId, marka){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var d=_mntLibEnsure(node);
+  var g=veMntLibMarkalar(_mntLibGirdileri(node).hepsi).filter(function(x){ return x.ad===marka; })[0];
+  if(!g) return;
+  var mevcut=g.girdiler.filter(function(e){ return e.key===d._selKey; })[0];
+  if(!mevcut){
+    d._selKey=g.girdiler[0].key;
+    if(d._curveEditKey && d._curveEditKey!==d._selKey) d._curveEditKey=null;
+  }
+  veMntLibDropdownClose();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 
@@ -5667,12 +5536,10 @@ if(typeof module!=='undefined' && module.exports){
     _mntComputeResults: _mntComputeResults,
     veMntSolverCompute: veMntSolverCompute,
     _mntForgetResults: _mntForgetResults,
-    getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
     _mnt2DGather: _mnt2DGather,
     _mnt2DYaziKutu: _mnt2DYaziKutu,
     _mnt2DKesisir: _mnt2DKesisir,
-    veMntLibEksen: veMntLibEksen,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
@@ -5698,6 +5565,10 @@ if(typeof module!=='undefined' && module.exports){
     _mntLibOptionRow: _mntLibOptionRow,
     _mntLibTrigger: _mntLibTrigger,
     _mntLibDropdown: _mntLibDropdown,
+    _mntLibSecici: _mntLibSecici, _mntLibGirdileri: _mntLibGirdileri,
+    veMntLibMarka: veMntLibMarka, veMntLibMarkalar: veMntLibMarkalar,
+    VE_MNT_LIB_MARKALAR: VE_MNT_LIB_MARKALAR, VE_MNT_LIB_MARKA_OZEL: VE_MNT_LIB_MARKA_OZEL,
+    _mntLibGrafik: _mntLibGrafik, _mntLibLejant: _mntLibLejant, _mntLibEgriHTML: _mntLibEgriHTML,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
@@ -5714,15 +5585,13 @@ if(typeof module!=='undefined' && module.exports){
     _mntResolveTopology: _mntResolveTopology,
     _mntLoadExampleFromJSON: _mntLoadExampleFromJSON,
     _mntLoadExampleFromModel: _mntLoadExampleFromModel,
-    _mntExampleReg: _mntExampleReg,
-    _mntExampleList: _mntExampleList,
     _mntExampleLayout: _mntExampleLayout,
-    _mntExampleDiagramSVG: _mntExampleDiagramSVG, _mntLibForceChart: _mntLibForceChart,
+    _mntLibForceChart: _mntLibForceChart,
     _mntExampleBodyType: _mntExampleBodyType,
     _mntComputeSupportLinks: _mntComputeSupportLinks,
     _mntPtoConflict: _mntPtoConflict,
     _MNT_PTO_REF: _MNT_PTO_REF,
-    _mntExampleValidate: _mntExampleValidate,
+    _mntExampleValidate: _mntExampleValidate, _mntRenderExampleReport: _mntRenderExampleReport,
     _mntGatherForSolver: _mntGatherForSolver,
     _mntGatherTorque: _mntGatherTorque,
     _mntTorqueCases: _mntTorqueCases,
@@ -5748,7 +5617,6 @@ if(typeof module!=='undefined' && module.exports){
     veMntOrnekYukle: veMntOrnekYukle,
     _mntOrnekPaletKapat: _mntOrnekPaletKapat, veMntPaletKapat: veMntPaletKapat, veMntPaletGeriAc: veMntPaletGeriAc,
     _mntPaletSifirla: function(){ _mntPaletBizim = false; },
-    _mntExampleKapilarHTML: _mntExampleKapilarHTML
   };
   // Son çözüm bu modülün değişkeninde; tarayıcıda tek global, Node'da modül
   // kapsamında kalır. Pencereyi sentetik bir çözümle ölçen testler onu buradan kurar.

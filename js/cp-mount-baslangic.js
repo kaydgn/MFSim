@@ -8,7 +8,9 @@
 //
 // Önceki açılış iç topolojiye tek bir "Başlangıç ve Örnekler" bileşeni
 // koyuyordu; kullanıcı ne yapacağını o bileşene çift tıklayıp panelini açınca
-// öğreniyordu. Sayfa aynı soruyu tuvalin tamamında, kapılarla sorar.
+// öğreniyordu. Sayfa aynı soruyu tuvalin tamamında, kapılarla sorar. Bileşen
+// 2026-11-10'da (Canlı Not 110) kalktı; yerinde sihirbazı açan Başlangıç
+// Sihirbazı bileşeni durur (`mnt-wizard`).
 //
 // KURALLAR (FEAD kural 5'in aynısı — iki modül aynı sayfayı kurar):
 //  • GÖRÜNÜM VE DOM ORTAK KİTTEN (js/baslangic-sayfa.js · `.ve-bas*`). Bu
@@ -66,18 +68,19 @@ function _mntBasG(ad, dosya){
 
 // ── GÖRÜNÜRLÜK — SAF: yalnız modeli okur ───────────────────────────────────
 // Liste verilmezse canlı `nodes`. Herhangi bir düğüm kullanıcının bir yol
-// seçtiğini söyler — "Başlangıç ve Örnekler" (mnt-example) DIŞINDA: eski
-// açılış onu kendiliğinden kuruyordu (2026-10-14'e kadar), yani o tek düğümü
-// taşıyan kayıtlı bir topoloji aslında boştur.
+// seçtiğini söyler — Başlangıç Sihirbazı bileşeni (mnt-wizard) DIŞINDA: yalnız
+// sihirbazı açan bir düğüm model değildir. (Kalkan "Başlangıç ve Örnekler"
+// bileşenini kendiliğinden kuran açılış 2026-10-14'e kadardı; onu taşıyan
+// kayıtlı topoloji açılışta tanımsız tip olarak düşer ve boş kalır.)
 function veMntBaslangicGerekli(liste){
   if(!liste) liste = (typeof nodes !== 'undefined' && nodes) ? nodes : [];
   for(var i = 0; i < liste.length; i++){
-    if(!_mntBasTip(liste[i]).isMountExample) return false;
+    if(!_mntBasTip(liste[i]).isMountWizard) return false;
   }
   return true;
 }
 
-// ── ÖRNEKLER — "Başlangıç ve Örnekler" panelinin listesinin KENDİSİ ────────
+// ── ÖRNEKLER — başlangıç sayfasının dizini ──────────────────────────────────
 // Kayıt defteri `veMountCore.getMountExampleList`; ikinci bir liste tutulmaz.
 // Künye örneğin kaydından okunur: araç · toplam kütle · gövde ve takoz sayısı ·
 // gövdeler (ad, kütle) · takozların adı · güç grubunun künyesi.

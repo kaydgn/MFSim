@@ -47,7 +47,7 @@ const say = (page) => page.evaluate(() => ({
   hepsi: window.nodes.length,
   govde: window.nodes.filter((n) => (componentDefs[n.type] || {}).isMountBody).length,
   takoz: window.nodes.filter((n) => (componentDefs[n.type] || {}).isMount).length,
-  ornek: window.nodes.filter((n) => n.type === 'mnt-example').length,
+  sihirbaz: window.nodes.filter((n) => n.type === 'mnt-wizard').length,
 }));
 
 test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMAZ', async ({ page }) => {
@@ -56,7 +56,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await takozGir(page);
-  expect(await say(page)).toEqual({ hepsi: 0, govde: 0, takoz: 0, ornek: 0 });
+  expect(await say(page)).toEqual({ hepsi: 0, govde: 0, takoz: 0, sihirbaz: 0 });
   const o = await page.evaluate(() => {
     const r = (el) => { const b = el.getBoundingClientRect(); return { w: b.width, h: b.height }; };
     // Dönüş panelin altında (Canlı Not 19); köşedeki düğme sayfa açıkken gizli.
@@ -104,7 +104,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
   expect(o.veri).toBe(0);
   expect(o.kunye).toEqual([]);                           // kapıda künye yok (Canlı Not 84; önce 4 · 5 · 1 ad)
-  expect(new Set(o.kapiBoy).size).toBe(1);               // üç kapı aynı boyda (önce 81 · 64 · 64 px)
+  expect(o.kapiBoy).toEqual([40, 40, 40]);               // üç kapı aynı boyda, kompakt (Canlı Not 102; önce 62 px)
   expect(o.dip).toEqual([26, 26]);                       // Ana topoloji · Kılavuz (Canlı Not 86; önce 32 px)
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
@@ -194,6 +194,9 @@ test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getiri
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   const s = await page.evaluate(() => ({ tip: nodes.map((n) => n.type).sort(), beklenen: VE_MNT_ARAC_TIPLERI.slice().sort() }));
   expect(s.tip).toEqual(s.beklenen);
+  // Sihirbazı açan bileşen şeritte; "Başlangıç ve Örnekler" yok (Canlı Not 110)
+  expect(s.tip).toContain('mnt-wizard');
+  expect(s.tip).not.toContain('mnt-example');
   // seçenek seçildi → "Bileşenler" sütunu KAPALI gelir, açma sekmesi köşede (kullanıcı
   // 2026-11-06, Canlı Not 62: *"bileşenler penceresi otomatik açık olarak geliyor.
   // Gelmesin"*; önce tercihe göre açık geliyordu); tercih yazılmaz

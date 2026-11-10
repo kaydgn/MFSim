@@ -165,7 +165,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(lib.data.mounts.find(e => e.key === key)).toBeUndefined();
   });
 
-  test('getMntLibraryPropertiesHTML: ekle butonu + özel satır + katalog', () => {
+  test('getMntLibraryPropertiesHTML: ekle butonu + özel satır + marka listesi', () => {
     const lib = {
       id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
       data: { mounts: [{ key: 'k1', name: 'Deneme', sx: 100, sy: 100, sz: 200, dx: 150, dy: 150, dz: 300 }] }
@@ -173,8 +173,10 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     global.nodes = [lib];
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibAdd('lib1')");
-    expect(html).toContain('>Katalog · ');
-    expect(html).toContain('LMT-1433-37 55 ShA');               // gömülü satır (salt-okunur)
+    ['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer', 'Özel takozlar'].forEach((m) => {
+      expect(html).toContain('<option value="' + m + '"');       // Marka listesi: katalog markaları + özel
+    });
+    expect(html).not.toContain('>Katalog · ');                    // grup başlığı yok (marka listede)
     expect(html).toContain('value="Deneme"');           // özel satır ad girdisi
     expect(html).toContain("veMntLibRemove('lib1','k1')");
     expect(html).toContain("veMntLibSet('lib1','k1','sz'");
@@ -238,13 +240,15 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(m.overridden).toBe(false);
   });
 
-  test('getMntLibraryPropertiesHTML: katalog satırları düzenlenebilir; Fabrika düğmesi yok (Canlı Not 65)', () => {
+  test('getMntLibraryPropertiesHTML: katalog rijitliği düzenlenebilir; Fabrika düğmesi ve ad alanı yok (Canlı Not 65 · 107)', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
     global.nodes = [lib];
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibSetBuiltin('lib1','amc55sha','sz'");
     expect(html).not.toContain('veMntLibResetBuiltin(');
-    expect(html).toContain('value="LMT-1433-37 55 ShA"');   // gömülü ad artık input değeri
+    expect(html).not.toContain("'name',this.value");           // katalog adı değiştirilmez
+    expect(html).not.toContain('value="LMT-1433-37 55 ShA"');
+    expect(html).toContain('LMT-1433-37 55 ShA');               // ad seçicide okunur
   });
 
   // ── Gömülü 3-eksen analitik fitli katalog (TK035/40/50) ──
@@ -381,7 +385,9 @@ describe('Referans yerleşim (koordinat çerçevesi) + açılış', () => {
     expect(L.filter(i => i.type === 'mnt-solver')).toHaveLength(1);
     expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft']));
     // referans görseldeki analiz araçları da yerleşimde (image 1)
-    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-example']));
+    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-wizard']));
+    // "Başlangıç ve Örnekler" bileşeni YOK (Canlı Not 110): yerinde sihirbazı açan bileşen
+    expect(L.map(i => i.type)).not.toContain('mnt-example');
     // Koordinat Düzlemi YOK (Canlı Not 63): yerleşimde, tiplerde ve dışa aktarımda
     expect(L.map(i => i.type)).not.toContain('mnt-coordframe');
     expect(cp.getMntCoordFramePropertiesHTML).toBeUndefined();
@@ -396,26 +402,24 @@ describe('Referans yerleşim (koordinat çerçevesi) + açılış', () => {
       .map(i => i.name);
     bodyNames.forEach(n => expect(n).not.toMatch(/\(Kütle\)/));
   });
-  test('açılışta YALNIZ "Başlangıç ve Örnekler" (mnt-example) düğümü kurulur', () => {
+  test('veMntPopulateStarter YALNIZ Başlangıç Sihirbazı (mnt-wizard) düğümünü kurar', () => {
     global.nodes = [];
     global.createNode = (type, x, y) => { global.nodes.push({ id: 'n' + global.nodes.length, type, x, y, data: {} }); };
     const created = cp.veMntPopulateStarter();
     expect(global.nodes).toHaveLength(1);
-    expect(global.nodes[0].type).toBe('mnt-example');
+    expect(global.nodes[0].type).toBe('mnt-wizard');
     expect(created).toHaveLength(1);
     delete global.createNode; delete global.nodes;
   });
+  test('"Başlangıç ve Örnekler" penceresi ve yardımcıları kalktı; örnek yükleyici durur', () => {
+    ['getMntExamplePropertiesHTML', 'veMntLoadExample', 'veMntSetExample', '_mntExampleDiagramSVG',
+      '_mntExampleKapilarHTML', '_mntExampleReg', '_mntExampleList'].forEach((ad) => expect(cp[ad]).toBeUndefined());
+    expect(typeof cp.veMntOrnekYukle).toBe('function');
+    expect(typeof cp._mntExampleValidate).toBe('function');
+  });
 });
 
-describe('Örnek bileşeni', () => {
-  test('panel: örnek seçici + Topolojiye Yükle düğmesi', () => {
-    const node = { id: 'ex1', type: 'mnt-example', def: { name: 'Örnek' }, data: {} };
-    const html = cp.getMntExamplePropertiesHTML(node);
-    expect(html).toContain('ve-mnt-example-sel');
-    expect(html).toContain("veMntLoadExample('ex1')");
-    expect(html).toContain('BMC SİPER');
-    expect(html).toContain('ve-mnt-example-report');
-  });
+describe('Örnek modelleri', () => {
   test('örnek adı → kanvas kütle tipi eşlemesi', () => {
     expect(cp._mntExampleBodyType('Motor')).toBe('mnt-motor');
     expect(cp._mntExampleBodyType('Şanzıman')).toBe('mnt-gearbox');
@@ -423,20 +427,11 @@ describe('Örnek bileşeni', () => {
     expect(cp._mntExampleBodyType('Sol cradle')).toBe('mnt-bracket');
     expect(cp._mntExampleBodyType('Transfer Kutusu')).toBe('mnt-transfer');
   });
-  test('panel: topoloji görseli + araç detayları + Örneği aktar', () => {
-    const node = { id: 'ex1', type: 'mnt-example', def: { name: 'Örnek' }, data: {} };
-    const html = cp.getMntExamplePropertiesHTML(node);
-    expect(html).toContain('veMntSetExample(\'ex1\'');   // seçici canlı yenileme
-    expect(html).toContain('<svg');                       // otomatik topoloji şeması
-    expect(html).toContain('BMC Siper');                  // araç başlığı (detay)
-    expect(html).toContain('Örneği aktar');               // aktar düğmesi
-  });
   test('kayıt defteri: bilinen anahtar çözülür, bilinmeyen ilk örneğe düşer', () => {
     const first = core.getMountExampleList()[0];
     expect(core.getMountExample('siper').id).toBe('siper');
     expect(core.getMountExample('yok-boyle-anahtar').id).toBe(first.id);  // bilinmeyen → ilk örnek
     expect(core.getMountExampleList().length).toBeGreaterThanOrEqual(1);
-    expect(cp._mntExampleReg('siper').model).toBe(core.getMountExample('siper').model);
   });
   test('yerleşim: otomatik (orta sıra kütle, alt/üst takoz) + at[] override', () => {
     const L = cp._mntExampleLayout(core.TTAR_EXAMPLE);
@@ -451,13 +446,6 @@ describe('Örnek bileşeni', () => {
     const L2 = cp._mntExampleLayout(custom);
     expect(L2.bodies[0]).toEqual({ lx: 11, ly: 22 });
     expect(L2.mnts[0]).toEqual({ lx: 33, ly: 44 });
-  });
-  test('otomatik şema: model bileşen adlarını içeren tema-uyumlu SVG üretir', () => {
-    const svg = cp._mntExampleDiagramSVG(core.TTAR_EXAMPLE);
-    expect(svg).toMatch(/^<svg[\s\S]*<\/svg>$/);
-    expect(svg).toContain('Motor');
-    expect(svg).toContain('var(--accent-success)');  // takoz rengi (tema değişkeni)
-    expect(cp._mntExampleDiagramSVG(null)).toBe('');  // model yoksa boş
   });
   test('BMC Siper örneği: 5 kütle + 6 takoz, doğru gövde eşlemesi, 2294.5 kg', () => {
     const ex = core.getMountExample('siper');
@@ -478,12 +466,10 @@ describe('Örnek bileşeni', () => {
     // her gövde/takoz kullanıcı düzenine ait at:[lx,ly] taşır (görsel↔topoloji birebir)
     expect(m.components.every(c => Array.isArray(c.at) && c.at.length === 2)).toBe(true);
     expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
-    // önizleme sahnesinde yardımcı araçlar (tools) tanımlı
+    // önizleme sahnesinde yardımcı araçlar (tools) tanımlı; sihirbazı açan bileşen de
     expect(ex.tools.map(t => t.type)).toContain('mnt-solver');
-    // panelde araç adı + otomatik şema görünür
-    const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'siper' } });
-    expect(html).toContain('BMC Siper');
-    expect(html).toContain('<svg');
+    expect(ex.tools.map(t => t.type)).toContain('mnt-wizard');
+    expect(ex.tools.map(t => t.type)).not.toContain('mnt-example');
   });
   test('TULGA örneği: 8 kütle + 5 takoz, 788.4 kg, tork zincirinden yük durumları', () => {
     const ex = core.getMountExample('tulga');
@@ -519,10 +505,6 @@ describe('Örnek bileşeni', () => {
     // tork dışı durumlar defaultLoadCases ile aynı kalır (mutasyon yok)
     expect(m.loadCases.find(c => c.name === 'Static').T).toEqual([0, 0, 0]);
     expect(core.defaultLoadCases().find(c => c.name === 'Forward Torque').T).toEqual([0, 0, 0]);
-    // topolojinin resmi modelden çizilen şema (S3·B — ekran görüntüsü yok)
-    const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'tulga' } });
-    expect(html).toContain('TULGA');
-    expect(html).toContain('<svg');
   });
   test('TULGA: yayınlanan JSON topolojisi kayıt defterindeki modelle birebir', () => {
     // Bu iki kaynak AYRI dosyalarda yaşıyor; biri elle güncellenip diğeri
@@ -961,10 +943,10 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
     n.data._selKey = 'k1';
     const html = cp.getMntLibraryPropertiesHTML(n);
-    // Sütunda TEK eksen grafiği (varsayılan z) + eksen seçici
-    expect(html).toContain('<i class="ve-fp-sym">F<sub>z</sub></i> · eksenel</b>');
-    expect(html).toContain("veMntLibEksen('lib1','x')");
-    expect(html).toContain('<svg');
+    // ÜÇ EKSEN TEK diyagramda (Canlı Not 108); eksen seçici ve yasa föyü yok (103)
+    expect(html).toContain('class="ve-mnt-lib-svg"');
+    expect(html).not.toContain('veMntLibEksen');
+    expect(html).not.toContain('Eksenlerin yasası');
     expect(html).toContain('<polyline');   // statik + dinamik çizgiler
     expect(html).toContain('<circle');      // ölçüm noktaları (z-eğrisi)
   });

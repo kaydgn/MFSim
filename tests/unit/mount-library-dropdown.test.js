@@ -6,10 +6,13 @@
  * aranabilir bir açılır liste.
  *
  * Burada test edilen ŞEY DAVRANIŞ, etiket değil: aç/kapa durumu, dış-tık ve
- * Escape ile kapanma, arama filtresinin hangi satırı/grubu gizlediği, Enter'ın
+ * Escape ile kapanma, arama filtresinin hangi satırı gizlediği, Enter'ın
  * ilk eşleşmeyi seçmesi ve ekle/sil sonrası seçimin nereye düştüğü. Sessiz
- * regresyonu (ör. filtre grubu boşalınca başlığın asılı kalması, silinen
- * takozda asılı kalan seçim) gözle yakalamak zor.
+ * regresyonu (ör. silinen takozda asılı kalan seçim) gözle yakalamak zor.
+ *
+ * MARKA (kullanıcı 2026-11-10, Canlı Not 106): liste yalnız SEÇİLİ MARKANIN
+ * tiplerini taşır — marka Marka listesinde seçilir; grup başlığı ve sayaç yok.
+ * Katalog tipleri bu yüzden seçili tipin markası üzerinden aranır.
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -34,9 +37,9 @@ function mountPanel(node) {
   };
 }
 
-const libNode = (mounts) => ({
+const libNode = (mounts, secili) => ({
   id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
-  data: { mounts: mounts || [] },
+  data: Object.assign({ mounts: mounts || [] }, secili ? { _selKey: secili } : {}),
 });
 
 const visibleOpts = (list) =>
@@ -60,23 +63,33 @@ describe('_mntLibNorm — arama için Türkçe harf katlaması', () => {
 });
 
 describe('açılır liste — kapalı başlar, tetikleyici seçiliyi gösterir', () => {
-  test('liste kapalı basılır; tüm gömülü girdiler satır olarak içindedir', () => {
+  test('liste kapalı basılır; seçili markanın tipleri satır olarak içindedir', () => {
     const el = mountPanel(libNode());
     expect(el.dd.hidden).toBe(true);                     // panel açılışında kapalı
     const opts = el.list.querySelectorAll('.mntlib-opt');
     const builtins = cp.veMntGetLibraryList().filter((e) => e.builtin);
-    expect(opts.length).toBe(builtins.length);           // gömülü katalog tam
-    // seçim yokken ilk gömülü seçilir → tetikleyici onu gösterir
+    // seçim yokken ilk gömülü seçilir → tetikleyici onu gösterir, liste onun markasını
+    const marka = builtins[0].marka;
+    const beklenen = builtins.filter((e) => e.marka === marka);
+    expect(opts.length).toBe(beklenen.length);
+    expect(opts.length).toBeLessThan(builtins.length);   // başka markanın tipi listede yok
     expect(el.trigger.textContent).toContain(builtins[0].name);
     expect(el.list.querySelectorAll('.mntlib-opt.sel').length).toBe(1);
   });
 
-  test('özel takozlar gömülülerden önce ve seçili olarak listelenir', () => {
+  test('liste grup başlığı ve sayaç taşımaz (marka Marka listesinde söylenir)', () => {
+    const el = mountPanel(libNode());
+    expect(el.list.querySelectorAll('.mntlib-group, .mntlib-count, .mntlib-note').length).toBe(0);
+  });
+
+  test('özel takoz seçili olarak "Özel takozlar" markasında listelenir', () => {
     const el = mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
     const opts = Array.from(el.list.querySelectorAll('.mntlib-opt'));
+    expect(opts).toHaveLength(1);
     expect(opts[0].textContent).toContain('Özel A');
     expect(opts[0].classList.contains('sel')).toBe(true);
     expect(el.trigger.textContent).toContain('Özel A');
+    expect(document.getElementById('mntlib-marka-lib1').value).toBe('Özel takozlar');
   });
 });
 
@@ -128,54 +141,39 @@ describe('aç / kapa', () => {
 });
 
 describe('arama filtresi', () => {
-  test('ada göre süzer; eşleşmeyen satır ve boşalan grup başlığı gizlenir', () => {
-    const el = mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
+  test('ada göre süzer; eşleşmeyen satır gizlenir', () => {
+    const el = mountPanel(libNode([], 'amc137982'));     // seçili tip AMC → liste AMC'nin tipleri
     el.trigger.click();
     el.search.value = 'cone 39';
     cp.veMntLibFilter('lib1');
     const vis = visibleOpts(el.list);
     expect(vis.length).toBeGreaterThan(0);
+    expect(vis.length).toBeLessThan(el.list.querySelectorAll('.mntlib-opt').length);
     expect(vis.every((o) => /Cone 39/i.test(o.textContent))).toBe(true);
-    const groups = Array.from(el.list.querySelectorAll('.mntlib-group'));
-    expect(groups[0].hidden).toBe(true);                 // "Özel Takozlar" boşaldı → gizli
-    expect(groups[1].hidden).toBe(false);                // "Katalog" eşleşme taşıyor
     expect(el.none.hidden).toBe(true);
   });
 
-  test('yalnız özel eşleşince SON grup başlığı ("Katalog") da gizlenir', () => {
-    const el = mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
+  test('arama yalnız seçili markanın tiplerinde yapılır', () => {
+    const el = mountPanel(libNode([], 'amc137982'));
     el.trigger.click();
-    el.search.value = 'özel a';
+    el.search.value = 'tk050';                           // Diğer markasının tipi
     cp.veMntLibFilter('lib1');
-    const groups = Array.from(el.list.querySelectorAll('.mntlib-group'));
-    expect(visibleOpts(el.list)).toHaveLength(1);
-    expect(groups[0].hidden).toBe(false);
-    expect(groups[1].hidden).toBe(true);                // döngü sonrası kapanış: son grup
+    expect(visibleOpts(el.list)).toHaveLength(0);
+    expect(el.none.hidden).toBe(false);
   });
 
   test('anahtar koduyla da eşleşir; Türkçe harf farkı aramayı bozmaz', () => {
-    const el = mountPanel(libNode([{ key: 'kx', name: 'Ön Şasi Takozu', sz: 100 }]));
+    let el = mountPanel(libNode([], 'amc137963'));
     el.trigger.click();
     el.search.value = 'amc137982';                       // ad değil, kütüphane anahtarı
     cp.veMntLibFilter('lib1');
     expect(visibleOpts(el.list).map((o) => o.textContent).join()).toContain('Cone 39 50 ShA (AMC 137982)');
+    cp.veMntLibDropdownClose();
+    el = mountPanel(libNode([{ key: 'kx', name: 'Ön Şasi Takozu', sz: 100 }]));
+    el.trigger.click();
     el.search.value = 'on sasi';                         // aksansız yazım
     cp.veMntLibFilter('lib1');
     expect(visibleOpts(el.list).map((o) => o.textContent).join()).toContain('Ön Şasi Takozu');
-  });
-
-  test('grup sayacı arama boyunca EŞLEŞEN sayısını gösterir, sonra toplama döner', () => {
-    const el = mountPanel(libNode());
-    el.trigger.click();
-    const gomulu = () => el.list.querySelectorAll('.mntlib-count')[1];
-    const toplam = gomulu().textContent;
-    expect(Number(toplam)).toBeGreaterThan(3);
-    el.search.value = 'cone 39';
-    cp.veMntLibFilter('lib1');
-    expect(gomulu().textContent).toBe(String(visibleOpts(el.list).length));
-    el.search.value = '';
-    cp.veMntLibFilter('lib1');
-    expect(gomulu().textContent).toBe(toplam);          // aramasız hâlde katalog toplamı
   });
 
   test('hiç eşleşme yoksa "eşleşen yok" satırı görünür; arama silinince liste döner', () => {
@@ -194,7 +192,7 @@ describe('arama filtresi', () => {
 
 describe('seçim', () => {
   test('satır tıklaması seçimi taşır ve listeyi kapatır', () => {
-    const node = libNode();
+    const node = libNode([], 'TK035');                   // TK040 ile aynı marka
     const el = mountPanel(node);
     el.trigger.click();
     const target = Array.from(el.list.querySelectorAll('.mntlib-opt'))
@@ -206,7 +204,7 @@ describe('seçim', () => {
   });
 
   test('aramada Enter ilk görünen satırı seçer', () => {
-    const node = libNode();
+    const node = libNode([], 'TK035');
     const el = mountPanel(node);
     el.trigger.click();
     el.search.value = 'tk050';

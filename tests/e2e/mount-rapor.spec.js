@@ -40,8 +40,7 @@ test('Takoz raporu: çizgi yazıyı kesmiyor, yazı yazıya binmiyor, sözcük b
   const out = [];
   for (const [k, imza] of ORNEK) {
     await page.evaluate((kk) => {
-      let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-      ex.data = ex.data || {}; ex.data.exampleKey = kk; veMntLoadExample(ex.id);
+      veMntOrnekYukle(kk);
     }, k);
     await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
     await page.evaluate(() => { window._veMntLast = null; const s = nodes.find((x) => x.type === 'mnt-solver'); veMntSolverCompute(s.id); });

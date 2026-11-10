@@ -455,7 +455,7 @@ function _mwTuvalModeli(){
 }
 // TOHUM SIRASI: tuvaldeki model (sihirbaz onu düzenler) → bu modülün oturum
 // taslağı → boş. Tek kural, giriş yolundan bağımsız (başlangıç sayfası ya da
-// "Başlangıç ve Örnekler" penceresi).
+// Başlangıç Sihirbazı bileşeni).
 function veMntWizAc(){
   if(typeof document === 'undefined') return false;
   var ov = document.getElementById('ve-mntwiz-overlay');

@@ -223,7 +223,7 @@ test('FEAD: ayrıntılı rapor, özet ve A3 pano Türkçe sayı yazıyor', async
 });
 
 test('Takoz: rapor Türkçe sayı yazıyor', async ({ page, browser }) => {
-  await modulAc(page, 'mount-analysis', "window.confirm = () => true; let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200); ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);");
+  await modulAc(page, 'mount-analysis', "window.confirm = () => true; veMntOrnekYukle('tulga');");
   await page.evaluate(() => { const s = nodes.find((x) => x.type === 'mnt-solver'); veMntSolverCompute(s.id); });
   await page.waitForFunction(() => typeof _veMntLast !== 'undefined' && _veMntLast && !_veMntLast.error, null, { timeout: 120000 });
   const html = await page.evaluate(() => new Promise((ok) => _mntReportEnsureAssets(() => {

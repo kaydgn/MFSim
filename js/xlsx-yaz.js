@@ -8,19 +8,27 @@
 // (yazı · dolgu · kenarlık · hizalama · sayı biçimi), sütun genişliği, satır
 // yüksekliği, birleşik hücre, sayfa içi bağlantı, hücre notu, filtre, ızgara
 // çizgisinin kapalı açılması, içeriğin dışında kalan satır ve sütunun gizli
-// açılması. Formül YAZILMAZ: hücre çözümün değerini taşır.
+// açılması, gizli sayfa, formül (önbellek değeriyle; kitap açılışta yeniden
+// hesaplanır) ve satırı istendikçe üretilen büyük veri sayfası.
 //
 // KİTAP MODELİ
 //   { sayfalar: [{
 //       ad,                          // ≤ 31 karakter, [ ] : * ? / \ yok (temizlenir)
-//       hucre: [[r, c, deger, stil]],// r, c 1 tabanlı; deger sayı | metin
+//       hucre: [[r, c, deger, stil]],// r, c 1 tabanlı; deger sayı | metin | formül
 //       sutun: { c: genişlik },      // karakter birimi (Excel'in sütun genişliği)
 //       satir: { r: yükseklik },     // pt
 //       birlesik: ['D6:F6'],
 //       bag: [[r, c, hedefSayfa, 'A1']],
 //       not: [[r, c, metin, genişlikPx, yükseklikPx]],
-//       filtre: 'A5:W581', izgara: false, gizle: true, yakin: 85
+//       filtre: 'A5:W581', izgara: false, gizle: true, yakin: 85,
+//       gizli: true,                 // sayfa sekmesi gizli (formüller okur)
+//       akis: { n, satir(i) → [deger] }   // hucre yerine: n satır, i. satırın değerleri
 //   }] }
+//   formül: { f:'IF(A1>0,1,0)', v:önbellek, dizi:true? } — '=' yazılmaz; dizi:
+//     tek hücrelik dizi formülü (Ctrl+Shift+Enter karşılığı). Formül varsa
+//     calcPr fullCalcOnLoad: Excel açılışta yeniden hesaplar.
+//   akis: stilsiz, satırları sırayla yazılan sayfa (yüz binlerce hücre);
+//     metin satır içi (inlineStr), sayı <v>.
 //   stil: { b, boy, renk, alt, dolgu, kenar, yatay, dikey, sar, bicim }
 //     renk/dolgu 'RRGGBB'; bicim '0.00' gibi sayı biçimi.
 //   gizle: içeriğin son satırından ve son sütunundan BİR sonrası görünür,
@@ -29,6 +37,10 @@
 // ZIP: yerel başlık + merkezi dizin; sıkıştırmasız (stored) ya da varsa
 // CompressionStream('deflate-raw') ile (zaman uyumsuz yol). Okuyucunun saf
 // JS inflate'i ikisini de açar (gidiş-dönüş testi).
+//
+// DİLİMLİ YAZIM (is): sayfa XML'i parça parça üretilir; her parça UTF-8'e çevrilir,
+// CRC'si yürür ve dosyanın sıkıştırıcısına yazılır — 13.824 satırlık kitap tek
+// görevde 1,7 sn donduruyordu. Tek seferlik yollar (dosyalar, yaz) aynı üreteçten.
 // ═══════════════════════════════════════════════════════════════════════════
 
 var veXlsxYaz = (function(){
@@ -45,7 +57,9 @@ var veXlsxYaz = (function(){
     return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  var KODLAYICI = (typeof TextEncoder === 'function') ? new TextEncoder() : null;
   function utf8(s){
+    if(KODLAYICI) return KODLAYICI.encode(String(s));
     var out = [], i, c;
     s = String(s);
     for(i = 0; i < s.length; i++){
@@ -155,50 +169,74 @@ var veXlsxYaz = (function(){
 
   // ── sayfa ────────────────────────────────────────────────────────────────
   function sayi(v){ return Number.isFinite(v) ? String(v) : null; }
-  function sayfaXml(S, ilk, stil, metin, notVar){
-    var satirlar = {}, sonR = 1, sonC = 1;
-    (S.hucre || []).forEach(function(h){
-      var r = h[0], c = h[1];
-      (satirlar[r] || (satirlar[r] = [])).push(h);
-      if(r > sonR) sonR = r;
-      if(c > sonC) sonC = c;
-    });
-    (S.birlesik || []).forEach(function(b){
-      var m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(b);
-      if(!m) return;
-      var c2 = 0; for(var i = 0; i < m[3].length; i++) c2 = c2 * 26 + (m[3].charCodeAt(i) - 64);
-      if(+m[4] > sonR) sonR = +m[4];
-      if(c2 > sonC) sonC = c2;
-    });
-    var gizle = !!S.gizle, gorR = gizle ? sonR + 1 : sonR;
-    var h = BAS + '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">';
-    h += '<dimension ref="A1:' + adres(sonR, sonC) + '"/>';
-    var yakin = S.yakin && S.yakin !== 100 ? ' zoomScale="' + S.yakin + '" zoomScaleNormal="' + S.yakin + '"' : '';
-    h += '<sheetViews><sheetView workbookViewId="0"' + (ilk ? ' tabSelected="1"' : '') + (S.izgara === false ? ' showGridLines="0"' : '')
-      + yakin + '/></sheetViews>';
-    h += '<sheetFormatPr defaultRowHeight="15"' + (gizle ? ' zeroHeight="1"' : '') + '/>';
-    var sut = S.sutun || {}, ck = Object.keys(sut).map(Number).filter(function(c){ return c >= 1; }).sort(function(a, b){ return a - b; });
-    if(ck.length || gizle){
-      h += '<cols>';
-      ck.forEach(function(c){
-        if(gizle && c > sonC + 1) return;
-        h += '<col min="' + c + '" max="' + c + '" width="' + (+sut[c]).toFixed(4) + '" customWidth="1"/>';   // makine: XML özniteliği
-      });
-      if(gizle && sonC + 2 <= 16384) h += '<col min="' + (sonC + 2) + '" max="16384" width="9.140625" hidden="1"/>';
-      h += '</cols>';
+  function formulMu(v){ return !!(v && typeof v === 'object' && typeof v.f === 'string'); }
+  // Formül hücresi: önbellek değeri metinse t="str", sayıysa türsüz; yoksa <v> yazılmaz.
+  function formulXml(ref, so, F){
+    var v = F.v, t = typeof v === 'string' ? ' t="str"' : (typeof v === 'boolean' ? ' t="b"' : '');
+    var f = '<f' + (F.dizi ? ' t="array" ref="' + ref + '"' : '') + '>' + kac(F.f) + '</f>';
+    var deger = '';
+    if(typeof v === 'string') deger = '<v>' + kac(v) + '</v>';
+    else if(typeof v === 'boolean') deger = '<v>' + (v ? 1 : 0) + '</v>';
+    else if(typeof v === 'number' && sayi(v) !== null) deger = '<v>' + sayi(v) + '</v>';
+    return '<c r="' + ref + '"' + so + t + '>' + f + deger + '</c>';
+  }
+  // ── sayfa üreteci ────────────────────────────────────────────────────────
+  // Sayfanın XML'i PARÇA PARÇA: sonraki() en çok ~PARCA karakterlik parça döndürür
+  // ('' = bu adımda çıktı yok, sürüyor; null = bitti). Dilimli yazımın (is) ve tek
+  // seferlik yazımın (dosyalar) ortak yolu — ikisinin çıktısı bayt bayt aynı.
+  var PARCA = 1 << 17;                       // ~128 K karakter: bir parçanın üretimi, kodlaması ve sıkıştırması birkaç ms
+  var GRUP = 50000;                          // bir adımda satırına dağıtılan hücre
+  function sayfaUretec(S, ilk, stil, metin, notVar, durum){
+    if(S.akis) return akisUretec(S);
+    var H = S.hucre || [], satirlar = {}, sonR = 1, sonC = 1, gi = 0, evre = 0, r = 1, gorR = 1;
+    var gizle = !!S.gizle, yuk = S.satir || {};
+    function grupla(){
+      for(var son = Math.min(H.length, gi + GRUP); gi < son; gi++){
+        var h = H[gi], rr = h[0], c = h[1];
+        (satirlar[rr] || (satirlar[rr] = [])).push(h);
+        if(rr > sonR) sonR = rr;
+        if(c > sonC) sonC = c;
+      }
+      return gi >= H.length;
     }
-    h += '<sheetData>';
-    var yuk = S.satir || {};
-    for(var r = 1; r <= gorR; r++){
+    function bas(){
+      (S.birlesik || []).forEach(function(b){
+        var m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(b);
+        if(!m) return;
+        var c2 = 0; for(var i = 0; i < m[3].length; i++) c2 = c2 * 26 + (m[3].charCodeAt(i) - 64);
+        if(+m[4] > sonR) sonR = +m[4];
+        if(c2 > sonC) sonC = c2;
+      });
+      gorR = gizle ? sonR + 1 : sonR;
+      var h = BAS + '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">';
+      h += '<dimension ref="A1:' + adres(sonR, sonC) + '"/>';
+      var yakin = S.yakin && S.yakin !== 100 ? ' zoomScale="' + S.yakin + '" zoomScaleNormal="' + S.yakin + '"' : '';
+      h += '<sheetViews><sheetView workbookViewId="0"' + (ilk ? ' tabSelected="1"' : '') + (S.izgara === false ? ' showGridLines="0"' : '')
+        + yakin + '/></sheetViews>';
+      h += '<sheetFormatPr defaultRowHeight="15"' + (gizle ? ' zeroHeight="1"' : '') + '/>';
+      var sut = S.sutun || {}, ck = Object.keys(sut).map(Number).filter(function(c){ return c >= 1; }).sort(function(a, b){ return a - b; });
+      if(ck.length || gizle){
+        h += '<cols>';
+        ck.forEach(function(c){
+          if(gizle && c > sonC + 1) return;
+          h += '<col min="' + c + '" max="' + c + '" width="' + (+sut[c]).toFixed(4) + '" customWidth="1"/>';   // makine: XML özniteliği
+        });
+        if(gizle && sonC + 2 <= 16384) h += '<col min="' + (sonC + 2) + '" max="16384" width="9.140625" hidden="1"/>';
+        h += '</cols>';
+      }
+      return h + '<sheetData>';
+    }
+    function satirXml(r){
       var L = satirlar[r], ht = yuk[r];
-      if(!L && !gizle && ht == null) continue;
+      if(!L && !gizle && ht == null) return '';
       var ozn = ' r="' + r + '"' + ((ht != null || gizle) ? ' ht="' + (ht != null ? ht : 15) + '" customHeight="1"' : '');
-      if(!L){ h += '<row' + ozn + '/>'; continue; }
+      if(!L) return '<row' + ozn + '/>';
       L.sort(function(a, b){ return a[1] - b[1]; });
-      h += '<row' + ozn + '>';
+      var h = '<row' + ozn + '>';
       L.forEach(function(x){
         var s = stil.no(x[3]), v = x[2], ref = adres(x[0], x[1]), so = s ? ' s="' + s + '"' : '';
         if(v === null || v === undefined || v === '') { h += '<c r="' + ref + '"' + so + '/>'; return; }
+        if(formulMu(v)){ durum.formul = true; h += formulXml(ref, so, v); return; }
         if(typeof v === 'number'){
           var n = sayi(v);
           h += n === null ? '<c r="' + ref + '"' + so + '/>' : '<c r="' + ref + '"' + so + '><v>' + n + '</v></c>';
@@ -206,18 +244,79 @@ var veXlsxYaz = (function(){
         }
         h += '<c r="' + ref + '"' + so + ' t="s"><v>' + metin.no(v) + '</v></c>';
       });
-      h += '</row>';
+      return h + '</row>';
     }
-    h += '</sheetData>';
-    if(S.filtre) h += '<autoFilter ref="' + S.filtre + '"/>';
-    if(S.birlesik && S.birlesik.length) h += '<mergeCells count="' + S.birlesik.length + '">'
-      + S.birlesik.map(function(b){ return '<mergeCell ref="' + b + '"/>'; }).join('') + '</mergeCells>';
-    if(S.bag && S.bag.length) h += '<hyperlinks>' + S.bag.map(function(b){
-      return '<hyperlink ref="' + adres(b[0], b[1]) + '" location="' + kac(konum(b[2], b[3])) + '"/>'; }).join('') + '</hyperlinks>';
-    h += '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>';
-    if(notVar) h += '<legacyDrawing r:id="rId2"/>';
-    h += '</worksheet>';
-    return h;
+    function son(){
+      var h = '</sheetData>';
+      if(S.filtre) h += '<autoFilter ref="' + S.filtre + '"/>';
+      if(S.birlesik && S.birlesik.length) h += '<mergeCells count="' + S.birlesik.length + '">'
+        + S.birlesik.map(function(b){ return '<mergeCell ref="' + b + '"/>'; }).join('') + '</mergeCells>';
+      if(S.bag && S.bag.length) h += '<hyperlinks>' + S.bag.map(function(b){
+        return '<hyperlink ref="' + adres(b[0], b[1]) + '" location="' + kac(konum(b[2], b[3])) + '"/>'; }).join('') + '</hyperlinks>';
+      h += '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>';
+      if(notVar) h += '<legacyDrawing r:id="rId2"/>';
+      return h + '</worksheet>';
+    }
+    return {
+      sonraki: function(){
+        if(evre === 0){ if(!grupla()) return ''; evre = 1; return bas(); }
+        if(evre === 1){
+          var h = '';
+          while(r <= gorR && h.length < PARCA) h += satirXml(r++);
+          if(r > gorR) evre = 2;
+          return h;
+        }
+        if(evre === 2){ evre = 3; return son(); }
+        return null;
+      },
+      oran: function(){ return evre === 0 ? 0.1 * gi / Math.max(1, H.length) : (evre >= 2 ? 1 : 0.1 + 0.9 * (r - 1) / gorR); }
+    };
+  }
+  // Satırı istendikçe üretilen sayfa: stil, birleşik hücre ve bağlantı yok; boyutun
+  // son sütunu ilk satırın uzunluğu (akis.sutun verilirse o).
+  function akisUretec(S){
+    var A = S.akis, i = 0, evre = 0, ilkL = null;
+    function satirXml(i){
+      var L = (i === 0 ? ilkL : A.satir(i)) || [], r = i + 1, s = '<row r="' + r + '">';
+      for(var c = 0; c < L.length; c++){
+        var v = L[c];
+        if(v === null || v === undefined || v === '') continue;
+        if(typeof v === 'number'){
+          var n = sayi(v);
+          if(n !== null) s += '<c r="' + adres(r, c + 1) + '"><v>' + n + '</v></c>';
+        } else s += '<c r="' + adres(r, c + 1) + '" t="inlineStr"><is><t>' + kac(v) + '</t></is></c>';
+      }
+      return s + '</row>';
+    }
+    return {
+      sonraki: function(){
+        if(evre === 0){
+          ilkL = A.n > 0 ? (A.satir(0) || []) : [];
+          evre = 1;
+          return BAS + '<worksheet xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '">'
+            + '<dimension ref="A1:' + adres(Math.max(1, A.n), Math.max(1, A.sutun || ilkL.length)) + '"/>'
+            + '<sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData>';
+        }
+        if(evre === 1){
+          var h = '';
+          while(i < A.n && h.length < PARCA) h += satirXml(i++);
+          if(i >= A.n) evre = 2;
+          return h;
+        }
+        if(evre === 2){
+          evre = 3;
+          return '</sheetData><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>';
+        }
+        return null;
+      },
+      oran: function(){ return A.n ? i / A.n : 1; }
+    };
+  }
+  // Tek parçalık dosya: üretimi sırası gelince (sayfalardan sonra yazılanlar
+  // — stiller, paylaşılan metin, kitap — sayfaların kaydını okur).
+  function tekUretec(f){
+    var bitti = false;
+    return { sonraki: function(){ if(bitti) return null; bitti = true; return f(); }, oran: function(){ return bitti ? 1 : 0; } };
   }
   function notXml(S){
     return BAS + '<comments xmlns="' + NS_MAIN + '"><authors><author>MFSim</author></authors><commentList>'
@@ -248,9 +347,11 @@ var veXlsxYaz = (function(){
   }
 
   // ── kitap → dosyalar ─────────────────────────────────────────────────────
-  // Dönüş: [[yol, metin]] — ZIP'in girdileri, sırası Excel'in beklediği.
-  function dosyalar(kitap){
-    var stil = stilKaydi(), metin = metinKaydi(), kul = {};
+  // Plan: dosyalar ÜRETİM sırasıyla (önce sayfalar ve notları; stiller, paylaşılan
+  // metin ve kitap sayfaların kaydını okuduğu için sonra) ve ZIP'in sırası (Excel'in
+  // beklediği: içerik türleri başta).
+  function plan(kitap){
+    var stil = stilKaydi(), metin = metinKaydi(), kul = {}, durum = { formul:false };
     var S = (kitap.sayfalar || []).map(function(s){ return Object.assign({}, s, { ad:sayfaAdi(s.ad, kul) }); });
     if(!S.length) throw new Error('Sayfa yok');
     var adEsle = {};
@@ -259,46 +360,69 @@ var veXlsxYaz = (function(){
     var F = [], notNo = 0, tur = [];
     S.forEach(function(s, i){
       var notVar = !!(s.not && s.not.length);
-      F.push(['xl/worksheets/sheet' + (i + 1) + '.xml', sayfaXml(s, i === 0, stil, metin, notVar)]);
+      F.push({ yol:'xl/worksheets/sheet' + (i + 1) + '.xml', uretec:sayfaUretec(s, i === 0, stil, metin, notVar, durum),
+               agirlik:s.akis ? s.akis.n * 40 : (s.hucre || []).length });
       tur.push('<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>');
       if(notVar){
-        notNo++;
-        F.push(['xl/comments' + notNo + '.xml', notXml(s)]);
-        F.push(['xl/drawings/vmlDrawing' + notNo + '.vml', vmlXml(s, notNo)]);
-        F.push(['xl/worksheets/_rels/sheet' + (i + 1) + '.xml.rels', BAS + '<Relationships xmlns="' + NS_PKG + '">'
-          + '<Relationship Id="rId1" Type="' + NS_R + '/comments" Target="../comments' + notNo + '.xml"/>'
-          + '<Relationship Id="rId2" Type="' + NS_R + '/vmlDrawing" Target="../drawings/vmlDrawing' + notNo + '.vml"/>'
-          + '</Relationships>']);
-        tur.push('<Override PartName="/xl/comments' + notNo + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"/>');
+        var no = ++notNo;
+        F.push({ yol:'xl/comments' + no + '.xml', uretec:tekUretec(function(){ return notXml(s); }) });
+        F.push({ yol:'xl/drawings/vmlDrawing' + no + '.vml', uretec:tekUretec(function(){ return vmlXml(s, no); }) });
+        F.push({ yol:'xl/worksheets/_rels/sheet' + (i + 1) + '.xml.rels', uretec:tekUretec(function(){
+          return BAS + '<Relationships xmlns="' + NS_PKG + '">'
+            + '<Relationship Id="rId1" Type="' + NS_R + '/comments" Target="../comments' + no + '.xml"/>'
+            + '<Relationship Id="rId2" Type="' + NS_R + '/vmlDrawing" Target="../drawings/vmlDrawing' + no + '.vml"/>'
+            + '</Relationships>'; }) });
+        tur.push('<Override PartName="/xl/comments' + no + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml"/>');
       }
     });
-    var tanim = [];
-    S.forEach(function(s, i){
-      if(!s.filtre) return;
-      var m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(s.filtre);
-      if(m) tanim.push('<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">'
-        + kac(konum(s.ad, '$' + m[1] + '$' + m[2] + ':$' + m[3] + '$' + m[4])) + '</definedName>');
-    });
-    var wb = BAS + '<workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'
-      + S.map(function(s, i){ return '<sheet name="' + kac(s.ad) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('')
-      + '</sheets>' + (tanim.length ? '<definedNames>' + tanim.join('') + '</definedNames>' : '') + '</workbook>';
-    var wbr = BAS + '<Relationships xmlns="' + NS_PKG + '">'
-      + S.map(function(s, i){ return '<Relationship Id="rId' + (i + 1) + '" Type="' + NS_R + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('')
-      + '<Relationship Id="rId' + (S.length + 1) + '" Type="' + NS_R + '/styles" Target="styles.xml"/>'
-      + '<Relationship Id="rId' + (S.length + 2) + '" Type="' + NS_R + '/sharedStrings" Target="sharedStrings.xml"/>'
-      + '</Relationships>';
-    var ct = BAS + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-      + '<Default Extension="xml" ContentType="application/xml"/>'
-      + '<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>'
-      + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-      + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
-      + '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
-      + tur.join('') + '</Types>';
-    var rels = BAS + '<Relationships xmlns="' + NS_PKG + '"><Relationship Id="rId1" Type="' + NS_R
-      + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
-    return [['[Content_Types].xml', ct], ['_rels/.rels', rels], ['xl/workbook.xml', wb], ['xl/_rels/workbook.xml.rels', wbr],
-            ['xl/styles.xml', stil.xml()], ['xl/sharedStrings.xml', metin.xml()]].concat(F);
+    function wb(){
+      var tanim = [];
+      S.forEach(function(s, i){
+        if(!s.filtre) return;
+        var m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(s.filtre);
+        if(m) tanim.push('<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">'
+          + kac(konum(s.ad, '$' + m[1] + '$' + m[2] + ':$' + m[3] + '$' + m[4])) + '</definedName>');
+      });
+      // Formül varsa kitap açılışta yeniden hesaplanır (önbellek değeri ilk görünüş içindir).
+      return BAS + '<workbook xmlns="' + NS_MAIN + '" xmlns:r="' + NS_R + '"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'
+        + S.map(function(s, i){
+          return '<sheet name="' + kac(s.ad) + '" sheetId="' + (i + 1) + '"' + (s.gizli && i > 0 ? ' state="hidden"' : '') + ' r:id="rId' + (i + 1) + '"/>';
+        }).join('')
+        + '</sheets>' + (tanim.length ? '<definedNames>' + tanim.join('') + '</definedNames>' : '')
+        + (durum.formul ? '<calcPr calcId="191029" fullCalcOnLoad="1"/>' : '') + '</workbook>';
+    }
+    function wbr(){
+      return BAS + '<Relationships xmlns="' + NS_PKG + '">'
+        + S.map(function(s, i){ return '<Relationship Id="rId' + (i + 1) + '" Type="' + NS_R + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('')
+        + '<Relationship Id="rId' + (S.length + 1) + '" Type="' + NS_R + '/styles" Target="styles.xml"/>'
+        + '<Relationship Id="rId' + (S.length + 2) + '" Type="' + NS_R + '/sharedStrings" Target="sharedStrings.xml"/>'
+        + '</Relationships>';
+    }
+    function ct(){
+      return BAS + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        + '<Default Extension="xml" ContentType="application/xml"/>'
+        + '<Default Extension="vml" ContentType="application/vnd.openxmlformats-officedocument.vmlDrawing"/>'
+        + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        + '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
+        + tur.join('') + '</Types>';
+    }
+    function rels(){
+      return BAS + '<Relationships xmlns="' + NS_PKG + '"><Relationship Id="rId1" Type="' + NS_R
+        + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    }
+    var BASI = [['[Content_Types].xml', ct], ['_rels/.rels', rels], ['xl/workbook.xml', wb], ['xl/_rels/workbook.xml.rels', wbr],
+                ['xl/styles.xml', function(){ return stil.xml(); }], ['xl/sharedStrings.xml', function(){ return metin.xml(); }]];
+    var uretim = F.concat(BASI.map(function(b){ return { yol:b[0], uretec:tekUretec(b[1]) }; }));
+    uretim.forEach(function(d){ if(!(d.agirlik > 1)) d.agirlik = 1; });
+    return { uretim:uretim, sira:BASI.map(function(b){ return b[0]; }).concat(F.map(function(d){ return d.yol; })) };
+  }
+  // Dönüş: [[yol, metin]] — ZIP'in girdileri, sırası Excel'in beklediği (tek seferlik yol).
+  function dosyalar(kitap){
+    var P = plan(kitap), M = {};
+    P.uretim.forEach(function(d){ var h = '', p; while((p = d.uretec.sonraki()) !== null) h += p; M[d.yol] = h; });
+    return P.sira.map(function(y){ return [y, M[y]]; });
   }
 
   // ── ZIP ──────────────────────────────────────────────────────────────────
@@ -307,12 +431,21 @@ var veXlsxYaz = (function(){
     for(var n = 0; n < 256; n++){ var c = n; for(var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; }
     return t;
   })();
-  function crc32(b){
-    var c = 0xFFFFFFFF;
+  // CRC parça parça yürür: c = crcYuru(c, parça) — başlangıç 0xFFFFFFFF, son crcSon(c).
+  function crcYuru(c, b){
     for(var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8);
-    return (c ^ 0xFFFFFFFF) >>> 0;
+    return c;
   }
-  // girdiler: [{ ad, ham (Uint8Array), veri (Uint8Array — sıkıştırılmış ya da ham), yontem 0|8 }]
+  function crcSon(c){ return (c ^ 0xFFFFFFFF) >>> 0; }
+  function crc32(b){ return crcSon(crcYuru(0xFFFFFFFF, b)); }
+  function birlestir(L){
+    if(L.length === 1) return L[0];
+    var top = 0, i; for(i = 0; i < L.length; i++) top += L[i].length;
+    var out = new Uint8Array(top), p = 0;
+    for(i = 0; i < L.length; i++){ out.set(L[i], p); p += L[i].length; }
+    return out;
+  }
+  // girdiler: [{ ad, crc, boy (ham bayt), veri (Uint8Array — sıkıştırılmış ya da ham), yontem 0|8 }]
   function zipKur(girdiler, tarih){
     var t = tarih || new Date();
     var dosZaman = (t.getHours() << 11) | (t.getMinutes() << 5) | Math.floor(t.getSeconds() / 2);
@@ -321,14 +454,14 @@ var veXlsxYaz = (function(){
     function u16(a, v){ a.push(v & 255, (v >>> 8) & 255); }
     function u32(a, v){ a.push(v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255); }
     girdiler.forEach(function(g){
-      var ad = utf8(g.ad), crc = crc32(g.ham), b = [];
+      var ad = utf8(g.ad), b = [];
       u32(b, 0x04034b50); u16(b, 20); u16(b, 0x0800); u16(b, g.yontem); u16(b, dosZaman); u16(b, dosTarih);
-      u32(b, crc); u32(b, g.veri.length); u32(b, g.ham.length); u16(b, ad.length); u16(b, 0);
+      u32(b, g.crc); u32(b, g.veri.length); u32(b, g.boy); u16(b, ad.length); u16(b, 0);
       var bas = new Uint8Array(b.length + ad.length); bas.set(b, 0); bas.set(ad, b.length);
       parca.push(bas, g.veri);
       var m = [];
       u32(m, 0x02014b50); u16(m, 20); u16(m, 20); u16(m, 0x0800); u16(m, g.yontem); u16(m, dosZaman); u16(m, dosTarih);
-      u32(m, crc); u32(m, g.veri.length); u32(m, g.ham.length); u16(m, ad.length); u16(m, 0); u16(m, 0); u16(m, 0); u16(m, 0);
+      u32(m, g.crc); u32(m, g.veri.length); u32(m, g.boy); u16(m, ad.length); u16(m, 0); u16(m, 0); u16(m, 0); u16(m, 0);
       u32(m, 0); u32(m, konumu);
       var mb = new Uint8Array(m.length + ad.length); mb.set(m, 0); mb.set(ad, m.length);
       merkez.push(mb);
@@ -337,37 +470,88 @@ var veXlsxYaz = (function(){
     var mBoy = merkez.reduce(function(s, x){ return s + x.length; }, 0), son = [];
     u32(son, 0x06054b50); u16(son, 0); u16(son, 0); u16(son, girdiler.length); u16(son, girdiler.length);
     u32(son, mBoy); u32(son, konumu); u16(son, 0);
-    var hepsi = parca.concat(merkez, [new Uint8Array(son)]);
-    var top = hepsi.reduce(function(s, x){ return s + x.length; }, 0), out = new Uint8Array(top), p = 0;
-    hepsi.forEach(function(x){ out.set(x, p); p += x.length; });
-    return out;
+    return birlestir(parca.concat(merkez, [new Uint8Array(son)]));
   }
   // Sıkıştırmasız (zaman uyumlu): testlerin ve CompressionStream'siz ortamın yolu.
   function zipDuz(F, tarih){
-    return zipKur(F.map(function(f){ var b = utf8(f[1]); return { ad:f[0], ham:b, veri:b, yontem:0 }; }), tarih);
+    return zipKur(F.map(function(f){ var b = utf8(f[1]); return { ad:f[0], crc:crc32(b), boy:b.length, veri:b, yontem:0 }; }), tarih);
   }
-  // deflate-raw ile (tarayıcıda CompressionStream varsa); yoksa sıkıştırmasız.
-  function zipSikistir(F, tarih){
-    if(typeof CompressionStream !== 'function' || typeof Response !== 'function' || typeof Blob !== 'function')
-      return Promise.resolve(zipDuz(F, tarih));
-    return Promise.all(F.map(function(f){
-      var b = utf8(f[1]);
-      var akis = new Blob([b]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-      return new Response(akis).arrayBuffer().then(function(ab){
-        var v = new Uint8Array(ab);
-        return v.length < b.length ? { ad:f[0], ham:b, veri:v, yontem:8 } : { ad:f[0], ham:b, veri:b, yontem:0 };
-      });
-    })).then(function(G){ return zipKur(G, tarih); });
+
+  // ── dilimli yazım ────────────────────────────────────────────────────────
+  // Uzun iş arayüzü kilitlemez: is.adim() BİR parça işler — sayfanın ~256 K
+  // karakterlik satırları ya da küçük bir dosya: UTF-8'e çevirir, CRC'sini yürütür,
+  // dosyanın sıkıştırıcısına yazar (CompressionStream('deflate-raw'), dosya başına
+  // bir akış) — ve iş yaptıysa true döner. Çağıran adımları kendi dilim bütçesiyle
+  // döndürür; sıkıştırma yazılan parçayla aynı görevde ilerler. bitir(): ZIP.
+  var HAM_SINIR = 1 << 20;                   // bundan büyük dosyanın ham baytı tutulmaz (sıkıştırılmışı her zaman küçük)
+  function havuz(sikistir){
+    var crc = 0xFFFFFFFF, boy = 0, ham = [], w = null, cikti = null, hata = null;
+    var yut = function(e){ if(!hata) hata = e; };
+    if(sikistir){
+      var cs = new CompressionStream('deflate-raw'), oku = cs.readable.getReader(), cik = [];
+      w = cs.writable.getWriter();
+      cikti = (function al(){
+        return oku.read().then(function(r){ if(r.done) return birlestir(cik); cik.push(r.value); return al(); });
+      })();
+      cikti.catch(yut);
+    }
+    return {
+      yaz: function(s){
+        var b = utf8(s);
+        crc = crcYuru(crc, b); boy += b.length;
+        if(ham){ ham.push(b); if(w && boy > HAM_SINIR) ham = null; }
+        if(w) w.write(b).catch(yut);
+        return b.length;
+      },
+      kapat: function(){
+        var c = crcSon(crc);
+        if(!w) return Promise.resolve({ crc:c, boy:boy, veri:birlestir(ham), yontem:0 });
+        w.close().catch(yut);
+        return cikti.then(function(v){
+          if(hata) throw hata;
+          if(ham && v.length >= boy) return { crc:c, boy:boy, veri:birlestir(ham), yontem:0 };
+          return { crc:c, boy:boy, veri:v, yontem:8 };
+        });
+      }
+    };
+  }
+  function isKur(kitap, o){
+    o = o || {};
+    var P = plan(kitap), k = 0, akim = null, G = {}, bitti = 0, bayt = 0;
+    var sikistir = o.sikistir !== false && typeof CompressionStream === 'function';
+    var topA = P.uretim.reduce(function(s, d){ return s + d.agirlik; }, 0);
+    return {
+      adim: function(){
+        if(k >= P.uretim.length) return false;
+        var d = P.uretim[k];
+        if(!akim) akim = havuz(sikistir);
+        var s = d.uretec.sonraki();
+        if(s === null){ G[d.yol] = akim.kapat(); akim = null; bitti += d.agirlik; k++; return true; }
+        if(s) bayt += akim.yaz(s);
+        return true;
+      },
+      bayt: function(){ return bayt; },          // yazılan ham bayt: çağıran dilimde sıkıştırılacak miktarı sınırlar
+      oran: function(){
+        var d = P.uretim[k];
+        return Math.min(1, (bitti + (d ? d.agirlik * d.uretec.oran() : 0)) / topA);
+      },
+      bitir: function(){
+        if(k < P.uretim.length) return Promise.reject(new Error('Yazım sürüyor'));
+        return Promise.all(P.sira.map(function(y){ return G[y]; })).then(function(L){
+          return zipKur(L.map(function(g, i){ return { ad:P.sira[i], crc:g.crc, boy:g.boy, veri:g.veri, yontem:g.yontem }; }), o.tarih);
+        });
+      }
+    };
   }
 
   return {
     dosyalar: dosyalar, yaz: function(kitap, tarih){ return zipDuz(dosyalar(kitap), tarih); },
+    is: function(kitap, o){ return isKur(kitap, o); },   // o: { tarih, sikistir:false — sıkıştırmasız }
     yazSikistir: function(kitap, tarih){
-      try { return zipSikistir(dosyalar(kitap), tarih); } catch(e){ return Promise.reject(e); }
+      try { var I = isKur(kitap, { tarih:tarih }); while(I.adim()); return I.bitir(); } catch(e){ return Promise.reject(e); }
     },
     harf: harf, adres: adres, sayfaAdi: sayfaAdi, crc32: crc32, utf8: utf8,
     MIME: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   };
 })();
-
 if(typeof module !== 'undefined' && module.exports){ module.exports = veXlsxYaz; }

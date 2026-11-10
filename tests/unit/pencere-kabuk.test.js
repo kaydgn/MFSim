@@ -214,7 +214,7 @@ function coz() {
 describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
   test('dağıtım iki modülün her tipini bir kurucuya bağlıyor (tarama gerçekten tarıyor)', () => {
     expect(FEAD_TIP.length).toBeGreaterThanOrEqual(15);
-    expect(TAKOZ_TIP.length).toBe(21);                                     // dördü motorun aksesuarı; Koordinat Düzlemi yok (Canlı Not 63)
+    expect(TAKOZ_TIP.length).toBe(20);                                     // dördü motorun aksesuarı; Koordinat Düzlemi yok (Canlı Not 63); Başlangıç ve Örnekler yok, Başlangıç Sihirbazı penceresiz (Canlı Not 110)
     expect(FEAD_TIP.concat(TAKOZ_TIP).filter((t) => typeof global[KURUCU[t]] !== 'function')).toEqual([]);
   });
 

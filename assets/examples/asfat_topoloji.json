@@ -394,7 +394,7 @@
     },
     {
       "id": "comp-22",
-      "type": "mnt-example",
+      "type": "mnt-wizard",
       "x": 3296,
       "y": 3087,
       "width": 60,
@@ -403,9 +403,7 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "data": {
-        "exampleKey": "asfat"
-      }
+      "data": {}
     }
   ],
   "connections": [],

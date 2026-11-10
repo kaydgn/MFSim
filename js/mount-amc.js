@@ -298,10 +298,12 @@ var VE_MNT_AMC = (function() {
   }
   // Kütüphane girdisi (VE_MOUNT_LIBRARY biçimi). Bilinmeyen eksen null: çözücü
   // boş rijitliği reddeder, Takoz penceresi eksik der.
+  // Kütüphanenin marka grubu (cp-mount.js → VE_MNT_LIB_MARKALAR'ın ilki, Canlı Not 106).
+  var MARKA = 'AMC Mecanocaucho';
   function girdi(kod) {
     var k = KOD[kod]; if (!k) return null;
     var t = TIP[k[0]], eo = EO[kod], kz = k[3], din = k[4];
-    var e = { name: ad(kod), maxLoad: k[2] };
+    var e = { marka: MARKA, name: ad(kod), maxLoad: k[2] };
     if (eo) {
       e.sx = eo[0][0]; e.sy = eo[0][1]; e.sz = eo[0][2]; e.dx = eo[1][0]; e.dy = eo[1][1]; e.dz = eo[1][2];
     } else {
@@ -336,7 +338,7 @@ var VE_MNT_AMC = (function() {
              cizim: gorsel('cizim-' + t[2]), foto: gorsel(a[1]), uyg: uyg,
              kaynak: KAYNAK[e.amc.kzKaynak] || null };
   }
-  return { AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, ESKI: ESKI, KAYNAK: KAYNAK,
+  return { MARKA: MARKA, AILE: AILE, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, EO: EO, ESKI: ESKI, KAYNAK: KAYNAK,
            ad: ad, girdi: girdi, kodlar: kodlar, gorsel: gorsel, kunye: kunye };
 })();
 

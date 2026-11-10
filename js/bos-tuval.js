@@ -46,7 +46,7 @@ function veBosTuvalKapsami(scope, liste, mntBaslangicAcik, mntStep) {
     if(mntBaslangicAcik) return null;
     var arac = (typeof VE_MNT_ARAC_TIPLERI !== 'undefined') ? VE_MNT_ARAC_TIPLERI : [];
     return liste.every(function(n) {
-      return arac.indexOf(n.type) >= 0 || _veBosTip(n).isMountExample;
+      return arac.indexOf(n.type) >= 0 || _veBosTip(n).isMountWizard;
     }) ? (mntStep ? 'mount-analysis-step' : scope) : null;
   }
   return null;

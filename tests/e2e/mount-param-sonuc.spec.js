@@ -19,7 +19,7 @@ const { githubFikstur } = require('./helpers/github-fikstur');
 test.setTimeout(180000);
 test.use({ serviceWorkers: 'block' });
 
-async function kur(page) {
+async function kur(page, nTip = 6) {
   await page.setViewportSize({ width: 1600, height: 1000 });
   page.on('dialog', (d) => d.accept());
   // GitHub API'si fikstürden: canlı API CI'da oran sınırına takılıp 403
@@ -27,23 +27,24 @@ async function kur(page) {
   await githubFikstur(page);
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
-  await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntLoadExample === 'function'
+  await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntOrnekYukle === 'function'
     && typeof window.veMntParamTara === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
-  await page.evaluate(() => { let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-    ex.data = ex.data || {}; ex.data.exampleKey = 'asfat'; veMntLoadExample(ex.id); });
+  await page.evaluate(() => { veMntOrnekYukle('asfat'); });
   await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('57RS') >= 0), null, { timeout: 20000 });
   await page.waitForTimeout(500);
-  return page.evaluate(() => {
+  return page.evaluate((nTip) => {
     const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+    const tum = Object.keys(veMntGetLibraryMap());
+    tum.forEach((k) => { if (tut.length < nTip && tut.indexOf(k) < 0) tut.push(k); });
     const n = createNode('mnt-parametric', 900, 120);
     // E9 kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10); tek uygun kombinasyon
     // darbede 2 × kapasiteyi aşıyor — Sonuç'un yapısı Öneri'yle sınanır.
-    n.data = { acik: { darbe: false }, haric: Object.keys(veMntGetLibraryMap()).filter((k) => tut.indexOf(k) < 0) };
+    n.data = { acik: { darbe: false }, haric: tum.filter((k) => tut.indexOf(k) < 0) };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
     return n.id;
-  });
+  }, nTip);
 }
 
 test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; galeri: liste, geçiş, 3B, kesit', async ({ page }) => {
@@ -297,7 +298,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
 // tarayıcının sıkıştırmasıyla (CompressionStream) yazılır ve programın kendi
 // okuyucusu açar — Node'da bu yol HİÇ koşmuyor (jsdom'da sıkıştırma yok).
 // Düğme satırı dar sütunda taşmaz (üç düğme alt satıra iner).
-test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, sayfalar ve Özet; düğme satırı taşmaz', async ({ page }) => {
+test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, Özet · Tarama · Sonuç · gizli Veri; düğme satırı taşmaz', async ({ page }) => {
   const hata = [];
   page.on('pageerror', (e) => hata.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
@@ -323,12 +324,49 @@ test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, sayfala
   expect(z.names.some((n) => z.entries[n].method === 8)).toBe(true);           // tarayıcıda sıkıştırılmış
   const wb = R.veXlsOpen(bayt);
   const ad = wb.sheets.map((s) => s.name);
-  expect(ad.slice(0, 3)).toEqual(['Özet', 'Tarama', 'K0 Mevcut']);
+  expect(ad).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri']);                    // K sayfası yok; Veri gizli
+  expect(R.veXlsUtf8(z.read('xl/workbook.xml'))).toContain('name="Veri" sheetId="4" state="hidden"');
   const oz = wb.readSheet(0).rows;
-  expect(oz[3].slice(1, 3)).toEqual(['K', 'Sayfa']);
+  expect(oz[3].slice(1, 3)).toEqual(['K', 'Sonuç']);
   expect(oz[4][1]).toBe('K0');
   const ta = wb.readSheet(1).rows;
   expect(ta[0][0]).toMatch(/^Tarama — [\d.]+ kombinasyon/);
+  const no = ta.slice(5).map((r) => r[0]).filter(Number.isFinite);              // veri 6. satırdan
+  const ve = wb.readSheet(3).rows;
+  expect(no.length).toBeGreaterThan(9);
+  expect(ve.slice(1).map((r) => r[0])).toEqual(no);                              // her tarama satırı Veri'de, aynı No
   await expect(page.locator('#ve-mnt-param-st-' + id)).toHaveText(/^İndirildi \([\d.]+ KB\)$/);
+  expect(hata).toEqual([]);
+});
+
+// EXCEL DİLİMLİ (2026-11-10): kitabın kurulumu ve dosyanın yazımı (XML, UTF-8, CRC,
+// sıkıştırma) parça parça — 13.824 satırlık kitap tek görevde 1,7 sn donduruyordu. On beş
+// adayla 3.375 kombinasyon: eski yazımda 210 ve 60 ms'lik iki görev; yenisinde en uzunu 21 ms.
+// Pay: CI'ın çöp toplamasına en çok bir, 100 ms'nin altında uzun görev.
+test('EXCEL DİLİMLİ: 3.375 kombinasyonun Excel\'i sürerken arayüz donmaz; dosya açılır', async ({ page }) => {
+  test.setTimeout(120000);
+  const hata = [];
+  page.on('pageerror', (e) => hata.push(String(e)));
+  const id = await kur(page, 15);
+  await page.click('#ve-mnt-param-btn-' + id);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 90000 });
+  expect(await page.evaluate((i) => _MNT_PARAM_SONUC[i].D.N, id)).toBe(3375);
+  await page.waitForTimeout(400);
+  const dugme = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem button[data-excel]');
+  await dugme.scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    window.__uzun = [];
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__uzun.push(Math.round(e.duration)))).observe({ type: 'longtask' });
+  });
+  const [indir] = await Promise.all([page.waitForEvent('download', { timeout: 90000 }), dugme.click()]);
+  const bayt = new Uint8Array(require('fs').readFileSync(await indir.path()));
+  await page.waitForTimeout(300);
+  const uzun = await page.evaluate(() => window.__uzun);
+  expect(uzun.length).toBeLessThanOrEqual(1);
+  expect(uzun.filter((d) => d >= 100)).toEqual([]);
+  const R = require('../../js/xlsx-read.js');
+  const wb = R.veXlsOpen(bayt);
+  expect(wb.sheets.map((x) => x.name)).toEqual(['Özet', 'Tarama', 'Sonuç', 'Veri']);
+  expect(wb.readSheet(3).rows.length).toBe(3376);
   expect(hata).toEqual([]);
 });

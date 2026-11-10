@@ -132,15 +132,13 @@
     },
     {
       "id": "n6",
-      "type": "mnt-example",
+      "type": "mnt-wizard",
       "x": 1255,
       "y": 163,
       "width": 60,
       "height": 56,
       "customName": "",
-      "data": {
-        "exampleKey": "kutu"
-      },
+      "data": {},
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false

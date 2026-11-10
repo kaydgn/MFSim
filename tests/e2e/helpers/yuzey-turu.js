@@ -259,8 +259,7 @@ async function takozTuru(page, olc) {
   });
   await page.waitForFunction(() => !nodes.some((x) => x.type === 'mount-analysis'), null, { timeout: 5000 });
   await page.evaluate(() => {
-    let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-    ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);
+    veMntOrnekYukle('tulga');
   });
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-solver'), null, { timeout: 20000 });
   await page.waitForTimeout(800);
@@ -316,8 +315,7 @@ async function takozTuru(page, olc) {
   // aşağıdaki parametrik analiz onun üç grubunu tarar.
   for (const [k, imza] of [['siper', 'cradle'], ['tta10', '4500 SP'], ['asfat', '57RS']]) {
     await page.evaluate((kk) => {
-      let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
-      ex.data = ex.data || {}; ex.data.exampleKey = kk; veMntLoadExample(ex.id);
+      veMntOrnekYukle(kk);
     }, k);
     await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
     await page.waitForTimeout(800);

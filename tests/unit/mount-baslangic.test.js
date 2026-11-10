@@ -53,14 +53,16 @@ describe('GÖRÜNÜRLÜK — modelden türer', () => {
   test('boş topoloji → sayfa', () => {
     expect(BS.veMntBaslangicGerekli([])).toBe(true);
   });
-  test('yalnız "Başlangıç ve Örnekler" taşıyan eski kayıt BOŞ sayılır', () => {
-    // 2026-10-14'e kadar açılış bu tek düğümü kendiliğinden kuruyordu
-    expect(componentDefs['mnt-example'].isMountExample).toBe(true);
-    expect(BS.veMntBaslangicGerekli([dugum('mnt-example')])).toBe(true);
+  test('yalnız Başlangıç Sihirbazı bileşenini taşıyan topoloji BOŞ sayılır', () => {
+    // Sihirbazı açan düğüm bir model değildir; kalkan "Başlangıç ve Örnekler" bileşeni
+    // (mnt-example) açılışta tanımsız tip olarak düşer (Canlı Not 110).
+    expect(componentDefs['mnt-wizard'].isMountWizard).toBe(true);
+    expect(componentDefs['mnt-example']).toBeUndefined();
+    expect(BS.veMntBaslangicGerekli([dugum('mnt-wizard')])).toBe(true);
   });
   test('araç düğümü de bir yol seçildi demektir (Boş kanvas onu kurar)', () => {
     expect(BS.veMntBaslangicGerekli([dugum('mnt-solver')])).toBe(false);
-    expect(BS.veMntBaslangicGerekli([dugum('mnt-example'), dugum('mnt-motor')])).toBe(false);
+    expect(BS.veMntBaslangicGerekli([dugum('mnt-wizard'), dugum('mnt-motor')])).toBe(false);
   });
   test('liste verilmezse canlı `nodes`', () => {
     global.nodes = [dugum('mnt-mount')];
@@ -491,6 +493,19 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
   const satir = (v) => el().querySelector('.ve-bas-satir[data-v="' + v + '"]');
   const acik = () => [...el().querySelectorAll('.ve-bas-satir')].filter((r) => r.classList.contains('acik')).map((r) => r.getAttribute('data-v'));
   beforeEach(() => K._veBasSifirla());
+  // KAPI KOMPAKT (kullanıcı 2026-11-10, Canlı Not 102: *"Şu butonlar da çok büyük.
+  // Bunları da küçültelim."*): masanın panelinde kapı 62 → 40 px, ikon 24 px, ad
+  // 13 px; sütun düzeninin (FEAD) kapısına dokunulmaz.
+  test('KAPI KOMPAKT — masada kapı 40 px, ikon 24 px, ad 13 px; sütun düzeninin kapısı değişmez', () => {
+    // Kural satırın başında aranır: ".ve-bas-kapi-ik" masanın ".ve-bas-ic--masa .ve-bas-kapi-ik"ine takılmasın.
+    const kural = (sel) => (CSS.match(new RegExp('(?:^|\\n)' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}')) || [])[1] || '';
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi')).toMatch(/min-height:\s*40px/);
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-ik')).toMatch(/width:\s*24px[^}]*height:\s*24px/);
+    expect(kural('.ve-bas-ic--masa .ve-bas-kapi-t b')).toMatch(/font-size:\s*var\(--fs-md\)/);
+    // Sütun düzeni (FEAD) taban kuralında: 64 px kapı, 36 px ikon.
+    expect(kural('.ve-bas-kapi')).toMatch(/min-height:\s*64px/);
+    expect(kural('.ve-bas-kapi-ik')).toMatch(/width:\s*36px[^}]*height:\s*36px/);
+  });
   test('panel: kimlik · kapılar · örnekler · dip (dönüş); masa: derlemenin künyesi yoksa boş', () => {
     const d = document.createElement('div');
     d.innerHTML = BS.veMntBaslangicHTML();

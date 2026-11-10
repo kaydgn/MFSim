@@ -2132,7 +2132,7 @@ var veMountCore = (function() {
   // N·m — UI ile aynı birimler). 8 kütle gövdesi (motor + şanzıman + transfer
   // kutusu + 5 braket) toplam 788.4 kg; 5 elastomer takozla şasiye bağlanır.
   // at:[lx,ly] değerleri JSON topolojisindeki düğüm MERKEZLERİNDEN türetildi →
-  // panel önizlemesi ile "Örneği Aktar"ın kurduğu kanvas aynı yerleşimi gösterir.
+  // örnek yüklenince kurulan kanvas aynı yerleşimi gösterir.
   //
   // ETİKET DÜZELTMESİ (kaynak kayıttaki hata): alttaki ön takoz kaynak dosyada
   // "Sağ Ön Takoz" adını taşıyordu ama y = −355.957, yani SOL taraf (depo işaret
@@ -2145,7 +2145,7 @@ var veMountCore = (function() {
   // etiket. Kaynak kayıttaki yanlış ad burada bilerek yazılı: ileride "kaynakla
   // uyuşmuyor" diye geri alınmasın.
   // Aynı düzeltme assets/examples/tulga_topoloji.json içindeki customName'de de
-  // yapıldı; ikisi ayrışırsa "Örneği Aktar" JSON'u önceliklediği için kullanıcı
+  // yapıldı; ikisi ayrışırsa örnek yükleme JSON'u önceliklediği için kullanıcı
   // yine yanlış adı görür (regresyon kilidi:
   // tests/unit/mount-example-names.test.js).
   const TULGA_TORQUE = { Te:760, Rstall:1.58, iTransfer:3.428,
@@ -2341,8 +2341,8 @@ var veMountCore = (function() {
   //     topology:'assets/examples/xxx.json'   // (b) JSON topoloji (varsa öncelikli)
   //   }
   //
-  // topology (ops., model'den ÖNCELİKLİ): "Başlangıç ve Örnekler" panelinden
-  //   "İç Topolojiyi JSON Dışa Aktar" ile üretilen dosya. "Örneği Aktar" bu JSON'u
+  // topology (ops., model'den ÖNCELİKLİ): proje "Kaydet" dosyası ya da
+  //   `veMntExportTopology()` çıktısı. Başlangıç sayfasının "Yükle"si bu JSON'u
   //   iç topolojiye birebir kurar (konum/isim/bağlantı/veri dahil). Dosyayı
   //   assets/examples/'e koy; build tek dosyaya gömer (fetch'e gerek kalmaz).
   //
@@ -2508,10 +2508,10 @@ var veMountCore = (function() {
         {type:'mnt-solver',     at:[740,265]},
         {type:'mnt-2dview',     at:[ 85,450]},
         {type:'mnt-viewer',     at:[200,450]},
-        {type:'mnt-example',    at:[730,450]}
+        {type:'mnt-wizard',     at:[730,450]}
       ],
-      // JSON topolojisi (model'den ÖNCELİKLİ): "Örneği Aktar" bu dosyayı iç
-      // topolojiye birebir kurar. model aşağıda kalır (panel spec tablosu +
+      // JSON topolojisi (model'den ÖNCELİKLİ): örnek yükleme bu dosyayı iç
+      // topolojiye birebir kurar. model aşağıda kalır (künye + başlangıç sayfasının satırı +
       // selfTest onu kullanır; JSON yüklenemezse programatik yola düşülür).
       topology: 'assets/examples/siper_topoloji.json',
       model: SIPER_EXAMPLE
@@ -2543,7 +2543,7 @@ var veMountCore = (function() {
         {type:'mnt-report',     at:[997, 41]},
         {type:'mnt-2dview',     at:[790,232]},
         {type:'mnt-viewer',     at:[983,235]},
-        {type:'mnt-example',    at:[995,401]}
+        {type:'mnt-wizard',     at:[995,401]}
       ],
       topology: 'assets/examples/tulga_topoloji.json',
       model: TULGA_EXAMPLE
@@ -2603,7 +2603,7 @@ var veMountCore = (function() {
       tools: [
         {type:'mnt-library',    at:[1005, 90]},
         {type:'mnt-solver',     at:[1110, 90]},
-        {type:'mnt-example',    at:[1215, 90]},
+        {type:'mnt-wizard',     at:[1215, 90]},
         {type:'mnt-report',     at:[1320, 90]},
         {type:'mnt-2dview',     at:[1005,250]},
         {type:'mnt-viewer',     at:[1110,250]}
@@ -2631,7 +2631,7 @@ var veMountCore = (function() {
       tools: [
         {type:'mnt-library',    at:[840, 90]},
         {type:'mnt-solver',     at:[945, 90]},
-        {type:'mnt-example',    at:[1050, 90]},
+        {type:'mnt-wizard',     at:[1050, 90]},
         {type:'mnt-report',     at:[1155, 90]},
         {type:'mnt-2dview',     at:[840,250]},
         {type:'mnt-viewer',     at:[1050,250]}
@@ -2658,7 +2658,7 @@ var veMountCore = (function() {
       tools: [
         {type:'mnt-library',    at:[840, 90]},
         {type:'mnt-solver',     at:[945, 90]},
-        {type:'mnt-example',    at:[1050, 90]},
+        {type:'mnt-wizard',     at:[1050, 90]},
         {type:'mnt-report',     at:[1155, 90]},
         {type:'mnt-2dview',     at:[840,250]},
         {type:'mnt-viewer',     at:[1050,250]}
@@ -2685,7 +2685,7 @@ var veMountCore = (function() {
       tools: [
         {type:'mnt-library',    at:[848, 90]},
         {type:'mnt-solver',     at:[953, 90]},
-        {type:'mnt-example',    at:[1058, 90]},
+        {type:'mnt-wizard',     at:[1058, 90]},
         {type:'mnt-report',     at:[1163, 90]},
         {type:'mnt-2dview',     at:[848,250]},
         {type:'mnt-viewer',     at:[1058,250]}

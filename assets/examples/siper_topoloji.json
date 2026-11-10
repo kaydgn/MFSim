@@ -4,7 +4,7 @@
   "nodes": [
     {
       "id": "comp-2",
-      "type": "mnt-example",
+      "type": "mnt-wizard",
       "x": 1223,
       "y": 230,
       "width": 60,
@@ -13,9 +13,7 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "data": {
-        "exampleKey": "siper"
-      }
+      "data": {}
     },
     {
       "id": "comp-3",
