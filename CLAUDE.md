@@ -1511,3 +1511,13 @@ Kaldırılırken ölçülen iki şey — bir dahaki öneri bunlara cevap vermeli
   `docs/olcum/boyut.csv` bugün hâlâ açılış satırından ibaret. Kural bundan
   çıktı: **çıktısı merge edilen bir yere düşmeyen rutinin harcadığı limit
   karşılıksızdır.**
+
+## SORMA — karar ver, uygula, sonucu söyle (2026-11-10)
+
+Kullanıcı kararı: *"Her şeye izin veriyorum bundan sonra. Sormanı istemiyorum.
+Sürekli soruyorsun."* İki anlamlı istek, eksik ayrıntı, kayıtlı bir kararla
+çakışma, PR, birleştirme, yayın: en makul okuma seçilir ve uygulanır; okuma ve
+varsayım sonuçta TEK cümleyle söylenir. Soru yalnız ilerlemenin tek yolu
+kullanıcının elindeki bir girdiyse (parola, dosya, ağ erişimi) sorulur — o zaman
+da yapılabilen iş yapılır, soru sonda durur. Canlı Not'ta `soru` durumu
+yazılmaz (skill `canli-not` §2 · 4).

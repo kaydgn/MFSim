@@ -152,10 +152,14 @@ Her not için, **sırayla ve tek tek**:
    sınıf, `data-*` ve metinle `grep`. Notun `surum`u yayının künyesidir: kod o
    zamandan beri değiştiyse önce farkı gör.
 4. **Yorumla.** Not kullanıcının KENDİ isteğidir (sayfa gizli, sahibi o), ama
-   CLAUDE.md'nin kuralları ve modül skill'leri yine geçerli. Not kayıtlı bir
-   kararla çakışıyorsa ya da iki anlamlıysa UYGULAMA: `durum: "soru"`, `cevap` =
-   tek soru. Kullanıcı sayfadan yanıtlar (`yanit` alanı, durum yeniden
-   `bekliyor`); yanıtlı not yanıtıyla birlikte okunur.
+   CLAUDE.md'nin kuralları ve modül skill'leri yine geçerli. **SORULMAZ**
+   (kullanıcı 2026-11-10: *"Her şeye izin veriyorum bundan sonra. Sormanı
+   istemiyorum. Sürekli soruyorsun."*): not iki anlamlıysa en makul okuma
+   uygulanır; kayıtlı bir kararla çakışıyorsa notun kararı kazanır ve eski kayıt
+   aynı turda güncellenir. Okuma ve varsayım `cevap`ta söylenir (en çok üç
+   cümle). `soru` durumu ve `yanit` alanı sayfada durur — kullanıcı kendiliğinden
+   yanıt yazarsa (`yanit` dolu, durum `bekliyor`) yanıtıyla birlikte okunur —
+   ama Claude `soru` YAZMAZ.
 5. **Uygula.** Modül skill'i (fead · arac-performans · kullanim) → değişiklik →
    modül testi → `npm run hazir`. Not başına TEK commit:
    `Canlı not N: <programdaki adıyla özet>`.
