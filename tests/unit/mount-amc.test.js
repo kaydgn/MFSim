@@ -13,8 +13,9 @@
  *   • envanter: 5 aile · 51 tip · 148 kod, sitenin tablosundaki sayılarla;
  *   • kz'nin AMC-EO'yla örtüştüğü (9 kodun 7'si ±0,2 %) ve iki ayrışmanın sayısı;
  *   • dinamik/statik oranın AMC kuralı (Sh+20)/50 ve sertliksiz flanşlı konilerin oranı;
- *   • kütüphane girdileri: anahtar, ad, kapasite; radyali yayımlanmayan kod EKSİK
- *     (sx/sy/dx/dy boş) ve taramaya aday değil; tamamlanınca aday;
+ *   • kütüphane girdileri: anahtar, ad, kapasite; radyali yayımlanmayan kod TAHMİNİ
+ *     (Canlı Not 113: AMC-EO'nun radyal/eksenel oranı — aynı tip, aile, hepsi), çözülür,
+ *     taramaya aday değil; radyali girilince aday; kz'si olmayan DSM eksik;
  *   • görsel: yalnız her tipin teknik resmi diskte ve künyede — ürün ve uygulama
  *     fotoğrafı yok (Canlı Not 111: "Sadece teknik resmi kalsa yeter");
  *   • Takoz Özellikleri künyesi: yalnız veri, kapasite yazılmaz (Canlı Not 65);
@@ -144,34 +145,15 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     expect(Object.keys(L)).toHaveLength(24 + 138);
   });
 
-  test('tam tip yalnız AMC-EO\'nun 10 kodu; ötekilerde radyal boş, dinamik eksenel kz × oran', () => {
-    const tam = kodlar.filter((k) => cp._mntLibTam(L['amc' + k]));
-    expect(tam.sort()).toEqual(Object.keys(A.EO).sort());
-    const e = L.amc137961;
-    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz]).toEqual([null, null, 450, null, null, 540]);
-    const h = L.amc177081;                                            // hidrolik: dinamik frekansa bağlı, yazılmadı
-    expect([h.sz, h.dz]).toEqual([250, null]);
-    const d = L.amc137461;                                            // DSM: rijitlik yok
-    expect([d.sx, d.sy, d.sz, d.dx, d.dy, d.dz]).toEqual([null, null, null, null, null, null]);
-  });
-
-  test('eksik tip uygulanınca takozun radyali boşalır ve pencere "rijitlik eksik" der; kapasite gelir', () => {
-    const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: { kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } };
-    global.nodes = [n];
-    cp.veMntApplyLib('m1', 'amc137961');
-    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd]).toEqual([null, null, 450, null, null, 540]);
-    expect(n.data.maxLoad).toBe(300);
-    expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137961)).toBe('eksik');
-    expect(cp._mntLibTur(cp.veMntGetLibraryMap().amc137963)).toBe('gomulu');
-  });
-
-  test('eksik tip uygulanınca tip notu 6/6 der: iki tarafı boş radyal "elle değiştirildi" sayılmaz; boş takoz eşleşmez', () => {
+  test('tahminli tip uygulanınca tip notu 6/6 der ve radyalin tahmini olduğunu söyler; elle girilen değer farktır', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
     global.nodes = [n];
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();                              // rijitliksiz tip (DSM) boş takoza oturmaz
     cp.veMntApplyLib('m1', 'amc137961');
     const E = cp._mntKutuphaneEslesme(n);
     expect([E.e.key, E.ayni, E.farkli]).toEqual(['amc137961', 6, []]);
+    const not = document.createElement('div'); not.innerHTML = cp._mntKutuphaneNotu(n);
+    expect(not.textContent).toBe('Cone 38 40 ShA (AMC 137961) ile 6/6 değer aynı · radyal tahmini (kz × x 1,51 · y 1,05 · Cone 38 · AMC-EO).');
     delete n.data.libKey;                                                       // bağsız: altı değer tek tipi gösterir
     expect(cp._mntKutuphaneEslesme(n).e.key).toBe('amc137961');
     n.data.kxs = 700;                                                           // radyal elle girildi → fark
@@ -188,11 +170,99 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
   });
 });
 
-describe('PARAMETRİK — eksik tip aday değil', () => {
+describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)', () => {
+  test('oran tipin ölçümü: aynı tipte sertlikten bağımsız — bir sertliği dışarıda bırakan sınama ±8 %', () => {
+    [['39', ['137981', '137982', '137983']], ['38', ['137963', '137964']]].forEach(([t, ks]) => {
+      ks.forEach((k) => {
+        const o = ks.filter((x) => x !== k).map((x) => A.EO[x][0][0] / A.EO[x][0][2]);
+        const tah = o.reduce((a, b) => a + b, 0) / o.length * A.EO[k][0][2];
+        expect([t, k, Math.abs(tah / A.EO[k][0][0] - 1) < 0.08]).toEqual([t, k, true]);
+      });
+    });
+    expect([A.ORAN.tip['39'].x, A.ORAN.tip['38'].x, A.ORAN.tip['38'].y].map((v) => +v.toFixed(3))).toEqual([1.851, 1.512, 1.05]);
+  });
+  test('sıra: aynı tip → aynı aile (eksen başına medyan) → ölçülmüş bütün tipler (x = y); hidrolikte din./stat. ailenin ölçümü', () => {
+    const r = (k) => A.tahminOrani(k);
+    expect(r('137961').kaynak).toEqual({ tur: 'tip', ad: 'Cone 38', n: 2 });          // Cone 38 40 ShA
+    expect(r('137005').kaynak).toEqual({ tur: 'aile', ad: 'Solid cone', n: 3 });      // Cone 01: masif ailesi
+    expect(r('137213').kaynak).toEqual({ tur: 'hepsi', ad: null, n: 6 });             // flanşlı: ölçüm yok
+    expect([r('137005').x, r('137005').y, r('137213').x, r('137213').y]).toEqual([2.641, 2.641, 1.914, 1.914]);
+    const kes = kodlar.find((k) => aile(k) === 'kesikli' && !A.ORAN.tip[KOD[k][0]]);
+    expect(r(kes).kaynak.tur).toBe('aile');
+    expect(r(kes).x / r(kes).y).toBeCloseTo(1.44, 1);                                // kesikli konide x ≠ y
+    expect([r('177081').din, r('177081').dinTahmin]).toEqual([2, true]);             // hidrolik: 177296'nın 2,0'ı
+    expect([r('137005').din, r('137005').dinTahmin]).toEqual([1.3, false]);           // NR: kodun kendi oranı
+    expect(r('137982')).toBeNull();                                                   // ölçülü kodda tahmin yok
+  });
+  test('kütüphane: 10 ölçülü · 132 tahminli · 6 eksik (DSM); kz × oran 5 N/mm\'ye yuvarlı, dinamik statik × din./stat.', () => {
+    const E = kodlar.map((k) => L['amc' + k]);
+    expect(E.filter((e) => cp._mntLibTam(e) && !cp._mntLibTahmin(e).length).map((e) => e.amc.kod).sort()).toEqual(Object.keys(A.EO).sort());
+    expect(E.filter((e) => cp._mntLibTahmin(e).length)).toHaveLength(132);
+    expect(E.filter((e) => !cp._mntLibTam(e)).map((e) => e.amc.aile)).toEqual(Array(6).fill('dsm'));
+    const e = L.amc137961;                                                            // Cone 38 40 ShA: kz 450, din 1,2
+    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([680, 475, 450, 816, 570, 540, ['sx', 'sy', 'dx', 'dy']]);
+    const h = L.amc177081;                                                            // hidrolik: dinamik de tahmini
+    expect([h.sx, h.sz, h.dx, h.dz, h.tahmin]).toEqual([420, 250, 840, 500, ['sx', 'sy', 'dx', 'dy', 'dz']]);
+    const d = L.amc137461;                                                            // DSM: kz yok, tahmin yok
+    expect([d.sx, d.sz, d.dz, d.tahmin]).toEqual([null, null, null, undefined]);
+    expect(['amc137963', 'amc137982'].map((k) => L[k].tahmin)).toEqual([undefined, undefined]);
+  });
+  test('girilen değer tahminden çıkar; kalan tahmin girilenden kurulur (kz → kx, kx → dinamik)', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], overrides: { amc137961: { sz: 500 } } } };
+    global.nodes = [lib];
+    let e = cp.veMntGetLibraryMap().amc137961;
+    expect([e.sx, e.sy, e.sz, e.dx, e.dy, e.dz, e.tahmin]).toEqual([755, 525, 500, 906, 630, 540, ['sx', 'sy', 'dx', 'dy']]);
+    lib.data.overrides.amc137961 = { sx: 700 };
+    e = cp.veMntGetLibraryMap().amc137961;
+    expect([e.sx, e.dx, e.tahmin]).toEqual([700, 840, ['sy', 'dx', 'dy']]);           // dinamik girilen statikten: 700 × 1,2
+    lib.data.overrides.amc137961 = { sx: 700, sy: 480, dx: 840, dy: 576 };
+    e = cp.veMntGetLibraryMap().amc137961;
+    expect([e.tahmin, cp._mntLibTur(e), cp.veMntGetLibraryMap().amc137005.tahmin]).toEqual([null, 'degisti', ['sx', 'sy', 'dx', 'dy']]);
+    expect(L.amc137961.sx).toBe(680);                                                 // fabrika girdisi değişmez
+  });
+  test('tahminli tip uygulanınca takoz dolu ve "rijitlik eksik" yok; tür ve takozun tahminli alanları', () => {
+    const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: { kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } };
+    global.nodes = [n];
+    cp.veMntApplyLib('m1', 'amc137961');
+    expect([n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd, n.data.maxLoad]).toEqual([680, 475, 450, 816, 570, 540, 300]);
+    expect(cp._mntTakozTipDurumu(n).d).toBe('ok');
+    expect(cp._mntTakozTahmin(n)).toEqual(['kxs', 'kys', 'kxd', 'kyd']);
+    n.data.kxs = 700;                                                                 // elle girilen değer tahmin değil
+    expect(cp._mntTakozTahmin(n)).toEqual(['kys', 'kxd', 'kyd']);
+    const M = cp.veMntGetLibraryMap();
+    expect(['amc137961', 'amc137963', 'amc137461'].map((k) => cp._mntLibTur(M[k]))).toEqual(['tahmin', 'gomulu', 'eksik']);
+  });
+  test('Takoz Özellikleri: tahminli hücreler işaretli, durum "tahmini", eksik bandı yok; kaynağı Rijitlik\'te', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137005' } };
+    global.nodes = [lib];
+    const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
+    const tah = [...d.querySelectorAll('td.tah input')].map((i) => i.id.replace(/^ve-mnt-lib-|-lib1$/g, ''));
+    expect(tah).toEqual(['sx', 'dx', 'sy', 'dy']);
+    expect([...d.querySelectorAll('td.zor')]).toHaveLength(0);
+    expect(d.querySelector('.ve-fp-kat[data-k="rij"]').getAttribute('data-d')).toBe('ok');
+    expect(d.textContent).not.toMatch(/reddeder|rijitlik eksik/);
+    const g = d.querySelector('#ve-mnt-lib-tah-lib1');
+    expect([g.getAttribute('data-d'), g.textContent]).toEqual(['warn', 'Radyal tahminikz × 2,64 · Solid cone, 3 tip · AMC-EO']);
+    expect(document.querySelector ? d.querySelector('#ve-mnt-lib-sx-lib1').value : '').toBe('345');
+  });
+  test('ÇÖZÜCÜ: radyali yayımlanmayan tip modeli reddettirmez — eskiden boş radyal hata veriyordu', () => {
+    const H = require('../helpers/takoz-dogrulama.js');
+    const e = L.amc137005, G1 = [{ ad: 'Kutu', m: 60, cg: [300, 20, 650], kutu: [500, 400, 400] }];
+    const model = (ks, kd) => H.kurguModel({ govdeler: G1, takozlar: H.dortluTakoz([300, 20, 650], 200, 150, 150, ks, kd), cozucu: {} });
+    const once = H.coz(model([null, null, e.sz], [null, null, e.dz]));                // tahminsiz: radyal boş
+    expect(once.error && once.error.length).toBeGreaterThan(0);
+    const R = H.coz(model([e.sx, e.sy, e.sz], [e.dx, e.dy, e.dz]));
+    expect(R.error).toBeUndefined();
+    expect(R.modes).toHaveLength(6);
+    R.modes.forEach((m) => expect(Number.isFinite(m.f_Hz) && m.f_Hz > 0).toBe(true));
+  });
+});
+
+describe('PARAMETRİK — eksik ve tahminli tip aday değil', () => {
   global.veMntKatalog = require('../../js/mount-katalog.js');
   Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
   const P = require('../../js/cp-mount-param.js');
-  test('adaylar yalnız tam tipler; Takoz Özellikleri\'nde tamamlanan AMC kodu aday olur', () => {
+  test('adaylar yalnız tam ve tahminsiz tipler; Takoz Özellikleri\'nde radyali girilen AMC kodu aday olur', () => {
     const M = { lib: cp.veMntGetLibraryMap() };
     const ad = P._mntParamAdaylar(M, null).map((a) => a.key);
     expect(ad).toHaveLength(24);

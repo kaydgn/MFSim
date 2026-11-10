@@ -45,16 +45,19 @@ function _mntParamModel(liste){
            eng:eng, fAtes:fAtes };
 }
 
-// Aday tipler: etkin kütüphanenin TAM tipleri (gömülü + değiştirilmiş + özel);
-// kullanıcı dışarıda bıraktıklarını `haric`ta tutar — yeni eklenen tip
-// kendiliğinden aday olur. Altı rijitliği olmayan tip (AMC'nin radyal değerini
-// yayımlamadığı kodlar) aday DEĞİL: çözücü onu reddeder; Takoz Özellikleri'nde
-// tamamlanınca aday olur (cp-mount.js → _mntLibTam).
+// Aday tipler: etkin kütüphanenin TAM ve TAHMİNSİZ tipleri (gömülü + değiştirilmiş +
+// özel); kullanıcı dışarıda bıraktıklarını `haric`ta tutar — yeni eklenen tip
+// kendiliğinden aday olur. Altı rijitliği olmayan tip (DSM) çözülmez; radyali
+// TAHMİNİ tip (AMC'nin yayımlamadığı 132 kod, Canlı Not 113) çözülür ama aday
+// DEĞİL — öneri ölçülmüş değerle verilir ve tarama 24 tipten 156'ya çıkardı
+// (üç grupta 13.824 → 3,8 milyon kombinasyon); Takoz Özellikleri'nde radyali
+// girilince aday olur (cp-mount.js → _mntLibTam · _mntLibTahmin).
 function _mntParamAdaylar(M, node){
   var haric={};
   ((node && node.data && node.data.haric) || []).forEach(function(k){ haric[k]=true; });
   var tam=(typeof _mntLibTam==='function') ? _mntLibTam : function(){ return true; };
-  return Object.keys(M.lib).filter(function(k){ return tam(M.lib[k]); })
+  var tahmin=(typeof _mntLibTahmin==='function') ? _mntLibTahmin : function(){ return []; };
+  return Object.keys(M.lib).filter(function(k){ return tam(M.lib[k]) && !tahmin(M.lib[k]).length; })
     .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:!haric[k] }; });
 }
 

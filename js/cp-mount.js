@@ -253,8 +253,10 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // ── AMC MECANOCAUCHO® — js/mount-amc.js (148 kod, üreticinin bütün konik aileleri)
 // Girdiler veri modülünden üretilir; eski 10 kod (aşağıdaki (A) tablosu ve 137829)
 // kütüphanedeki yerinde durur — ilk 24 girdinin sırası taramanın kombinasyon
-// sırasıdır. Radyal rijitliği yayımlanmayan kodlarda sx/sy/dx/dy boş: tip EKSİK,
-// Takoz Özellikleri'nden tamamlanır, taramaya aday olmaz (_mntLibTam).
+// sırasıdır. Radyal rijitliği yayımlanmayan kodlarda sx/sy/dx/dy TAHMİNİ (Canlı Not
+// 113: AMC-EO'nun radyal/eksenel oranı, js/mount-amc.js → RADYAL TAHMİN): tip çözülür,
+// girilen değer tahminin yerine geçer, tahminli tip taramaya aday olmaz
+// (_mntLibTahmin); kz'si olmayan DSM kodları EKSİK (_mntLibTam).
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
 // ── MARKA (kullanıcı 2026-11-10, Canlı Not 106: *"Takoz tiplerini markalarına
@@ -353,7 +355,8 @@ function veMntGetLibraryMap(){
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
-      amc:m.amc||null };                                    // AMC künyesi (js/mount-amc.js)
+      amc:m.amc||null,                                      // AMC künyesi (js/mount-amc.js)
+      tahmin:(m.tahmin && m.tahmin.length) ? m.tahmin.slice() : null };   // tahmini alanlar (Canlı Not 113)
   });
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     var def=_mntDef(n)||{};
@@ -366,11 +369,16 @@ function veMntGetLibraryMap(){
         var base=map[k]; if(!base) return;                // yalnız var olan gömülü girdiler
         var o=ov[k]||{}; if(!o || Object.keys(o).length===0) return;
         var pick=function(f){ return (o[f]!==undefined && o[f]!==null && o[f]!=='') ? (f==='name'?o[f]:_mntNum(o[f])) : base[f]; };
+        // Girilen alan tahmin değildir; kalan tahmin girilen değerden yeniden kurulur
+        // (kz girildiyse kx = oran·kz, kx girildiyse dinamiği kx × din./stat.).
+        var tah=(base.tahmin||[]).filter(function(f){ return !(o[f]!==undefined && o[f]!==null && o[f]!==''); });
         map[k]={ key:k, name:pick('name'), marka:base.marka, sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
           dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
-          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc };
+          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc,
+          tahmin:tah.length ? tah : null };
+        if(tah.length && _MNT_AMC && _MNT_AMC.tamamla) _MNT_AMC.tamamla(map[k]);
       });
     }
     // Kullanıcı tanımlı takozlar (Özel grup) — 3-eksen eğri (curveX/Y/Z) taşıyabilir.
@@ -407,9 +415,23 @@ function veMntGetLibraryList(){
   return out;
 }
 // Tip TAM mı: altı rijitliğin hepsi > 0 (çözücünün kuralı). AMC'nin radyal değerini
-// yayımlamadığı kodlar eksiktir; taramaya aday olmaz, Takoz Özellikleri'nde tamamlanır.
+// yayımlamadığı kodlar tahminle tamdır (Canlı Not 113); eksik yalnız kz'si olmayan
+// (DSM) ya da Takoz Özellikleri'nde boşaltılan tip.
 function _mntLibTam(e){
   return !!e && ['sx','sy','sz','dx','dy','dz'].every(function(f){ return _mntNum(e[f], 0)>0; });
+}
+// Tipin TAHMİNİ alanları (js/mount-amc.js → RADYAL TAHMİN): girilen değer listeden düşer.
+// Tahminli tip çözülür; katalog taramasına aday olmaz (cp-mount-param.js → _mntParamAdaylar).
+function _mntLibTahmin(e){
+  return (e && Array.isArray(e.tahmin)) ? e.tahmin : [];
+}
+// Tahminin künyesi: "kz × 1,85 · Cone 39" (aynı tipin ölçümü) · "kz × 2,64 · Solid cone, 3 tip"
+// (ailenin AMC-EO'daki tipleri) · "kz × 1,91 · 6 tipin medyanı" (AMC-EO'daki bütün tipler).
+function _mntLibTahminKunye(e){
+  var R=e && e.amc && e.amc.radyal; if(!R) return '';
+  var oran=(Math.abs(R.x-R.y)<5e-4) ? _mntS(R.x,2) : 'x '+_mntS(R.x,2)+' · y '+_mntS(R.y,2);
+  var K=R.kaynak||{}, kay=K.tur==='tip' ? K.ad : K.tur==='aile' ? K.ad+', '+K.n+' tip' : K.n+' tipin medyanı';
+  return 'kz × '+oran+' · '+kay+' · AMC-EO';
 }
 // Listelerin sırası: AMC dışı katalog kendi sırasıyla, sonra AMC kodları ailenin,
 // tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın kombinasyon sırası).
@@ -1060,10 +1082,10 @@ function _mntFoyGir(node, key, aria, opt){
   opt=opt||{};
   var v=(node.data && node.data[key]!=null) ? node.data[key] : '';
   var zor=!!opt.zorunlu, bos=_mntBos(v);
-  return '<td class="gir'+(zor&&bos?' zor':'')+'"><input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
+  return '<td class="gir'+(zor&&bos?' zor':'')+(opt.tahmin?' tah" title="Tahmini':'')+'"><input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
     + ' value="'+_mntEsc(v)+'"'+(zor?' data-zorunlu':'')
     + ((opt.ph||zor) ? ' placeholder="'+_mntEsc(opt.ph||'zorunlu')+'"' : '')
-    + ' aria-label="'+_mntEsc(aria)+'" onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></td>';
+    + ' aria-label="'+_mntEsc(aria)+(opt.tahmin?' · tahmini':'')+'" onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></td>';
 }
 // Türetilen hücre — oyuk zemin; kimlik verilirse yerinde tazelenir.
 function _mntFoyCoz(ic, opt){
@@ -1878,8 +1900,22 @@ function _mntKutuphaneNotu(node){
                                  : 'Kütüphanede eşleşen takoz yok; değerler elle.', '');
   var ad='<b>'+_mntEsc(E.e.name)+'</b>';
   var yasa=(E.yasaKut && !E.yasaTk) ? ' · kütüphanedeki nonlineer yasası bu takozda yok' : '';
-  if(E.farkli.length) return _mntNot(ad+' ile '+E.ayni+'/6 değer aynı; '+E.farkli.join(', ')+' elle değiştirildi'+yasa+'.', 'warn');
-  return _mntNot(ad+' ile 6/6 değer aynı'+yasa+'.', '');
+  var tah=_mntTakozTahmin(node).length ? ' · radyal tahmini ('+_mntEsc(_mntLibTahminKunye(E.e))+')' : '';
+  if(E.farkli.length) return _mntNot(ad+' ile '+E.ayni+'/6 değer aynı; '+E.farkli.join(', ')+' elle değiştirildi'+yasa+tah+'.', 'warn');
+  return _mntNot(ad+' ile 6/6 değer aynı'+yasa+tah+'.', '');
+}
+// TAKOZUN TAHMİNİ RİJİTLİKLERİ (Canlı Not 113): bağlı tipin tahminli alanlarından takozda
+// tipin değerini taşıyanlar ([kxs…kzd] alan adları) — elle girilen değer tahmin değildir.
+// Takoz penceresi (föy hücresi, tip notu) ve rapor (Tablo 2) bunu okur.
+function _mntTakozTahmin(node){
+  var E=_mntKutuphaneEslesme(node), T=E ? _mntLibTahmin(E.e) : [];
+  if(!T.length) return [];
+  var d=node.data||{};
+  return _MNT_RIJ_KUT.filter(function(a){
+    if(T.indexOf(a[1])<0) return false;
+    var x=_mntNum(d[a[0]],NaN), y=_mntNum(E.e[a[1]],NaN);
+    return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x-y)<=1e-9*Math.max(1, Math.abs(y));
+  }).map(function(a){ return a[0]; });
 }
 
 // İKİ KATEGORİ, İKİ DURUM: TİP VE RİJİTLİK (kütüphane seçimi, rijitlik föyü,
@@ -1912,10 +1948,11 @@ function _mntTakozTipGovde(node){
   // Rijitlik — statik ve dinamik aynı satırda; oran türetilir.
   var f=_mntFoyAc([{ b:'Eksen', gen:'31%' }, { b:'Statik', gen:'23%' }, { b:'Dinamik', gen:'23%' },
                    { b:'Din./stat.', gen:'23%', sinif:'cz ay' }], 'Rijitlik');
+  var tahT=_mntTakozTahmin(node);
   _MNT_RIJ.forEach(function(r){
     var s=_mntNum(d[r[0]],NaN), k=_mntNum(d[r[1]],NaN);
-    f+='<tr><td>'+r[2]+'</td>'+_mntFoyGir(node, r[0], 'Statik k'+r[3], { zorunlu:true })
-      + _mntFoyGir(node, r[1], 'Dinamik k'+r[3], { zorunlu:true })
+    f+='<tr><td>'+r[2]+'</td>'+_mntFoyGir(node, r[0], 'Statik k'+r[3], { zorunlu:true, tahmin:tahT.indexOf(r[0])>=0 })
+      + _mntFoyGir(node, r[1], 'Dinamik k'+r[3], { zorunlu:true, tahmin:tahT.indexOf(r[1])>=0 })
       + _mntFoyCoz((s>0 && k>0) ? _mntS(k/s,2) : '—', { ay:true, id:'ve-mnt-oran-'+r[3]+'-'+node.id })+'</tr>';
   });
   var O=_mntOranYayilim(d), sinir=_mntS(_MNT_ORAN_YAYILIM_SINIR,1);
@@ -3910,8 +3947,10 @@ function _mntLibFoyGir(node, e, field, aria, setter, opt){
   opt=opt||{};
   var v=(e[field]===undefined||e[field]===null)?'':e[field];
   var zor=!!opt.zorunlu && !(_mntNum(v,0)>0);
-  return '<td class="gir'+(zor?' zor':'')+'"><input type="text" inputmode="decimal" id="ve-mnt-lib-'+field+'-'+node.id+'"'
-    + ' value="'+_mntEsc(v)+'" aria-label="'+_mntEsc(aria)+'"'+(opt.zorunlu?' data-zorunlu':'')
+  var tah=_mntLibTahmin(e).indexOf(field)>=0;
+  return '<td class="gir'+(zor?' zor':'')+(tah?' tah':'')+'"'+(tah?' title="Tahmini · '+_mntEsc(_mntLibTahminKunye(e))+'"':'')
+    + '><input type="text" inputmode="decimal" id="ve-mnt-lib-'+field+'-'+node.id+'"'
+    + ' value="'+_mntEsc(v)+'" aria-label="'+_mntEsc(aria)+(tah?' · tahmini':'')+'"'+(opt.zorunlu?' data-zorunlu':'')
     + ' onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\''+field+'\',this.value)"></td>';
 }
 // ─── Grafik/detay yardımcıları (master-detay interaktif panel) ───────────────
@@ -3931,7 +3970,8 @@ function _mntLinInterp(pts, x){
 // Girdinin türü — tetikleyici, liste satırı ve rozet AYNI koddan okur:
 // eğrili · değiştirilmiş gömülü · gömülü · özel. Renk CSS'te (`data-t`).
 function _mntLibTur(e){
-  if(e.builtin && !_mntLibTam(e)) return 'eksik';           // radyal (ya da bütün) rijitliği yayımlanmayan tip
+  if(e.builtin && !_mntLibTam(e)) return 'eksik';           // rijitliği yayımlanmayan tip (DSM)
+  if(_mntLibTahmin(e).length) return 'tahmin';              // radyal tahmini (Canlı Not 113)
   return _mntEntryHasLaw(e) ? 'egri' : (e.overridden ? 'degisti' : (e.builtin ? 'gomulu' : 'ozel'));
 }
 // Satırın kz özeti: değer yoksa tire (DSM gibi eğrisi doğrusal olmayan tipte kz yok).
@@ -4041,6 +4081,10 @@ function _mntLibRijitlikHTML(node, e, setter){
         ? 'Din./stat. oranı yayılımı '+_mntS(O.yayilim,2)+' · sınır '+sinir
         : 'Altı rijitlik eksik')+'">'
     + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
+  // Tahmini radyal (Canlı Not 113): AMC'nin yayımlamadığı eksenler — değer girilince satır düşer.
+  if(_mntLibTahmin(e).length) kapi+='<div class="ve-fp-gate ve-mnt-ic" data-d="warn" id="ve-mnt-lib-tah-'+node.id+'">'
+    + '<i></i>'+(_mntLibTahmin(e).indexOf('dz')>=0 ? 'Radyal ve dinamik tahmini' : 'Radyal tahmini')
+    + '<span>'+_mntEsc(_mntLibTahminKunye(e))+'</span></div>';
   return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi);
 }
 // Grafiğin göstergesi — çizilen eksen grupları (renk), statik (düz), dinamik
@@ -4217,7 +4261,7 @@ function _mntLibDurumlari(node, e){
     ? _mntDurum('eksik', 'rijitlik eksik', bos.length+' rijitlik boş ya da ≤ 0: çözücü reddeder.', 've-mnt-lib-'+bos[0]+'-'+node.id)
     : (O && O.yayilim>_MNT_ORAN_YAYILIM_SINIR)
       ? _mntDurum('eksik', 'oran?', 'Din./stat. oranı eksenler arasında '+_mntS(O.yayilim,2)+' kat yayılıyor (sınır '+_mntS(_MNT_ORAN_YAYILIM_SINIR,1)+') — eksen takası olabilir.', 've-mnt-lib-dx-'+node.id)
-      : _mntDurum('ok', 'tamam');
+      : _mntDurum('ok', _mntLibTahmin(e).length ? 'tahmini' : 'tamam');
   var egri=_mntDurum('ok', _mntEntryHasLaw(e) ? 'nonlineer' : 'lineer');
   return { rij:rij, egri:egri };
 }
@@ -5564,7 +5608,8 @@ if(typeof module!=='undefined' && module.exports){
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
-    _mntLibTam: _mntLibTam, _mntLibSirali: _mntLibSirali,
+    _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye,
+    _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, veMntLibCizimAc: veMntLibCizimAc, _mntLibTur: _mntLibTur,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
