@@ -4000,6 +4000,7 @@ function _mntLibDropdown(node, girdiler, sel){
 }
 // SEÇİCİ — Marka listesi, onun altında seçili markanın tipleri ve Yeni takoz
 // (Canlı Not 105: sıkı iki satır; 106: önce marka, sonra o markanın tipleri).
+// Tipin teknik resmi varsa Tip satırının sonunda (i) düğmesi (Canlı Not 111).
 function _mntLibSecici(node, markalar, grup, sel){
   var mk='<select class="ve-fp-sel mntlib-marka" id="mntlib-marka-'+node.id+'" aria-label="Marka"'
     +' onchange="veMntLibMarka(\''+node.id+'\',this.value)">'
@@ -4009,7 +4010,8 @@ function _mntLibSecici(node, markalar, grup, sel){
   return '<div class="mntlib-sec">'
     + '<span class="mntlib-et">Marka</span>'+mk
     + '<span class="mntlib-et">Tip</span>'
-    + '<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
+    + '<div class="mntlib-tip"><div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
+    + _mntLibCizimDugme(node, sel)+'</div>'
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
 }
@@ -4235,23 +4237,33 @@ function _mntLibKimlikHTML(node, e, setter){
     + ' aria-label="Takoz tipinin adı" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'name\',this.value)">'
     + eylem+'</div>';
 }
-// AMC KÜNYESİ — üreticinin verisi ve görselleri (js/mount-amc.js): ölçülü çizim,
-// ürün fotoğrafı, uygulama fotoğrafları; tık görseli büyütür (başlangıç sayfası
-// kitinin penceresi, veBasResimAc). Maks. yük burada yazılmaz (Canlı Not 65):
-// tip uygulanınca takozun Kapasite alanına geçer.
-function _mntLibAmcResim(src, alt, sinif){
-  return '<button type="button" class="ve-mnt-amc-res'+(sinif?' '+sinif:'')+'" onclick="if(typeof veBasResimAc===\'function\')veBasResimAc(this)"'
-    + ' title="'+_mntEsc(alt)+'"><img src="'+_mntEsc(src)+'" alt="'+_mntEsc(alt)+'" loading="lazy" decoding="async"></button>';
+// AMC KÜNYESİ — üreticinin verisi (js/mount-amc.js). Görsel YOK (kullanıcı
+// 2026-11-10, Canlı Not 111: *"takoz resimlerini kaldıralım. Sadece teknik resmi
+// kalsa yeter. Onu da direkt burada göstermeyelim … (i) butonu … pop-up pencere"*):
+// tipin teknik resmi Tip satırının (i) düğmesiyle pencerede açılır (başlangıç
+// sayfası kitinin penceresi, veBasResimGoster). Maks. yük burada yazılmaz (Canlı
+// Not 65): tip uygulanınca takozun Kapasite alanına geçer. Kapı: mount-amc.test.js
+// → *KÜNYE* · *TEKNİK RESİM*.
+function _mntLibAmcKunye(e){
+  return (e && e.amc && _MNT_AMC) ? _MNT_AMC.kunye(e.amc.kod) : null;
+}
+function _mntLibCizimDugme(node, e){
+  var K=_mntLibAmcKunye(e); if(!K || !K.cizim) return '';
+  return '<button type="button" class="mntlib-bilgi" id="mntlib-bilgi-'+node.id+'" data-amc="'+_mntEsc(K.kod)+'"'
+    + ' aria-label="Teknik resim" title="Teknik resim" aria-haspopup="dialog"'
+    + ' onclick="veMntLibCizimAc(this)">'+veIkon('info')+'</button>';
+}
+// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner.
+function veMntLibCizimAc(dugme){
+  var K=dugme && _MNT_AMC ? _MNT_AMC.kunye(dugme.getAttribute('data-amc')) : null;
+  if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
+  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
 }
 function _mntLibAmcKunyeHTML(e){
-  if(!e || !e.amc || !_MNT_AMC) return '';
-  var K=_MNT_AMC.kunye(e.amc.kod); if(!K) return '';
+  var K=_mntLibAmcKunye(e); if(!K) return '';
   var sat=function(ad, v){ return v==null || v==='' ? '' : '<tr><th scope="row">'+ad+'</th><td>'+v+'</td></tr>'; };
   var h='<div class="ve-mnt-amc" data-amc="'+_mntEsc(K.kod)+'">'
-    + '<div class="ve-mnt-amc-gorsel">'
-    + _mntLibAmcResim(K.cizim, K.urun+' · ölçülü çizim', 've-mnt-amc-cizim')
-    + _mntLibAmcResim(K.foto, K.aile, 've-mnt-amc-foto')
-    + '</div><table class="ve-mnt-amc-veri"><tbody>'
+    + '<table class="ve-mnt-amc-veri"><tbody>'
     + sat('Kod', 'AMC '+_mntEsc(K.kod))
     + sat('Ürün ailesi', '<span lang="en">'+_mntEsc(K.aile)+'</span>')
     + sat('Sertlik', K.sh!=null ? veSayi(K.sh, 0)+' ShA' : null)
@@ -4259,11 +4271,6 @@ function _mntLibAmcKunyeHTML(e){
     + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
     + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
-  if(K.uyg.length){
-    h+='<div class="ve-mnt-amc-uyg">';
-    K.uyg.forEach(function(src, i){ h+=_mntLibAmcResim(src, K.aile+' · uygulama '+(i+1)); });
-    h+='</div>';
-  }
   return h+'</div>';
 }
 // TAKOZ ÖZELLİKLERİ PENCERESİ — sütunda (2026-10-15'e dek 1040 px'lik modal
@@ -4334,6 +4341,7 @@ function veMntLibDropdownToggle(nodeId, ev){
   if(tr){ tr.classList.add('open'); tr.setAttribute('aria-expanded','true'); }
   var q=document.getElementById('mntlib-q-'+nodeId);
   if(q){ q.value=''; veMntLibFilter(nodeId); try{ q.focus(); }catch(_e){} }
+  _mntLibSeciliyeKaydir(nodeId);
   // dd.isConnected: panel kapandıysa ya da yeniden çizildiyse liste DOM'dan
   // koptu demektir — dinleyiciler sessizce sökülür. Aksi hâlde ölü bir liste
   // ilk Escape'i yutar ve özellik penceresi kapanmaz.
@@ -4360,6 +4368,19 @@ function veMntLibDropdownToggle(nodeId, ev){
   };
   document.addEventListener('mousedown', onDown, true);
   document.addEventListener('keydown', onKey, true);
+}
+// SEÇİLİ SATIR GÖRÜNÜR (kullanıcı 2026-11-10, Canlı Not 112: *"tabloyu tekrar
+// açtığımda, tablonun en başına geliyor. Seçtiğim yere gelmiyor"*): liste açılınca
+// seçili tipin satırı listenin ortasına kayar. Yalnız listenin kendi kaydırması
+// oynar — scrollIntoView özellikler penceresini de kaydırırdı. Kapı:
+// mount-library-dropdown.test.js → *SEÇİLİ SATIR*.
+function _mntLibSeciliyeKaydir(nodeId){
+  var list=document.getElementById('mntlib-list-'+nodeId);
+  var sel=list ? list.querySelector('.mntlib-opt.sel') : null;
+  if(!sel || sel.hidden) return;
+  var L=list.getBoundingClientRect(), S=sel.getBoundingClientRect();
+  var ust=S.top-L.top+list.scrollTop;
+  list.scrollTop=Math.max(0, Math.round(ust-(list.clientHeight-S.height)/2));
 }
 // Arama: seçili markanın satırlarını DOM'da gizler/gösterir; hiç eşleşme yoksa
 // "eşleşen yok" satırı görünür.
@@ -5544,7 +5565,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
     _mntLibTam: _mntLibTam, _mntLibSirali: _mntLibSirali,
-    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibTur: _mntLibTur,
+    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, veMntLibCizimAc: veMntLibCizimAc, _mntLibTur: _mntLibTur,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,

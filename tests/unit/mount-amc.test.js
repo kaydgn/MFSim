@@ -15,8 +15,10 @@
  *   • dinamik/statik oranın AMC kuralı (Sh+20)/50 ve sertliksiz flanşlı konilerin oranı;
  *   • kütüphane girdileri: anahtar, ad, kapasite; radyali yayımlanmayan kod EKSİK
  *     (sx/sy/dx/dy boş) ve taramaya aday değil; tamamlanınca aday;
- *   • görseller: her tipin çizimi, ailenin fotoğrafları diskte ve künyede;
- *   • Takoz Özellikleri künyesi: veri + görsel, kapasite yazılmaz (Canlı Not 65).
+ *   • görsel: yalnız her tipin teknik resmi diskte ve künyede — ürün ve uygulama
+ *     fotoğrafı yok (Canlı Not 111: "Sadece teknik resmi kalsa yeter");
+ *   • Takoz Özellikleri künyesi: yalnız veri, kapasite yazılmaz (Canlı Not 65);
+ *     teknik resim Tip satırının (i) düğmesiyle pencerede (Canlı Not 111).
  * Bir hane kayarsa sonuç sessizce "makul ama yanlış" çıkar — testin karşılığı burada.
  */
 const fs = require('fs');
@@ -204,19 +206,19 @@ describe('PARAMETRİK — eksik tip aday değil', () => {
   });
 });
 
-describe('GÖRSELLER — üreticinin çizimi ve fotoğrafları', () => {
+describe('GÖRSELLER — yalnız tipin teknik resmi (Canlı Not 111)', () => {
   const D = path.join(__dirname, '../../assets/takoz/amc');
   const kunye = JSON.parse(fs.readFileSync(path.join(D, 'kunye.json'), 'utf8'));
   const dosya = fs.readdirSync(D).filter((f) => f.endsWith('.webp')).map((f) => f.replace(/\.webp$/, '')).sort();
-  test('her tipin ölçülü çizimi, her ailenin ürün ve uygulama fotoğrafı diskte', () => {
-    const iste = new Set();
-    Object.keys(TIP).forEach((t) => iste.add('cizim-' + TIP[t][2]));
-    Object.keys(A.AILE).forEach((a) => {
-      iste.add(A.AILE[a][1]);
-      for (let i = 1; i <= A.AILE[a][2]; i++) iste.add('uyg-' + a + '-' + i);
-    });
+  test('her tipin teknik resmi diskte; ürün ve uygulama fotoğrafı yok, üreteç de üretmez', () => {
+    const iste = new Set(Object.keys(TIP).map((t) => 'cizim-' + TIP[t][2]));
     expect([...iste].filter((x) => dosya.indexOf(x) < 0)).toEqual([]);
-    expect(dosya.filter((x) => !iste.has(x))).toEqual([]);                       // öksüz görsel yok
+    expect(dosya.filter((x) => !iste.has(x))).toEqual([]);                       // öksüz görsel yok — fotoğraf da
+    expect(Object.keys(A.AILE).map((a) => A.AILE[a].length)).toEqual([1, 1, 1, 1, 1]);   // ailede fotoğraf alanı yok
+    const T = require('../../tools/takoz-gorsel.js');
+    expect(T.listesi().map((x) => x.ad).sort()).toEqual([...iste].sort());
+    const K = A.kunye('137963');
+    expect([K.cizim, 'foto' in K, 'uyg' in K]).toEqual(['assets/takoz/amc/cizim-38.webp', false, false]);
   });
   test('künye diskle birebir: kaynak üreticinin adresi, bayt dosyanınki', () => {
     expect(Object.keys(kunye).sort()).toEqual(dosya);
@@ -241,24 +243,59 @@ describe('GÖRSELLER — üreticinin çizimi ve fotoğrafları', () => {
 
 describe('KÜNYE — Takoz Özellikleri', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
-  test('AMC tipinde çizim + fotoğraf + uygulama fotoğrafları ve veri; kapasite yazılmaz (Canlı Not 65)', () => {
+  test('AMC tipinde yalnız veri: pencerede görsel yok, kapasite yazılmaz (Canlı Not 65 · 111)', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137963' } };
     global.nodes = [lib];
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
     const k = d.querySelector('.ve-mnt-amc[data-amc="137963"]');
     expect(k).not.toBeNull();
-    const img = [...k.querySelectorAll('img')].map((i) => i.getAttribute('src'));
-    expect(img.slice(0, 2)).toEqual(['assets/takoz/amc/cizim-38.webp', 'assets/takoz/amc/urun-kesikli.webp']);
-    expect(img).toHaveLength(2 + 6);
+    expect(d.querySelectorAll('img')).toHaveLength(0);                     // resim yalnız (i)'nin penceresinde
     const satir = [...k.querySelectorAll('tr')].map((r) => [r.querySelector('th').textContent, r.querySelector('td').textContent]);
     expect(satir).toEqual([['Kod', 'AMC 137963'], ['Ürün ailesi', 'Cone with cutouts'], ['Sertlik', '60 ShA'],
       ['Sıkma torku', '170 N·m'], ['Ağırlık', '1.438 g'], ['Kaynak', 'AMC-EO · 24.11.2025']]);
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|650 kg/i);
-    [...k.querySelectorAll('button.ve-mnt-amc-res')].forEach((b) => expect(b.getAttribute('onclick')).toMatch(/veBasResimAc\(this\)/));
   });
-  test('AMC dışı tipte künye yok', () => {
+  test('AMC dışı tipte künye de (i) de yok', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'TK040' } };
     global.nodes = [lib];
-    expect(dom(cp.getMntLibraryPropertiesHTML(lib)).querySelector('.ve-mnt-amc')).toBeNull();
+    const d = dom(cp.getMntLibraryPropertiesHTML(lib));
+    expect([d.querySelector('.ve-mnt-amc'), d.querySelector('.mntlib-bilgi')]).toEqual([null, null]);
+    expect(d.querySelector('.mntlib-sec > .mntlib-tip > .mntlib-picker')).not.toBeNull();   // satırın yapısı aynı
+  });
+});
+
+describe('TEKNİK RESİM — Tip satırının (i) düğmesi (Canlı Not 111)', () => {
+  const BSK = require('../../js/baslangic-sayfa.js');
+  beforeAll(() => { global.veBasResimGoster = BSK.veBasResimGoster; });
+  afterAll(() => { delete global.veBasResimGoster; BSK.veBasResimKapat(); document.body.innerHTML = ''; });
+  test('(i) tetikleyicinin yanında; tık pencere ailesinin penceresinde tipin teknik resmini açar, Esc kapatır, odak döner', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137963' } };
+    global.nodes = [lib];
+    document.body.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
+    const b = document.querySelector('.mntlib-sec > .mntlib-tip > button.mntlib-bilgi');
+    expect(b).not.toBeNull();
+    expect(b.previousElementSibling.classList.contains('mntlib-picker')).toBe(true);
+    expect([b.getAttribute('aria-label'), b.getAttribute('title'), b.querySelector('.mf-ico-info') !== null, b.getAttribute('onclick')])
+      .toEqual(['Teknik resim', 'Teknik resim', true, 'veMntLibCizimAc(this)']);
+    expect(document.querySelectorAll('img')).toHaveLength(0);
+    expect(cp.veMntLibCizimAc(b)).toBe(true);
+    const perde = document.getElementById('ve-bas-buyuk-perde');
+    const pen = perde.querySelector('.ve-bas-buyuk-pencere[role="dialog"][aria-modal="true"]');
+    expect(pen.querySelector('.ve-settings-header .ve-settings-close .mf-ico-x')).not.toBeNull();
+    expect(pen.querySelector('#ve-bas-buyuk-baslik').textContent).toBe('Cone 38 · teknik resim');
+    const im = pen.querySelector('.ve-bas-buyuk-govde img');
+    expect([im.getAttribute('src'), im.hasAttribute('width'), im.getAttribute('alt')])
+      .toEqual(['assets/takoz/amc/cizim-38.webp', false, 'Cone 38 · teknik resim']);   // ölçü dosyanın kendisinden
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
+    expect(document.activeElement).toBe(b);
+  });
+  test('bilinmeyen kod ya da pencere kiti yoksa hiçbir şey açılmaz', () => {
+    const b = document.createElement('button'); b.setAttribute('data-amc', '999999');
+    expect(cp.veMntLibCizimAc(b)).toBe(false);
+    b.setAttribute('data-amc', '137963');
+    const g = global.veBasResimGoster; delete global.veBasResimGoster;
+    try { expect(cp.veMntLibCizimAc(b)).toBe(false); } finally { global.veBasResimGoster = g; }
+    expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
   });
 });

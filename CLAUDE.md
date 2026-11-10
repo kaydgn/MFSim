@@ -350,9 +350,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kütüphanede EKSİK tip (sx/sy/dx/dy boş), taramaya aday olmaz (`_mntLibTam`), Takoz
   Özellikleri'nden tamamlanır — tahmin YAZILMAZ. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
-  tablosundan (E4 · E9'u ölçtürür). Görseller `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
+  teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
+  (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65). Kapı: `mount-amc.test.js` + `mount-param.test.js` → *AMC KAPASİTESİ*.
+  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112). Kapı:
+  `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK RESİM*) + `mount-library-dropdown.test.js` →
+  *SEÇİLİ SATIR* + `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` →
+  *AMC KAPASİTESİ*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
