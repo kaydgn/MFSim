@@ -30,6 +30,7 @@
   --fs-2: 14px;
   --fs-3: 17px;
   --serit-h: 44px;
+  --tul: rgba(244, 243, 239, .74);   /* kâğıdın tülü: kilitli programın üstü */
 }
 html, body { height: 100%; }
 * { box-sizing: border-box; }
@@ -105,6 +106,24 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-acilis {
   position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
   font-family: var(--dar); font-size: var(--fs-3); color: var(--soluk); background: var(--kagit);
+}
+
+/* ── kilit: güncelleme isteği sürerken program kullanılamaz ──────────── */
+/* program ve kalem katmanı perdenin altında; notlar ve not kartı üstünde */
+.cn-kilit { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; background: var(--tul); cursor: progress; }
+.cn-kilit-kart {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 12px;
+  min-width: 270px; padding: 13px 16px 12px; cursor: default;
+  background: var(--pafta); border: 1px solid var(--murekkep); border-top: 3px solid var(--amber); box-shadow: var(--golge);
+}
+.cn-kilit-kart:focus { outline: none; }
+.cn-kilit-don { grid-row: span 2; width: 22px; height: 22px; border: 2px solid var(--cizgi); border-top-color: var(--amber); border-radius: 50%; }
+.cn-kilit-kart b { font-family: var(--dar); font-weight: 600; font-size: var(--fs-3); white-space: nowrap; }
+.cn-kilit-asama { font-family: var(--veri); font-size: var(--fs-0); color: var(--soluk); white-space: nowrap; }
+.cn-kilit-kart .cn-dugme { grid-column: 1 / -1; justify-self: end; margin-top: 8px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cn-kilit-don { animation: cn-don .9s linear infinite; }
+  @keyframes cn-don { to { transform: rotate(360deg); } }
 }
 
 /* ── not kartı ───────────────────────────────────────────────────────── */
@@ -274,6 +293,15 @@ button, textarea, input { font: inherit; color: inherit; }
     <iframe class="cn-program" id="cn-program" title="MFSim"></iframe>
     <div class="cn-acilis" id="cn-acilis">MFSim açılıyor…</div>
     <svg class="cn-cizim" id="cn-cizim" aria-hidden="true"><g class="cn-onizleme" id="cn-onizleme"></g><g id="cn-taslak"></g></svg>
+
+    <div class="cn-kilit" id="cn-kilit" hidden>
+      <div class="cn-kilit-kart" id="cn-kilit-kart" role="status" aria-live="polite" tabindex="-1">
+        <span class="cn-kilit-don" aria-hidden="true"></span>
+        <b>Program güncelleniyor</b>
+        <span class="cn-kilit-asama" id="cn-kilit-asama"></span>
+        <button class="cn-dugme" type="button" id="cn-kilit-vazgec">Vazgeç</button>
+      </div>
+    </div>
 
     <form class="cn-kart" id="cn-kart" hidden>
       <div class="cn-kart-bas"><span class="cn-no" id="cn-kart-no">Not</span><span class="cn-yer" id="cn-kart-yer"></span></div>
@@ -522,11 +550,12 @@ button, textarea, input { font: inherit; color: inherit; }
     var k = CN.programKaynagi(yayin), btn = $('cn-guncel-evet');
     if (k.tur === 'yok' || program.yuklenen) return;
     btn.disabled = true;
+    yukleKilitle(k.surum);                    // proje şimdi alınır: yeni program açılana dek kilitli
     programYukle(k, programProjesi()).then(function () {
       ertelenen = ''; guncelKapat(); $('cn-guncel-ac').hidden = true;
       bildir('Program güncellendi · ' + k.surum);
       guncellemeDenetle();
-    }, function () { btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
+    }, function () { yukleKilitle(''); btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
   }
   // YENİLE (kullanıcı 2026-11-05: *"canlı not içine yenileme butonu ekler misin … F5
   // yapıp sayfayı tamamen yenilemek istemiyorum"*): yalnız program yeniden yüklenir,
@@ -556,6 +585,43 @@ button, textarea, input { font: inherit; color: inherit; }
     b.disabled = surer;
     b.setAttribute('aria-busy', surer ? 'true' : 'false');
     b.textContent = surer ? 'Güncelleniyor…' : 'Programı güncelle';
+    kilitCiz();
+  }
+  // KİLİT (kullanıcı 2026-11-11: *"'güncelleniyor' yazısı çıkıyor butonda. Böyle olduğu zaman
+  // programı kilitlemesini istiyorum"*): istek sürerken ve yeni program açılana dek program
+  // perdenin altında ve `inert` (fare, klavye, odak); Yenile kapalı. Notlar ve not kartı
+  // açık kalır. Vazgeç isteği bırakır; istek eskiyince (30 dk) kilit kendiliğinden açılır.
+  var yukleniyor = '', yukleZaman = null, kilitZaman = null;
+  function kilitCiz() {
+    var k = CN.kilitDurumu(istek, Date.now(), yukleniyor);
+    $('cn-kilit').hidden = !k.kilitli;
+    $('cn-kilit-asama').textContent = k.metin;
+    $('cn-kilit-vazgec').hidden = k.asama === 'yukleme';
+    cerceve.toggleAttribute('inert', k.kilitli);
+    $('cn-yenile').disabled = k.kilitli;
+    if (k.kilitli) kilitOdak();
+    clearTimeout(kilitZaman);
+    if (k.kalan > 0) kilitZaman = setTimeout(istekCiz, k.kalan + 100);
+  }
+  // inert programın kendi focus() çağrısını durdurmuyor: odak programa girerse karta döner
+  // (yazılan not kartında kalır).
+  function kilitOdak() {
+    if (!$('cn-kilit').hidden && document.activeElement === cerceve) $('cn-kilit-kart').focus({ preventScroll: true });
+  }
+  window.addEventListener('blur', function () { setTimeout(kilitOdak, 0); });
+  function yukleKilitle(surum) {
+    yukleniyor = surum || '';
+    clearTimeout(yukleZaman);
+    if (yukleniyor) yukleZaman = setTimeout(function () { yukleKilitle(''); }, 180000);   // program hiç açılmazsa
+    kilitCiz();
+  }
+  function istekBirak() {
+    if (!yetki.db) return;
+    istekBekle = false;
+    istek = { durum: 'iptal', zaman: new Date().toISOString(), konu: istek && istek.konu };
+    istekCiz();
+    yetki.db.doc('istek/guncelle').update({ durum: 'iptal', zaman: istek.zaman })
+      .then(function () { bildir('İstek bırakıldı.'); }, function () { bildir('İstek bırakılamadı.'); });
   }
   function istekGeldi(snap) {
     var once = CN.istekDurumu(istek, Date.now());
@@ -563,12 +629,14 @@ button, textarea, input { font: inherit; color: inherit; }
     var d = CN.istekDurumu(istek, Date.now());
     istekCiz();
     if (!istekBekle || d === once) return;
-    if (d === 'guncel') { istekBekle = false; bildir('Program güncel · ' + (istek.surum || program.surum)); }
-    else if (d === 'hata') { istekBekle = false; bildir('Güncellenemedi' + (istek.cevap ? ': ' + istek.cevap : '.')); }
-    else if (d === 'tamam') {
-      guncellemeDenetle();                    // yayın önce yazılır (skill §1): gelmişse yüklenir
-      setTimeout(function () { istekBekle = false; }, 20000);
+    if (d === 'tamam' || d === 'guncel') {
+      // İstenen ana dalın son hâli: açık program kayıttaki yayından eskiyse o yüklenir.
+      if (CN.guncellemeVar(yayin, program.surum, '')) { guncellemeDenetle(); return; }
+      if (d === 'guncel') { istekBekle = false; bildir('Program güncel · ' + (istek.surum || program.surum)); return; }
+      setTimeout(function () { istekBekle = false; }, 20000);   // yayın önce yazılır (skill §1); gecikirse gelince yüklenir
     }
+    else if (d === 'hata') { istekBekle = false; bildir('Güncellenemedi' + (istek.cevap ? ': ' + istek.cevap : '.')); }
+    else if (d === 'iptal') istekBekle = false;
   }
   function istekGonder() {
     if (!yetki.db) { bildir('Kayıt bağlı değil.'); return; }
@@ -592,6 +660,7 @@ button, textarea, input { font: inherit; color: inherit; }
       .catch(function () { istekBekle = false; istek = null; istekCiz(); bildir('İstek gönderilemedi.'); });
   }
   $('cn-istek').addEventListener('click', istekGonder);
+  $('cn-kilit-vazgec').addEventListener('click', istekBirak);
   $('cn-yenile').addEventListener('click', yenile);
   $('cn-guncel-evet').addEventListener('click', guncelle);
   $('cn-guncel-sonra').addEventListener('click', function () { ertelenen = yayin ? yayin.surum : ''; guncelKapat(); });
@@ -629,6 +698,7 @@ button, textarea, input { font: inherit; color: inherit; }
     if (ad === 'basladi') {
       program.basladi = true; program.hazir = false; program.ortam = v.ortam || null;
       $('cn-acilis').hidden = true; durumYaz();
+      if (yukleniyor) yukleKilitle('');        // yeni program açıldı
     } else if (ad === 'hazir') {
       program.ortam = v.ortam || program.ortam; durumYaz();
       hazirBekle();
@@ -646,6 +716,7 @@ button, textarea, input { font: inherit; color: inherit; }
   // Çerçeve yüklendi ama köprü konuşmadıysa program açılmamıştır.
   cerceve.addEventListener('load', function () {
     if (program.basladi || !program.kaynak) return;
+    yukleKilitle('');
     acilisYaz('Program açılmadı.');
   });
 

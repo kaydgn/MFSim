@@ -325,9 +325,9 @@
   // programı güncelleyen bir buton koyalım"*): sayfa kayda `istek/guncelle` yazar ve
   // Claude'a yorum gönderir; oturum ana dalın SON hâlini yayınlar, durumu aynı belgeye
   // yazar. Durum: bekliyor → yapiliyor → tamam (yeni yayın) · guncel (yayın zaten ana
-  // dal) · hata. 30 dakikadan eski "bekliyor/yapiliyor" ESKİ sayılır (oturum yok):
-  // düğme yeniden açılır.
-  var ISTEK_DURUMLARI = ['bekliyor', 'yapiliyor', 'tamam', 'guncel', 'hata'];
+  // dal) · hata · iptal (sayfada Vazgeç). 30 dakikadan eski "bekliyor/yapiliyor" ESKİ
+  // sayılır (oturum yok): düğme yeniden açılır.
+  var ISTEK_DURUMLARI = ['bekliyor', 'yapiliyor', 'tamam', 'guncel', 'hata', 'iptal'];
   var ISTEK_ESKI_MS = 30 * 60 * 1000;
   function istekDurumu(d, simdi) {
     if (!d || typeof d !== 'object') return 'yok';
@@ -345,9 +345,22 @@
     o = o || {};
     return ISTEK_BASLIK + ' · açık sürüm ' + (o.surum || '?') + (o.pr ? ' · #' + o.pr : '');
   }
+  // KİLİT (kullanıcı 2026-11-11: *"Programı güncelle dediğim zaman … 'güncelleniyor' yazısı
+  // çıkıyor butonda. Böyle olduğu zaman programı kilitlemesini istiyorum"*): istek sürerken
+  // (bekliyor · yapiliyor, eskimemiş) ve yeni program yüklenirken (`yukleme`: yüklenen sürüm)
+  // program kilitli. `kalan`: isteğin eskimesine kalan ms — kilit o an kendiliğinden açılır.
+  var KILIT_ASAMA = { bekliyor: 'İstek gönderildi', yapiliyor: 'Derleniyor', yukleme: 'Yükleniyor' };
+  function kilitDurumu(istek, simdi, yukleme) {
+    if (yukleme) return { kilitli: true, asama: 'yukleme', metin: KILIT_ASAMA.yukleme + ' · ' + yukleme, kalan: 0 };
+    var d = istekDurumu(istek, simdi);
+    if (d !== 'bekliyor' && d !== 'yapiliyor') return { kilitli: false, asama: d, metin: '', kalan: 0 };
+    var kalan = Date.parse(istek.zaman) + ISTEK_ESKI_MS - (simdi || 0);
+    return { kilitli: true, asama: d, metin: KILIT_ASAMA[d], kalan: Math.max(0, kalan) };
+  }
 
   var api = {
     ISTEK_BASLIK: ISTEK_BASLIK, ISTEK_ESKI_MS: ISTEK_ESKI_MS, istekDurumu: istekDurumu, istekMetni: istekMetni,
+    kilitDurumu: kilitDurumu,
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,

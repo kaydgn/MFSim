@@ -527,9 +527,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Yenile**'si yalnız programı yeniden yükler, sayfa ve notlar yerinde, proje taşınır.
   Şeridin **Programı güncelle**'si (kullanıcı 2026-11-11) ana dalın SON hâlini ister
   (`istek/guncelle` + Claude'a yorum; oturum yayınlar, sayfa sormadan yükler — skill
-  `canli-not` §1). **Yayını YALNIZ sahibi oturum yapar ve yayın geri gitmez** (kullanıcı
-  2026-11-11: başka oturumların güncellemeleri karışıyordu; `yayin` komutu sahibi olmayanı ve
-  eski sürümü reddeder); yayından önce `duman` (sayfa + parçalar gerçek tarayıcıda). Protokol:
+  `canli-not` §1); istek sürerken ve yeni program açılana dek program KİLİTLİ (perde + `inert`,
+  Vazgeç isteği bırakır — kullanıcı 2026-11-11). **Yayını YALNIZ sahibi oturum yapar ve yayın
+  geri gitmez** (kullanıcı 2026-11-11: başka oturumların güncellemeleri karışıyordu; `yayin`
+  komutu sahibi olmayanı ve eski sürümü reddeder); yayından önce `duman` (sayfa + parçalar
+  gerçek tarayıcıda). Protokol:
   skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
   (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js` →
   *PARÇALI YAYIN* · *İKİ KAPI*.
