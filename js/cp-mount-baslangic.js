@@ -248,9 +248,11 @@ function veMntBaslangicEylem(ad, v){
 // biraz geç yüklensin yani. Profesyonelliği belli olsun. Tık diye açılıyor."*) ──────────
 // Yükle → modülün alanında kart: örneğin adı, künyesi (gövde · takoz · kütle) ve kademeli
 // çubuk. Model kartın ARKASINDA kurulur ve sığdırılır, çubuk dolar, kart söner. Süre
-// VE_MNT_YUKLEME_MS. Otomasyonda (navigator.webdriver) ve jsdom'da gecikme YOK: kurucu
-// eşzamanlı çağrılır — testler ve ürün turu birebir eski (`zorla` yalnız kapı içindir).
-var VE_MNT_YUKLEME_MS = 1400;
+// VE_MNT_YUKLEME_MS (Canlı Not 131: *"biraz daha uzun sürebilir … Kısa olmuş"* — 1,4 → 2,6 sn);
+// çubuk bekleyişin TAMAMINDA dolar (geçişi süreden: `--ve-mnt-yukleme-adim`), yolda durmaz.
+// Otomasyonda (navigator.webdriver) ve jsdom'da gecikme YOK: kurucu eşzamanlı çağrılır —
+// testler ve ürün turu birebir eski (`zorla` yalnız kapı içindir).
+var VE_MNT_YUKLEME_MS = 2600;
 var VE_MNT_YUKLEME_ID = 've-mnt-yukleme';
 function _mntYuklemeGecikmesiz(){
   if(typeof window !== 'undefined' && window.VE_MNT_YUKLEME_ZORLA) return false;
@@ -298,15 +300,20 @@ function veMntOrnekYuklemeli(key, opt){
   if(!el) return !!veMntOrnekYukle(key);
   var ms = (opt.ms > 0) ? opt.ms : VE_MNT_YUKLEME_MS;
   var sonraki = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : function(f){ setTimeout(f, 16); };
-  sonraki(function(){ el.classList.add('acik'); _mntYuklemeIlerle(el, 72); });
+  el.style.setProperty('--ve-mnt-yukleme-adim', Math.round(ms * 0.62) + 'ms');
+  // Başlangıç hâli (perde saydam, çubuk boş) ÖNCE hesaplanır: yeni kartın ilk karesinde
+  // verilen genişlik geçişsiz uygulanıyordu — çubuk %71'e sıçrayıp 0,8 sn duruyordu (Not 131).
+  void el.offsetWidth;
+  sonraki(function(){ el.classList.add('acik'); _mntYuklemeIlerle(el, 86); });
   setTimeout(function(){
     try { veMntOrnekYukle(key); } catch(e){ if(typeof console !== 'undefined') console.error(e); }
+    el.style.setProperty('--ve-mnt-yukleme-adim', '240ms');
     _mntYuklemeIlerle(el, 100);
     setTimeout(function(){
       el.classList.remove('acik');
       setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 220);
     }, Math.round(ms * 0.2));
-  }, Math.round(ms * 0.65));
+  }, Math.round(ms * 0.68));
   return true;
 }
 

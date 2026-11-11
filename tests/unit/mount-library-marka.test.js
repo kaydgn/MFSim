@@ -62,8 +62,10 @@ describe('MARKA — katalogdaki her tipin markası var', () => {
     const g = cp.veMntLibMarkalar(kat());
     expect(g.map((x) => x.ad)).toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer']);
     expect(g.reduce((t, x) => t + x.girdiler.length, 0)).toBe(291);
-    // marka içinde AMC ailenin · tipin · sertliğin sırasıyla (kütüphanenin iç sırası değil)
-    expect(g[0].girdiler.map((e) => e.amc.kod)).toEqual(require('../../js/mount-amc.js').kodlar());
+    // marka içinde AMC adın sayı sırasıyla (Canlı Not 134; kütüphanenin iç sırası değil)
+    const ad = g[0].girdiler.map((e) => e.name);
+    expect(ad[0]).toMatch(/^Cone 00 45 ShA/);
+    expect(ad.findIndex((x) => /^Cone 39 /.test(x))).toBeGreaterThan(ad.findIndex((x) => /^Cone 38 /.test(x)));
   });
 });
 
@@ -90,7 +92,7 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     const node = libNode([], 'TK040');
     global.nodes = [node];
     cp.veMntLibMarka('lib1', 'AMC Mecanocaucho');
-    expect(node.data._selKey).toBe('amc137005');                 // listenin ilki: Cone 01 45 ShA
+    expect(node.data._selKey).toBe('amc137007');                 // listenin ilki: Cone 00 45 ShA (Canlı Not 134)
     expect(stubs.showNodeProperties).toHaveBeenCalledWith(node);
     const d = pencere(node);
     expect(d.querySelector('select.mntlib-marka').value).toBe('AMC Mecanocaucho');
@@ -116,7 +118,7 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     node.data._curveEditKey = 'k1';
     global.nodes = [node];
     cp.veMntLibMarka('lib1', 'AMC Mecanocaucho');
-    expect(node.data._selKey).toBe('amc137005');
+    expect(node.data._selKey).toBe('amc137007');
     expect(node.data._curveEditKey).toBeNull();
   });
 

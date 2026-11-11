@@ -358,9 +358,39 @@
     return { kilitli: true, asama: d, metin: KILIT_ASAMA[d], kalan: Math.max(0, kalan) };
   }
 
+  // OTURUMU ÇAĞIR (kullanıcı 2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*): sayfa
+  // oturum AÇAMAZ (ölçüldü — skill canli-not §1); sayfaya BAĞLI oturumu Claude'a giden bir
+  // yorumla uyandırır ve çağrıyı kayda yazar (`oturum/cagri`: zaman + o anki `oturum/aktif`
+  // zamanı). Oturum geldiğini `oturum/aktif`i yeniden yazarak söyler: zamanı değiştiyse GELDİ
+  // — iki makinenin saati karşılaştırılmaz. Durum: hazir · cagrildi · geldi. 10 dakikada
+  // gelmeyen çağrı eskir (düğme yeniden açılır); `kalan` eskimeye kalan ms.
+  var CAGRI_ESKI_MS = 10 * 60 * 1000;
+  function cagriDurumu(cagri, aktif, simdi) {
+    var t = cagri && cagri.durum !== 'hata' ? Date.parse(cagri.zaman || '') : NaN;
+    if (!isFinite(t)) return { durum: 'hazir', kalan: 0 };
+    var z = String((aktif && aktif.zaman) || '');
+    if (z && z !== String(cagri.onceki || '')) return { durum: 'geldi', kalan: 0 };
+    var kalan = t + CAGRI_ESKI_MS - (simdi || 0);
+    return kalan > 0 ? { durum: 'cagrildi', kalan: kalan } : { durum: 'hazir', kalan: 0 };
+  }
+  // Claude'a giden yorumun metni — oturum çağrıyı bu başlıktan tanır (skill canli-not §1).
+  var CAGRI_BASLIK = 'Oturum çağrısı';
+  function cagriMetni(o) {
+    var n = Math.floor(Number(o && o.bekleyen)) || 0;
+    return CAGRI_BASLIK + (n > 0 ? ' · bekleyen ' + n + ' not' : '');
+  }
+  // Çağrının gidemediği durum ve çaresi (bağlantı: yorumların Claude'a gidebilirliği).
+  // Bağlı oturum yoksa tek yol yeni oturumdur — sayfa açamaz.
+  function cagriEngeli(baglanti) {
+    if (baglanti === 'available') return '';
+    if (baglanti === 'no_session') return 'Claude oturumu bağlı değil. Yeni oturumda “Canlı Not’u getir” yazın.';
+    return 'Claude’a gönderim kapalı.';
+  }
+
   var api = {
     ISTEK_BASLIK: ISTEK_BASLIK, ISTEK_ESKI_MS: ISTEK_ESKI_MS, istekDurumu: istekDurumu, istekMetni: istekMetni,
     kilitDurumu: kilitDurumu,
+    CAGRI_BASLIK: CAGRI_BASLIK, CAGRI_ESKI_MS: CAGRI_ESKI_MS, cagriDurumu: cagriDurumu, cagriMetni: cagriMetni, cagriEngeli: cagriEngeli,
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,

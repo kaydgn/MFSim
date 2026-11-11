@@ -11303,7 +11303,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mnt-yukleme-cubuk::after{ content:""; position:absolute; inset:0; pointer-events:none;
   background:repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--bg-secondary) calc(10% - 1px) 10%); }
 .ve-mnt-yukleme-cubuk > i{ display:block; height:100%; width:0; background:var(--accent-primary);
-  transition:width 0.85s cubic-bezier(.25,.7,.25,1); }
+  transition:width var(--ve-mnt-yukleme-adim, 0.85s) cubic-bezier(.4,.25,.6,1); }
 @media (prefers-reduced-motion: reduce){
   .ve-mnt-yukleme, .ve-mnt-yukleme-cubuk > i{ transition:none; }
   .ve-mnt-yukleme-ico{ animation:none; }

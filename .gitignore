@@ -42,3 +42,6 @@ metin-envanteri.json
 # Takoz görselleri (tools/takoz-gorsel.js): AMC CDN indirme önbelleği; üretilen
 # webp ve künye assets/takoz/amc/ altında (git'te).
 .takoz-gorsel/
+
+# Oturumun yerel izin ayarı (Claude Code): kişiye ve oturuma özgü, commit edilmez.
+.claude/settings.local.json

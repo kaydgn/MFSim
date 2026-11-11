@@ -1,6 +1,6 @@
 ---
 name: canli-not
-description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Kullanıcı (çoğu zaman YENİ bir oturumda) "Canlı Not'u getir / Canlı Not'u aç / Canlı Not, düzenlemeler yapacağız" dediğinde İLK iş olarak çağır ve §0 Açılış'ı uygula (aynı sayfa, yeni Artifact açılmaz); Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Açılış, yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt, sonucun görüntüsü ve teslim buradadır.
+description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Kullanıcı (çoğu zaman YENİ bir oturumda) "Canlı Not'u getir / Canlı Not'u aç / Canlı Not, düzenlemeler yapacağız" dediğinde İLK iş olarak çağır ve §0 Açılış'ı uygula (aynı sayfa, yeni Artifact açılmaz); Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), sayfanın "Oturum çağrısı" yorumuyla uyanınca (§1 · Oturumu çağır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Açılış, yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt, sonucun görüntüsü ve teslim buradadır.
 ---
 
 # Canlı Not
@@ -46,8 +46,9 @@ her yayın `url` ile. Yeni oturum aynı sayfayı devralır, sırayla:
    ile `if_version`). Oturumun adresi commit künyesindeki `Claude-Session:`
    satırı. Bu kayıt iki oturumun aynı notu işlemesini önler (§2'nin başı) ve
    yayının TEK yazarını belirler (§1 · iki kapı): sahibi olmayan oturum yayınlayamaz.
+   Sayfa çağırdığı oturumun geldiğini bu yazımdan okur (§1 · Oturumu çağır).
 4. **İzle.** `ArtifactComments watch url:<adres>` — sayfanın "Send to Claude"
-   yorumu ancak izleyen oturumu uyandırır.
+   yorumu ancak izleyen oturumu uyandırır. Çıplak `watch` listesinde sayfa görünmeli.
 5. **Güncellik.** `git fetch origin main && git checkout -B main origin/main`, dökümler
    (`ArtifactData get` · `out_dir:.canli-not/dokum`): `collection:oturum doc_id:aktif`
    (3. adımdan SONRA) ve `collection:yayin doc_id:son`; sonra iki denetim:
@@ -151,27 +152,47 @@ node tools/canli-not.js duman     # sayfa + parçalar gerçek tarayıcıda: indi
 
 `node tools/canli-not.js sayfa` (ya da `hazirla`nın yazdığı `canli-not.html`) →
 `Artifact` publish `url:<adres>` `file_path: .canli-not/yayin/canli-not.html`,
-**`files` YOK**, `capabilities` YAZILMAZ (saklı beyan korunur). Başka konuşmadan: önce
+**`files` YOK**, `capabilities` HER yayında tam kümeyle (aşağıda). Başka konuşmadan: önce
 `Artifact read url:<adres>`. Sayfanın ayar satırı sayfanın KENDİ künyesidir (şeritteki
 sürümün ipucunda); açık programın sürümü kayıttan.
 
-- **Yetki beyanı** (yalnız değişecekse yazılır; tam küme — yazılmayan düşer):
-  `capabilities: {db: {}, user: {}, comments: {}, assets: {}, downloads: true,
-  mcp: {servers: [{server: "Claude Code Remote", tools: ["list_environments",
-  "list_sessions", "get_session", "create_session", "send_message", "list_triggers",
-  "fire_trigger"]}]}}`, `icon: "pen"`.
+- **Yetki beyanı** (tam küme — yazılmayan düşer): `capabilities: {db: {}, user: {},
+  comments: {}, assets: {}, downloads: true}`, `icon: "pen"`. Her sayfa yayınında yazılır:
+  saklı beyan 2026-11-11 yoklamasından kalan bağlayıcı komutlarını taşıyabilir ve sayfa
+  artık hiçbirini kullanmıyor.
+- **Yayın, yayınlayan oturumu sayfanın İZLEYİCİSİ yapar** (kalıcı kayıt arka planda
+  kurulur). Sahipliği geçici alan oturum işi bitince `oturum/aktif`'i geri yazar, sonra
+  `ArtifactComments watch url:<adres>` → `watch url:<adres> on:false` ve çıplak `watch`
+  listesinde sayfanın OLMADIĞINI görür: yayından hemen sonra verilen `on:false`
+  kurulmakta olan kaydı düşürmüyor (bir oturum başkasının notuyla böyle uyandı).
 - Adres: **https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91** (gizli; yalnız kullanıcı).
 
-### Bağlantıyı yokla — sayfadan oturum (ölçüm aşaması)
+### Oturumu çağır — sayfa BAĞLI oturumu uyandırır, oturum AÇAMAZ
 
-Kullanıcı 2026-11-11: değişiklik için her seferinde yeni oturum açmak pratik değil;
-sayfanın oturumu KENDİSİNİN başlatması isteniyor. Sayfalar Claude Code'un komutlarını
-kullanıcı adına çağırabiliyor, ama hangilerinin açık olduğu hesaba bağlı. Şeritteki
-**Bağlantıyı yokla** bunu ölçer: izin ister, açık komutları ve ortamları okur, kayda
-yazar — `yoklama/baglanti`: `{zaman, sunucu, durum, izin, kimlik, araclar: [{ad, tanim,
-salt}], ortamlar}` (`tanim: true` = kullanıcıya açık komut). Yoklama oturum AÇMAZ.
-Sonucu `ArtifactData get collection:yoklama doc_id:baglanti` ile okunur; oturumu açan
-düğme bu ölçüme göre kurulacak. Kapı: `canli-not.test.js` → *Bağlantıyı yokla*.
+Kullanıcı 2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"* · *"bu iş
+olabildiğince kolay olsun artık"* — değişiklik için her seferinde yeni oturum açmak
+pratik değil.
+
+**Sayfa oturum açamaz — iki ölçüm (2026-11-11; ayrıntı `references/emekli-oturum-gorevi.md`):**
+sayfaya Claude Code'un oturum açan ve oturuma yazan komutları kapalı (istenen yedi
+komuttan üçü açık); elle çalıştırılan görev de var olan oturumu UYANDIRMADI, depo bağlı
+olmayan yeni bir oturum açtı. Görev silindi; hesapta görev yok.
+
+**Çalışan yol yorumdur.** Sayfayı izleyen oturum Claude'a giden her yorumla uyanır; tek
+oturum açık kaldıkça yeni oturum gerekmez (her not onu uyandırır).
+
+- **Sayfa.** Şeritteki **Oturumu çağır** Claude'a `Oturum çağrısı · bekleyen N not`
+  yorumunu gönderir ve `oturum/cagri`'ya `{zaman, onceki: <o anki oturum/aktif.zaman>,
+  konu}` yazar; düğme "Çağrılıyor…". `oturum/aktif`'in zamanı değişince "Oturum geldi."
+  (iki makinenin saati karşılaştırılmaz); 10 dakikada gelmeyen çağrı eskir. Bağlı oturum
+  yoksa çağrı gitmez, durum ve çare söylenir: "Claude oturumu bağlı değil. Yeni oturumda
+  “Canlı Not’u getir” yazın." — o durumda tek yol §0.
+- **Oturum, bu yorumla uyanınca:** §2'nin kendisi (sahiplik → güncellik → kuyruk). Sahibi
+  ise `oturum/aktif`'i ŞİMDİKİ zamanla yeniden yazar (sayfanın "geldi"si); konuya tek
+  satır cevap, `resolve`.
+- **Ne zaman işe yarar:** notlar kayıtta bekliyor ve oturum durmuşsa (kullanım sınırı,
+  yarım kalan tur) not yazmadan yeniden başlatır.
+- Kapı: `canli-not.test.js` → *çağrı* · *OTURUMU ÇAĞIR*.
 
 ### Programı güncelle düğmesi — ana dalın son hâli
 
@@ -344,4 +365,8 @@ denetler). Eski biçim (`program: {id, boyut}` — tek varlık) okunur, yazılma
 araç aynı doğrulamayı okur; bozuk belge sayfada güncelleme sayılmaz, araçta yazılmaz.
 
 **Sahiplik belgesi (`oturum/aktif`, Claude yazar):** `{oturum, zaman}` — notları
-işleyen ve yayınlayan oturumun adresi (§0 · 3; §1 · tek yazar); sayfa okumaz.
+işleyen ve yayınlayan oturumun adresi (§0 · 3; §1 · tek yazar). Sayfa yalnız `zaman`ın
+değiştiğine bakar (çağrılan oturum geldi mi).
+
+**Çağrı belgesi (`oturum/cagri`, sayfa yazar — §1 · Oturumu çağır):** `{zaman, onceki,
+konu}` ya da gitmeyen çağrıda `{zaman, durum: 'hata', hata}`.

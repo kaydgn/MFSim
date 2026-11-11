@@ -929,8 +929,21 @@ describe('YÜKLEME EKRANI — örnek kartın arkasında kurulur', () => {
     });
   });
 
-  test('süre sabiti 1–2 sn: "biraz geç" ama bekletmez', () => {
-    expect(BS.VE_MNT_YUKLEME_MS).toBeGreaterThanOrEqual(1000);
-    expect(BS.VE_MNT_YUKLEME_MS).toBeLessThanOrEqual(2000);
+  // Canlı Not 131: *"biraz daha uzun sürebilir yükleme ekranı. Kısa olmuş."* (1,4 sn idi)
+  test('süre sabiti 2,4–3,5 sn: kart okunur, bekletmez', () => {
+    expect(BS.VE_MNT_YUKLEME_MS).toBeGreaterThanOrEqual(2400);
+    expect(BS.VE_MNT_YUKLEME_MS).toBeLessThanOrEqual(3500);
+  });
+
+  test('çubuk bekleyişin tamamında dolar: geçişi süreden, kurulumda son adım kısa', () => {
+    casus('veMntOrnekYukle', () => true, () => {
+      BS.veMntOrnekYuklemeli('tulga', { zorla: true, ms: 2600 });
+      const k = document.getElementById('ve-mnt-yukleme');
+      expect(k.style.getPropertyValue('--ve-mnt-yukleme-adim')).toBe('1612ms');   // 0,62 · ms
+      jest.advanceTimersByTime(1768);                                              // 0,68 · ms: kurulum
+      expect(k.style.getPropertyValue('--ve-mnt-yukleme-adim')).toBe('240ms');
+    });
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mnt-yukleme-cubuk > i\{[^}]*transition:width var\(--ve-mnt-yukleme-adim/);
   });
 });

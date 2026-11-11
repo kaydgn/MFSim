@@ -25,7 +25,8 @@
  *   PARÇALI YAYIN  program yuvalara ayrılır (kod + uzun satırlar), geri kurma bire
  *              bir; değişmeyen yuva yeniden yüklenmez ve indirilmez; sayfa program gömmez
  *   İKİ KAPI   tek yazar (yalnız oturum/aktif yayınlar) · sıra (yayın geri gitmez)
- *   YOKLAMA    sayfadan açılabilen oturum komutları ölçülür; yoklama oturum açmaz
+ *   ÇAĞRI      sayfa BAĞLI oturumu Claude'a giden bir yorumla uyandırır (oturum açamaz); oturum
+ *              geldiğini sahiplik kaydını yeniden yazarak söyler (iki saat karşılaştırılmaz)
  *   SONUÇ      `sonuc` komutu (her oturumun aynı kalıbı): bayraklar sessizce
  *              yutulmaz; giriş js/auth.js'in özetinden, modülün açıcısı programda var
  */
@@ -545,7 +546,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
         set: (v) => { yazilan.push(['set', p, v]); return Promise.resolve(); } })
     };
     document.body.innerHTML = tam.replace(/<script>[\s\S]*?<\/script>/g, '');
-    const yetkiler = { db, comments: opt.yorum || null, mcp: opt.mcp || null, permissions: opt.izin || null };
+    const yetkiler = { db, comments: opt.yorum || null, mcp: opt.mcp || null };
     window.claude = { use: (ad) => Promise.resolve(yetkiler[ad] || null) };
     // Varlık deposu: `opt.varlik` kimlik → metin (null: indirilemez); yoksa adresini taşıyan tam
     // belge. `opt.getir(u)`: indirmeyi bekleten söz (kilit testleri).
@@ -560,7 +561,8 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     const yayinGonder = (y) => dinle['yayin/son']({ exists: !!y, data: () => y, metadata: { fromCache: false } });
     const notGonder = (liste) => dinle.notlar({ docs: liste.map((n) => ({ id: n.id, data: () => n })) });
     const istekGonder = (v) => dinle['istek/guncelle']({ exists: !!v, data: () => v });
-    return { d, getirilen, yazilan, yayinGonder, notGonder, istekGonder, cerceve: d.getElementById('cn-program'), gizli: (id) => d.getElementById(id).hidden };
+    const belgeGonder = (yol, v) => dinle[yol]({ exists: !!v, data: () => v });
+    return { d, getirilen, yazilan, yayinGonder, notGonder, istekGonder, belgeGonder, cerceve: d.getElementById('cn-program'), gizli: (id) => d.getElementById(id).hidden };
   }
 
   // PROGRAMI GÜNCELLE (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı
@@ -1016,60 +1018,103 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(c.d.getElementById('cn-acilis').textContent).toBe('Program indirilemedi.');
   });
 
-  // OTURUM BAĞLANTISI YOKLAMASI (kullanıcı 2026-11-11: her değişiklikte yeni oturum açmak
-  // pratik değil): sayfanın oturumu kendisinin başlatabilmesi için önce bu hesapta sayfaya
-  // açık komutlar ölçülür. Yoklama yalnız OKUR: izin ister, komutları listeler, ortamları
-  // okur ve kayda yazar; oturum açan hiçbir komutu çağırmaz.
-  test('Bağlantıyı yokla: izin · açık komutlar · ortamlar kayda yazılır; oturum açılmaz', async () => {
-    const cagri = [];
-    const mcp = {
-      listTools: (s) => { cagri.push(['listTools', s]); return Promise.resolve({ servers: [{ server: s, authStatus: 'connected', tools: [
-        { name: 'list_environments', description: 'x', annotations: { readOnlyHint: true } },
-        { name: 'create_session', description: 'y' }, { name: 'send_message', description: '' }] }] }); },
-      callTool: (s, t, i) => { cagri.push(['callTool', s, t, i]); return Promise.resolve({ payload: { environments: [{ id: 'env_1', name: 'Default' }] } }); }
-    };
-    const izin = { request: (n) => { cagri.push(['request', n]); return Promise.resolve({ 'mcp:Claude Code Remote': 'granted' }); } };
-    const a = sayfa({ mcp, izin });
-    await bekle();
-    const b = a.d.getElementById('cn-yokla');
-    expect([b.textContent, b.disabled]).toEqual(['Bağlantıyı yokla', false]);
-    b.click();
-    await bekle(40);
-    expect(cagri).toEqual([['request', ['mcp:Claude Code Remote']], ['listTools', 'Claude Code Remote'], ['callTool', 'Claude Code Remote', 'list_environments', {}]]);
-    const w = a.yazilan.filter((x) => x[1] === 'yoklama/baglanti');
-    expect(w.map((x) => x[0])).toEqual(['set']);
-    expect(w[0][2]).toMatchObject({ sunucu: 'Claude Code Remote', durum: 'var', izin: 'granted', kimlik: 'connected',
-      araclar: [{ ad: 'list_environments', tanim: true, salt: true }, { ad: 'create_session', tanim: true, salt: false }, { ad: 'send_message', tanim: false, salt: false }],
-      ortamlar: '{"environments":[{"id":"env_1","name":"Default"}]}' });
-    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 2 komut açık.');
-    expect(b.disabled).toBe(false);
+  // OTURUMU ÇAĞIR (kullanıcı 2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"* · *"bu iş
+  // olabildiğince kolay olsun"*): her değişiklikte yeni oturum açmak pratik değil. Ölçüldü: sayfa
+  // oturum AÇAMIYOR (o komutlar sayfaya kapalı; elle çalıştırılan görev var olan oturumu
+  // uyandırmadı, depo bağlı olmayan yeni bir oturum açtı). Çalışan yol yorum: düğme sayfaya
+  // BAĞLI oturumu uyandırır; oturum geldiğini sahiplik kaydını yeniden yazarak söyler. Buradaki
+  // hata sessizdir: düğme "çağrıldı" der ve kimse gelmez, ya da oturum gelmiştir ve düğme on
+  // dakika kapalı kalır.
+  test('çağrı: sahiplik kaydı değişince GELDİ; 10 dakikada eskir; bağlı oturum yoksa durum ve çare', () => {
+    const simdi = Date.parse('2026-11-11T11:00:00Z');
+    const d = (c, k, s) => CN.cagriDurumu(c, k, s === undefined ? simdi : s).durum;
+    expect(d(null, { zaman: 'A' })).toBe('hazir');
+    const cagri = { zaman: '2026-11-11T10:58:00Z', onceki: 'A' };
+    expect(CN.cagriDurumu(cagri, { zaman: 'A' }, simdi)).toEqual({ durum: 'cagrildi', kalan: 8 * 60 * 1000 });
+    expect(d(cagri, null)).toBe('cagrildi');                              // sahiplik kaydı henüz okunmadı
+    expect(d(cagri, { zaman: 'B' })).toBe('geldi');                       // oturum kaydı yeniden yazdı
+    // saatler KARŞILAŞTIRILMAZ: oturumun yazdığı zaman çağrıdan eski görünse de geldi
+    expect(d({ zaman: '2026-11-11T10:58:00Z', onceki: '2026-11-11T10:00:00Z' }, { zaman: '2026-11-11T10:30:00Z' })).toBe('geldi');
+    expect(d(cagri, { zaman: 'A' }, simdi + 9 * 60 * 1000)).toBe('hazir');              // 11 dakika: eskidi
+    expect(d({ zaman: '2026-11-11T10:59:00Z', durum: 'hata', onceki: 'A' }, { zaman: 'B' })).toBe('hazir');
+    expect(CN.cagriMetni({ bekleyen: 3 })).toBe('Oturum çağrısı · bekleyen 3 not');
+    expect(CN.cagriMetni({})).toBe(CN.CAGRI_BASLIK);
+    expect(CN.cagriEngeli('available')).toBe('');
+    expect(CN.cagriEngeli('no_session')).toBe('Claude oturumu bağlı değil. Yeni oturumda “Canlı Not’u getir” yazın.');
+    expect(CN.cagriEngeli('off')).toBe('Claude’a gönderim kapalı.');
+    expect(CN.cagriEngeli()).toBe('Claude’a gönderim kapalı.');
+    // oturumun tarafı skill'de: yorumun başlığı, çağrının kaydı ve emekli görevin ölçümü
+    const skill = fs.readFileSync(path.join(KOK, '.claude', 'skills', 'canli-not', 'SKILL.md'), 'utf8');
+    [CN.CAGRI_BASLIK, 'oturum/cagri', 'emekli-oturum-gorevi.md'].forEach((x) => expect(skill).toContain(x));
+    expect(fs.existsSync(path.join(KOK, '.claude', 'skills', 'canli-not', 'references', 'emekli-oturum-gorevi.md'))).toBe(true);
   });
 
-  test('yoklama: bağlantı yoksa, izin verilmediyse ya da komut hata verdiyse sonuç yine kayda yazılır', async () => {
-    const son = (x) => x.yazilan.filter((w) => w[1] === 'yoklama/baglanti').map((w) => w[2]);
-    const a = sayfa();                                           // bu görünümde bağlantı yok
+  const cagriNotu = (id, no, durum) => ({ id, no, sira: no, metin: 'x', durum, zaman: '2026-11-11T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } });
+  test('OTURUMU ÇAĞIR: bağlı oturuma yorum gider, çağrı kayda yazılır; oturum gelene dek kapalı', async () => {
+    const gonderilen = [];
+    const yorum = { canSendToClaude: () => Promise.resolve('available'), anchorFor: (el) => Promise.resolve({ el: el.id }),
+      sendToClaude: (t) => { gonderilen.push(t); return Promise.resolve({ threadId: 'konu-9' }); } };
+    const a = sayfa({ yorum });
     await bekle();
-    a.d.getElementById('cn-yokla').click();
-    await bekle(40);
-    expect(son(a).map((v) => v.durum)).toEqual(['yok']);
-    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 0 komut açık.');
-    // izin reddi: liste beyandan gelir (tanımsız komutlar) — açık komut sayılmaz, ortam okunmaz
-    const cagri = [];
-    const mcp = { listTools: (s) => Promise.resolve({ servers: [{ server: s, authStatus: 'unknown', tools: [{ name: 'list_environments', description: '' }] }] }),
-      callTool: () => { cagri.push('callTool'); return Promise.resolve({}); } };
-    const b = sayfa({ mcp, izin: { request: () => Promise.resolve({ 'mcp:Claude Code Remote': 'denied' }) } });
-    await bekle();
-    b.d.getElementById('cn-yokla').click();
-    await bekle(40);
-    expect(son(b)[0]).toMatchObject({ durum: 'var', izin: 'denied', kimlik: 'unknown', araclar: [{ ad: 'list_environments', tanim: false, salt: false }] });
-    expect(cagri).toEqual([]);
-    expect(b.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 0 komut açık.');
-    // komut hata verirse kodu yazılır
-    const c = sayfa({ mcp: { listTools: () => Promise.reject({ code: 'not_granted' }) } });
-    await bekle();
-    c.d.getElementById('cn-yokla').click();
-    await bekle(40);
-    expect(son(c)[0]).toMatchObject({ durum: 'hata', hata: 'not_granted' });
+    const b = a.d.getElementById('cn-cagir');
+    expect([b.textContent, b.disabled]).toEqual(['Oturumu çağır', false]);
+    a.belgeGonder('oturum/aktif', { oturum: 'https://claude.ai/code/session_x', zaman: 'A' });
+    a.notGonder([cagriNotu('a', 1, 'bekliyor'), cagriNotu('b', 2, 'uygulandi'), cagriNotu('c', 3, 'bekliyor')]);
+    b.click(); b.click();                                        // çift tık tek çağrı
+    await bekle(30);
+    expect(gonderilen).toEqual([{ anchor: { el: 'cn-cagir' }, text: 'Oturum çağrısı · bekleyen 2 not' }]);
+    const w = a.yazilan.filter((x) => x[1] === 'oturum/cagri');
+    expect(w.map((x) => x[0])).toEqual(['set']);
+    expect(w[0][2]).toMatchObject({ onceki: 'A', konu: 'konu-9' });
+    expect(Number.isFinite(Date.parse(w[0][2].zaman))).toBe(true);
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Oturum çağrıldı.');
+    expect([b.textContent, b.disabled, b.getAttribute('aria-busy')]).toEqual(['Çağrılıyor…', true, 'true']);
+    // kayıt aynı zamanla yeniden gelirse (başka görünüm) durum değişmez
+    a.belgeGonder('oturum/aktif', { oturum: 'https://claude.ai/code/session_x', zaman: 'A' });
+    expect(b.disabled).toBe(true);
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Oturum çağrıldı.');
+    // oturum sahipliği yeniden yazdı: geldi
+    a.belgeGonder('oturum/aktif', { oturum: 'https://claude.ai/code/session_x', zaman: 'B' });
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Oturum geldi.');
+    expect([b.textContent, b.disabled, b.getAttribute('aria-busy')]).toEqual(['Oturumu çağır', false, 'false']);
+    expect(gonderilen.length).toBe(1);
+  });
+
+  test('bağlı oturum yoksa çağrı gitmez: durum ve çare söylenir; gönderim düşerse söylenir; düğme açık kalır', async () => {
+    const dene = async (yorum) => {
+      const gonderilen = [];
+      if (yorum && !yorum.sendToClaude) yorum.sendToClaude = (t) => { gonderilen.push(t); return Promise.resolve({ threadId: 'k' }); };
+      if (yorum && !yorum.anchorFor) yorum.anchorFor = (el) => Promise.resolve({ el: el.id });
+      const a = sayfa({ yorum });
+      await bekle();
+      a.belgeGonder('oturum/aktif', { oturum: 'x', zaman: 'A' });
+      const b = a.d.getElementById('cn-cagir');
+      b.click();
+      await bekle(30);
+      return { bildirim: a.d.getElementById('cn-bildirim').textContent, kapali: b.disabled, yazi: b.textContent, gonderilen,
+        w: a.yazilan.filter((x) => x[1] === 'oturum/cagri').map((x) => x[2]) };
+    };
+    const yok = await dene({ canSendToClaude: () => Promise.resolve('no_session') });
+    expect(yok.bildirim).toBe('Claude oturumu bağlı değil. Yeni oturumda “Canlı Not’u getir” yazın.');
+    expect(yok.gonderilen).toEqual([]);
+    expect(yok.w).toHaveLength(1);
+    expect(yok.w[0]).toMatchObject({ durum: 'hata', hata: 'no_session' });
+    expect([yok.kapali, yok.yazi]).toEqual([false, 'Oturumu çağır']);
+    const kapali = await dene(null);                             // bu görünümde yorum yetkisi yok
+    expect(kapali.bildirim).toBe('Claude’a gönderim kapalı.');
+    expect(kapali.w[0]).toMatchObject({ durum: 'hata' });
+    expect(kapali.kapali).toBe(false);
+    const duser = await dene({ canSendToClaude: () => Promise.resolve('available'),
+      sendToClaude: () => Promise.reject({ code: 'claude_unavailable' }) });
+    expect(duser.bildirim).toBe('Oturum çağrılamadı.');
+    expect(duser.w[0]).toMatchObject({ durum: 'hata', hata: 'claude_unavailable' });
+    expect([duser.kapali, duser.yazi]).toEqual([false, 'Oturumu çağır']);
+    // bağlantı açılışta yoktu, oturum sonradan bağlandı: düğme tıkta YENİDEN yoklar
+    let sayac = 0;
+    const sonra = await dene({ canSendToClaude: () => Promise.resolve(sayac++ ? 'available' : 'no_session') });
+    expect(sonra.bildirim).toBe('Oturum çağrıldı.');
+    expect(sonra.gonderilen).toHaveLength(1);
+    expect(sonra.w[0]).toMatchObject({ onceki: 'A', konu: 'k' });
   });
 });
 

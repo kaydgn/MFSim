@@ -27,6 +27,10 @@ const { cp, rp } = H.kur();
 // resimlerle tamamlanan AMC kodları (137061 · 137062 · 137961) adayları 27'ye çıkarır;
 // o sayı mount-amc.test.js → PARAMETRİK'te kilitli.
 Object.keys(cp.VE_MOUNT_LIBRARY).slice(24).forEach((k) => { delete cp.VE_MOUNT_LIBRARY[k]; });
+// Canlı Not 133 dört 57RS tipini taramanın adaylığından çıkardı (`aday:false`); donmuş kümede
+// aday kalırlar — beklenen sayılar ve onaylı Excel o kümenin. Adaylıktan çıkış kapısı:
+// mount-param.test.js → ADAY OLMAYAN TİP.
+Object.keys(cp.VE_MOUNT_LIBRARY).forEach((k) => { delete cp.VE_MOUNT_LIBRARY[k].aday; });
 Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
 Object.keys(rp).forEach((k) => { if (global[k] === undefined) global[k] = rp[k]; });
 global.veMntKatalog = require('../../js/mount-katalog.js');
@@ -1117,5 +1121,27 @@ describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); 
     expect(W.huni.map((h) => h.k)).toEqual(['cozulen', 'k1', 'k1a', 'k1b', 'k2']);
     expect(W.uygunN).toBeGreaterThan(1);
     expect(W.sira.slice(0, W.uygunN).some((r) => JSON.stringify(r.tipler) === JSON.stringify(A.sira[0].tipler))).toBe(true);
+  });
+});
+
+
+// ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133 · Parametrik Analiz › Adaylar › Diğer:
+// dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): taramanın aday listesinde yoklar;
+// Takoz Özellikleri'nin Tip listesinde, örneklerin eşleşmesinde ve anahtarla çözümde dururlar.
+describe('ADAY OLMAYAN TİP — dört 57RS taramanın adayı değil', () => {
+  const DORT = ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116'];
+  test('kütüphanede aday:false; birleşik haritada aday değil, Tip listesinde var', () => {
+    const kod = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-mount.js'), 'utf8');
+    DORT.forEach((k) => expect(kod).toMatch(new RegExp("'" + k + "':\\s*\\{ marka:'Diğer', aday:false,")));
+    // Bu dosyanın donmuş kümesi bayrağı siler; harita bayrağı girdiden okur.
+    const tip = { aday: false };
+    expect(DORT.every((k) => cp.veMntGetLibraryMap()[k])).toBe(true);
+    const M = { lib: Object.assign({}, cp.veMntGetLibraryMap()) };
+    DORT.forEach((k) => { M.lib[k] = Object.assign({}, M.lib[k], tip); });
+    const ad = P._mntParamAdaylar(M, null).map((a) => a.key);
+    DORT.forEach((k) => expect(ad).not.toContain(k));
+    expect(ad).toContain('TK040');
+    const liste = cp.veMntGetLibraryList().map((e) => e.key);
+    DORT.forEach((k) => expect(liste).toContain(k));
   });
 });

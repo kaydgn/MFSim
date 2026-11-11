@@ -160,6 +160,39 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     const tuval = document.getElementById('ve-mw-yan');
     expect(tuval.textContent).not.toMatch(/yüklendi/);
     expect(tuval.querySelector('.ve-fw-seeded').textContent.trim()).toBe('1 gövde · 1 takoz');
+    W.veMntWizKapat(true);
+  });
+  // TUVALİN ÖRNEĞİ (kullanıcı 2026-11-11, Canlı Not 135: *"BMC Siper örneğini açtım … 'başlangıç
+  // sihirbazı' bileşenini açtığım zaman, sanki sıfırdan bir başlangıç sihirbazı açmışım gibi oluyor
+  // … seçilen örneğin ne olduğu belli olsun. Kullanıcı değiştirmek isterse daha sonra değiştirir"*):
+  // örnek yüklenince anahtarı sihirbaz bileşenine yazılır; tuvalden açılan sihirbaz örneği adıyla
+  // gösterir, liste ve gezinme o örnekte — yeniden doldurmaz (tuvaldeki değişiklik kalır).
+  test('TUVALİN ÖRNEĞİ: örnekten kurulan tuvalde sihirbaz örneğin adıyla açılır; liste ve gezinme o örnekte', () => {
+    global.nodes = [{ id: 'w1', type: 'mnt-wizard', x: 0, y: 0, data: {} },
+      { id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },
+      { id: 't1', type: 'mnt-mount', x: 0, y: 0, data: { x: 0, y: 300, z: 500, kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } }];
+    global.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    expect(cp.veMntTuvalOrnegi()).toBeNull();                                  // işaretsiz tuval
+    expect(cp.veMntOrnekIsaretle('siper')).toBe(true);
+    expect(global.nodes[0].data.ornek).toBe('siper');
+    expect(cp.veMntTuvalOrnegi()).toBe('siper');
+    W.veMntWizAc();
+    const yan = document.getElementById('ve-mw-yan');
+    expect(yan.querySelector('.ve-fw-seeded b').textContent).toMatch(/Siper/);
+    expect(yan.querySelector('.ve-fw-seeded').textContent.trim()).toMatch(/· 1 gövde · 1 takoz$/);
+    const sec = yan.querySelector('select[aria-label="Örnek"]');
+    expect(sec.value).toBe('siper');                                           // liste örnekte
+    expect(sec.options[0].textContent).toBe('— değiştir —');
+    expect(yan.querySelector('.ve-fw-seednav-n').textContent).toMatch(/^[1-9]\d* \/ \d+$/);
+    expect(W.veMntWizState().govdeler).toHaveLength(1);                        // tuvalin modeli, örneğin değil
+    expect(W._mwOrnekGosterilen({ seededFrom: 'tuval', tuvalOrnek: 'siper' })).toBe('siper');
+    expect(W._mwOrnekGosterilen({ seededFrom: 'tuval' })).toBeNull();
+    expect(W._mwOrnekGosterilen({ seededFrom: 'step' })).toBeNull();
+    expect(W._mwOrnekGosterilen({ seededFrom: '' })).toBe('');
+    W.veMntWizKapat(true);
+    expect(cp.veMntOrnekIsaretle(null)).toBe(true);                            // STEP'ten ya da boştan kurulum siler
+    expect(global.nodes[0].data.ornek).toBeUndefined();
+    global.nodes = [];
   });
   // Canlı Not 81 · 82 · 83 (kullanıcı 2026-11-09): "Arada bir boşluk var. Fazla satırlı bir boşluk
   // o." · "Açıklamayı yana alalım." · "Açıklamaları düzeltelim, gereksiz açıklamaları kaldıralım."

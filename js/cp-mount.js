@@ -286,14 +286,18 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 //   • Diğer — 57RS… (A26): kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
+// ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
+// dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
+// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
+// mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { marka:'LASPAR', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { marka:'Diğer', name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { marka:'Diğer', name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { marka:'Diğer', name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { marka:'Diğer', name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  '57RS313773':       { marka:'Diğer', aday:false, name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  '57RS313774':       { marka:'Diğer', aday:false, name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  '57RS313773-sr116': { marka:'Diğer', aday:false, name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  '57RS313774-sr116': { marka:'Diğer', aday:false, name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
   'TK035': { marka:'LASPAR', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
@@ -368,6 +372,7 @@ function veMntGetLibraryMap(){
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
     var m=VE_MOUNT_LIBRARY[k], c=m.curves||{}, f=m.fits||{};
     map[k]={ key:k, name:m.name, marka:(m.marka||'Diğer'), sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
+      aday:m.aday!==false,                                  // taramanın adayı mı (Canlı Not 133)
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
@@ -389,7 +394,7 @@ function veMntGetLibraryMap(){
         // (kz girildiyse kx = oran·kz, kx girildiyse dinamiği kx × din./stat.).
         var tah=(base.tahmin||[]).filter(function(f){ return !(o[f]!==undefined && o[f]!==null && o[f]!==''); });
         map[k]={ key:k, name:pick('name'), marka:base.marka, sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
-          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
+          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true, aday:base.aday,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
           curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc, ap:base.ap, lp:base.lp,
@@ -417,7 +422,7 @@ function veMntGetLibraryMap(){
 // Girdileri markaya göre gruplar: [{ ad, girdiler:[…] }] — katalog markaları
 // sabit sırada, Özel takozlar sonda; girdisiz marka listede yok. Takoz
 // Özellikleri'nin Marka listesi ve Takoz penceresinin tip listesi AYNI
-// gruplamadan okur; marka içinde sıra _mntLibSirali'den (AMC: aile · tip · sertlik).
+// gruplamadan okur; marka içinde sıra _mntLibSirali'den (AMC: adın sayı sırası — Canlı Not 134).
 function veMntLibMarkalar(girdiler){
   var out=[], L=_mntLibSirali(girdiler||[]);
   VE_MNT_LIB_MARKALAR.concat([VE_MNT_LIB_MARKA_OZEL]).forEach(function(ad){
@@ -472,6 +477,17 @@ function _mntLibTahminKunye(e){
 // Listelerin sırası: üretici veritabanı dışı katalog kendi sırasıyla, sonra AMC, A+P ve
 // LASPAR kodları ailenin, tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın
 // kombinasyon sırası).
+// AMC ADIN SAYI SIRASIYLA (kullanıcı 2026-11-11, Canlı Not 134: *"AMC takoz isimlerini Cone
+// sıralarına göre diz. Yani Cone 38, Cone 39 şeklinde sıralı gitsin"*): ailenin sırası Cone
+// numarasını her ailede baştan başlatıyordu (… Cone 141 · Cone 00 · Cone 10 …). Ad sayıya duyarlı
+// karşılaştırılır: Cone 00 · 01 · 02 · 10 … 141, sonra DSM, Hydraulic Cone; aynı numarada çeşit ve
+// sertlik artan. A+P kendi sırasında. Liste sırasıdır — taramanın kombinasyon sırası kütüphanenin
+// iç sırası, değişmez.
+var _MNT_AD_SIRA = (typeof Intl !== 'undefined' && Intl.Collator) ? new Intl.Collator('en', { numeric:true, sensitivity:'base' }) : null;
+function _mntAdKarsilastir(a, b){
+  var x=String(a||'').replace(/\s*\(AMC \d+\)\s*$/, ''), y=String(b||'').replace(/\s*\(AMC \d+\)\s*$/, '');
+  return _MNT_AD_SIRA ? _MNT_AD_SIRA.compare(x, y) : (x < y ? -1 : x > y ? 1 : 0);
+}
 function _mntLibSirali(list){
   var yer={};
   (_MNT_AMC ? _MNT_AMC.kodlar() : []).forEach(function(k, i){ yer['amc'+k]=i; });
@@ -480,7 +496,10 @@ function _mntLibSirali(list){
   var id=function(e){ return e.amc ? 'amc'+e.amc.kod : (e.ap ? 'ap'+e.ap.kod : (e.lp && _MNT_LP ? _MNT_LP.anahtar(e.lp.kod) : null)); };
   var ure=list.filter(function(e){ return yer[id(e)]!==undefined; });
   var obur=list.filter(function(e){ return yer[id(e)]===undefined; });
-  ure.sort(function(a, b){ return yer[id(a)]-yer[id(b)]; });
+  ure.sort(function(a, b){
+    if(a.amc && b.amc) return _mntAdKarsilastir(a.name, b.name) || (yer[id(a)]-yer[id(b)]);
+    return yer[id(a)]-yer[id(b)];
+  });
   return obur.concat(ure);
 }
 
@@ -822,6 +841,24 @@ function veMntKanvasBos(){
   if(typeof updateAllConnections==='function') updateAllConnections();
   if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
   return created;
+}
+
+// TUVALİN ÖRNEĞİ (kullanıcı 2026-11-11, Canlı Not 135: *"BMC Siper örneğini açtım … 'başlangıç
+// sihirbazı' bileşenini açtığım zaman, sanki sıfırdan bir başlangıç sihirbazı açmışım gibi oluyor
+// … seçilen örneğin ne olduğu belli olsun"*): yüklenen örneğin anahtarı modülün Başlangıç
+// Sihirbazı bileşenine yazılır (`data.ornek`, projeyle kaydedilir); sihirbaz tuvalden açılınca
+// örneği adıyla gösterir. Anahtarsız `null` işareti siler. Kapı: mount-wizard.test.js → *TUVALİN ÖRNEĞİ*.
+function veMntOrnekIsaretle(key){
+  var w=(typeof nodes!=='undefined') ? nodes.filter(function(n){ return (_mntDef(n)||{}).isMountWizard; })[0] : null;
+  if(!w) return false;
+  w.data=w.data||{};
+  if(key) w.data.ornek=String(key); else delete w.data.ornek;
+  return true;
+}
+function veMntTuvalOrnegi(){
+  var w=(typeof nodes!=='undefined') ? nodes.filter(function(n){ return (_mntDef(n)||{}).isMountWizard; })[0] : null;
+  var k=w && w.data ? w.data.ornek : null;
+  return (k && typeof veMountCore!=='undefined' && veMountCore.getMountExample && veMountCore.getMountExample(k)) ? k : null;
 }
 
 // ÖRNEĞİ ANAHTARIYLA YÜKLE — başlangıç sayfasının örnek satırları. Kayıt girişinde
@@ -2555,6 +2592,7 @@ function _mntLoadExampleFromJSON(ref, ex){
       veMntPopulateStarter();
     }
     if(_once){ undoStack = _once; redoStack = []; }
+    veMntOrnekIsaretle(ex && ex.id);
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
@@ -2916,6 +2954,7 @@ function _mntLoadExampleFromModel(anahtar){
       if(EX.solver && EX.solver[k]!=null) cz.data[k]=EX.solver[k]; else delete cz.data[k];
     });
   }
+  veMntOrnekIsaretle(ex ? ex.id : key);
   if(typeof saveState==='function') saveState();
   if(typeof updateAllConnections==='function') updateAllConnections();
   _mntOrnekPaletKapat();
@@ -6091,7 +6130,7 @@ if(typeof module!=='undefined' && module.exports){
     _mnt2DKesisir: _mnt2DKesisir,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
-    veMntGetLibraryList: veMntGetLibraryList,
+    veMntGetLibraryList: veMntGetLibraryList, veMntOrnekIsaretle: veMntOrnekIsaretle, veMntTuvalOrnegi: veMntTuvalOrnegi,
     _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye, _mntLibTahminAdi: _mntLibTahminAdi,
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
