@@ -260,15 +260,38 @@ function _mntYuklemeGecikmesiz(){
   if(navigator.webdriver === true) return true;
   return /jsdom/i.test(navigator.userAgent || '');
 }
-function veMntOrnekYuklemeHTML(o){
-  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
+// Kartın içi — ad, künye, kademeli çubuk (örnek ve sihirbaz aynı kalıptan)
+function _mntYuklemeKartHTML(ad, kunye, ikon){
   var e = function(x){ return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   return '<div class="ve-mnt-yukleme-kart" role="status" aria-live="polite">'
-    + '<div class="ve-mnt-yukleme-bas">' + (typeof veIkon === 'function' ? veIkon('settings', 've-mnt-yukleme-ico') : '')
-    + '<b>' + e(o.arac || o.ad) + '</b></div>'
-    + '<div class="ve-mnt-yukleme-kunye">' + n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz · ' + n(o.kutle) + ' kg</div>'
-    + '<div class="ve-mnt-yukleme-cubuk" role="progressbar" aria-label="' + e(o.arac || o.ad) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>'
+    + '<div class="ve-mnt-yukleme-bas">' + (typeof veIkon === 'function' ? veIkon(ikon || 'settings', 've-mnt-yukleme-ico') : '')
+    + '<b>' + e(ad) + '</b></div>'
+    + '<div class="ve-mnt-yukleme-kunye">' + e(kunye) + '</div>'
+    + '<div class="ve-mnt-yukleme-cubuk" role="progressbar" aria-label="' + e(ad) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>'
     + '</div>';
+}
+function veMntOrnekYuklemeHTML(o){
+  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
+  return _mntYuklemeKartHTML(o.arac || o.ad, n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz · ' + n(o.kutle) + ' kg', 'settings');
+}
+// Kartın oynatılışı: çubuk bekleyişin %62'sinde %86'ya, %68'de `ortada` (kurulum) ve %100,
+// %88'de kart söner. Örnek ve sihirbaz aynı zamanlamadan (Canlı Not 131 · 146).
+function _mntYuklemeOynat(el, ms, ortada){
+  var sonraki = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : function(f){ setTimeout(f, 16); };
+  el.style.setProperty('--ve-mnt-yukleme-adim', Math.round(ms * 0.62) + 'ms');
+  // Başlangıç hâli (perde saydam, çubuk boş) ÖNCE hesaplanır: yeni kartın ilk karesinde
+  // verilen genişlik geçişsiz uygulanıyordu — çubuk %71'e sıçrayıp 0,8 sn duruyordu (Not 131).
+  void el.offsetWidth;
+  sonraki(function(){ el.classList.add('acik'); _mntYuklemeIlerle(el, 86); });
+  setTimeout(function(){
+    if(ortada){ try { ortada(); } catch(e){ if(typeof console !== 'undefined') console.error(e); } }
+    el.style.setProperty('--ve-mnt-yukleme-adim', '240ms');
+    _mntYuklemeIlerle(el, 100);
+    setTimeout(function(){
+      el.classList.remove('acik');
+      setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 220);
+    }, Math.round(ms * 0.2));
+  }, Math.round(ms * 0.68));
 }
 function _mntYuklemeIlerle(el, yuzde){
   if(!el) return;
@@ -299,22 +322,33 @@ function veMntOrnekYuklemeli(key, opt){
   var el = veMntOrnekYuklemeKur(key);
   if(!el) return !!veMntOrnekYukle(key);
   var ms = (opt.ms > 0) ? opt.ms : VE_MNT_YUKLEME_MS;
-  var sonraki = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : function(f){ setTimeout(f, 16); };
-  el.style.setProperty('--ve-mnt-yukleme-adim', Math.round(ms * 0.62) + 'ms');
-  // Başlangıç hâli (perde saydam, çubuk boş) ÖNCE hesaplanır: yeni kartın ilk karesinde
-  // verilen genişlik geçişsiz uygulanıyordu — çubuk %71'e sıçrayıp 0,8 sn duruyordu (Not 131).
-  void el.offsetWidth;
-  sonraki(function(){ el.classList.add('acik'); _mntYuklemeIlerle(el, 86); });
-  setTimeout(function(){
-    try { veMntOrnekYukle(key); } catch(e){ if(typeof console !== 'undefined') console.error(e); }
-    el.style.setProperty('--ve-mnt-yukleme-adim', '240ms');
-    _mntYuklemeIlerle(el, 100);
-    setTimeout(function(){
-      el.classList.remove('acik');
-      setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 220);
-    }, Math.round(ms * 0.2));
-  }, Math.round(ms * 0.68));
+  _mntYuklemeOynat(el, ms, function(){ veMntOrnekYukle(key); });
   return true;
+}
+
+// ── SİHİRBAZIN YÜKLEME EKRANI (kullanıcı 2026-11-11, Canlı Not 146: *"Başlangıç sihirbazı açılırken
+// yine bir yükleme ekranı olsun, daha profesyonel görünür."*) ──────────────────────────────────
+// Sihirbaz açılınca (her yoldan: araç şeridi, başlangıç sayfası, 3B'den aktarım) pencerenin ÜSTÜNDE
+// örneğin kartının aynısı: ad, künye (tuvaldeki model: örneğin adı · gövde · takoz; boşsa adım
+// sayısı), kademeli çubuk; sihirbaz kartın ARKASINDA kurulur, kart söner. Süre örneğinki
+// (VE_MNT_YUKLEME_MS). Otomasyonda ve jsdom'da kart yok (açılış eşzamanlı, testler birebir).
+// Kapı: mount-baslangic.test.js → *SİHİRBAZIN YÜKLEME EKRANI*.
+var VE_MW_YUKLEME_ID = 've-mw-yukleme';
+function veMntSihirbazYukleme(kunye, opt){
+  opt = opt || {};
+  if(!opt.zorla && _mntYuklemeGecikmesiz()) return null;
+  if(typeof document === 'undefined') return null;
+  var modal = document.querySelector('#ve-mntwiz-overlay .ve-fw-modal');
+  if(!modal) return null;
+  var eski = document.getElementById(VE_MW_YUKLEME_ID);
+  if(eski) eski.remove();
+  var el = document.createElement('div');
+  el.id = VE_MW_YUKLEME_ID;
+  el.className = 've-mnt-yukleme ve-mw-yukleme';
+  el.innerHTML = _mntYuklemeKartHTML('Takoz Başlangıç Sihirbazı', kunye || '', 'wand');
+  modal.appendChild(el);
+  _mntYuklemeOynat(el, (opt.ms > 0) ? opt.ms : VE_MNT_YUKLEME_MS, null);
+  return el;
 }
 
 // ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
@@ -354,6 +388,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntBaslangicEylem: veMntBaslangicEylem, veMntBaslangicKapsam: veMntBaslangicKapsam,
     veMntOrnekYuklemeli: veMntOrnekYuklemeli, veMntOrnekYuklemeKur: veMntOrnekYuklemeKur,
     VE_MNT_YUKLEME_MS: VE_MNT_YUKLEME_MS, _mntYuklemeGecikmesiz: _mntYuklemeGecikmesiz,
+    veMntSihirbazYukleme: veMntSihirbazYukleme, VE_MW_YUKLEME_ID: VE_MW_YUKLEME_ID,
     veMntBaslangicTazele: veMntBaslangicTazele, veMntBaslangicAcik: veMntBaslangicAcik,
     veMntBaslangicKimlik: veMntBaslangicKimlik,
     veMntBaslangicKapilar: veMntBaslangicKapilar,

@@ -11139,6 +11139,9 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   opacity:0; transition:opacity var(--dur-fast,0.14s) var(--ease-out,ease);
 }
 .ve-mnt-yukleme.acik{ opacity:1; }
+/* Sihirbazın yükleme ekranı (Canlı Not 146): pencerenin üstünde, başlık dâhil; asa dönmez */
+.ve-mw-yukleme{ z-index:60; }
+.ve-mw-yukleme .ve-mnt-yukleme-ico{ animation:none; }
 .ve-mnt-yukleme-kart{
   width:300px; box-sizing:border-box; padding:18px 20px 20px;
   background:var(--bg-secondary); border:1px solid var(--border-color);
