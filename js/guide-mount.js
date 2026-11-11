@@ -511,6 +511,7 @@ var _GM_TAKOZ = [
 var _GM_KUTUPHANE = [
   { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
+  { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
   { k: 'egri', bolum: 'Kuvvet–sehim', ad: 'Kuvvet–sehim', not: 'Üç eksen tek diyagramda; z-eğrisi özel takozda girilir.' }
 ];
@@ -1048,6 +1049,12 @@ function _gmSec9(){
     ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi ve <strong>Yeni takoz</strong>; özel '
       + 'tipte ad alanı ve <strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler '
       + 'seçili tipin adını başlıklarında taşır'],
+    ['Öneri', 'Seçili markanın modele uyan ilk beş tipi: en yüklü takozda kapasite payı, statik sehim '
+      + '<span class="ve-fp-sym">δ</span>, dikey frekans <span class="ve-fp-sym">f<sub>z</sub></span>; satıra tık tipi seçer',
+      'Kaba ön seçimdir: model rijit gövde, bütün takozlar aynı tip, yük kütleden ve takoz konumlarından '
+      + 'dağıtılır. Ölçütler Parametrik Analiz’in sınırları — kapasite ≤ 1, sehim 3–5 mm, '
+      + '<span class="ve-fp-sym">f<sub>z</sub></span> ≥ 5 Hz ve ≤ rölanti ateşlemesinin yarısı; sıra sehimi 4 mm’ye '
+      + 'yakın olandan. Kesin seçim Parametrik Analiz’in <strong>Katalogdan seçim</strong>’inde'],
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '

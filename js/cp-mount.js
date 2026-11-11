@@ -4589,10 +4589,77 @@ function getMntLibraryPropertiesHTML(node){
   var kategoriler=[
     { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)+_mntLibApKunyeHTML(sel)),
       durum:_mntDurum('ok') },
+    { k:'oneri', ad:'Öneri', govde:_mntLibOneriHTML(node, grup, sel) },
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
     { k:'egri', ad:'Kuvvet–sehim', govde:_mntLibEgriHTML(node, sel), durum:D.egri }
   ];
   return _mntPencereKabuk(node, kategoriler, '');
+}
+
+// ─── ÖNERİ — konfigürasyondan KABA ön seçim ──────────────────────────────────
+// Kullanıcı 2026-11-11, Canlı Not 126: *"Takoz tipleri arasından, kabaca, bizim
+// konfigürasyona göre, tavsiye verebilecek bir hale getirebilir miyiz? Örneğin
+// sistemin kütlesi olabilir, başka şeyler olabilir."* Çözücü DEĞİL, ön boyutlandırma:
+// model rijit gövde, bütün takozlar AYNI tip (eşit düşey rijitlik). Takoz başına
+// statik yük kütleden ve konumlardan (düzlemsel dağılım: ΣF = W, moment dengesi
+// x ve y'de), dikey frekans f_z = √(n·k_z,din/M)/2π. Ölçütler Parametrik Analiz'in
+// varsayılan sınırları (js/mount-katalog.js): E4 kapasite ≤ 1, E1–E2 statik sehim
+// 3–5 mm, E3 en düşük mod ≥ 5 Hz, Kriter 1 mod ≤ ½·f_ateş (rölanti). Uygun tipler
+// sehimi pencerenin ortasına (4 mm) en yakın olandan, ilk beşi; satır tipi seçer.
+// Çözümden BAĞIMSIZ (canlı model) — kesin seçim Parametrik Analiz'de.
+var VE_MNT_ONERI = { sehimAlt:3, sehimUst:5, sehimOrta:4, altMod:5, k1:0.5, kapasite:1, adet:5 };
+// Eşit rijitlikte düzlemsel dağılım: F_i = W/n + b·Δx_i + c·Δy_i. W [kg] → [kg].
+function _mntOneriYukler(mounts, cg, W){
+  var n=mounts.length; if(!n) return [];
+  var xm=0, ym=0;
+  mounts.forEach(function(m){ xm+=m.x; ym+=m.y; }); xm/=n; ym/=n;
+  var sxx=0, sxy=0, syy=0;
+  mounts.forEach(function(m){ var dx=m.x-xm, dy=m.y-ym; sxx+=dx*dx; sxy+=dx*dy; syy+=dy*dy; });
+  var ex=cg.x-xm, ey=cg.y-ym, det=sxx*syy-sxy*sxy, b=0, c=0;
+  if(n>=3 && Math.abs(det)>1e-9*Math.max(1, sxx*syy)){ b=W*(syy*ex-sxy*ey)/det; c=W*(sxx*ey-sxy*ex)/det; }
+  else if(sxx>1e-9) b=W*ex/sxx;                 // tek doğru üstünde (x boyunca)
+  else if(syy>1e-9) c=W*ey/syy;
+  return mounts.map(function(m){ return W/n+b*(m.x-xm)+c*(m.y-ym); });
+}
+// Modelden ve listeden öneri. Döner: { M, n, fAtes, yuk:[kg], satir:[{ e, u, d, f }] } ya da { eksik }.
+function _mntLibOneri(girdiler){
+  var CM=_mntCanliModel(), O=VE_MNT_ONERI, g=9.81;
+  var mounts=CM.g.mounts.map(function(m){ return { x:_mntNum(m.x,0), y:_mntNum(m.y,0) }; });
+  if(!(CM.mTop>0) || !mounts.length || !(CM.mp && CM.mp.cg && CM.mp.cg.every(Number.isFinite))) return { eksik:true };
+  var cg={ x:CM.mp.cg[0]*1000, y:CM.mp.cg[1]*1000 };
+  var yuk=_mntOneriYukler(mounts, cg, CM.mTop), Fmax=Math.max.apply(null, yuk), n=mounts.length;
+  var motor=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes.filter(function(x){ return x && x.type==='mnt-motor'; })[0] : null;
+  var fAtes=motor ? _mntAtesleme(motor.data||{}) : NaN;
+  var satir=[];
+  (girdiler||[]).forEach(function(e){
+    var ks=_mntNum(e.sz,NaN), kd=_mntNum(e.dz,NaN), cap=_mntNum(e.maxLoad,NaN);
+    if(!(ks>0) || !(cap>0)) return;
+    if(!(kd>0)) kd=ks;
+    var u=Fmax/cap, d=Fmax*g/ks, f=Math.sqrt(n*kd*1000/CM.mTop)/(2*Math.PI);
+    if(u>O.kapasite || d<O.sehimAlt || d>O.sehimUst || f<O.altMod) return;
+    if(Number.isFinite(fAtes) && f>O.k1*fAtes) return;
+    satir.push({ e:e, u:u, d:d, f:f });
+  });
+  satir.sort(function(a, b){ return Math.abs(a.d-O.sehimOrta)-Math.abs(b.d-O.sehimOrta) || a.f-b.f; });
+  return { M:CM.mTop, n:n, fAtes:fAtes, yuk:yuk, satir:satir.slice(0, O.adet) };
+}
+function _mntLibOneriHTML(node, grup, sel){
+  var R=_mntLibOneri(grup ? grup.girdiler : []);
+  if(R.eksik) return _mntBolum('Öneri', '', _mntNot('Kütle ve takoz konumu yok. '+veYon('Kütle gövdelerini ve takozları kurun.'), ''));
+  var em=_mntS(R.M,0)+' kg · '+R.n+' takoz'+(Number.isFinite(R.fAtes) ? ' · ½·f '+_mntS(0.5*R.fAtes,1)+' Hz' : '');
+  if(!R.satir.length) return _mntBolum('Öneri', em, _mntNot('Uygun tip yok. '+veYon('Marka listesinden başka marka seçin.'), 'warn'));
+  var f=_mntFoyAc([{ b:'Tip', gen:'52%', sinif:'sol' }, { b:'Yük', gen:'16%', ipucu:'En yüklü takozda kapasitenin payı' },
+                   { b:_mntSym('δ')+' <u>[mm]</u>', gen:'16%', ipucu:'Statik sehim, en yüklü takoz' },
+                   { b:_mntSym('f<sub>z</sub>')+' <u>[Hz]</u>', gen:'16%', ipucu:'Dikey frekans' }], 'Öneri', 've-mnt-foy--sik ve-mnt-oneri');
+  R.satir.forEach(function(r){
+    var secili=sel && r.e.key===sel.key;
+    f+='<tr class="ve-mnt-oneri-sat'+(secili?' sel':'')+'" data-k="'+_mntEsc(r.e.key)+'" tabindex="0" role="button"'
+      + ' onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(r.e.key)+'\')"'
+      + ' onkeydown="if(event.key===\'Enter\')veMntLibSelect(\''+node.id+'\',\''+_mntEsc(r.e.key)+'\')">'
+      + '<td class="sol" title="'+_mntEsc(r.e.name)+'">'+_mntEsc(r.e.name)+'</td>'
+      + '<td>%'+_mntS(r.u*100,0)+'</td><td>'+_mntS(r.d,1)+'</td><td>'+_mntS(r.f,1)+'</td></tr>';
+  });
+  return _mntBolum('Öneri', em, f+_MNT_FOY_KAPA);
 }
 
 // ─── Açılır liste denetimi (aç/kapa · ara · klavye) ──────────────────────────
@@ -5975,6 +6042,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryList: veMntGetLibraryList,
     _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye, _mntLibTahminAdi: _mntLibTahminAdi,
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
+    _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
     _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, veMntLibCizimAc: veMntLibCizimAc,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
