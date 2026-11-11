@@ -467,7 +467,7 @@ var componentDefs = {
   // zemininde, iki temada); Alternatör Braketi'nin mavi L'sinden kaburgasıyla ayrılır.
   'mnt-bracket': {
     name: 'Braket',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M36 30 L36 70 L74 70 Z" fill="var(--text-muted, #5f6873)" opacity="0.5"/><path d="M18 12 H36 V70 H88 V88 H18 Z" fill="var(--text-secondary, #535c67)"/><circle cx="27" cy="26" r="4.5" fill="var(--bg-tertiary, #eef0f3)"/><circle cx="27" cy="52" r="4.5" fill="var(--bg-tertiary, #eef0f3)"/><circle cx="62" cy="79" r="4.5" fill="var(--bg-tertiary, #eef0f3)"/><circle cx="78" cy="79" r="4.5" fill="var(--bg-tertiary, #eef0f3)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M36 30 L36 70 L74 70 Z" fill="var(--text-muted, #5f6873)" opacity="0.5"/><path d="M18 12 H36 V70 H88 V88 H18 Z" fill="var(--text-secondary, #535c67)"/><circle cx="27" cy="26" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/><circle cx="27" cy="52" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/><circle cx="62" cy="79" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/><circle cx="78" cy="79" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/></svg>',
     inputs: 2, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['top','bottom'], outputs: ['right'] }   // takozlar üst/alt
   },
