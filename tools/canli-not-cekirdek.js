@@ -226,26 +226,73 @@
   // Sayfa yeniden yayınlanınca açık görünüm kendiliğinden tazeleniyordu; yeni
   // program artık varlık deposuna (metin, text/plain) konur ve kaydın
   // `yayin/son` belgesi onu gösterir: { surum, sha, pr, zaman, boyut,
-  // program: { id, boyut }, notlar: [no…] }. Sayfa açılışta en yeniyi yükler,
+  // program: { … }, notlar: [no…] }. Sayfa açılışta en yeniyi yükler,
   // açıkken gelen yayını SORAR.
+  //
+  // PARÇALI YAYIN (kullanıcı 2026-11-11: boyut sınırı — *"Tamam yapalım bakalım"*):
+  // program tek metin varlığıydı (sınırı 20 MiB; program 17,2 MiB'tı ve bir haftada
+  // 5,3 MiB görsel almıştı). Artık PARÇALAR hâlinde durur: yuva 0 iskelet (kod —
+  // büyük satırların yerinde `@@CN-YUVA:n@@`), her büyük satır kendi yuvasında.
+  //   program: { boyut, uzunluk, parcalar: [{ yuva, id, ozet, boyut, sik }] }
+  // Aynı yuvanın parçaları (sınırı aşan satır bölünür) listedeki sırayla eklenir,
+  // sonra açılır (`sik`: gzip → taban64 | yok). `ozet` yuvanın İÇERİĞİNİN özeti:
+  // değişmeyen yuva yeniden yüklenmez, sayfa onu yeniden indirmez. Eski biçim
+  // (program: { id, boyut } — tek varlık) okunur.
   var VARLIK = /^[0-9a-f]{32}$/;
+  var SIKISTIRMA = { yok: true, gzip: true };
+  function yuvaImi(n) { return '@@CN-YUVA:' + n + '@@'; }
+  function parcalarDogrula(parcalar) {
+    if (!Array.isArray(parcalar) || !parcalar.length) return ['program.parcalar boş'];
+    var h = [], yuvalar = {};
+    parcalar.forEach(function (p, i) {
+      if (!p || !Number.isInteger(p.yuva) || p.yuva < 0) { h.push('parça ' + (i + 1) + ': yuva yok'); return; }
+      if (!VARLIK.test(String(p.id || ''))) h.push('parça ' + (i + 1) + ': id varlık kimliği olmalı');
+      if (!SIKISTIRMA[p.sik]) h.push('parça ' + (i + 1) + ': sik gzip | yok olmalı');
+      if (i && p.yuva < parcalar[i - 1].yuva) h.push('parça ' + (i + 1) + ': yuvalar sırasız');
+      yuvalar[p.yuva] = true;
+    });
+    var sayi = Object.keys(yuvalar).length;
+    for (var n = 0; n < sayi; n++) if (!yuvalar[n]) { h.push('yuva ' + n + ' yok'); break; }
+    return h;
+  }
   function yayinDogrula(y) {
     if (!y || typeof y !== 'object') return ['yayın bir nesne olmalı'];
     var h = [];
     if (typeof y.surum !== 'string' || !/^[0-9a-f]{7,40}$/.test(y.surum)) h.push('surum kısa sha olmalı');
-    if (!y.program || !VARLIK.test(String(y.program.id || ''))) h.push('program.id varlık kimliği olmalı');
+    if (y.program && y.program.parcalar !== undefined) h = h.concat(parcalarDogrula(y.program.parcalar));
+    else if (!y.program || !VARLIK.test(String(y.program.id || ''))) h.push('program.id varlık kimliği olmalı');
     if (y.notlar !== undefined && !(Array.isArray(y.notlar) && y.notlar.every(function (n) { return Number.isInteger(n) && n > 0; }))) {
       h.push('notlar pozitif tam sayılar olmalı');
     }
     return h;
   }
-  // Açılışta yüklenecek program: kayıttaki geçerli yayın sayfanın gömülü
-  // programından (mfsim.html) başkaysa varlık, değilse dosya.
-  function programKaynagi(yayin, gomulu) {
-    if (yayin && !yayinDogrula(yayin).length && yayin.surum !== (gomulu || '')) {
-      return { tur: 'varlik', id: yayin.program.id, surum: yayin.surum, pr: yayin.pr || '' };
-    }
-    return { tur: 'dosya' };
+  // Yüklenecek program KAYITTAKİ yayındır; sayfa program gömmez (gömülü kopya
+  // 16 MB'a sığmıyordu ve eskiyordu). Geçerli yayın yoksa program da yok.
+  function programKaynagi(yayin) {
+    if (!yayin || yayinDogrula(yayin).length) return { tur: 'yok' };
+    var p = yayin.program, k = { tur: 'varlik', surum: yayin.surum, pr: yayin.pr || '' };
+    if (Array.isArray(p.parcalar)) { k.tur = 'parcali'; k.parcalar = p.parcalar; k.uzunluk = p.uzunluk || 0; }
+    else k.id = p.id;
+    return k;
+  }
+  // Parçalar yuvalarına: [[yuva 0'ın parçaları], [yuva 1'in…], …] — listedeki sırayla.
+  function yuvaPlani(parcalar) {
+    var plan = [];
+    (parcalar || []).forEach(function (p) { (plan[p.yuva] = plan[p.yuva] || []).push(p); });
+    return plan;
+  }
+  // Açılmış yuvalar → program: iskeletteki her im kendi yuvasının metniyle değişir.
+  // Eksik ya da kullanılmayan yuva SESSİZCE geçmez (yarım program açılmasın).
+  function programBirlestir(yuvalar) {
+    var eksik = [], kullanilan = {};
+    var html = String(yuvalar[0]).replace(/^@@CN-YUVA:(\d+)@@$/gm, function (im, n) {
+      if (typeof yuvalar[n] !== 'string' || n === '0') { eksik.push(n); return im; }
+      kullanilan[n] = true;
+      return yuvalar[n];
+    });
+    if (eksik.length) throw new Error('eksik yuva: ' + eksik.join(', '));
+    if (Object.keys(kullanilan).length !== yuvalar.length - 1) throw new Error('yuva sayısı tutmuyor');
+    return html;
   }
   // Açık programın yerine gelecek yayın: "Sonra" denen sürüm yeniden SORULMAZ
   // (`ertelenen`), şeritteki düğme yine görünür.
@@ -306,6 +353,7 @@
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,
     KATEGORILER: KATEGORILER, kategorile: kategorile, acikNot: acikNot,
     yayinDogrula: yayinDogrula, programKaynagi: programKaynagi, guncellemeVar: guncellemeVar,
+    yuvaImi: yuvaImi, yuvaPlani: yuvaPlani, programBirlestir: programBirlestir,
     noAraligi: noAraligi, sonucYolu: sonucYolu
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

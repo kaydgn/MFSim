@@ -7,29 +7,40 @@
  * girelim ve ben çizerek, yuvarlak içine alarak istediğim değişiklikleri canlı
  * olarak yazayım. Sen de bunları sırası ile uygula."*
  *
- *   node tools/canli-not.js hazirla [--cikti .canli-not/yayin] [--dal]
+ *   node tools/canli-not.js hazirla [--cikti .canli-not/yayin] [--dokum .canli-not/dokum] [--dal]
  *       Karesiz tek dosya (MFSIM_KARSILAMA=yok) + köprü <meta charset>'ın
- *       arkasında → mfsim.html; sayfa (canli-not.html) çekirdek ve künyeyle.
+ *       arkasında → mfsim.html; program PARÇALARA ayrılır (parca/*.txt +
+ *       yayin-plan.json); sayfa (canli-not.html) çekirdek ve künyeyle.
  *       YALNIZ ANA DALDAN: HEAD origin/main değilse ya da commit edilmemiş
  *       değişiklik varsa DURUR (--dal: yerel deneme, YAYINLANMAZ).
- *       İKİ SINIR: programın güncellemesi (varlık) 20 MB'a kadar gider; sayfanın
- *       gömdüğü kopya (sayfa yayını) 16 MB'a. Program 16 MB'ı aşarsa varlık yine
- *       hazırlanır, sayfa yayını UYARIYLA kapalı söylenir; 20 MB'ı aşarsa DURUR.
+ *       PARÇALI YAYIN: 512 KiB'tan uzun her satır (build.js gömülü veriyi tek
+ *       satıra yazar) kendi yuvasına çıkar, kalan iskelet (kod) yuva 0'dır;
+ *       sıkışan yuva gzip → taban64 saklanır, 12 MiB'ı aşan bölünür. Önceki
+ *       yayının dökümü varsa (ArtifactData get yayin son, out_dir) yerinde
+ *       duran yuvalar söylenir: yalnız DEĞİŞEN yuva yüklenir.
  *
- *   node tools/canli-not.js sayfa <yayındaki index.html> [--cikti .canli-not/yayin] [--dal]
- *       SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE: program 16 MB'ı aştığında sayfa
- *       yeni programı gömemez. Yayındaki mfsim.html korunur — publish `files`'SIZ
- *       (verilmeyen dosya yerinde kalır); sayfanın ayar satırı o gömülü programı
- *       anlatmalı, yayındaki sayfadan (`Artifact read url:<adres> path:index.html`)
- *       okunur. Yeni program kayıttaki yayından (`yayin/son`) yüklenir. Yalnız ana daldan.
+ *   node tools/canli-not.js sayfa [--cikti .canli-not/yayin] [--dal]
+ *       SAYFANIN YAYINI — yalnız sayfa (tools/canli-not*) değiştiyse. Sayfa
+ *       program GÖMMEZ: program hep kayıttaki yayından (yayin/son) yüklenir.
+ *       Publish `files`'sız. Yalnız ana daldan.
  *
- *   node tools/canli-not.js yayin --program <varlık kimliği> [--notlar 6,8-21]
- *                           [--kaynak <mfsim.html>] [--cikti <json>]
+ *   node tools/canli-not.js duman [--cikti .canli-not/yayin]
+ *       AÇILIŞ DENEMESİ — hazırlanan sayfa ve parçalar gerçek tarayıcıda:
+ *       sahte kayıt planı gösterir, parçalar diskten gelir; sayfa onları indirir,
+ *       açar, birleştirir, program çerçevede başlar. Sayfa hatası ya da açılmayan
+ *       program DURDURUR. Yayından ÖNCE koşulur.
+ *
+ *   node tools/canli-not.js yayin [--parca <özet[.n]>=<varlık kimliği> …] [--notlar 6,8-21]
+ *                           [--dokum .canli-not/dokum] [--oturum <adres>] [--ilk] [--cikti <json>]
  *       PROGRAMIN GÜNCELLEMESİ — sayfa yeniden YAYINLANMAZ (kullanıcı
  *       2026-11-05: "artifaktı otomatik olarak yenileme … güncelleme
- *       geldiğinde uyarı popup çıkar"). `hazirla`nın mfsim-<sha>.txt'si varlık
- *       deposuna yüklenir; bu komut kaydın `yayin/son` belgesini yazar (künye ·
- *       varlık · uygulanan notlar). Açık sayfa sorar, Güncelle yükler.
+ *       geldiğinde uyarı popup çıkar"). `hazirla`nın YÜKLE dediği parçalar varlık
+ *       deposuna yüklenir; bu komut kaydın `yayin/son` belgesini kurar (künye ·
+ *       parçalar · uygulanan notlar): yerinde duran yuva önceki yayının varlığını
+ *       taşır. İKİ KAPI (kullanıcı 2026-11-11, karışma): TEK YAZAR — yalnız
+ *       `oturum/aktif`in gösterdiği oturum yayınlar; SIRA — yayındaki sürüm bu
+ *       derlemeden yeniyse yayın yazılmaz. İkisi de dökümden (`--dokum`:
+ *       yayin/son.json · oturum/aktif.json) okunur. Açık sayfa sorar, Güncelle yükler.
  *
  *   node tools/canli-not.js denetle <yayin-son.json | yayındaki mfsim.html | yayındaki sayfa>
  *       Yayındaki programın künyesi ↔ origin/main: güncel · geride (kaç
@@ -64,6 +75,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const CN = require('./canli-not-cekirdek.js');
 
@@ -73,18 +85,17 @@ const CEKIRDEK = path.join(__dirname, 'canli-not-cekirdek.js');
 const KOPRU = path.join(__dirname, 'canli-not-kopru.js');
 const CEKIRDEK_CAPA = '/*__CEKIRDEK__*/';
 const AYAR_CAPA = '/*__AYAR__*/null';
-// Artifact'in iki sınırı BİRBİRİNDEN BAĞIMSIZ (Canlı Not 103–110 sonrası: AMC görselleri
-// programı 14,5 → 17,8 MB yaptı; tek 16 MB denetimi programın güncellemesini de durdurdu,
-// oysa güncelleme varlık olarak gidiyor ve 17,8 MiB'lık metin varlığı kabul edildi):
-//   SINIR          sayfa yayını — sayfanın `files` ile gömdüğü mfsim.html (sayfa ve her metin dosyası)
-//   VARLIK_SINIRI  programın güncellemesi — varlık deposundaki metin kopyası
-const SINIR = 16 * 1024 * 1024;
+// PARÇALI YAYIN (kullanıcı 2026-11-11: boyut sınırı). Program tek metin varlığıydı
+// (sınırı 20 MiB) ve sayfanın gömdüğü kopya 16 MB'a sığmıyordu; ölçüldü: 17,2 MiB,
+// bir haftada 5,3 MiB görsel. Program artık parçalar hâlinde durur, sayfa program gömmez.
+//   ESIK           bu boydan uzun SATIR kendi yuvasına çıkar (karakter)
+//   PARCA_SINIRI   bir varlığın saklanan metni; aşan yuva bölünür
+//   VARLIK_SINIRI  deponun metin varlığı sınırı — PARCA_SINIRI onun altında durur
+const ESIK = 512 * 1024;
+const PARCA_SINIRI = 12 * 1024 * 1024;
 const VARLIK_SINIRI = 20 * 1024 * 1024;
-// Boyutun hükmü: varlık yüklenebilir mi, sayfa gömebilir mi. SAF — hazirla'nın kararı ve testi.
-function sinirHukmu(boyut) {
-  return { varlik: boyut <= VARLIK_SINIRI, sayfa: boyut <= SINIR };
-}
 const VARSAYILAN_CIKTI = path.join(KOK, '.canli-not', 'yayin');
+const VARSAYILAN_DOKUM = path.join(KOK, '.canli-not', 'dokum');
 
 function ayristir(argv) {
   const ilk = argv[0] && !argv[0].startsWith('-') ? argv[0] : undefined;
@@ -94,6 +105,10 @@ function ayristir(argv) {
     const deger = () => { if (i + 1 >= argv.length) throw new Error(a + ' bir değer ister'); return argv[++i]; };
     if (a === '--cikti') o.cikti = path.resolve(deger());
     else if (a === '--program') o.program = deger();
+    else if (a === '--parca') parcaAyristir(deger(), o.parca = o.parca || {});
+    else if (a === '--dokum') o.dokum = path.resolve(deger());
+    else if (a === '--oturum') o.oturum = deger();
+    else if (a === '--ilk') o.ilk = true;
     else if (a === '--notlar') o.notlar = notlarAyristir(deger());
     else if (a === '--kaynak') o.kaynak = path.resolve(deger());
     else if (a === '--foto') o.foto = path.resolve(deger());
@@ -120,6 +135,14 @@ function ayristir(argv) {
   if (o.pay !== undefined && !(o.pay >= 0 && o.pay <= 200)) throw new Error('--pay 0–200 px olmalı');
   if (o.alan && o.secici) throw new Error('--alan ile --secici birlikte olmaz');
   return o;
+}
+
+// "--parca <özet[.n]>=<varlık kimliği>": yüklenen parçanın kimliği, parçanın anahtarıyla.
+function parcaAyristir(s, hedef) {
+  const m = /^([0-9a-f]{16}(?:\.\d+)?)=([0-9a-f]{32})$/.exec(String(s).trim());
+  if (!m) throw new Error('--parca <özet[.n]>=<varlık kimliği> olmalı ("' + s + '" okunamadı)');
+  hedef[m[1]] = m[2];
+  return hedef;
 }
 
 function alanAyristir(s) {
@@ -217,16 +240,174 @@ function kunyeOku(html) {
   return JSON.parse(m[1]);
 }
 
+// ── parçalı yayın ──────────────────────────────────────────────────────────
+// build.js gömülü her veri globalini TEK satıra yazar (window.__MFSIM_TAKOZ = {…};),
+// kütüphaneler de tek satırdır: satır doğal kesim yeridir. ESIK'ten uzun satır kendi
+// yuvasına çıkar, iskelette yerinde imi kalır (CN.yuvaImi); geri kurma CN.programBirlestir.
+function ozetle(metin) {
+  return crypto.createHash('sha256').update(metin, 'utf8').digest('hex').slice(0, 16);
+}
+function yuvaAdi(satir) {
+  const m = /window\.__(?:MFSIM_)?([A-Z][A-Z0-9_]*)\s*=/.exec(satir.slice(0, 160));
+  return m ? m[1].toLowerCase().replace(/_/g, '-') : 'satir';
+}
+function parcala(html, esik) {
+  if (html.indexOf('@@CN-YUVA:') >= 0) throw new Error('programda yuva imi geçiyor (@@CN-YUVA:): ayrılamaz');
+  const yuvalar = [{ ad: 'kod', metin: '' }];
+  yuvalar[0].metin = html.split('\n').map((satir) => {
+    if (satir.length < (esik || ESIK)) return satir;
+    yuvalar.push({ ad: yuvaAdi(satir), metin: satir });
+    return CN.yuvaImi(yuvalar.length - 1);
+  }).join('\n');
+  return yuvalar;
+}
+// Saklanan biçim: sıkışan yuva gzip → taban64; sıkışmayan (taban64 görsel) olduğu gibi.
+// ASCII olmayan metin hep gzip'lenir: saklanan metnin karakteri = baytı kalsın (bölme sınırı).
+function paketle(metin) {
+  const gz = zlib.gzipSync(Buffer.from(metin, 'utf8'), { level: 9 }).toString('base64');
+  // eslint-disable-next-line no-control-regex
+  if (gz.length < metin.length * 0.9 || /[^\x00-\x7f]/.test(metin)) return { sik: 'gzip', veri: gz };
+  return { sik: 'yok', veri: metin };
+}
+function paketAc(sik, veri) {
+  if (sik === 'gzip') return zlib.gunzipSync(Buffer.from(veri, 'base64')).toString('utf8');
+  if (sik === 'yok') return veri;
+  throw new Error('bilinmeyen sıkıştırma: ' + sik);
+}
+function bol(veri, sinir) {
+  const p = [];
+  for (let i = 0; i < veri.length; i += sinir) p.push(veri.slice(i, i + sinir));
+  return p.length ? p : [''];
+}
+// Plan: yuvalar sırayla; `ozet` yuvanın İÇERİĞİNİN özeti (sıkıştırmanın değil — aynı içerik
+// başka zlib sürümünde başka bayt üretse de aynı yuvadır), `parcalar` saklanan metinler.
+function planKur(html, kunye, secenek) {
+  secenek = secenek || {};
+  kunye = kunye || {};
+  return {
+    surum: kunye.shortSha || '', sha: kunye.sha || '', pr: kunye.prNumber || '',
+    boyut: Buffer.byteLength(html), uzunluk: html.length,
+    yuvalar: parcala(html, secenek.esik).map((y, n) => {
+      const p = paketle(y.metin);
+      return { yuva: n, ad: y.ad, ozet: ozetle(y.metin), sik: p.sik, uzunluk: y.metin.length, parcalar: bol(p.veri, secenek.sinir || PARCA_SINIRI) };
+    })
+  };
+}
+// Planı geri kurar: `oku(parça)` saklanan metni verir (bellekteki dizge ya da dosya).
+function planBirlestir(plan, oku) {
+  oku = oku || ((p) => p);
+  return CN.programBirlestir(plan.yuvalar.map((y) => paketAc(y.sik, y.parcalar.map(oku).join(''))));
+}
+// Parçanın anahtarı: yuvanın özeti; yuva bölünmüşse sıra numarasıyla (özet.2).
+function parcaAnahtari(y, i) {
+  return y.ozet + (y.parcalar.length > 1 ? '.' + (i + 1) : '');
+}
+// Önceki yayının yuvaları özetleriyle: { özet: [parça kayıtları…] } — yalnız parçalı kayıtta.
+function oncekiYuvalar(yayin) {
+  const out = {};
+  const p = yayin && yayin.program && yayin.program.parcalar;
+  if (!Array.isArray(p) || CN.yayinDogrula(yayin).length) return out;
+  CN.yuvaPlani(p).forEach((yuva) => {
+    const oz = yuva[0] && yuva[0].ozet;
+    if (oz && yuva.every((x) => x.ozet === oz)) out[oz] = yuva;
+  });
+  return out;
+}
+// Yerinde duran yuva yeniden YÜKLENMEZ: önceki yayında aynı özetle (aynı içerik) duruyor.
+function planKarsilastir(plan, onceki) {
+  const eski = oncekiYuvalar(onceki);
+  return plan.yuvalar.map((y) => ({ yuva: y.yuva, ad: y.ad, ozet: y.ozet, yerinde: !!eski[y.ozet],
+    boyut: y.parcalar.reduce((t, p) => t + (p.boyut || 0), 0), parcalar: y.parcalar }));
+}
+// Bir yayının tuttuğu varlıklar (eski biçimde tek kimlik).
+function yayinVarliklari(yayin) {
+  const p = yayin && yayin.program;
+  if (!p) return [];
+  if (Array.isArray(p.parcalar)) return p.parcalar.map((x) => x.id).filter((id, i, a) => id && a.indexOf(id) === i);
+  return p.id ? [p.id] : [];
+}
+// Kaydın parça listesi: yeni yüklenenin kimliği `verilen`den, yerinde duranınki önceki
+// yayından. Yuva ya BÜTÜN parçalarıyla yeni yüklenmiştir ya da önceki yayının parçalarını
+// OLDUĞU GİBI taşır (saklanan metin aynı içeriğin başka bölünüşü olabilir: yarım eşleşme
+// kurulmaz). Kimliksiz parça `eksik`te adıyla döner — yarım kayıt yazılmaz. `artik`:
+// önceki yayının, yeni kayıtta kalmayan varlıkları (yazımdan SONRA silinir).
+function yayinKur(plan, onceki, verilen) {
+  verilen = verilen || {};
+  const eski = oncekiYuvalar(onceki), parcalar = [], eksik = [];
+  let yeni = 0;
+  plan.yuvalar.forEach((y) => {
+    const anahtarlar = y.parcalar.map((p, i) => parcaAnahtari(y, i)), e = eski[y.ozet];
+    if (!anahtarlar.some((a) => verilen[a]) && e) {
+      e.forEach((x) => parcalar.push({ yuva: y.yuva, id: x.id, ozet: y.ozet, boyut: x.boyut || 0, sik: x.sik, ad: y.ad }));
+      return;
+    }
+    y.parcalar.forEach((p, i) => {
+      const anahtar = anahtarlar[i];
+      if (verilen[anahtar]) { yeni++; parcalar.push({ yuva: y.yuva, id: verilen[anahtar], ozet: y.ozet, boyut: p.boyut || 0, sik: y.sik, ad: y.ad }); }
+      else eksik.push({ anahtar: anahtar, dosya: p.dosya || '', ad: y.ad });
+    });
+  });
+  const kullanilan = {};
+  parcalar.forEach((p) => { kullanilan[p.id] = true; });
+  return { parcalar: parcalar, eksik: eksik, yeni: yeni, artik: yayinVarliklari(onceki).filter((id) => !kullanilan[id]) };
+}
+
+// ── iki kapı: tek yazar · sıra ─────────────────────────────────────────────
+// Kullanıcı 2026-11-11: *"diğer sessionlardan gelen güncellemelerle de bazen
+// karışabiliyor"*. Ölçüldü: her oturum her birleşmeden sonra Canlı Not'taki programı
+// da yeniliyordu (üç günde 57 birleşme; yayın kaydı 6 günde 74 kez yazıldı) ve kaydın
+// sırası denetlenmiyordu — son yazan kazanıyor, eski sürüm yenisinin üstüne yazabiliyordu.
+//   TEK YAZAR  yayını yalnız `oturum/aktif`in gösterdiği oturum yapar
+//   SIRA       yayındaki sürüm bu derlemeden yeniyse yayın yazılmaz
+function oturumKimligi(s) {
+  const m = /(?:session_|cse_)([0-9A-Za-z]{16,})/.exec(String(s || ''));
+  return m ? m[1] : '';
+}
+// Bu oturumun adresi: --oturum, yoksa ortamdan (bulut oturumunun kimliği).
+function oturumAdresi(o, ortam) {
+  ortam = ortam || process.env;
+  const k = oturumKimligi((o && o.oturum) || ortam.MFSIM_OTURUM || ortam.CLAUDE_CODE_REMOTE_SDK_URL);
+  return k ? 'https://claude.ai/code/session_' + k : '';
+}
+function sahipHukmu(aktif, ben) {
+  const s = oturumKimligi(aktif && aktif.oturum), b = oturumKimligi(ben);
+  if (!b) return { sahip: false, sebep: 'bu oturumun adresi bilinmiyor (--oturum <adres>)' };
+  if (!s) return { sahip: false, sebep: 'sahiplik kaydı okunmadı (ArtifactData get collection:oturum doc_id:aktif out_dir:.canli-not/dokum)' };
+  return s === b ? { sahip: true } : { sahip: false, sebep: 'Canlı Not şu oturumda: https://claude.ai/code/session_' + s };
+}
+// `ata(a, b)`: a, b'nin atası mı — true · false · null (commit yerelde yok). Yalnız KESİN
+// geri gidiş durdurur: sığ klonda bilinmeyen sıra yayını engellemez.
+function siraHukmu(yayindaki, yeni, ata) {
+  if (!yayindaki || !yeni || yayindaki === yeni) return { durum: 'ayni', yayinla: true };
+  if (ata(yayindaki, yeni) === true) return { durum: 'ileri', yayinla: true };
+  if (ata(yeni, yayindaki) === true) return { durum: 'geri', yayinla: false };
+  return { durum: 'bilinmiyor', yayinla: true };
+}
+function ataMi(a, b) {
+  const r = spawnSync('git', ['merge-base', '--is-ancestor', a, b], { cwd: KOK, encoding: 'utf8' });
+  return r.status === 0 ? true : (r.status === 1 ? false : null);
+}
+// ArtifactData dökümü: {id, version, data} sarmalı ya da çıplak belge; dosya yoksa null.
+function dokumOku(dosya) {
+  if (!fs.existsSync(dosya)) return null;
+  const j = JSON.parse(fs.readFileSync(dosya, 'utf8'));
+  return j && j.data && typeof j.data === 'object' && !Array.isArray(j.data) ? { data: j.data, version: j.version } : { data: j };
+}
+
 // ── yayın kaydı (yayin/son) ────────────────────────────────────────────────
 // Sayfa ile araç aynı doğrulamayı okur (CN.yayinDogrula): bozuk kayıt sayfada
-// güncelleme sayılmaz, burada yazılmaz.
-function yayinKaydi(kunye, program, notlar, zaman) {
+// güncelleme sayılmaz, burada yazılmaz. `oturum` yayınlayanın adresi (bilgi).
+function yayinKaydi(kunye, program, notlar, zaman, oturum) {
+  const p = program || {};
   const y = {
     surum: kunye.shortSha || '', sha: kunye.sha || '', pr: kunye.prNumber || '',
     zaman: zaman || new Date().toISOString(),
-    program: { id: String(program && program.id || ''), boyut: (program && program.boyut) || 0 },
+    program: Array.isArray(p.parcalar)
+      ? { boyut: p.boyut || 0, uzunluk: p.uzunluk || 0, parcalar: p.parcalar }
+      : { id: String(p.id || ''), boyut: p.boyut || 0 },
     notlar: notlar || []
   };
+  if (oturum) y.oturum = oturum;
   const h = CN.yayinDogrula(y);
   if (h.length) throw new Error('yayın kaydı bozuk: ' + h.join(' · '));
   return y;
@@ -239,18 +420,58 @@ function yayinOku(j) {
   return { sha: d.sha || d.surum, shortSha: d.surum, prNumber: d.pr || '' };
 }
 
+const MiB = (n) => (n / 1048576).toFixed(2).replace('.', ',') + ' MiB';
+const goreli = (p) => path.relative(KOK, p) || p;
+
 function yayin(o) {
-  if (!o.program) throw new Error('--program <varlık kimliği> gerekli (Artifact asset yüklemesinin id\'si)');
-  const kaynak = o.kaynak || path.join(VARSAYILAN_CIKTI, 'mfsim.html');
-  const kunye = kunyeOku(fs.readFileSync(kaynak, 'utf8'));
-  const y = yayinKaydi(kunye, { id: o.program, boyut: fs.statSync(kaynak).size }, o.notlar || []);
-  const cikti = o.cikti || path.join(path.dirname(kaynak), 'yayin-son.json');
+  if (o.program) {
+    throw new Error('--program kalktı: program parçalı yayınlanır. `hazirla`nın YÜKLE dediği her dosyayı yükle, ' +
+      'sonra: node tools/canli-not.js yayin --parca <özet>=<id> … (skill canli-not §1)');
+  }
+  const planYol = o.kaynak || path.join(VARSAYILAN_CIKTI, 'yayin-plan.json');
+  if (!fs.existsSync(planYol)) throw new Error(goreli(planYol) + ' yok — önce: node tools/canli-not.js hazirla');
+  const plan = JSON.parse(fs.readFileSync(planYol, 'utf8'));
+  if (plan.dal) throw new Error('bu plan bir DAL KURULUMU (hazirla --dal): yayınlanmaz');
+  const dokum = o.dokum || VARSAYILAN_DOKUM;
+  const ben = oturumAdresi(o);
+  const aktif = dokumOku(path.join(dokum, 'oturum', 'aktif.json'));
+  const sahip = sahipHukmu(aktif && aktif.data, ben);
+  if (!sahip.sahip) {
+    throw new Error('TEK YAZAR: programı yalnız Canlı Not\'un sahibi oturum yayınlar. ' + sahip.sebep +
+      '\n  Başka oturumun birleşmesi sayfaya "Programı güncelle" ile gelir; devralmak için skill canli-not §0 · 3.');
+  }
+  const onceki = dokumOku(path.join(dokum, 'yayin', 'son.json'));
+  if (!onceki && !o.ilk) {
+    throw new Error('önceki yayın okunmadı: ArtifactData get collection:yayin doc_id:son out_dir:' + goreli(dokum) +
+      ' (kayıt hiç yoksa --ilk)');
+  }
+  const eski = onceki ? onceki.data : null;
+  const sira = siraHukmu(eski && (eski.sha || eski.surum), plan.sha || plan.surum, ataMi);
+  if (!sira.yayinla) {
+    throw new Error('SIRA: yayındaki sürüm (' + eski.surum + (eski.pr ? ' · PR #' + eski.pr : '') + ') bu derlemeden (' +
+      plan.surum + ') YENİ — yayın geri gitmez. git fetch origin main && git checkout -B main origin/main, sonra hazirla.');
+  }
+  const kur = yayinKur(plan, eski, o.parca);
+  if (kur.eksik.length) {
+    throw new Error('yüklenmemiş parça var — Artifact publish url:<adres> asset:true file_path:<dosya>, sonra kimliğiyle:\n' +
+      kur.eksik.map((e) => '  --parca ' + e.anahtar + '=<id>   ' + path.join(goreli(path.dirname(planYol)), e.dosya)).join('\n'));
+  }
+  const y = yayinKaydi({ shortSha: plan.surum, sha: plan.sha, prNumber: plan.pr },
+    { boyut: plan.boyut, uzunluk: plan.uzunluk, parcalar: kur.parcalar }, o.notlar || [], null, ben);
+  const cikti = o.cikti || path.join(path.dirname(planYol), 'yayin-son.json');
   fs.writeFileSync(cikti, JSON.stringify(y, null, 2) + '\n');
-  console.log('yayin/son · ' + y.surum + (y.pr ? ' · PR #' + y.pr : '') + ' · program ' + y.program.id +
+  console.log('yayin/son · ' + y.surum + (y.pr ? ' · PR #' + y.pr : '') + ' · ' + kur.parcalar.length + ' parça (' + kur.yeni + ' yeni)' +
     (y.notlar.length ? ' · Not ' + CN.noAraligi(y.notlar) : ''));
-  console.log('  ' + (path.relative(KOK, cikti) || cikti));
-  console.log('\nArtifactData set: collection=yayin doc_id=son data=<dosyanın içeriği>');
-  return y;
+  console.log('  sıra: ' + (eski ? eski.surum + ' → ' + y.surum + ' (' + sira.durum + ')' : 'ilk yayın'));
+  console.log('\n1. Notların sonucu ve cevabı ÖNCE yazılır (skill §2 · 6–7).');
+  console.log('2. ArtifactData set collection:yayin doc_id:son file_path:' + goreli(cikti) +
+    (onceki && onceki.version !== undefined ? ' if_version:' + onceki.version : ''));
+  console.log('   Sürüm çakışırsa araya başka bir yayın girmiştir: yayin/son\'u yeniden oku, bu komutu yeniden çalıştır.');
+  if (kur.artik.length) {
+    console.log('3. Yazım BAŞARILI olduktan sonra artık kullanılmayan varlıklar silinir:');
+    kur.artik.forEach((id) => console.log('   Artifact delete url:<adres> path:' + id));
+  }
+  return { kayit: y, artik: kur.artik, yeni: kur.yeni, sira: sira, surum: onceki ? onceki.version : undefined };
 }
 
 // Saf hüküm: yayındaki sha ↔ ana dal, aradaki birleşmeler, değişen girdiler.
@@ -303,90 +524,103 @@ function denetle(o) {
     if (h.durum === 'bilinmiyor') console.log('Yayındaki commit yerel geçmişte yok → programı güncelle.');
     else if (h.durum === 'program') console.log('Programın girdileri değişti (' + h.degisen.length + ' dosya) → programı güncelle.');
     else console.log('Programın girdileri aynı; yalnız künye eski.');
+    if (h.yayinla) console.log('Yayını yalnız Canlı Not\'un sahibi oturum yapar (tek yazar — skill canli-not §1).');
   }
   return h;
+}
+
+// Yayın ana dalın kendisidir: HEAD origin/main ve çalışma ağacı temiz.
+function anaDalKapisi(env) {
+  const ana = anaDal(), head = git(['rev-parse', 'HEAD']);
+  if (head !== ana.sha) {
+    throw new Error('HEAD ' + head.slice(0, 7) + ' ana dal değil (origin/main ' + ana.sha.slice(0, 7) + '). ' +
+      'Yayın ana dalın kendisidir:\n  git fetch origin main && git checkout -B main origin/main');
+  }
+  if (git(['status', '--porcelain', '--untracked-files=no'])) {
+    throw new Error('commit edilmemiş değişiklik var; yayın commit edilmiş ana daldan kurulur');
+  }
+  if (ana.uyari) console.log('! ' + ana.uyari);
+  env.GITHUB_REF_NAME = 'main';   // künyenin dalı: HEAD origin/main'in kendisi
+}
+
+// Sayfa: şablon + çekirdek + ayar (sayfanın KENDİ künyesi). Program gömülmez.
+function sayfaYaz(cikti, env) {
+  const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
+  const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString() };
+  const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
+  const yol = path.join(cikti, 'canli-not.html');
+  fs.mkdirSync(cikti, { recursive: true });
+  fs.writeFileSync(yol, sayfa);
+  return { yol: yol, ayar: ayar, kunye: kunye, boyut: Buffer.byteLength(sayfa) };
 }
 
 function hazirla(o) {
   const cikti = o.cikti || VARSAYILAN_CIKTI;
   const env = Object.assign({}, process.env, { MFSIM_BUILD_OUT: path.join(cikti, 'mfsim.html'), MFSIM_KARSILAMA: 'yok' });
-  if (!o.dal) {
-    const ana = anaDal();
-    const head = git(['rev-parse', 'HEAD']);
-    if (head !== ana.sha) {
-      throw new Error('HEAD ' + head.slice(0, 7) + ' ana dal değil (origin/main ' + ana.sha.slice(0, 7) + '). ' +
-        'Yayın ana dalın kendisidir:\n  git fetch origin main && git checkout -B main origin/main');
-    }
-    if (git(['status', '--porcelain', '--untracked-files=no'])) {
-      throw new Error('commit edilmemiş değişiklik var; yayın commit edilmiş ana daldan kurulur');
-    }
-    if (ana.uyari) console.log('! ' + ana.uyari);
-    env.GITHUB_REF_NAME = 'main';   // künyenin dalı: HEAD origin/main'in kendisi
-  }
+  if (!o.dal) anaDalKapisi(env);
   fs.mkdirSync(cikti, { recursive: true });
   const mfsim = env.MFSIM_BUILD_OUT;
   const r = spawnSync(process.execPath, [path.join(KOK, 'build.js')], { cwd: KOK, encoding: 'utf8', env: env });
   if (r.status !== 0) throw new Error('build.js durdu:\n' + ((r.stdout || '') + (r.stderr || '')).slice(-3000));
   const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
   fs.writeFileSync(mfsim, html);
-  const boyut = Buffer.byteLength(html);
-  const hukum = sinirHukmu(boyut);
-  if (!hukum.varlik) {
-    throw new Error('mfsim.html ' + (boyut / 1048576).toFixed(2) + ' MB — Artifact metin varlığı sınırı 20 MB. ' +
-      'Büyüyen parçayı bulun (build çıktısı gömülenleri sayıyor).');
-  }
-  const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
-  const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString(), boyut: boyut };
-  // Varlık deposunun kopyası: metin (text/plain) — depo HTML belgesi almaz,
-  // sayfa metni okuyup çerçeveye koyar. Eski kopyalar silinir.
+  const s = sayfaYaz(cikti, env);
+
+  // Parçalar diske: parca/<ad>-<özet>[.n].txt — eskileri silinir.
+  const plan = planKur(html, s.kunye);
+  const parcaDizin = path.join(cikti, 'parca'), tutulan = {};
+  fs.mkdirSync(parcaDizin, { recursive: true });
+  plan.yuvalar.forEach((y) => {
+    const sayi = y.parcalar.length;
+    y.parcalar = y.parcalar.map((veri, i) => {
+      const ad = y.ad + '-' + y.ozet + (sayi > 1 ? '.' + (i + 1) : '') + '.txt', boyut = Buffer.byteLength(veri);
+      if (boyut > VARLIK_SINIRI) throw new Error('parça ' + ad + ' ' + MiB(boyut) + ' — varlık sınırı ' + MiB(VARLIK_SINIRI));
+      fs.writeFileSync(path.join(parcaDizin, ad), veri);
+      tutulan[ad] = true;
+      return { dosya: 'parca/' + ad, boyut: boyut };
+    });
+  });
+  fs.readdirSync(parcaDizin).filter((f) => !tutulan[f]).forEach((f) => fs.unlinkSync(path.join(parcaDizin, f)));
   fs.readdirSync(cikti).filter((f) => /^mfsim-[0-9a-f]+\.txt$/.test(f)).forEach((f) => fs.unlinkSync(path.join(cikti, f)));
-  const varlik = path.join(cikti, 'mfsim-' + (ayar.surum || 'yerel') + '.txt');
-  fs.writeFileSync(varlik, html);
-  const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
-  const sayfaYol = path.join(cikti, 'canli-not.html');
-  fs.writeFileSync(sayfaYol, sayfa);
-  const goreli = (p) => path.relative(KOK, p) || p;
-  console.log('Canlı Not yayını hazır · ' + (ayar.surum || '(git yok)') + (ayar.pr ? ' · PR #' + ayar.pr : '') +
-    (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
-  console.log('  sayfa   ' + goreli(sayfaYol) + ' (' + (Buffer.byteLength(sayfa) / 1024).toFixed(1) + ' KB)');
-  console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB · sayfa sınırı 16 MB' +
-    (hukum.sayfa ? '' : ' AŞILDI') + ' · varlık sınırı 20 MB)');
-  console.log('  varlık  ' + goreli(varlik));
-  if (!hukum.sayfa) {
-    console.log('! Program 16 MB\'ı aşıyor: sayfa bu programı gömemez. Yalnız programın güncellemesi (varlık) ' +
-      'yapılır; sayfa değişirse gömülü kopya küçültülmeden sayfa yayınlanamaz.');
+  // Geri kurma: parçalar DİSKTEN okunur, açılır, birleşir — programın kendisi çıkmalı.
+  if (planBirlestir(plan, (p) => fs.readFileSync(path.join(cikti, p.dosya), 'utf8')) !== html) {
+    throw new Error('parçalar programı geri kurmuyor (ayırma hatası) — yayınlanmaz');
   }
-  console.log('\nProgramın güncellemesi (sayfa yenilenmez): Artifact publish url:<adres> asset:true file_path=' + goreli(varlik) +
-    '\n  → node tools/canli-not.js yayin --program <id> --notlar <…>  → ArtifactData set yayin/son');
-  console.log('Sayfanın yayını (yalnız sayfa değiştiyse): ' + (hukum.sayfa
-    ? 'file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}'
-    : 'YAPILAMAZ (program 16 MB\'ı aşıyor)'));
-  return { sayfa: sayfaYol, mfsim: mfsim, varlik: varlik, boyut: boyut, ayar: ayar, hukum: hukum };
+  if (o.dal) plan.dal = true;
+  const planYol = path.join(cikti, 'yayin-plan.json');
+  fs.writeFileSync(planYol, JSON.stringify(plan, null, 2) + '\n');
+
+  const onceki = dokumOku(path.join(o.dokum || VARSAYILAN_DOKUM, 'yayin', 'son.json'));
+  const durum = planKarsilastir(plan, onceki && onceki.data);
+  const yukle = durum.filter((y) => !y.yerinde), yerinde = durum.filter((y) => y.yerinde);
+  const topla = (l) => l.reduce((t, y) => t + y.boyut, 0);
+  console.log('Canlı Not yayını hazır · ' + (plan.surum || '(git yok)') + (plan.pr ? ' · PR #' + plan.pr : '') +
+    (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
+  console.log('  program  ' + goreli(mfsim) + ' · ' + MiB(plan.boyut) + ' → ' + plan.yuvalar.length + ' yuva · saklanan ' + MiB(topla(durum)));
+  console.log('  sayfa    ' + goreli(s.yol) + ' (' + (s.boyut / 1024).toFixed(1) + ' KB)');
+  if (!onceki) console.log('  ! önceki yayın okunmadı (ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum): bütün parçalar YÜKLE sayıldı');
+  if (yerinde.length) console.log('  yerinde  ' + yerinde.length + ' yuva · ' + MiB(topla(yerinde)) + ' — yüklenmez (' + yerinde.map((y) => y.ad).join(' · ') + ')');
+  console.log('  YÜKLE    ' + yukle.reduce((t, y) => t + y.parcalar.length, 0) + ' parça · ' + MiB(topla(yukle)));
+  yukle.forEach((y) => y.parcalar.forEach((p, i) => {
+    console.log('    ' + parcaAnahtari(y, i).padEnd(19) + ' ' + y.ad.padEnd(10) + ' ' + MiB(p.boyut).padStart(10) + '  ' + goreli(path.join(cikti, p.dosya)));
+  }));
+  console.log('\nProgramın güncellemesi — YALNIZ Canlı Not\'un sahibi oturum (skill canli-not §1); sayfa yenilenmez:' +
+    '\n  1. node tools/canli-not.js duman' +
+    '\n  2. Her YÜKLE dosyası ayrı çağrıda: Artifact publish url:<adres> asset:true file_path:<dosya>  → id' +
+    '\n  3. node tools/canli-not.js yayin --parca <özet>=<id> [--parca …] [--notlar <…>]  → yazımı ve silinecekleri söyler');
+  console.log('Sayfanın yayını (yalnız tools/canli-not* değiştiyse): Artifact publish url:<adres> file_path=' + goreli(s.yol) + '   (files YOK)');
+  return { sayfa: s.yol, mfsim: mfsim, plan: plan, planYol: planYol, boyut: plan.boyut, ayar: s.ayar, durum: durum };
 }
 
-// SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE (kullanıcı 2026-11-11, "Programı güncelle"
-// düğmesi sayfaya girmeliydi; program 17,6 MB → sayfa gömemiyor). Ayar yayındaki
-// sayfadan: yayındaki mfsim.html'in künyesi. Sayfa ana dalın şablonu ve çekirdeğiyle.
+// SAYFANIN YAYINI — yalnız sayfa. Program gömülmediği için derlenmez; sayfa ana dalın
+// şablonu ve çekirdeğiyle kurulur, program kayıttaki yayından (yayin/son) yüklenir.
 function sayfaYayini(o) {
-  if (!o.konum[0]) throw new Error('yayındaki sayfa gerekli: Artifact read url:<adres> path:index.html');
-  if (!o.dal) {
-    const ana = anaDal(), head = git(['rev-parse', 'HEAD']);
-    if (head !== ana.sha) throw new Error('HEAD ' + head.slice(0, 7) + ' ana dal değil (origin/main ' + ana.sha.slice(0, 7) + ')');
-    if (git(['status', '--porcelain', '--untracked-files=no'])) throw new Error('commit edilmemiş değişiklik var');
-  }
-  const sablon = fs.readFileSync(SABLON, 'utf8'), cekirdek = fs.readFileSync(CEKIRDEK, 'utf8');
-  const h = sayfaHukmu(fs.readFileSync(path.resolve(o.konum[0]), 'utf8'), sablon, cekirdek);
-  if (!h.ayar || !h.ayar.surum) throw new Error('yayındaki sayfanın ayar satırı okunamadı (Canlı Not sayfası mı?)');
-  const cikti = o.cikti || VARSAYILAN_CIKTI;
-  fs.mkdirSync(cikti, { recursive: true });
-  const yol = path.join(cikti, 'canli-not.html');
-  const sayfa = sayfaKur(sablon, cekirdek, h.ayar);
-  fs.writeFileSync(yol, sayfa);
-  const goreli = (p) => path.relative(KOK, p) || p;
-  console.log('Sayfa hazır · gömülü program ' + h.ayar.surum + (h.ayar.pr ? ' · PR #' + h.ayar.pr : '') +
-    ' (yayındaki mfsim.html korunur)' + (h.guncel ? ' · yayındaki sayfa zaten bugünkü kaynakla aynı' : ''));
-  console.log('  Artifact publish url:<adres> file_path=' + goreli(yol) + '   (files YOK)');
-  return { sayfa: yol, ayar: h.ayar, guncel: h.guncel, boyut: Buffer.byteLength(sayfa) };
+  const env = Object.assign({}, process.env);
+  if (!o.dal) anaDalKapisi(env);
+  const s = sayfaYaz(o.cikti || VARSAYILAN_CIKTI, env);
+  console.log('Sayfa hazır · ' + (s.ayar.surum || '(git yok)') + (s.ayar.pr ? ' · PR #' + s.ayar.pr : '') + (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ''));
+  console.log('  Artifact publish url:<adres> file_path=' + goreli(s.yol) + '   (files YOK; program kayıttaki yayından yüklenir)');
+  return { sayfa: s.yol, ayar: s.ayar, boyut: s.boyut };
 }
 
 // ── notlar ─────────────────────────────────────────────────────────────────
@@ -578,6 +812,83 @@ async function sonuc(o) {
   return { cikti: cikti, olcu: olcu, hatalar: hatalar };
 }
 
+// ── duman: açılış denemesi ─────────────────────────────────────────────────
+// Yayından ÖNCE: hazırlanan sayfa ile parçalar gerçek tarayıcıda. Sahte kayıt planı
+// gösterir (kimlikler özetten), parçalar diskten gelir; sayfa indirir, açar (gzip —
+// tarayıcının DecompressionStream'i), birleştirir ve çerçeveye koyar. Node'daki geri
+// kurma denetimi tarayıcının yolunu koşmaz: sıkıştırmayı açan kod yalnız burada çalışır.
+const DUMAN_KOK = 'https://canli-not.test/';
+function dumanKaydi(plan) {
+  const dosya = {}, parcalar = [];
+  plan.yuvalar.forEach((y) => y.parcalar.forEach((p, i) => {
+    const id = (y.ozet + String(i).padStart(2, '0') + '0'.repeat(32)).slice(0, 32);
+    dosya[id] = p.dosya;
+    parcalar.push({ yuva: y.yuva, id: id, ozet: y.ozet, boyut: p.boyut || 0, sik: y.sik });
+  }));
+  const kayit = yayinKaydi({ shortSha: plan.surum || '0000000', sha: plan.sha || '', prNumber: plan.pr || '' },
+    { boyut: plan.boyut, uzunluk: plan.uzunluk, parcalar: parcalar }, [], '2026-01-01T00:00:00.000Z');
+  return { kayit: kayit, dosya: dosya };
+}
+
+async function duman(o) {
+  const cikti = o.cikti || VARSAYILAN_CIKTI;
+  const planYol = path.join(cikti, 'yayin-plan.json'), sayfaYol = path.join(cikti, 'canli-not.html');
+  if (!fs.existsSync(planYol) || !fs.existsSync(sayfaYol)) throw new Error('yayın hazır değil — önce: node tools/canli-not.js hazirla');
+  const plan = JSON.parse(fs.readFileSync(planYol, 'utf8'));
+  const d = dumanKaydi(plan);
+  const belge = '<!doctype html><html><head><meta charset="utf-8"></head><body>' + fs.readFileSync(sayfaYol, 'utf8') + '</body></html>';
+  const { chromium } = require('playwright');
+  const tarayici = await chromium.launch(tarayiciYolu() ? { executablePath: tarayiciYolu() } : {});
+  const hatalar = [], ag = [];
+  let sure = 0, surum = '', indirilen = 0, kare = 0;
+  try {
+    const sayfa = await tarayici.newPage({ viewport: { width: 1440, height: 900 } });
+    sayfa.on('pageerror', (e) => hatalar.push(String(e && e.message ? e.message : e)));
+    await sayfa.route('**/*', (r) => {
+      const u = r.request().url();
+      if (u === DUMAN_KOK) return r.fulfill({ contentType: 'text/html; charset=utf-8', body: belge });
+      const m = /^https:\/\/canli-not\.test\/_blob\/([0-9a-f]{32})$/.exec(u);
+      if (m && d.dosya[m[1]]) { indirilen++; return r.fulfill({ contentType: 'text/plain; charset=utf-8', body: fs.readFileSync(path.join(cikti, d.dosya[m[1]])) }); }
+      if (/^(data|blob|about):/.test(u)) return r.continue();
+      // Sayılmayan iki istek: sayfanın yazı tipi; karesiz yayında programın aradığı karşılama karesi.
+      if (/^https:\/\/canli-not\.test\/assets\/karsilama\//.test(u)) kare++;
+      else if (!/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(u)) ag.push(u);
+      return r.abort();
+    });
+    await sayfa.addInitScript((v) => {
+      try { localStorage.setItem('mfsim_auth_token', v.anahtar); } catch (e) { /* özel pencere */ }
+      if (window.top !== window) return;                       // sahte kayıt yalnız sayfada
+      const db = {
+        collection: () => ({ orderBy: () => ({ onSnapshot: (f) => { setTimeout(() => f({ docs: [] }), 0); return () => {}; } }) }),
+        doc: (p) => ({
+          onSnapshot: (f) => { if (p === 'yayin/son') setTimeout(() => f({ exists: true, data: () => v.kayit }), 0); return () => {}; },
+          set: () => Promise.resolve(), update: () => Promise.resolve()
+        })
+      };
+      window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : null) };
+    }, { kayit: d.kayit, anahtar: girisAnahtari() });
+    const t0 = Date.now();
+    await sayfa.goto(DUMAN_KOK);
+    // köprünün 'basladi' olayı açılış perdesini kaldırır: program parçalardan kuruldu ve çalışıyor
+    await sayfa.waitForFunction(() => { const e = document.getElementById('cn-acilis'); return e && e.hidden; }, null, { timeout: 120000 });
+    const cerceve = sayfa.frames().find((f) => f !== sayfa.mainFrame());
+    if (!cerceve) throw new Error('program çerçevesi yok');
+    await cerceve.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
+    sure = Date.now() - t0;
+    surum = await sayfa.evaluate(() => document.getElementById('cn-surum').textContent);
+    const uzunluk = await sayfa.evaluate(() => (document.getElementById('cn-program').getAttribute('srcdoc') || '').length);
+    if (uzunluk !== plan.uzunluk) hatalar.push('çerçevedeki program ' + uzunluk + ' karakter, plan ' + plan.uzunluk);
+  } finally {
+    await tarayici.close();
+  }
+  console.log('Duman · ' + (surum || '?') + ' · ' + indirilen + ' parça indirildi · açılış ' + (sure / 1000).toFixed(1).replace('.', ',') + ' sn · ' +
+    hatalar.length + ' hata · ' + ag.length + ' ağ isteği' + (kare ? ' (karşılama karesi ' + kare + ': bu yayında kare yok)' : ''));
+  hatalar.slice(0, 5).forEach((h) => console.log('  ! ' + h));
+  ag.slice(0, 5).forEach((u) => console.log('  ağ: ' + u));
+  if (hatalar.length) throw new Error('duman: sayfa hatası — yayınlama');
+  return { sure: sure, surum: surum, indirilen: indirilen, hatalar: hatalar, ag: ag };
+}
+
 // Yardım, dosyanın baş yorumunun kendisi (yorum büyüyünce kesilmesin).
 const YARDIM = (() => {
   const s = fs.readFileSync(__filename, 'utf8'), a = s.indexOf('/**'), b = s.indexOf('*/', a);
@@ -589,17 +900,20 @@ async function ana(argv) {
   if (o.yardim || !o.komut) { console.log(YARDIM); return; }
   if (o.komut === 'hazirla') return hazirla(o);
   if (o.komut === 'sayfa') return sayfaYayini(o);
+  if (o.komut === 'duman') return duman(o);
   if (o.komut === 'denetle') return denetle(o);
   if (o.komut === 'yayin') return yayin(o);
   if (o.komut === 'liste') return liste(o);
   if (o.komut === 'goruntu') return goruntu(o);
   if (o.komut === 'sonuc') return sonuc(o);
-  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · yayin · denetle · liste · goruntu · sonuc)');
+  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · sayfa · duman · yayin · denetle · liste · goruntu · sonuc)');
 }
 
 if (require.main === module) {
   ana(process.argv.slice(2)).catch((e) => { console.error('✗ ' + (e && e.message ? e.message : e)); process.exit(1); });
 }
 
-module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, sayfaYayini, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
-  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR, VARLIK_SINIRI, sinirHukmu };
+module.exports = { ayristir, notlarAyristir, parcaAyristir, kopruGom, sayfaKur, sayfaYayini, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
+  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA,
+  ESIK, PARCA_SINIRI, VARLIK_SINIRI, ozetle, parcala, paketle, paketAc, bol, planKur, planBirlestir, parcaAnahtari, planKarsilastir, yayinKur,
+  yayinVarliklari, oturumKimligi, oturumAdresi, sahipHukmu, siraHukmu, dokumOku, dumanKaydi, yayin };
