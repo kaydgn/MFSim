@@ -1005,6 +1005,20 @@ async function duman(o) {
           return !!(k && k.type === tip && document.querySelector('.ve-properties-content [data-mnt-pencere="' + k.id + '"]'));
         }, odak.tip);
       if (odakDurum !== 'tamam' || !acik) hatalar.push('odak: ' + odak.ad + (belgeOdak ? ' açılmadı' : ' penceresi açılmadı') + ' (' + odakDurum + ')');
+      // Belgenin içinde gezinme ÇERÇEVEDE kalır: bağlantı (sekme) ve satır tıkı. Belge çerçevede
+      // (srcdoc) "#tarama"yı üst sayfanın adresine çözüyor ve çerçeve sayfayı yüklüyordu — kullanıcı
+      // "MFSim açılıyor" gördü (2026-11-11).
+      if (belgeOdak && !hatalar.length) {
+        await cerceve.click('#n-tarama');
+        await sayfa.waitForTimeout(400);
+        await cerceve.click('#ve-tarama tbody tr:first-child td:nth-child(3)');
+        await sayfa.waitForTimeout(400);
+        const g = await cerceve.evaluate(() => ({ url: location.href, rapor: !!window.veRapor,
+          sonuc: !document.getElementById('v-sonuc').hidden, baslik: (document.querySelector('#ve-sonuc h2') || {}).textContent || '' }))
+          .catch((e) => ({ hata: String(e && e.message || e) }));
+        if (!g.rapor || !/^about:srcdoc/.test(g.url || '') || !g.sonuc) hatalar.push('belgede gezinme çerçeveden çıktı: ' + JSON.stringify(g));
+        else odakDurum += ' · gezinme ' + g.baslik;
+      }
     }
   } finally {
     await tarayici.close();

@@ -1164,6 +1164,20 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.d.getElementById('cn').getAttribute('data-odak')).toBe('tamam');
   });
 
+  // BELGE ODAĞI (kullanıcı 2026-11-11: *"MFSim açılıyor diyor? Ben sadece bu HTML'i canlı not
+  // olarak istedim."*): sayfanın yazıları belgenin adıyla; ana sayfanınkiler aynı.
+  test('BELGE ODAĞI: sayfa MFSim ve program demez — marka gizli, açılış, düğme, kilit ve çerçeve raporun adıyla', () => {
+    const a = sayfa({ ayar: { odak: 'param-html' } });
+    expect([a.gizli('cn-odak'), a.d.getElementById('cn-odak').textContent]).toEqual([false, 'HTML raporu']);
+    expect(a.gizli('cn-marka')).toBe(true);
+    expect(a.d.getElementById('cn-acilis').textContent).toBe('Rapor açılıyor…');
+    expect([a.d.getElementById('cn-istek').textContent, a.d.getElementById('cn-kilit-baslik').textContent]).toEqual(['Raporu güncelle', 'Rapor güncelleniyor']);
+    expect(a.d.getElementById('cn-program').title).toBe('HTML raporu');
+    const b = sayfa({});
+    expect([b.gizli('cn-marka'), b.d.getElementById('cn-acilis').textContent, b.d.getElementById('cn-istek').textContent,
+      b.d.getElementById('cn-program').title]).toEqual([false, 'MFSim açılıyor…', 'Programı güncelle', 'MFSim']);
+  });
+
   test('ODAK: açılamayan bileşen söylenir; odaksız sayfa odak istemez', async () => {
     const a = sayfa({ ayar: { odak: 'parametrik' } });
     await bekle();
