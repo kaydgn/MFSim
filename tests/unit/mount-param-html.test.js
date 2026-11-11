@@ -301,6 +301,33 @@ describe('SAYFA', () => {
       d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(p.hidden).toBe(true);
     });
+
+    // Canlı not 2006: "Takozların üstüne tıklayınca sıralıyor, onu da istemiyorum. Filtreleyince çıkan
+    // sonuç sıralanır zaten." — takozun başlığı sıralamaz (tık sırayı ve oku değiştirmez, el imleci
+    // yok); takoz Filtrele'nin panelinden sıralanır, ok başlıkta; sayı sütununun başlığı sıralar.
+    test('takozun başlığı sıralamaz: tık sırayı ve oku değiştirmez, el imleci yok; panelden sıralanınca ok başlıkta', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      const takoz = () => d.querySelector('#ve-tarama button[data-suz="g0"]').closest('th');
+      const sehim = () => d.querySelector('#ve-tarama th[data-sira="d"]');
+      expect(takoz().hasAttribute('data-sira')).toBe(false);
+      expect(w.getComputedStyle(takoz()).cursor).not.toBe('pointer');
+      expect(w.getComputedStyle(sehim()).cursor).toBe('pointer');
+      sehim().click(); sehim().click();                                    // statik sehim: büyükten küçüğe
+      expect(no(d)).toEqual(['3', '2', '1']);
+      takoz().querySelector('.bas').click();
+      takoz().click();
+      expect(no(d)).toEqual(['3', '2', '1']);
+      expect(takoz().hasAttribute('aria-sort')).toBe(false);
+      expect(sehim().getAttribute('aria-sort')).toBe('descending');
+      ac_(d, 'g0');
+      p.querySelector('[data-suz-is="artan"]').click();                  // A'dan Z'ye: Cone 39 · Cone 121 · Mount
+      expect(no(d)).toEqual(['2', '1', '3']);
+      expect(takoz().getAttribute('aria-sort')).toBe('ascending');
+      takoz().click();                                                    // başlık yönü çevirmez
+      expect(no(d)).toEqual(['2', '1', '3']);
+      expect(takoz().getAttribute('aria-sort')).toBe('ascending');
+      expect(takoz().querySelector('button[data-suz]')).not.toBeNull();   // Filtrele yerinde
+    });
   });
 
   test('adres görünümü seçer: #T3 o sonuç; #sonuc son seçilen (varsayılan K1); bozuk adres Özet', () => {

@@ -250,12 +250,14 @@ var veMntParamHtml = (function(){
     // Sütunlar sıralamanın ve SÜZGECİN tek tanımı (Canlı not 2001: "Excel'deki gibi 'Filtrele'"):
     // `liste` sütununda değer listesi (ara · tümünü seç · satır sayısı), `sayi` sütununda en az ·
     // en çok. Liste, öteki süzgeçlerden geçen satırların değerleri (Excel gibi).
+    // `suz:false` başlıkta Filtrele yok (Canlı not 2005); `sira:false` başlığa tık sıralamaz,
+    // sıra Filtrele'nin panelinden (Canlı not 2006: takozlar).
     var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100, suz = {}, acikSuz = null;
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
     var SUT = [], SUTK = {};
     if(T){
       SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, suz:false, deger:function(i){ return i + 1; } });
-      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, deger:function(i){ return tipAdi(j, i); } }); });
+      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, sira:false, deger:function(i){ return tipAdi(j, i); } }); });
       SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
       SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
       SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
@@ -395,7 +397,7 @@ var veMntParamHtml = (function(){
       var a = sayfa * ADIM, b = Math.min(n, a + ADIM), suzSay = Object.keys(suz).length;
       var bs = function(c){
         var ac = !!suz[c.k];
-        return '<th data-sira="' + c.k + '"' + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
+        return '<th' + (c.sira === false ? '' : ' data-sira="' + c.k + '"') + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
           + (anahtar === c.k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '><span class="bas">' + c.ad + '</span>'
           + (c.suz === false ? '' : '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"'
             + (ac ? ' aria-pressed="true"' : '') + '>' + (ac ? HUNI : OK_ALT) + '</button>') + '</th>';
