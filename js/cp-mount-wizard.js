@@ -81,7 +81,7 @@ var VE_MW_TAKOZ_ALAN = ['x', 'y', 'z', 'kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd',
 var VE_MW_TORK = [
   { grup:'motor',    alan:['Te', 'TeRpm', 'Pmax', 'PmaxRpm', 'idleRpm', 'cylinders', 'enginePreset'], tip:['mnt-motor'] },
   { grup:'sanziman', alan:['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'gR', 'Rstall', 'gearPreset', 'tcPreset'], tip:['mnt-gearbox', 'mnt-transfer', 'mnt-motor'] },
-  { grup:'transfer', alan:['iTransfer', 'phiFwd', 'phiRev', 'derate'], tip:['mnt-transfer', 'mnt-gearbox', 'mnt-motor'] }
+  { grup:'transfer', alan:['iTransfer', 'phiFwd', 'phiRev', 'derate', 'trPreset'], tip:['mnt-transfer', 'mnt-gearbox', 'mnt-motor'] }
 ];
 
 var _mwState = null;          // oturumluk durum (açık sihirbazın)
@@ -308,7 +308,7 @@ function _mwVeriYaz(hedef, kaynak, alanlar){
     var v = kaynak[k];
     if(v === undefined || v === null || v === '') return;
     if(typeof v === 'object' || typeof v === 'boolean') hedef[k] = _mwKopya(v);
-    else if(k === 'libKey' || k === 'enginePreset' || k === 'gearPreset' || k === 'tcPreset') hedef[k] = String(v);
+    else if(k === 'libKey' || k === 'enginePreset' || k === 'gearPreset' || k === 'tcPreset' || k === 'trPreset') hedef[k] = String(v);
     else { var n = _mwNum(v); if(Number.isFinite(n)) hedef[k] = n; }
   });
   return hedef;
@@ -2361,8 +2361,28 @@ function _mwSanzimanKatalogHTML(){
   };
   return '<div class="ve-fw-grid" style="--fw-cols:2;">'
     + sec(K.disli, tq.gearPreset || '', 'veMntWizDisliKatalog', 'Vites konfigürasyonu', function(x){ return x.etiket; })
-    + sec(K.tc, tq.tcPreset || '', 'veMntWizKonvertorKatalog', 'Konvertör', function(x){ return x.ad + ' · ' + _mwSayi(x.stall, 2); })
+    + sec(typeof _mntKonvertorListesi === 'function' ? _mntKonvertorListesi(tq.gearPreset) : K.tc, tq.tcPreset || '', 'veMntWizKonvertorKatalog', 'Konvertör', function(x){ return x.ad + ' · ' + _mwSayi(x.stall, 2); })
     + '</div>';
+}
+// Transferin kataloğu — pencereyle AYNI liste ve okuyucu (cp-mount.js →
+// _mntTransferKatalog · _mntTransferPresetValues)
+function _mwTransferKatalogHTML(){
+  var L = (typeof _mntTransferKatalog === 'function') ? _mntTransferKatalog() : [];
+  if(!L.length) return '';
+  var cur = (_mwState.tork || {}).trPreset || '', aileler = [];
+  L.forEach(function(x){ if(aileler.indexOf(x.aile) < 0) aileler.push(x.aile); });
+  return '<label class="ve-fw-field"><span class="ve-fw-lbl">Transfer kademesi</span>'
+    + '<select class="ve-fw-inp" onchange="veMntWizTransferKatalog(this.value)" aria-label="Transfer kademesi">'
+    + '<option value="">— elle gir —</option>'
+    + aileler.map(function(a){
+        return '<optgroup label="' + _mwEsc(a) + '">' + L.filter(function(x){ return x.aile === a; }).map(function(x){
+          return '<option value="' + _mwEsc(x.k) + '"' + (x.k === cur ? ' selected' : '') + '>' + _mwEsc(x.ad + ' · ' + _mwSayi(x.oran, 3)) + '</option>';
+        }).join('') + '</optgroup>';
+      }).join('')
+    + '</select></label>';
+}
+function veMntWizTransferKatalog(key){
+  return _mwSanzimanKatalog(key, 'trPreset', typeof _mntTransferPresetValues === 'function' ? _mntTransferPresetValues : null);
 }
 function _mwSanzimanKatalog(key, alan, degerler){
   if(!_mwState) return false;
@@ -2372,6 +2392,7 @@ function _mwSanzimanKatalog(key, alan, degerler){
   if(!v) return false;
   Object.keys(v).forEach(function(k){ if(v[k] === null) delete t[k]; else t[k] = v[k]; });
   t[alan] = key;
+  if(alan === 'gearPreset' && typeof _mntKonvertorEsle === 'function') _mntKonvertorEsle(t);
   veMntWizRender();
   return true;
 }
@@ -2404,7 +2425,7 @@ function _mwStepTork(c){
     + g('g1', '', '1. vites') + g('g2', '', '2. vites') + g('g3', '', '3. vites')
     + g('g4', '', '4. vites') + g('g5', '', '5. vites') + g('g6', '', '6. vites')
     + g('g7', '', '7. vites') + g('gR', '', 'Geri') + g('Rstall', '', 'Stall oranı') + '</div>');
-  h += _mwCard('Transfer ve aks', '<div class="ve-fw-grid" style="--fw-cols:3;">'
+  h += _mwCard('Transfer ve aks', _mwTransferKatalogHTML() + '<div class="ve-fw-grid" style="--fw-cols:3;">'
     + g('iTransfer', '1', 'Transfer oranı') + g('phiFwd', '1', 'Aks payı φ ileri') + g('phiRev', '1', 'Aks payı φ geri') + '</div>');
   h += _mwCard('Zincirin sonucu', '<div id="ve-mw-tork-oku">' + _mwTorkOkuHTML(c) + '</div>');
   return h;
@@ -2923,7 +2944,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizNokta: veMntWizNokta, veMntWizTakozEkle: veMntWizTakozEkle, veMntWizTakozSil: veMntWizTakozSil,
     veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
-    veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
+    veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, veMntWizTransferKatalog: veMntWizTransferKatalog, _mwTransferKatalogHTML: _mwTransferKatalogHTML, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
     veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim,

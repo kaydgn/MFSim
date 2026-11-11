@@ -2,13 +2,16 @@
 //  TAKOZ — PARAMETRİK ANALİZ penceresi ve katalog taraması koşucusu
 // ════════════════════════════════════════════════════════════════════════════
 // Bileşen 'mnt-parametric' (js/components.js), ilk analizi "Katalogdan seçim"
-// (kullanıcı isteği 2026-10-16). Girdi kategorileri: gruplar, aday tipler,
-// kısıt sınırları, amaç ağırlığı. Tek eylemi taramayı koşturur; tarama
-// bitince Sonuç kategorisi uzlaşı çözümünü ve diyagramları taşır (kullanıcı
-// kararı 2026-10-18 — Takoz pencerelerinin "sonuç göstermez" kuralının bu
-// pencereye özgü istisnası; js/cp-mount-param-sonuc.js). Ayrıntılı rapor AYRI
-// belgede (js/cp-mount-param-rapor.js): ana rapora eklemek onu uzatırdı
-// (kullanıcı: "Rapor kısmına eklersek çok uzun olabilir").
+// (kullanıcı isteği 2026-10-16). Girdi kategorileri: gruplar, aday tipler (markaya
+// göre katlanır gruplar), kriterler (dört kesin kriter, sıralama, rijitlik toleransı).
+// SIRALAMA EXCEL'İNKİ (kullanıcı 2026-11-10: "yaptığımız değişiklikleri bu bileşene
+// aktarmamışız … güncel ve modern bir hale getirelim"): dört kesin kriter, sonra en
+// küçük statik sehim — ek kısıtlar, sürünme payı ve amaç ağırlığı (uzlaşı) emekli.
+// Tek eylemi taramayı koşturur; tarama bitince Sonuç kategorisi K0 (mevcut) ve
+// K1…K9'u Excel'in Özet'i gibi taşır (kullanıcı kararı 2026-10-18 — Takoz
+// pencerelerinin "sonuç göstermez" kuralının bu pencereye özgü istisnası;
+// js/cp-mount-param-sonuc.js). Ayrıntılı rapor AYRI belgede (js/cp-mount-param-rapor.js):
+// ana rapora eklemek onu uzatırdı (kullanıcı: "Rapor kısmına eklersek çok uzun olabilir").
 //
 // ÇÖZÜM YOLU UYGULAMANINKİ: her kombinasyon Çözücü'nün yolundan geçer
 // (_mntPrepareFrom → solveOne → solveModes; çözüm modu ve ζ Çözücü'den,
@@ -61,16 +64,16 @@ function _mntParamAdaylar(M, node){
     .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:!haric[k] }; });
 }
 
-// Pencerede yüzde, çekirdekte oran.
-// Pencere birimi → çekirdek birimi: yüzdeler orana döner.
-var _MNT_PARAM_YUZDE = { kapasite:1, ayrisma:1, darbe:1, surunme:1, tolerans:1 };
+// Bağlam: DÖRT KESİN KRİTER ve rijitlik toleransı — ek kısıtlar KAPALI (Excel'in
+// kuralı; eski projede yazılı ek kısıt ve ağırlık okunmaz). Tolerans açıkken kesin
+// kriterler ±tolerans köşelerinde de sınanır.
 function _mntParamCtx(M, node){
-  var d=(node && node.data) || {}, s=d.sinir || {}, o={};
-  Object.keys(veMntKatalog.SINIR_VARSAYILAN).forEach(function(k){
-    var x=_mntNum(s[k], NaN);
-    o[k]=(Number.isFinite(x) && _MNT_PARAM_YUZDE[k]) ? x/100 : x;
-  });
-  return { fAtes:M.fAtes, acik:d.acik || {}, s:o };
+  var d=(node && node.data) || {}, s=d.sinir || {}, o={}, acik={};
+  veMntKatalog.KISITLAR.forEach(function(Q){ if(!Q.zorunlu) acik[Q.k]=false; });
+  acik.tolerans=!!(d.acik && d.acik.tolerans);
+  var t=_mntNum(s.tolerans, NaN);
+  if(Number.isFinite(t)) o.tolerans=t/100;
+  return { fAtes:M.fAtes, acik:acik, s:o };
 }
 
 // Taramanın bütün girdisi ve eksiği (pencere ile koşucu AYNI hazırlığı okur).
@@ -243,8 +246,8 @@ function _mntParamOlcucu(M, ctx){
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
 // Kategoriler, gövdede alt alta: GRUPLAR (model taraması, sabit tutulan
-// grup) · ADAYLAR (kütüphane) · KISITLAR (dört kesin kriter, ek kısıtlar,
-// amaç ağırlığı) · SONUÇ (yalnız taramadan sonra). Sağ sütun: analizin adı
+// grup) · ADAYLAR (kütüphane, marka marka) · KRİTERLER (dört kesin kriter,
+// sıralama, tolerans) · SONUÇ (yalnız taramadan sonra). Sağ sütun: analizin adı
 // ve büyüklüğü → cevap → eylem.
 function getMntParamPropertiesHTML(node){
   if(!node.data) node.data={};
@@ -252,7 +255,7 @@ function getMntParamPropertiesHTML(node){
   var kategoriler=[
     { k:'grup', ad:'Gruplar', govde:_mntParamGrupHTML(node, H) },
     { k:'aday', ad:'Adaylar', govde:_mntParamAdayHTML(node, H) },
-    { k:'kisit', ad:'Kısıtlar', govde:_mntParamKisitHTML(node, H) }
+    { k:'kriter', ad:'Kriterler', govde:_mntParamKriterHTML(node, H) }
   ];
   var son=(typeof _mntParamSonucKat==='function') ? _mntParamSonucKat(node, H) : null;
   if(son) kategoriler.push(son);
@@ -322,78 +325,86 @@ function _mntParamGrupHTML(node, H){
   return _mntBolum('Gruplar', G.length+' grup', h+_MNT_FOY_KAPA);
 }
 
+// ADAYLAR — marka marka katlanır grup (kütüphanenin markası, Canlı Not 106): özetin
+// kutusu markanın bütün tiplerini alır ya da bırakır, sayısı alınan / bütün; açıklık
+// görünüm durumu (_MNT_PARAM_MARKA, modelde değil), açılışta kapalı.
+var _MNT_PARAM_MARKA = {};       // 'düğüm|marka' → açık
+function _mntParamMarkalar(A){
+  var sira=((typeof VE_MNT_LIB_MARKALAR!=='undefined') ? VE_MNT_LIB_MARKALAR : [])
+    .concat([(typeof VE_MNT_LIB_MARKA_OZEL!=='undefined') ? VE_MNT_LIB_MARKA_OZEL : 'Özel takozlar']);
+  var G={}, ad=[];
+  A.forEach(function(a){
+    var m=(a.e && a.e.marka) || 'Diğer';
+    if(!G[m]){ G[m]=[]; ad.push(m); }
+    G[m].push(a);
+  });
+  ad.sort(function(x, y){
+    var i=sira.indexOf(x), j=sira.indexOf(y);
+    return (i<0 ? 99 : i)-(j<0 ? 99 : j) || x.localeCompare(y, 'tr');
+  });
+  return ad.map(function(m){ return { ad:m, A:G[m], n:G[m].filter(function(a){ return a.dahil; }).length }; });
+}
 function _mntParamAdayHTML(node, H){
   var A=H.A, n=H.aday.length;
-  var h=_mntFoyAc([{ b:'<input type="checkbox"'+(n===A.length ? ' checked' : '')+' aria-label="Tüm tipler"'
-                       + ' onchange="veMntParamAdayHepsi(\''+node.id+'\',this.checked)">', gen:'8%', sinif:'ve-mnt-sec' },
-                   { b:'Tip', gen:'42%', sinif:'sol' },
+  if(!A.length) return _mntBolum('Adaylar', '', _mntNot('Kütüphanede tip yok', 'warn'), { emId:'ve-mnt-param-aday-em-'+node.id });
+  var h='<div class="ve-prm-marka-l">'
+    + '<label class="ve-prm-hepsi"><input type="checkbox"'+(n===A.length ? ' checked' : '')+' aria-label="Tüm tipler"'
+    + ' onchange="veMntParamAdayHepsi(\''+node.id+'\',this.checked)"><span>Tümü</span></label>';
+  _mntParamMarkalar(A).forEach(function(M){
+    var acik=!!_MNT_PARAM_MARKA[node.id+'|'+M.ad];
+    h+='<details class="ve-prm-marka"'+(acik ? ' open' : '')+' data-marka="'+_mntEsc(M.ad)+'"'
+      + ' ontoggle="veMntParamMarkaAc(\''+node.id+'\',this.dataset.marka,this.open)">'
+      + '<summary><input type="checkbox"'+(M.n===M.A.length ? ' checked' : '')+' aria-label="'+_mntEsc(M.ad)+'"'
+      + ' onchange="veMntParamMarka(\''+node.id+'\',this.closest(\'details\').dataset.marka,this.checked)">'
+      + '<span class="ve-prm-marka-ad">'+_mntEsc(M.ad)+'</span>'
+      + '<span class="ve-prm-marka-n">'+M.n+' / '+M.A.length+'</span>'+veIkon('chevron-down')+'</summary>'
+      + _mntFoyAc([{ b:'', gen:'8%', sinif:'ve-mnt-sec' }, { b:'Tip', gen:'42%', sinif:'sol' },
                    { b:_mntSym('k<sub>z</sub>')+' stat. <u>[N/mm]</u>', gen:'16%' },
                    { b:_mntSym('k<sub>z</sub>')+' din. <u>[N/mm]</u>', gen:'16%' },
-                   { b:'Yasa', gen:'18%', sinif:'sol' }], 'Aday tipler', 've-mnt-foy--sar ve-mnt-foy--ad');
-  A.forEach(function(a){
-    h+='<tr><td class="ve-mnt-sec"><input type="checkbox"'+(a.dahil ? ' checked' : '')
-     + ' aria-label="'+_mntEsc(a.name)+'" onchange="veMntParamAday(\''+node.id+'\',\''+_mntEsc(a.key)+'\',this.checked)"></td>'
-     + '<td class="sol sar">'+_mntParamAd(a.name)+'</td>'
-     + '<td>'+_mntS(_mntNum(a.e.sz, NaN), 0)+'</td><td>'+_mntS(_mntNum(a.e.dz, NaN), 0)+'</td>'
-     + '<td class="sol">'+(_mntEntryHasLaw(a.e) ? 'eğri' : 'doğrusal')+'</td></tr>';   // sütun 18 %: "doğrusal" sığar
+                   { b:'Yasa', gen:'18%', sinif:'sol' }], M.ad+' · aday tipler', 've-mnt-foy--sar ve-mnt-foy--ad');
+    M.A.forEach(function(a){
+      h+='<tr><td class="ve-mnt-sec"><input type="checkbox"'+(a.dahil ? ' checked' : '')
+       + ' aria-label="'+_mntEsc(a.name)+'" onchange="veMntParamAday(\''+node.id+'\',\''+_mntEsc(a.key)+'\',this.checked)"></td>'
+       + '<td class="sol sar">'+_mntParamAd(a.name)+'</td>'
+       + '<td>'+_mntS(_mntNum(a.e.sz, NaN), 0)+'</td><td>'+_mntS(_mntNum(a.e.dz, NaN), 0)+'</td>'
+       + '<td class="sol">'+(_mntEntryHasLaw(a.e) ? 'eğri' : 'doğrusal')+'</td></tr>';   // sütun 18 %: "doğrusal" sığar
+    });
+    h+=_MNT_FOY_KAPA+'</details>';
   });
-  return _mntBolum('Adaylar', n+' / '+A.length, h+_MNT_FOY_KAPA, { emId:'ve-mnt-param-aday-em-'+node.id });
+  return _mntBolum('Adaylar', n+' / '+A.length, h+'</div>', { emId:'ve-mnt-param-aday-em-'+node.id });
 }
 
-// Ek kısıtların penceredeki biçimi: anahtar → [karşılaştırma, birim, sınır anahtarı].
-// Sınırın yüzdesi pencerede, oranı çekirdekte (_MNT_PARAM_YUZDE).
-var _MNT_PARAM_EK = {
-  sehimAlt: ['≥', 'mm', 'sehimAlt'], sehim: ['≤', 'mm', 'sehimUst'], altMod: ['≥', 'Hz', 'altMod'],
-  kapasite: ['≤', '%', 'kapasite'], ayrisma: ['≥', '%', 'ayrisma'], isletme: ['≤', 'mm', 'isletmeUst'],
-  durdurucu: ['≤', 'mm', 'durdurucuUst'], cekme: ['', '', null], darbe: ['≤', '%', 'darbe']
-};
-function _mntParamSinirDeger(node, key){
-  var s=(node.data && node.data.sinir) || {}, V=veMntKatalog.SINIR_VARSAYILAN;
-  return _mntBos(s[key]) ? (_MNT_PARAM_YUZDE[key] ? +(V[key]*100).toFixed(6) : V[key]) : s[key];   // makine: yüzde → alan değeri
+// Rijitlik toleransının alan değeri (pencerede yüzde, çekirdekte oran).
+function _mntParamTolerans(node){
+  var s=(node.data && node.data.sinir) || {};
+  return _mntBos(s.tolerans) ? +(veMntKatalog.SINIR_VARSAYILAN.tolerans*100).toFixed(6) : s.tolerans;   // makine: oran → alan değeri
 }
-function _mntParamSinirAlan(node, key, aria){
-  return '<td class="gir"><input type="text" inputmode="decimal" id="ve-mnt-param-'+key+'-'+node.id+'"'
-    + ' value="'+_mntEsc(_mntParamSinirDeger(node, key))+'" aria-label="'+_mntEsc(aria)+'"'
-    + ' onchange="veMntParamSinir(\''+node.id+'\',\''+key+'\',this.value)"></td>';
+// KRİTERLER — Excel'in Özet'indeki dört kesin kriter (adı ve sınırı aynı), sıralama
+// ölçütü ve rijitlik toleransı (açıkken kesin kriterler ±tolerans köşelerinde de).
+var _MNT_PARAM_KRITER_AD = { k1:'Modal bant', k1a:'Mod ayrıklığı', k1b:'8–10 Hz bandında mod', k2:'TR' };
+function _mntParamKriterSinir(k, fAtes){
+  var K=veMntKatalog, b='&nbsp;';
+  if(k==='k1') return (fAtes>0) ? '&lt;'+b+_mntS(K.K1_ORAN*fAtes, 2)+b+'Hz' : '&lt;'+b+'½·f<sub>ateş</sub>';
+  if(k==='k1a') return '&gt;'+b+_mntS(K.K1A_HZ, 1)+b+'Hz';
+  if(k==='k1b') return 'Yok';
+  return '&lt;'+b+'%'+_mntS(K.K2_T*100, 0);
 }
-function _mntParamAcikKutu(node, k, acik, aria){
-  return '<td class="ve-mnt-sec"><input type="checkbox"'+(acik ? ' checked' : '')+' aria-label="'+_mntEsc(aria)+'"'
-    + ' onchange="veMntParamAcik(\''+node.id+'\',\''+k+'\',this.checked)"></td>';
-}
-function _mntParamKisitHTML(node, H){
+function _mntParamKriterHTML(node, H){
   var K=veMntKatalog, c=K.baglam(H.ctx);
-  var ad={}; K.KISITLAR.forEach(function(x){ ad[x.k]=x.ad; });
-  var lim1=(H.M.fAtes>0) ? '&lt; '+_mntS(K.K1_ORAN*H.M.fAtes, 1)+' Hz' : '&lt; ½·f<sub>ateş</sub>';
-  var kesin=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Kriter', gen:'54%', sinif:'sol' }, { b:'Sınır', gen:'34%' }], 'Kesin kriterler')
-    + '<tr><td>1</td><td class="sol">'+ad.k1+'</td><td>'+lim1+'</td></tr>'
-    + '<tr><td>1a</td><td class="sol">'+ad.k1a+'</td><td>&gt; '+_mntS(K.K1A_HZ, 1)+' Hz</td></tr>'
-    + '<tr><td>1b</td><td class="sol">'+ad.k1b+'</td><td>'+_mntS(K.K1B[0], 0)+'–'+_mntS(K.K1B[1], 0)+' Hz dışı</td></tr>'
-    + '<tr><td>2</td><td class="sol">'+ad.k2+'</td><td>&lt; %'+_mntS(K.K2_T*100, 0)+'</td></tr>'+_MNT_FOY_KAPA;
-  var ek=_mntFoyAc([{ b:'Açık', gen:'11%', sinif:'ve-mnt-sec' }, { b:'Kısıt', gen:'49%', sinif:'sol' }, { b:'', gen:'7%' },
-                    { b:'Sınır', gen:'19%' }, { b:'Birim', gen:'14%', sinif:'sol' }], 'Ek kısıtlar');
-  K.KISITLAR.forEach(function(x){
-    if(x.zorunlu) return;
-    var E=_MNT_PARAM_EK[x.k];
-    ek+='<tr>'+_mntParamAcikKutu(node, x.k, c.acik[x.k], x.ad)+'<td class="sol" title="'+_mntEsc(x.ad)+'">'+x.ad+'</td><td>'+E[0]+'</td>'
-      + (E[2] ? _mntParamSinirAlan(node, E[2], x.ad+' sınırı') : '<td>—</td>')+'<td class="sol">'+E[1]+'</td></tr>';
+  var h=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Kriter', gen:'54%', sinif:'sol' }, { b:'Sınır', gen:'34%' }], 'Kesin kriterler');
+  K.KISITLAR.forEach(function(Q){
+    if(!Q.zorunlu) return;
+    h+='<tr><td>'+Q.no+'</td><td class="sol">'+_MNT_PARAM_KRITER_AD[Q.k]+'</td><td>'+_mntParamKriterSinir(Q.k, H.M.fAtes)+'</td></tr>';
   });
-  ek+=_MNT_FOY_KAPA;
-  var deg=_mntFoyAc([{ b:'Açık', gen:'11%', sinif:'ve-mnt-sec' }, { b:'Parametre', gen:'56%', sinif:'sol' },
-                     { b:'Değer', gen:'19%' }, { b:'Birim', gen:'14%', sinif:'sol' }], 'Değerlendirme parametreleri')
-    + '<tr><td class="ve-mnt-sec">—</td><td class="sol">Sürünme payı (E7)</td>'+_mntParamSinirAlan(node, 'surunme', 'Sürünme payı')+'<td class="sol">%</td></tr>'
-    + '<tr>'+_mntParamAcikKutu(node, 'tolerans', c.acik.tolerans, 'Rijitlik toleransı')
-    + '<td class="sol">Rijitlik toleransı ±</td>'+_mntParamSinirAlan(node, 'tolerans', 'Rijitlik toleransı')+'<td class="sol">%</td></tr>'
-    + _MNT_FOY_KAPA;
-  var amac=_mntIzgara(2,
-      '<label class="ve-fp-f"><span class="ve-fp-l">İletilebilirlik ağırlığı</span>'
-    + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-mnt-param-agirlik-'+node.id+'"'
-    + ' value="'+_mntEsc(_mntParamSinirDeger(node, 'agirlik'))+'"'
-    + ' onchange="veMntParamSinir(\''+node.id+'\',\'agirlik\',this.value)"></label>'
-    + _mntOku('Sehim ağırlığı', _mntS(1-c.s.agirlik, 2), { id:'ve-mnt-param-agd-'+node.id }));
-  return _mntBolum('Kesin kriterler', '', kesin)
-    + _mntBolum('Ek kısıtlar', '', ek)
-    + _mntBolum('Değerlendirme', '', deg)
-    + _mntBolum('Amaç', 'iletilebilirlik · statik sehim', amac);
+  h+=_MNT_FOY_KAPA;
+  var tol='<div class="ve-fp-f"><label class="ve-fp-l" for="ve-mnt-param-tolerans-'+node.id+'">Rijitlik toleransı ± <u>[%]</u></label>'
+    + '<span class="ve-prm-tol"><input type="checkbox"'+(c.acik.tolerans ? ' checked' : '')+' aria-label="Rijitlik toleransı"'
+    + ' onchange="veMntParamToleransAc(\''+node.id+'\',this.checked)">'
+    + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-mnt-param-tolerans-'+node.id+'"'
+    + ' value="'+_mntEsc(_mntParamTolerans(node))+'"'+(c.acik.tolerans ? '' : ' disabled title="Rijitlik toleransı kapalı"')
+    + ' onchange="veMntParamTolerans(\''+node.id+'\',this.value)"></span></div>';
+  return _mntBolum('Kesin kriterler', '', h)
+    + _mntBolum('Sıralama', '', _mntIzgara(2, _mntOku('Ölçüt', 'Statik sehim') + tol));
 }
 
 // ── Ayarlar ─────────────────────────────────────────────────────────────────
@@ -417,6 +428,21 @@ function veMntParamAday(nodeId, key, dahil){
   if(h.length) n.data.haric=h; else delete n.data.haric;
   if(typeof saveState==='function') saveState();
 }
+// Markanın bütün tipleri alınır ya da bırakılır.
+function veMntParamMarka(nodeId, marka, dahil){
+  var n=_mntParamDugum(nodeId); if(!n) return;
+  var keys=_mntParamAdaylar(_mntParamModel(), n).filter(function(a){ return ((a.e && a.e.marka) || 'Diğer')===marka; })
+    .map(function(a){ return a.key; });
+  var h=(n.data.haric || []).filter(function(k){ return keys.indexOf(k)<0; });
+  if(!dahil) h=h.concat(keys);
+  if(h.length) n.data.haric=h; else delete n.data.haric;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(n);
+}
+// Marka grubunun açıklığı — görünüm durumu, modele yazılmaz.
+function veMntParamMarkaAc(nodeId, marka, acik){
+  if(acik) _MNT_PARAM_MARKA[nodeId+'|'+marka]=true; else delete _MNT_PARAM_MARKA[nodeId+'|'+marka];
+}
 function veMntParamAdayHepsi(nodeId, dahil){
   var n=_mntParamDugum(nodeId); if(!n) return;
   if(dahil) delete n.data.haric; else n.data.haric=Object.keys(veMntGetLibraryMap());
@@ -425,22 +451,26 @@ function veMntParamAdayHepsi(nodeId, dahil){
 }
 // Sınır (pencere birimi: mm, %, ağırlık 0–1). Boş ya da geçersiz → alan
 // silinir, varsayılan geçerli olur (alan varsayılanı değer olarak gösterir).
-function veMntParamSinir(nodeId, key, val){
+// Rijitlik toleransı: değer (%, aralığı çekirdeğin) ve açıklık — taramanın tek ayarı.
+// Eski projenin öteki sınırları ve açıklıkları okunmaz, yazılmaz.
+function veMntParamTolerans(nodeId, val){
   var n=_mntParamDugum(nodeId); if(!n) return;
-  if(!(key in veMntKatalog.SINIR_VARSAYILAN)) return;
-  var s=Object.assign({}, n.data.sinir || {}), v=_mntNum(val, NaN), r=veMntKatalog.SINIR_ARALIK[key];
-  var x=_MNT_PARAM_YUZDE[key] ? v/100 : v;
-  var gecerli=r ? ((r[2] ? x>r[0] : x>=r[0]) && x<=r[1]) : (x>0);
-  if(String(val==null ? '' : val).trim()!=='' && gecerli) s[key]=v; else delete s[key];
+  var s=Object.assign({}, n.data.sinir || {}), v=_mntNum(val, NaN), r=veMntKatalog.SINIR_ARALIK.tolerans, x=v/100;
+  var gecerli=(r[2] ? x>r[0] : x>=r[0]) && x<=r[1];
+  if(String(val==null ? '' : val).trim()!=='' && gecerli) s.tolerans=v; else delete s.tolerans;
   if(Object.keys(s).length) n.data.sinir=s; else delete n.data.sinir;
   if(typeof saveState==='function') saveState();
 }
-function veMntParamAcik(nodeId, k, acik){
+function veMntParamToleransAc(nodeId, acik){
   var n=_mntParamDugum(nodeId); if(!n) return;
   var a=Object.assign({}, n.data.acik || {});
-  if(!!acik===!!veMntKatalog.ACIK_VARSAYILAN[k]) delete a[k]; else a[k]=!!acik;
+  if(acik) a.tolerans=true; else delete a.tolerans;
   if(Object.keys(a).length) n.data.acik=a; else delete n.data.acik;
   if(typeof saveState==='function') saveState();
+  if(typeof document!=='undefined'){                                   // değer alanı açıklığı izler
+    var el=document.getElementById('ve-mnt-param-tolerans-'+nodeId);
+    if(el){ el.disabled=!acik; if(acik) el.removeAttribute('title'); else el.title='Rijitlik toleransı kapalı'; }
+  }
 }
 
 // ── KOŞUCU ──────────────────────────────────────────────────────────────────
@@ -500,19 +530,6 @@ function _mntParamIlerlemeYaz(nodeId){
   if(typeof document==='undefined' || typeof vePencereIlerleme!=='function') return;
   vePencereIlerleme('ve-mnt-param-btn-'+nodeId, _mntParamIlerleme(nodeId));
 }
-// Raporun satırları: sıranın ve mevcut tasarımın TAM ölçümü (iki aşama + darbe).
-function _mntParamZenginlestir(S, H, O){
-  var tam=function(tipler){
-    var o1=O.olc1(tipler), o2=o1 ? O.olc2(tipler) : null;
-    return { o1:o1, o2:o2, k:veMntKatalog.hepsi(o1, o2, H.ctx) };
-  };
-  return {
-    S:S, M:H.M, A:H.aday, sabit:H.sabit, ctx:veMntKatalog.baglam(H.ctx),
-    satir:S.sira.map(function(r){ return Object.assign({}, r, tam(r.tipler)); }),
-    mevcut:tam(H.M.G.map(function(){ return null; })),
-    tarih:new Date()
-  };
-}
 // Süren taramayı durdurur (proje değişince — veMntParamUnut). Dönüş: vardı mı.
 function veMntParamDurdur(){
   if(!_MNT_PARAM_IS) return false;
@@ -525,8 +542,11 @@ function veMntParamTara(nodeId){
   var H=_mntParamHazirlik(node);
   if(H.eksik){ _mntParamYaz(nodeId, H.eksik, 'warn'); return; }
   var O=_mntParamOlcucu(H.M, veMntKatalog.baglam(H.ctx));
+  // Ek kısıt yok: ikinci aşama yalnız kesin kriterleri sağlayanlarda (yoksa en az
+  // ihlalli 25'te) — tam tarama (her kombinasyonda) sınır değişince yeniden taramasın
+  // diyeydi, değişen sınır kalmadı.
   var it=veMntKatalog.tarayici({ G:H.M.G, adaylar:H.aday, sabit:H.sabit, ctx:H.ctx,
-                                 olc1:O.olc1, olc2:O.olc2, enIyi:25, tam:true });
+                                 olc1:O.olc1, olc2:O.olc2, enIyi:25, tam:false });
   var is=_MNT_PARAM_IS={ nodeId:nodeId, dur:false, i:0, n:it.N, son:false };
   _mntParamYaz(nodeId, '');
   _mntParamDugme(nodeId);
@@ -573,7 +593,7 @@ function veMntParamTara(nodeId){
     if(is.dur){ bitir('Durduruldu', 'warn'); return; }
     var bas=_mntParamSimdi(), r, k=0;
     do { r=it.adim(1); } while(!r.bitti && ++k<_MNT_PARAM_DILIM_N && _mntParamSimdi()-bas<_MNT_PARAM_DILIM);
-    is.i=r.i;
+    is.i=r.asama===2 ? it.N : r.i;                 // ikinci aşama kısa: çubuk dolu kalır
     // Çubuk en çok ~10 kez/s yazılır; genişlik geçişi CSS'te.
     var t=_mntParamSimdi();
     if(r.bitti || t-yazildi>=100){ yazildi=t; _mntParamIlerlemeYaz(nodeId); }
@@ -590,12 +610,15 @@ if(typeof module!=='undefined' && module.exports){
     getMntParamPropertiesHTML: getMntParamPropertiesHTML,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
-    _mntParamZenginlestir: _mntParamZenginlestir, _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,
+    _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,
     _mntParamIlerleme: _mntParamIlerleme, _mntParamSonraki: _mntParamSonraki, veMntParamDurdur: veMntParamDurdur,
     _mntParamSimdi: _mntParamSimdi, _mntParamIlerlemeYaz: _mntParamIlerlemeYaz, _MNT_PARAM_DILIM: _MNT_PARAM_DILIM,
     _MNT_PARAM_XLS: _MNT_PARAM_XLS,
-    _MNT_PARAM_EK: _MNT_PARAM_EK, _MNT_PARAM_YUZDE: _MNT_PARAM_YUZDE, _mntParamAd: _mntParamAd,
+    _mntParamTolerans: _mntParamTolerans, _mntParamAd: _mntParamAd, _MNT_PARAM_KRITER_AD: _MNT_PARAM_KRITER_AD,
+    _mntParamKriterSinir: _mntParamKriterSinir, _mntParamKriterHTML: _mntParamKriterHTML,
+    _mntParamMarkalar: _mntParamMarkalar, _MNT_PARAM_MARKA: _MNT_PARAM_MARKA,
+    veMntParamMarka: veMntParamMarka, veMntParamMarkaAc: veMntParamMarkaAc,
     veMntParamSabit: veMntParamSabit, veMntParamAday: veMntParamAday, veMntParamAdayHepsi: veMntParamAdayHepsi,
-    veMntParamSinir: veMntParamSinir, veMntParamAcik: veMntParamAcik, veMntParamTara: veMntParamTara
+    veMntParamTolerans: veMntParamTolerans, veMntParamToleransAc: veMntParamToleransAc, veMntParamTara: veMntParamTara
   };
 }

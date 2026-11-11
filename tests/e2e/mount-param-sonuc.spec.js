@@ -1,13 +1,14 @@
 /**
  * mount-param-sonuc.spec.js — PARAMETRİK ANALİZ'İN SONUÇ'U (gerçek tarayıcı)
  * ─────────────────────────────────────────────────────────────────────────
- * Kullanıcı kararları (2026-10-18): taramanın sonucu pencerenin Sonuç
- * kategorisinde — "Tablo + iki sade grafik, diğer diyagramlar kalsın fakat
- * kullanıcı istediği zaman açabilsin". Node'da koşmayan halkalar:
+ * Kullanıcı kararları: taramanın sonucu pencerenin Sonuç kategorisinde (2026-10-18);
+ * sıralama Excel'in kuralı — dört kesin kriter, sonra en küçük statik sehim; K0 ve
+ * K1…K9 (2026-11-10). Node'da koşmayan halkalar:
  *   · gerçek "Tara" tıklaması taramayı bitirir, Sonuç kurulur ve görüşe gelir
  *   · iki grafik kabın GERÇEK genişliğinde 1:1 (yazı ekrandaki boyunda)
- *   · önerinin halkası ve mod çentiği gerçek fareyle ipucu verir
- *   · sınır alanına gerçek yazım Sonuç'u tarama YİNELENMEDEN yeniler
+ *   · seçilenin halkası ve mod çentiği gerçek fareyle ipucu verir
+ *   · K satırına gerçek tık seçilen bölümü değiştirir, tarama YİNELENMEZ;
+ *     tip adları satırda bölünmez
  *   · Diyagramlar listesi galeriyi açar; soldaki listeden geçiş aynı katmanda;
  *     3B gerçek fareyle ve oklarla döner; kesit seçicisi haritayı değiştirir;
  *     ✕ kapatır, pencere yerinde kalır
@@ -39,15 +40,13 @@ async function kur(page, nTip = 6) {
     const tum = Object.keys(veMntGetLibraryMap());
     tum.forEach((k) => { if (tut.length < nTip && tut.indexOf(k) < 0) tut.push(k); });
     const n = createNode('mnt-parametric', 900, 120);
-    // E9 kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10); tek uygun kombinasyon
-    // darbede 2 × kapasiteyi aşıyor — Sonuç'un yapısı Öneri'yle sınanır.
-    n.data = { acik: { darbe: false }, haric: tum.filter((k) => tut.indexOf(k) < 0) };
+    n.data = { haric: tum.filter((k) => tut.indexOf(k) < 0) };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
     return n.id;
   }, nTip);
 }
 
-test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; galeri: liste, geçiş, 3B, kesit', async ({ page }) => {
+test('Tara → Sonuç: altı bölüm, iki grafik 1:1, ipucu, K seçimi; galeri: liste, geçiş, 3B, kesit', async ({ page }) => {
   const hata = [];
   page.on('pageerror', (e) => hata.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
@@ -64,10 +63,10 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
     return { bas: [...kat.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent), gorus: r.top < q.bottom && r.top >= q.top - 2,
       durum: document.getElementById('ve-mnt-param-st-' + i).textContent, liste: kat.querySelectorAll('.ve-prm-dg').length };
   }, id);
-  expect(S.bas).toEqual(['Öneri', 'Kriterler', 'Modlar', 'Statik sehim ve iletilebilirlik', 'Yakın seçenekler', 'Eleme', 'Diyagramlar']);
+  expect(S.bas).toEqual(['Konfigürasyonlar', 'K1', 'Modlar', 'Statik sehim ve iletilebilirlik', 'Kriterleri sağlayan', 'Diyagramlar']);
   expect(S.gorus).toBe(true);
   expect(S.durum).toMatch(/^Tarandı \([\d,]+ s\)$/);
-  expect(S.liste).toBe(10);
+  expect(S.liste).toBe(9);
 
   // 1:1 — iki grafiğin ekrandaki genişliği kendi genişliği (ölçeklenmiyor), kabı dolduruyor
   const olcu = await page.evaluate(() => [...document.querySelectorAll('.ve-fp-kat[data-k="sonuc"] svg.ve-pd')].map((s) => {
@@ -78,7 +77,7 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
   expect(olcu.map((o) => o.pd)).toEqual(['mod', 'dag']);
   olcu.forEach((o) => { expect(Math.abs(o.w - o.a)).toBeLessThan(0.6); expect(Math.abs(o.kap - (o.a + 2))).toBeLessThan(1.5); });
 
-  // araç ipucu: önerinin halkası (kombinasyon, amaçlar, hüküm) ve bir mod çentiği
+  // araç ipucu: seçilenin halkası (kombinasyon, amaçlar, hüküm) ve bir mod çentiği
   const ipucu = async (sec) => {
     const el = await page.$(sec);
     await el.scrollIntoViewIfNeeded();
@@ -90,28 +89,27 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
   const ip = await ipucu('.ve-pd-kap[data-pd="dag"] circle.ve-pd-uz');
   expect(ip).toMatch(/T %[\d,]+ · δs [\d,]+ mm/);
   expect(ip).toMatch(/Uygun/);
-  expect(await ipucu('.ve-pd-kap[data-pd="mod"] rect.ve-pd-hit[data-ip]')).toMatch(/^Mevcut · 1\. mod/);
+  expect(await ipucu('.ve-pd-kap[data-pd="mod"] rect.ve-pd-hit[data-ip]')).toMatch(/^K0 · 1\. mod/);
 
-  // canlı sınır: statik sehim üst sınırına gerçek yazım — tarama yinelenmez, cevap yeni sınırla
-  const D0 = await page.evaluate((i) => { window.__depo = _MNT_PARAM_SONUC[i].D; return true; }, id);
-  expect(D0).toBe(true);
-  const alan = page.locator('#ve-mnt-param-sehimUst-' + id);
-  await alan.scrollIntoViewIfNeeded();
-  await alan.fill('6');
-  await alan.press('Enter');
-  await alan.evaluate((e) => e.blur());
+  // K seçimi: K3 (liste kısaysa sonuncusu) satırına gerçek tık — seçilen bölüm o K, grafikler
+  // onunla; tarama yinelenmez
+  await page.evaluate((i) => { window.__depo = _MNT_PARAM_SONUC[i].D; }, id);
+  const kk = await page.evaluate(() => Math.min(3, document.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-prm-k').length - 1));
+  expect(kk).toBeGreaterThan(1);
+  const k3 = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-k[data-k="' + kk + '"]');
+  await k3.scrollIntoViewIfNeeded();
+  await k3.click();
   await page.waitForTimeout(300);
-  const canli = await page.evaluate((i) => {
-    const n = nodes.find((x) => x.id === i), H = _mntParamHazirlik(n);
-    const S2 = _mntParamOzet(_MNT_PARAM_SONUC[i], veMntKatalog.baglam(H.ctx)).S;
-    const sat = [...document.querySelectorAll('table.ve-prm-kriter tbody tr')].find((r) => r.getAttribute('data-k') === 'sehim');
-    return { ayni: _MNT_PARAM_SONUC[i].D === window.__depo, ust: H.ctx.s.sehimUst, durum: document.getElementById('ve-mnt-param-durum-' + i).textContent,
-      n: S2.uygunN, N: S2.N, sinir: sat.children[1].textContent };
-  }, id);
-  expect(canli.ayni).toBe(true);
-  expect(canli.ust).toBe(6);
-  expect(canli.durum).toBe('Uygun ' + canli.n + ' / ' + canli.N);
-  expect(canli.sinir.replace(/ /g, ' ')).toBe('3–6 mm');
+  const sec = await page.evaluate(([i, kk]) => {
+    const kat = document.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    return { ayni: _MNT_PARAM_SONUC[i].D === window.__depo, bas: [...kat.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent)[1],
+      secili: kat.querySelector('.ve-prm-k[aria-selected="true"]').getAttribute('data-k'),
+      sutun: kat.querySelector('table.ve-prm-kriter thead th:last-child').textContent,
+      mod: [...kat.querySelectorAll('.ve-pd-kap[data-pd="mod"] text')].some((t) => t.textContent === 'K' + kk),
+      // tip adı satırda bölünmez: her adın kutusu tek satır
+      bolunen: [...kat.querySelectorAll('.ve-prm-k-ad .t')].filter((e) => e.getClientRects().length > 1).map((e) => e.textContent) };
+  }, [id, kk]);
+  expect(sec).toEqual({ ayni: true, bas: 'K' + kk, secili: String(kk), sutun: 'K' + kk, mod: true, bolunen: [] });
 
   // galeri: listedeki gerçek düğme büyük çizimi açar
   const dg = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-dg[data-pd="d11"]');
@@ -157,7 +155,7 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
 
   await page.click('#ve-mnt-fs-x');
   await expect(page.locator('#ve-mnt-fs')).toHaveCount(0);
-  await expect(page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-dg')).toHaveCount(10);
+  await expect(page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-dg')).toHaveCount(9);
   expect(hata).toEqual([]);
 });
 
@@ -169,6 +167,7 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
 // kombinasyondu). Burada aday × aday (tam ve tahminsiz tip; 2026-11-10: 27 × 27 = 729).
 // MODELE UYGULA ve AD (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran
 // bir düğme yok" · "Cone 67 50Sh (AMC 1…" iki ayrı tipte aynı görünüyordu).
+// Adaylar markaya göre açılır kapanır gruplarda: ölçü bütün gruplar açıkken.
 // Node'da koşmayan halkalar: gerçek tık takozlara yazar ve TEK geri-al
 // adımıdır; pencere yeniden kurulur, Sonuç yerinde kalır (tarama eskimez);
 // Takoz penceresinin listesi uygulanan tipi gösterir; Ctrl+Z geri alır.
@@ -179,6 +178,8 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
   page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
   const id = await kur(page);
   await page.waitForTimeout(500);
+  await page.evaluate(() => document.querySelectorAll('.ve-prm-marka').forEach((d) => { d.open = true; }));
+  await page.waitForTimeout(200);
   const ad = await page.evaluate(() => {
     const td = [...document.querySelectorAll('.ve-fp-kat[data-k="grup"] td.sar, .ve-fp-kat[data-k="aday"] td.sar')];
     return { n: td.length, kesik: td.filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent) };
@@ -218,7 +219,7 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
   expect(sonra.kat).toBe('ok');
   expect(sonra.em).toEqual(['Aynı', 'Aynı', 'Aynı']);
   sonra.krit.forEach((r) => expect(r[0]).toBe(r[1]));
-  expect(sonra.dugme).toEqual({ idx: once.dugme.idx, kapali: 'true', title: 'Öneri modelde.' });
+  expect(sonra.dugme).toEqual({ idx: once.dugme.idx, kapali: 'true', title: 'K1 modelde.' });
   expect(sonra.not).toBe('Uygulandı (6 takoz)');
   const tid = await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-mount');
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
@@ -241,6 +242,9 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
   }, id);
   await page.waitForTimeout(600);
+  // adayların marka grupları açık: içerik sütunu taşar (satırın yapışıklığı sınanır)
+  await page.evaluate(() => document.querySelectorAll('.ve-prm-marka').forEach((d) => { d.open = true; }));
+  await page.waitForTimeout(300);
   const geo = () => page.evaluate((i) => {
     const ic = document.querySelector('.ve-properties-content'), s = document.querySelector('.ve-properties-content .ve-fp-yurut');
     const b = document.getElementById('ve-mnt-param-btn-' + i), il = s.querySelector('.ve-fp-ilerleme');
@@ -298,7 +302,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
 });
 
 // EXCEL (kullanıcı kararı 2026-11-09: "Kullanıcı bu Excel formatında çıktı alacak"):
-// Öneri'deki düğmenin gerçek tıkı tarayıcının indirmesini başlatır; dosya
+// Seçilen K'nın bölümündeki düğmenin gerçek tıkı tarayıcının indirmesini başlatır; dosya
 // tarayıcının sıkıştırmasıyla (CompressionStream) yazılır ve programın kendi
 // okuyucusu açar — Node'da bu yol HİÇ koşmuyor (jsdom'da sıkıştırma yok).
 // Düğme satırı dar sütunda taşmaz (üç düğme alt satıra iner).

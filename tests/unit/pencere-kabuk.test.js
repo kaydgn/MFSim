@@ -377,21 +377,19 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     const govde = global.nodes.find((n) => n.type === 'mnt-motor');
     const nk = govde.data.pointMass; govde.data.pointMass = true; topla(takozPencere('mnt-motor')); govde.data.pointMass = nk;
     // Parametrik Analiz'in Sonuç bölümleri yalnız taramadan sonra: ASFAT, üç
-    // grup × dört aday (64 kombinasyon) — öneri, kriterler, iki grafik, yakın
-    // seçenekler, eleme ve diyagramların listesi (diyagramlar galeride).
+    // grup × dört aday (64 kombinasyon) — konfigürasyonlar, seçilen K, iki grafik,
+    // kriterleri sağlayan ve diyagramların listesi (diyagramlar galeride).
     global.nodes = JSON.parse(oku('assets/examples/asfat_topoloji.json')).nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
-    // E9 (darbe yükü) kapalı: AMC tipleri katalog kapasitesini taşıyor (2026-11-10) ve uygun
-    // kombinasyon Cone 67 50 ShA'lı — burada Sonuç'un bölüm adları sınanır, uygun sonuç gerekir.
     const tutulan = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116'];
-    const pn = { id: 'pa-k', type: 'mnt-parametric', data: { acik: { darbe: false },
+    const pn = { id: 'pa-k', type: 'mnt-parametric', data: {
       haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => tutulan.indexOf(k) < 0) } };
     global.nodes.push(pn);
     const Hz = pa._mntParamHazirlik(pn), O = pa._mntParamOlcucu(Hz.M, global.veMntKatalog.baglam(Hz.ctx));
-    const it = global.veMntKatalog.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, tam: true });
+    const it = global.veMntKatalog.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2 });
     it.adim(Infinity);
     ps._mntParamSonucKaydet(pn.id, Hz, O, it.depo());
     const sonuc = dom(getMntParamPropertiesHTML(pn));
-    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(7);
+    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(6);
     topla(sonuc);
     expect(basliklar.size).toBeGreaterThan(40);                       // tarama gerçekten taradı
     // 3D Görüntüleyici'nin dosyalı bölümleri (Parçalar · Kütle · Model): güç
