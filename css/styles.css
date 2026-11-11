@@ -3490,14 +3490,9 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   border-color:var(--accent-primary);
   box-shadow:0 0 0 1px var(--accent-primary);
 }
-/* PENCERENİN KONUSU (js/map.js → veMufettisIsaretle). Bileşen penceresi seçim
-   boşalınca da açık kalıyor (kullanıcı isteği 2026-10-16); pencerenin hangi
-   bileşene ait olduğu kesikli kenardan okunur. Seçili kutunun çift çeperi
-   ayrı kalır — seçim başka, pencere başka. */
-.ve-node.ve-node--mufettis:not(.selected) .ve-node-box{
-  border-color:var(--accent-primary);
-  border-style:dashed;
-}
+/* PENCERENİN KONUSU (js/map.js → veMufettisIsaretle) tuvalde ÇİZİLMEZ (kullanıcı
+   2026-11-11, Canlı Not 147: "Çerçevesi kesikli çizgi bunun, gerek yok"): kutu
+   öteki bileşenler gibi; sınıf yalnız FEAD'in tablo ve çizim işareti için. */
 
 /* Yeni bileşen canvas'a eklenince yaylanarak belirir (drop-in) — yalnızca
    kullanıcı eklemesinde (createNode); restore/load ayrı yoldan render eder. */
@@ -9933,6 +9928,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-lj-gy{ fill:color-mix(in srgb, var(--text-muted) 22%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
 .ve-ak-lj-gx{ fill:color-mix(in srgb, var(--text-muted) 34%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
 .ve-ak-lj-t{ fill:var(--accent-success); }
+.ve-ak-lj-g1{ fill:var(--seri-1); } .ve-ak-lj-g2{ fill:var(--seri-2); } .ve-ak-lj-g3{ fill:var(--seri-3); }
 .ve-ak-lj-G{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.4; }
 .ve-ak-lj-n{ fill:var(--accent-warning); }
 .ve-ak-lj-br{ fill:color-mix(in srgb, var(--text-muted) 50%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; stroke-linejoin:round; }
@@ -10109,32 +10105,26 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-prm-marka[open] > summary .mf-ico{ transform:rotate(180deg); }
 .ve-prm-marka > table{ margin:0; border-top:1px solid var(--border-light); }
 @media (prefers-reduced-motion: reduce){ .ve-prm-marka > summary .mf-ico{ transition:none; } }
-/* TAKOZ YERLEŞİMİ (Canlı Not 1002) — üstten şema: sütun grup (önden arkaya), satır yan
-   (sağ üstte, merkez, sol altta). Konum satır içinde VERİ (left/top), görünüm burada.
-   Balonun numarası föyün ve aday tablosunun sütun numarası; taranan grubun balonu dolu. */
-.ve-prm-plan{
-  margin:0 0 8px; padding:16px 44px; border:1px solid var(--border-color); border-radius:var(--radius-md);
-  background:var(--bg-primary);
-}
-.ve-prm-plan-a{ position:relative; height:64px; }
-.ve-prm-plan-eksen{ position:absolute; left:0; right:0; top:50%; border-top:1px dashed var(--border-hover); }
-.ve-prm-plan-bag{ position:absolute; top:0; bottom:0; border-left:1px dashed var(--border-hover); }
-.ve-prm-plan-yon{
-  position:absolute; transform:translateY(-50%); font-size:var(--fs-micro); line-height:1;
-  color:var(--text-muted); white-space:nowrap;
-}
-.ve-prm-plan-yon[data-yer="sag"]{ top:0; right:calc(100% + 12px); }
-.ve-prm-plan-yon[data-yer="on"]{ top:50%; right:calc(100% + 12px); }
-.ve-prm-plan-yon[data-yer="sol"]{ top:100%; right:calc(100% + 12px); }
-.ve-prm-plan-yon[data-yer="arka"]{ top:50%; left:calc(100% + 12px); }
-.ve-prm-no, .ve-prm-plan-t{
+/* TAKOZ YERLEŞİMİ (Canlı Not 1003 · 1006) — çizim Görünümler'in bileşeni; grubun RENGİ diyagramların
+   seri paletinden (--seri-1…4; iki temada zeminine ≥ 3:1, üstündeki yazı --bg-input ile AA): föyün ve aday
+   tablosunun numara rozeti, çizimde takozun küpü ve çipinin kenarı. Renk VERİ (data-renk · ve-ak-renk-N). */
+.ve-prm-ak{ margin:0 0 10px; }
+.ve-prm-no[data-renk="1"], .ve-ak-renk-1{ --grup-renk:var(--seri-1); }
+.ve-prm-no[data-renk="2"], .ve-ak-renk-2{ --grup-renk:var(--seri-2); }
+.ve-prm-no[data-renk="3"], .ve-ak-renk-3{ --grup-renk:var(--seri-3); }
+.ve-prm-no[data-renk="4"], .ve-ak-renk-4{ --grup-renk:var(--seri-4); }
+.ve-prm-no{
   display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;
-  width:18px; height:18px; border:1px solid var(--border-hover); border-radius:50%;
-  background:var(--bg-secondary); color:var(--text-heading); font-size:var(--fs-micro); font-weight:700;
-  line-height:1; letter-spacing:normal; font-variant-numeric:tabular-nums; vertical-align:middle;
+  width:20px; height:20px; border-radius:50%; vertical-align:middle;
+  background:var(--grup-renk, var(--text-primary)); color:var(--bg-input);
+  border:1px solid color-mix(in srgb, var(--grup-renk, var(--text-primary)) 70%, var(--text-heading));
+  font-size:var(--fs-tiny); font-weight:700; line-height:1; letter-spacing:normal; font-variant-numeric:tabular-nums;
 }
-.ve-prm-plan-t{ position:absolute; z-index:1; transform:translate(-50%, -50%); cursor:default; }
-.ve-prm-plan-t[data-tara]{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
+.ve-ak-t.ve-ak-renkli path{ stroke:var(--bg-input); }
+.ve-ak-t.ve-ak-renkli .t-z{ fill:color-mix(in srgb, var(--grup-renk) 55%, var(--bg-input)); }
+.ve-ak-t.ve-ak-renkli .t-y{ fill:var(--grup-renk); }
+.ve-ak-t.ve-ak-renkli .t-x{ fill:color-mix(in srgb, var(--grup-renk) 75%, var(--text-heading)); }
+.ve-ak-cip.ve-ak-renkli rect{ stroke:var(--grup-renk); stroke-width:1.6; }
 /* ADAYLAR — tip × grup: marka satırı bölüm başı (ad büyük harfe dönmez), mevcut tipin
    hücresi tonlu, son satır grup başına seçili tip sayısı. */
 .ve-properties-content .ve-mnt-foy.ve-prm-mx tr.ve-prm-mx-marka > *{ background:var(--bg-tertiary); }

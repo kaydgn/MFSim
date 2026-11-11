@@ -3213,9 +3213,12 @@ function _mntAksoKoord(x, y, z, b){ return '('+_mntS(x, b||0)+'; '+_mntS(y, b||0
 // ÇİZİMİN MODELİ — pencere hesaplamaz, okur: CANLI modelden (_mnt2DPencereVeri
 // → _mntCanliModel; G İşaretler föyününkiyle aynı). Çözüm OKUNMAZ (kullanıcı
 // kararı 2026-10-16): pencerenin çizimi girdiyi gösterir, sonucu rapor.
+// `P.duzelt(m)` (ops.): kaynağın modele dokunuşu — Parametrik Analiz takozun numarasını ve
+// rengini grubunkiyle değiştirir (cp-mount-param.js → _mntParamAksoVeri).
 function _mntAksoModel(P){
   P=P||_mnt2DPencereVeri();
-  return _mntAksoModelKur(P.M.g, P.M.mp, null, 'yok');
+  var m=_mntAksoModelKur(P.M.g, P.M.mp, null, 'yok');
+  return (typeof P.duzelt==='function') ? (P.duzelt(m) || m) : m;
 }
 // Örnek kaydından (veMountCore.getMountExample(k).model; mm, kg, N/mm) —
 // başlangıç sayfasının karosu. Pencereyle AYNI kurucu: karo kendi modelini
@@ -3387,7 +3390,10 @@ var _MNT_AKSO_IPUCU = 'Sol tık + sürükle: döndür · Sağ tık + sürükle: 
 function _mntAksoLejant(m, b, sec){
   return '<div class="ve-mnt-kroki-lej ve-mnt-ak-lej">'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-g" d="M5 1 L9 3 L5 5 L1 3 Z"/><path class="ve-ak-lj-gy" d="M1 3 L5 5 L5 9 L1 7 Z"/><path class="ve-ak-lj-gx" d="M5 5 L9 3 L9 7 L5 9 Z"/></svg>gövde · eşdeğer kutu</span>'
-    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/></svg>takoz · T</span>'
+    // grup renkli takoz (Parametrik Analiz): işaret grupların renkleri, yan yana
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true">'+(m.takozLej
+        ? '<rect class="ve-ak-lj-g1" x="0.5" y="2" width="3" height="6"/><rect class="ve-ak-lj-g2" x="3.5" y="2" width="3" height="6"/><rect class="ve-ak-lj-g3" x="6.5" y="2" width="3" height="6"/>'
+        : '<rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/>')+'</svg>'+(m.takozLej || 'takoz · T')+'</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik CG</span>'
     + (m.govde.some(function(g){ return g.braket && (g.levha || g.kutu); }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-br" d="M2 1.5 H4.6 V6.6 H8.8 V9 H2 Z"/></svg>braket</span>' : '')
     + (m.govde.some(function(g){ return !g.kutu && !g.levha; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
@@ -3439,7 +3445,8 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
     + '<div class="ve-mnt2d-zoomctl" role="group" aria-label="Görünüm">'
     + dg(ay('yakin', 'in'), 'plus', 'Yakınlaştır')+dg(ay('yakin', 'out'), 'minus', 'Uzaklaştır')
     + dg(ay('sifirla'), 'rotate-ccw', 'Sıfırla — dimetrik bakış')
-    + (tam ? '' : dg('veMntAkso3BTamEkran('+(sec ? '\''+_mntEsc(ek.sec)+'\'' : '')+')', 'maximize', 'Tam ekran'))
+    // kendi kaynağı olan çizimin (Parametrik Analiz) tam ekranı yok: tam ekran Görünümler'in modelini kurar
+    + ((tam || typeof _mntAksoKaynak[kapId]==='function') ? '' : dg('veMntAkso3BTamEkran('+(sec ? '\''+_mntEsc(ek.sec)+'\'' : '')+')', 'maximize', 'Tam ekran'))
     + '</div>';
   return '<div class="ve-mnt-2d ve-mnt-akso ve-mnt-akso3b" data-mnt2d="akso"><div class="ve-mnt-kroki-bas">'+bas+'</div>'+svg+'</div>'
     + _mntAksoLejant(m, b, sec);

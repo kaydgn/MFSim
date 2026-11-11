@@ -426,8 +426,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
   Canlı Not 1002 (*"takoz yerlerine göre parametrik analize katılacak takozları seçecek"*):
-  **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; üstten ŞEMA — sütun grup x sırasıyla,
-  satır yan; ölçekli değil: ASFAT'ın ön çifti ölçekte üst üste biniyordu) + **Adaylar** (tip × grup
+  **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; çizim Görünümler'in BİLEŞENİ — Canlı Not 1003:
+  *"Çok sade olmuş"*; takozun çipi grubun NUMARASI, küpü ve çipin kenarı grubun RENGİ, föyün rozetiyle aynı —
+  Canlı Not 1006, `--seri-1…4`, dörtten sonra döner; kaynağı pencere `_mntAksoKaynak` → `P.duzelt`, tam ekranı
+  yok; kapı `mount-akso.test.js` → *GRUBUN RENGİ*) + **Adaylar** (tip × grup
   işaret tablosu; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında; işaretsiz
   grup mevcut tipinde) + sağda taranan grup · kombinasyon (grup sayılarının çarpımı). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
@@ -609,7 +611,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91; yeni Artifact AÇILMAZ, her yayın
   `url` ile), sahiplik kaydı (`oturum/aktif`: iki oturum aynı notu işlemez), yorum izleme,
   program ve sayfanın güncelliği (`denetle`), kuyruk. Sonucun görüntüsü
-  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz).
+  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz). **Her not kendi ajanında, paralel**
+  (kullanıcı 2026-11-11: *"Ajanlar eğer birbirinden etkileniyorsa, diğeri diğerini beklesinler"*):
+  ajan kendi çalışma kopyasında uygular ve commit eder, aynı yüzeye dokunan notlar zincirlenir;
+  birleştirme, tam test ve yayın sahibi oturumda — skill `canli-not` §2 · *Paralel ajanlar*.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
@@ -1108,7 +1113,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   tipi seçer, çözümden bağımsız. Kapı: `mount-oneri.test.js`.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
-  kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
+  kalır ve tuvalde İŞARETLENMEZ — kutu öteki bileşenler gibi (kullanıcı 2026-11-11, Canlı Not
+  147: *"Çerçevesi kesikli çizgi bunun, gerek yok"*; sınıf yalnız FEAD'in tablo ve çizim
+  işaretinde); başka bileşene tık içeriği
   YERİNDE değiştirir. Kapatan yalnız ✕ · Esc · bağlam değişimi
   (`veMufettisKapat`: proje yükleme, modüle giriş/çıkış, yeni proje). İçerik
   değişmeden önce odak bırakılır (yazılmış değer eski bileşene yazılsın).

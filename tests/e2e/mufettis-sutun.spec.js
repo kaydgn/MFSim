@@ -209,6 +209,8 @@ test('KALIR — boş alana ve başka bileşene tık pencereyi kapatmaz, içerik 
   expect(bos).toMatchObject({ acik: true, secili: 0, tuvalW: ilk.tuvalW, kapanis: 0 });
   expect(bos.baslik).toContain('Diferansiyel');
   expect(await page.evaluate((id) => document.getElementById(id).classList.contains('ve-node--mufettis'), kim.a)).toBe(true);
+  // kutu işaretsiz (Canlı Not 147: kesikli kenar yok — öteki bileşenler gibi)
+  expect(await page.evaluate((id) => getComputedStyle(document.getElementById(id).querySelector('.ve-node-box')).borderTopStyle, kim.a)).not.toBe('dashed');
 
   // 2 · başka bileşene tek tık: içerik yerinde değişir
   await tik(kim.b);

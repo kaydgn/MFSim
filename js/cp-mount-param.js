@@ -339,34 +339,37 @@ function _mntParamYeni(node){
   return { M:M, A:A, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
 }
 
-// PLAN — yerleşimin şeması, üstten: sütun grup (önden arkaya, x sırasıyla; aralık x'ten,
-// sütunlar en az %14 ayrık), satır yan (sağ üstte, merkez, sol altta). Çiftin iki takozu
-// kesikli çizgiyle bağlı; numara grubun numarası, taranan grubun balonu dolu. Ölçekli
-// plan değil: ASFAT'ın ön çifti (y ±51 mm) ölçekte iki balonu üst üste koyuyordu.
+// YERLEŞİMİN ÇİZİMİ (Canlı Not 1003: *"daha güzel yapalım. Çok sade olmuş."*) — güç grubunun
+// aksonometrisi, Görünümler'in ve "Güç grubundaki yeri"nin AYNI bileşeni (serbest kamera, bakış
+// düğmeleri, gösterge); takozun çipi GRUBUN numarası, küpü ve çipin kenarı GRUBUN RENGİ — föyün
+// ve aday tablosunun numara rozetiyle aynı (Canlı Not 1006: *"numaralandırmayı da güzel yapalım"*;
+// renk diyagramların seri paletinden, --seri-1…4, dörtten sonra döner). Çizimin kaynağı bu pencere
+// (_mntAksoKaynak): sürüklemenin bitişi de aynı numara ve renklerle kurar. Eskiden kendi şemasıydı.
+function _mntParamRenk(no){ return ((Math.max(1, no)-1)%4)+1; }
+function _mntParamNo(no){ return '<span class="ve-prm-no" data-renk="'+_mntParamRenk(no)+'">'+no+'</span>'; }
+function _mntParamAksoVeri(nodeId, Y){
+  var P=_mnt2DPencereVeri();
+  if(!Y){ var n=_mntParamDugum(nodeId); Y=n ? _mntParamYeni(n) : null; }
+  if(!Y) return P;
+  var grup={};
+  Y.M.G.forEach(function(g){ g.idler.forEach(function(id){ grup[String(id)]={ no:String(g.no), renk:_mntParamRenk(g.no) }; }); });
+  P.duzelt=function(m){
+    m.takozLej='takoz · grup numarası';
+    m.takoz.forEach(function(t){ var q=grup[String(t.id)]; if(q){ t.no=q.no; t.renk=q.renk; } });
+    return m;
+  };
+  return P;
+}
+// Çizimin birimi Görünümler'inki (_MNT_KROKI_W, müfettiş sütununun içi): yerinde tazelemede
+// genişlik değişmesin diye sabit (data-w).
+var _MNT_PARAM_AK_W = 354;
 function _mntParamPlanHTML(node, Y){
-  var G=Y.M.G, T=Y.M.tak, n=G.length;
-  if(!n) return '';
-  var ara=n>1 ? Math.min(14, 100/(n-1)) : 0, dx=G[n-1].x-G[0].x, i;
-  var p=G.map(function(g, k){ return n<2 ? 50 : dx>0 ? 100*(g.x-G[0].x)/dx : 50+(k-(n-1)/2)*ara; });
-  for(i=1;i<n;i++) p[i]=Math.max(p[i], p[i-1]+ara);
-  if(n>1 && p[n-1]>100){ p[n-1]=100; for(i=n-2;i>=0;i--) p[i]=Math.min(p[i], p[i+1]-ara); }
-  var tol=veMntKatalog.TOL_MM, yuzde=function(v){ return v.toFixed(2)+'%'; };   // makine: CSS konumu
-  var h='';
-  G.forEach(function(g, k){
-    var sira=g.uyeler.slice().sort(function(a, b){ return T[b].y-T[a].y; });   // +y (sağ) üstte
-    var y0=T[sira[0]].y, satir=g.cift ? [0, 100] : [y0>tol ? 0 : y0<-tol ? 100 : 50];
-    if(g.cift) h+='<i class="ve-prm-plan-bag" style="left:'+yuzde(p[k])+'"></i>';
-    sira.forEach(function(u, j){
-      var t=T[u];
-      h+='<span class="ve-prm-plan-t"'+(Y.sec[g.anahtar] ? ' data-tara' : '')+' style="left:'+yuzde(p[k])+';top:'+satir[j]+'%"'
-       + ' title="'+_mntEsc(t.name+' · x '+_mntS(t.x, 0)+' · y '+_mntS(t.y, 0)+' mm')+'">'+g.no+'</span>';
-    });
-  });
-  return '<div class="ve-prm-plan" id="ve-mnt-param-plan-'+node.id+'" data-tazele role="img" aria-label="Takoz yerleşimi">'
-    + '<div class="ve-prm-plan-a"><i class="ve-prm-plan-eksen"></i>'
-    + '<span class="ve-prm-plan-yon" data-yer="sag">Sağ</span><span class="ve-prm-plan-yon" data-yer="on">Ön</span>'
-    + '<span class="ve-prm-plan-yon" data-yer="sol">Sol</span><span class="ve-prm-plan-yon" data-yer="arka">Arka</span>'
-    + h+'</div></div>';
+  if(!Y.M.tak.length || typeof _mntAksoHTML!=='function' || typeof veMntAkso==='undefined' || !veMntAkso.ciz) return '';
+  var kapId='ve-mnt-param-ak-'+node.id;
+  _mntAksoKaynak[kapId]=function(){ return _mntParamAksoVeri(node.id); };
+  return '<div class="ve-mnt-akso-kap ve-prm-ak" id="'+kapId+'" data-tazele data-w="'+_MNT_PARAM_AK_W+'"'
+    + ' onmouseenter="_mntAksoBagla(this)" onfocusin="_mntAksoBagla(this)">'
+    + _mntAksoHTML(_mntParamAksoVeri(node.id, Y), _MNT_PARAM_AK_W, false, kapId, {})+'</div>';
 }
 function _mntParamYerlesimHTML(node, Y){
   var G=Y.M.G;
@@ -376,7 +379,7 @@ function _mntParamYerlesimHTML(node, Y){
     { b:'x <u>[mm]</u>', gen:'13%' }, { b:'Mevcut tip', gen:'37%', sinif:'sol' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
   G.forEach(function(g){
     var tip=(g.tip && Y.M.lib[g.tip]) ? Y.M.lib[g.tip].name : '—';
-    h+='<tr><td><span class="ve-prm-no">'+g.no+'</span></td><td class="sol sar">'+_mntParamAd(g.ad)+'</td>'
+    h+='<tr><td>'+_mntParamNo(g.no)+'</td><td class="sol sar">'+_mntParamAd(g.ad)+'</td>'
      + '<td>'+g.uyeler.length+'</td><td>'+_mntS(g.x, 0)+'</td><td class="sol sar">'+_mntParamAd(tip)+'</td></tr>';
   });
   return _mntBolum('Takoz yerleşimi', G.length+' grup · '+Y.M.tak.length+' takoz', _mntParamPlanHTML(node, Y)+h+_MNT_FOY_KAPA);
@@ -390,7 +393,7 @@ function _mntParamMatrisHTML(node, Y){
   if(!G.length || !A.length) return _mntBolum('Adaylar', A.length+' tip', '');   // durum sağ sütunda, bir kez
   var gen=(36/G.length).toFixed(3)+'%';                                                    // makine: sütun genişliği
   var h=_mntFoyAc([{ b:'Tip', gen:'46%', sinif:'sol' }, { b:_mntSym('k<sub>z</sub>')+' stat. <u>[N/mm]</u>', gen:'18%' }]
-    .concat(G.map(function(g){ return { b:'<span class="ve-prm-no">'+g.no+'</span>', gen:gen, sinif:'ve-mnt-sec', ipucu:g.ad }; })),
+    .concat(G.map(function(g){ return { b:_mntParamNo(g.no), gen:gen, sinif:'ve-mnt-sec', ipucu:g.ad }; })),
     'Aday tipler', 've-mnt-foy--sar ve-mnt-foy--ad ve-prm-mx');
   var secili=function(g, k){ return (Y.sec[g.anahtar] || []).indexOf(k)>=0; };
   _mntParamMarkalar(A).forEach(function(Mk, mi){
@@ -865,6 +868,7 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntParamPropertiesHTML: getMntParamPropertiesHTML, _mntParamEskiPencereHTML: _mntParamEskiPencereHTML,
     _mntParamYeni: _mntParamYeni, _mntParamAdayTipler: _mntParamAdayTipler, veMntParamGrupAday: veMntParamGrupAday,
+    _mntParamAksoVeri: _mntParamAksoVeri, _mntParamRenk: _mntParamRenk,
     veMntParamGrupMarka: veMntParamGrupMarka,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,

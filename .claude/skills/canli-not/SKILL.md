@@ -256,7 +256,36 @@ ArtifactData list   url:<adres> collection:notlar out_dir:.canli-not/dokum
 node tools/canli-not.js liste .canli-not/dokum      # işi kalanlar, sırayla (eskiden yeniye)
 ```
 
-Her not için, **sırayla ve tek tek**:
+### Paralel ajanlar — her not kendi ajanında
+
+Kullanıcı 2026-11-11: *"Bundan sonra her 'canlı not'a girilen notlar için yeni bir ajan
+çalıştırmanı ve notların uygulanmasını paralel yapmanı istiyorum. Ajanlar eğer birbirinden
+etkileniyorsa, diğeri diğerini beklesinler."* Bu, çoklu ajan için kullanıcının KALICI
+açık isteğidir (Agent ya da Workflow aracı, ayrıca sorulmaz).
+
+- **Oturum koordinatördür:** sahiplik, güncellik, `uygulaniyor` yazımı (aşağıda 1), notun
+  ekranı (2: `goruntu --kirp` → yerel PNG; ajan yolunu alır) ve etki alanının tayini (3).
+  Uygulama (4–5 ve 6'nın görsel denetimi) AJANDA; birleştirme, tam test, sonucun görüntüsü,
+  PR, yayın ve kayıt (6–8) yine oturumda — TEK YAZAR (§1).
+- **Not başına bir ajan**, kendi çalışma kopyasında (`isolation: "worktree"`, dal
+  `canli/not-N`, taban oturumun dalı) ve arka planda; ajan notu uygular, kapısını yazar,
+  modül testini koşar, sonucu `canli-not.js sonuc` ile kendi kopyasında görür, TEK commit
+  atar (künyeli), itmez; dönüşü: commit · `cevap` · hazırlık betiği · seçici · e2e listesi.
+- **Etkileşen notlar ZİNCİR:** aynı yüzeyi, aynı pencerenin aynı bölümünü ya da aynı işlevi
+  değiştiren notlar birbirini bekler — sonraki, öncekinin dalının üstünden başlar (ya da
+  önceki birleşince); etkileşmeyenler aynı anda koşar. Kararsız kalınan çift zincirlenir.
+  Koşan bir ajanın alanına düşen yeni not da onu bekler.
+- **Ajan e2e koşmaz** (Playwright'ın sabit 8080 kapısı öteki kopyaların dosyasını sunar),
+  tam testi ve kılavuz görüntülerini koşmaz, `MFSim_Olcum_Goruntuleyici.html` · `assets/kilavuz/`
+  · `assets/degisiklik/` commit etmez; bunlar birleştirmede (`build:viewer`, `kilavuz-resim.js`,
+  ilgili e2e, `npm run hazir` bir kez). `node_modules` ana kopyadan bağlanır (`ln -s`).
+- **Biten not hemen birleşir ve yayınlanır** (aşağıda *HER NOT BİTİNCE HEMEN YAYIN*):
+  birlikte bitenler tek yayın. Kopyalar yerel olarak yok sayılır (`.git/info/exclude` →
+  `.claude/worktrees/`); birleşen ajanın kopyası ve dalı silinir.
+- Makinenin çekirdeği eşzamanlılığı sınırlar (Workflow'da en çok çekirdek − 2 ajan); fazlası
+  sırada bekler.
+
+Her not için (koordinatör ve ajan birlikte, adımların sahibi yukarıda):
 
 1. `durum: "uygulaniyor"` yaz (`update`, okuduğun `version` ile `if_version`) —
    sayfada canlı görünür.
