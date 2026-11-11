@@ -41,16 +41,9 @@
 // diyor; AMC'nin bütün oranları > 1) — tip eksik kalır; Takoz Özellikleri'nden girilen
 // X · Y'nin dinamiği aynı oranla kurulur (tamamla).
 //
-// PROGRAMDAKİ BMC GİRDİLERİ (cp-mount.js: LMT-1433-00 · "Mount 1" · LMT-1433-37):
-//   • "LMT-" önekli kodlar LASPAR'ın (Bursa; LMT-1412-30, LMT-1443-40, LMT-1444,
-//     LMT-1445). Angst+Pfister'in Bursa şirketi 2012'de LASPAR Grubu'yla ortak
-//     girişim olarak kuruldu — raporların çizimindeki A+P logosu bununla uyumlu.
-//   • LMT-1433-00'ın flanşı (BMC FEA raporu: 107 × 90, delik 80 × 65) konik yatak
-//     026'nın ölçüsüyle birebir; radyal X = Y → 026 S 1 (ESLES). Rijitlik: Z orta
-//     ve sertte %−3 · %+2, X %13–15 düşük (FEA tablosu ≠ katalog).
-//   • "Mount 1" X > Y (anizotrop) — 026 S 3'ün deseni (oyuklu kauçuk): Y ve Z
-//     40/70 ShA'da %0–11, X 40'ta birebir, 55/70'te %39–40 düşük. Ölçü yok → eş
-//     YAZILMADI.
+// PROGRAMDAKİ BMC GİRDİLERİ (LMT-1433-00 · LMT-1433-37 · "Mount 1") LASPAR'ın: LMT-1433-00
+// LASPAR kataloğunda (js/mount-laspar.js). Ölçüsü konik yatak 026'nınki (107 × 90, delik
+// 80 × 65; radyal X = Y → 026 S 1) — LASPAR künyesinde "A+P eşi" (mount-laspar.js → AP_ESI).
 //
 // ANAHTAR 'ap' + makale no (10 hane) — kayıtlı projeler takozu node.data.libKey ile
 // bağlar, DEĞİŞMEZ. Ad: "<ürün> <tip> <sertlik> ShA (A+P 12.2140.2503)"; H-takozda
@@ -193,11 +186,8 @@ var VE_MNT_AP = (function() {
   // Belgenin tarihiyle (ay yıl) — yıl tek başına sayı okunurdu (Türkçe sayı kapısı).
   var KAYNAK = {
     konus: 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026', h: 'A+P föyü Haziran 2018 · e-mağaza 10.11.2026',
-    marine: 'A+P e-mağaza 10.11.2026 · föy Şubat 2017', gen: 'A+P e-mağaza 10.11.2026 · katalog Ekim 2017',
-    fea: 'BMC FEA raporu · 02.10.2018 · 12.02.2019'
+    marine: 'A+P e-mağaza 10.11.2026 · föy Şubat 2017', gen: 'A+P e-mağaza 10.11.2026 · katalog Ekim 2017'
   };
-  // Programın BMC girdileri → katalog eşi (gövde). Yalnız ölçüsü belgeli olan.
-  var ESLES = { 'lmt1433-00-40sh': '026-s1', 'lmt1433-00-55sh': '026-s1', 'lmt1433-00-70sh': '026-s1' };
 
   function noktali(kod) { return kod.slice(0, 2) + '.' + kod.slice(2, 6) + '.' + kod.slice(6); }
   function ad(kod) {
@@ -267,16 +257,9 @@ var VE_MNT_AP = (function() {
     K.tol = (TIP[k[0]][0] === 'h') ? 20 : null;
     return K;
   }
-  // BMC girdisinin katalog eşi (anahtar → künye) — yoksa null.
-  function kunyeEs(anahtar) {
-    var tip = ESLES[anahtar]; if (!tip) return null;
-    var K = tipKunye(tip);
-    K.uretici = 'LMT-1433-00'; K.kaynak = KAYNAK.fea;
-    return K;
-  }
-  return { MARKA: MARKA, AILE: AILE, AILE_SIRA: AILE_SIRA, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, KAYNAK: KAYNAK, ESLES: ESLES,
+  return { MARKA: MARKA, AILE: AILE, AILE_SIRA: AILE_SIRA, TIP: TIP, TIP_SIRA: TIP_SIRA, KOD: KOD, KAYNAK: KAYNAK,
            DIN_MEDYAN: DIN_MEDYAN, noktali: noktali, ad: ad, dinOrani: dinOrani, tamamla: tamamla, girdi: girdi,
-           kodlar: kodlar, gorsel: gorsel, kunye: kunye, kunyeEs: kunyeEs };
+           kodlar: kodlar, gorsel: gorsel, kunye: kunye };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = VE_MNT_AP;

@@ -806,33 +806,44 @@ function _mntRepMassTable(geom){
   return h;
 }
 
+// Tahminin YÖNTEMİ (Tablo 2'nin dipnotu, üreticiye göre bir cümle) — kütüphane girdisinin
+// üretici künyesinden (amc · ap · lp); tahminsiz girdide ''.
+function _mntRepTahminYontem(e){
+  if(!e || typeof _mntLibTahmin!=='function' || !_mntLibTahmin(e).length) return '';
+  var din='dinamik değer statik × (Sh + 20)/50 (AMC’nin NR konilerdeki ölçümü';
+  if(e.lp) return (e.lp.tahmin && e.lp.tahmin.radyal!=null)
+    ? 'üretici radyal ve dinamik rijitliği yayımlamıyor; k<sub>x</sub>, k<sub>y</sub> eksenel rijitlik × LMT-1433-00’ın '
+      + 'FEA’daki radyal/eksenel oranı (sertliğe göre doğrusal), '+din+').'
+    : 'üretici dinamik rijitliği yayımlamıyor; '+din+').';
+  if(e.ap) return 'üretici dinamik rijitliği yayımlamıyor; '+din+'; sertliği yazılmayan CR takozda '
+    + 'AMC-EO’daki NR kodların din./stat. medyanı).';
+  return 'üretici radyal rijitliği yayımlamıyor; k<sub>x</sub>, k<sub>y</sub> eksenel rijitlik × AMC’nin ölçtüğü '
+    + 'radyal/eksenel oran (AMC-EO ve AMC çizimleri; aynı tipin ölçülmüş sertlikleri arasında doğrusal, yoksa aynı '
+    + 'ailenin, yoksa ölçülmüş bütün tiplerin medyanı), dinamik değer statik × din./stat. oranı.';
+}
 // Tablo 2 — takoz konum + rijitlik. Tahmini rijitlik (Canlı Not 113: üreticinin
-// yayımlamadığı değer — AMC'de radyal, A+P'de dinamik; cp-mount.js → _mntTakozTahmin)
-// "≈" ile ve tablonun altında üreticisinin yöntemiyle yazılır — modelin varsayımıdır.
+// yayımlamadığı değer — AMC'de radyal, A+P'de dinamik, LASPAR'da konikte radyal ve dinamik;
+// cp-mount.js → _mntTakozTahmin) "≈" ile ve tablonun altında üreticisinin yöntemiyle
+// (_mntRepTahminYontem) yazılır — modelin varsayımıdır.
 function _mntRepMountTable(R){
-  var g=(R.gather.mounts||[]), byId={}, tahminli=[], tahminliAp=[];
+  var g=(R.gather.mounts||[]), byId={}, yontem={}, sira=[];
   ((typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : []).forEach(function(n){ byId[n.id]=n; });
   var h='<table><caption>Tablo '+_rTbl()+' — Takoz konumları ve rijitlikleri (statik / dinamik, üç eksen)</caption>';
   h+='<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k<sub>x,s</sub></th><th>k<sub>y,s</sub></th><th>k<sub>z,s</sub></th><th>k<sub>x,d</sub></th><th>k<sub>y,d</sub></th><th>k<sub>z,d</sub> [N/mm]</th></tr>';
   g.forEach(function(m){
     var T=(byId[m.id] && typeof _mntTakozTahmin==='function') ? _mntTakozTahmin(byId[m.id]) : [];
     var k=function(a){ return '<td>'+(T.indexOf(a)>=0 ? '≈' : '')+_rF(m[a],0)+'</td>'; };
-    if(T.length){
+    if(T.length){                        // üreticinin yöntemine göre grupla (bir cümle, adlar)
       var E=(typeof _mntKutuphaneEslesme==='function') ? _mntKutuphaneEslesme(byId[m.id]) : null;
-      (E && E.e && E.e.ap ? tahminliAp : tahminli).push(_rEsc(m.name||'takoz'));
+      var Y=_mntRepTahminYontem(E && E.e);
+      if(Y){ if(!yontem[Y]){ yontem[Y]=[]; sira.push(Y); } yontem[Y].push(_rEsc(m.name||'takoz')); }
     }
     h+='<tr><td class="l">'+_rEsc(m.name||'takoz')+'</td>'
       +'<td>'+_rF(m.x,2)+'</td><td>'+_rF(m.y,2)+'</td><td>'+_rF(m.z,2)+'</td>'
       +k('kxs')+k('kys')+k('kzs')+k('kxd')+k('kyd')+k('kzd')+'</tr>';
   });
   h+='</table>';
-  if(tahminli.length) h+='<p>≈ Tahmini rijitlik — '+tahminli.join(', ')+': üretici radyal rijitliği yayımlamıyor; '
-    +'k<sub>x</sub>, k<sub>y</sub> eksenel rijitlik × AMC’nin ölçtüğü radyal/eksenel oran (AMC-EO ve AMC çizimleri; '
-    +'aynı tipin ölçülmüş sertlikleri arasında doğrusal, yoksa aynı ailenin, yoksa ölçülmüş bütün tiplerin medyanı), '
-    +'dinamik değer statik × din./stat. oranı.</p>';
-  if(tahminliAp.length) h+='<p>≈ Tahmini rijitlik — '+tahminliAp.join(', ')+': üretici dinamik rijitliği yayımlamıyor; '
-    +'dinamik değer statik × (Sh + 20)/50 (AMC’nin NR konilerdeki ölçümü; sertliği yazılmayan CR takozda '
-    +'AMC-EO’daki NR kodların din./stat. medyanı).</p>';
+  sira.forEach(function(Y){ h+='<p>≈ Tahmini rijitlik — '+yontem[Y].join(', ')+': '+Y+'</p>'; });
   return h;
 }
 
@@ -2633,6 +2644,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepZarf: _mntRepZarf,
     _mntRepMassTable: _mntRepMassTable,
     _mntRepMountTable: _mntRepMountTable,
+    _mntRepTahminYontem: _mntRepTahminYontem,
     _mntRepFigure: _mntRepFigure,
     _mntRepModeFigure: _mntRepModeFigure,
     _repPlaceLabels: _repPlaceLabels,

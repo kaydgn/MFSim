@@ -32,7 +32,8 @@ const TIRE_EKSI = /(?<![\p{L}\d_\-−.,])-\d[\d.,]*/gu;
 const SABIT = '(?:1000|3600|9549|9550|50000|60000)';
 const AD = [
   ['şanzıman modeli', /Allison|\bSP\b|\d{4}SP|8L90|8HP|ZF|Aile:|Ailesi/],
-  ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}|E9843|AG00976|LMT-|ASR-SR|A\+P|APSOvib|bearing|H-Mount|Marine mount/],
+  // LASPAR (2026-11-11): tipin numarası adda ("Conical mount 1423 45 ShA") ve künyede ("Tip 1433")
+  ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}|E9843|AG00976|LMT-|ASR-SR|A\+P|APSOvib|bearing|H-Mount|Marine mount|LASPAR|[Mm]ount \d{4}|Tip \d{4}/],
   ['motor ön ayarı', /Duramax|ISX|ISB|ISL|ISM|ISG|I6\b|\d\.\dL|Nm&|\(\d{4} Nm\) \|/],
   ['kompresör ön ayarı', /Wabco|Knorr|bar\b/],
   ['telif yılı', /©|\(c\)/],
@@ -44,8 +45,8 @@ const AD = [
   ['Gates rapor künyesi', /AG\d{4,6} (?:19|20)\d\d|raporu \(\d{4}\)|Ten@/],
   ['tarih', /20\d\d-\d\d|\d\d\.\d\d\.20\d\d|(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (?:19|20)\d\d/],
   // Kaynakça yılı: "Kong 2016", "Gerbert & Hansson (1987)", "Balta ve ark. 2015", "Eng. 55(2), 2019",
-  // "Čepon 2011" (yazar adında Slav aksanı: Č Š Ž)
-  ['kaynak yılı', /[A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+(?: ve ark\.| & [A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
+  // "Čepon 2011" (yazar adında Slav aksanı: Č Š Ž), kataloğun yılı ("LASPAR genel kataloğu 2018")
+  ['kaynak yılı', /[A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+(?: ve ark\.| & [A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d|kataloğu (?:19|20)\d\d\b/],
   ['bölüm no', /§/],
   // PR / iş numarası bir başvurudur, nicelik değil: Program Durumu'nun commit
   // listesi "#1104" yazıyor (PR'lar 1.000'i geçti; yüzey turu onu da tarıyor).
@@ -58,8 +59,10 @@ const AD = [
 
 // Eşleşmenin 14 karakter öncesine ve 10 karakter sonrasına bakılır: sınıf
 // adın KENDİSİNDE aranır, satırın uzağındaki bir ad başka bir sayıyı affetmez.
-function sinifla(sayi, bag) {
-  const i = bag.indexOf(sayi);
+// `konum` eşleşmenin bağdaki yeri: aynı sayı bağda daha önce de geçiyorsa
+// ("LMT-1423-00-TK45) Conical mount 1423") ilk geçtiği yerin çevresi başka addır.
+function sinifla(sayi, bag, konum) {
+  const i = (konum != null && bag.substr(konum, sayi.length) === sayi) ? konum : bag.indexOf(sayi);
   const cevre = bag.slice(Math.max(0, i - 14), i + sayi.length + 10);
   for (const [ad, re] of AD) if (re.test(cevre)) return ad;
   return null;
@@ -73,11 +76,13 @@ function tara(metin) {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(metin))) {
-      const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ').trim();
+      const bas = Math.max(0, m.index - 30);
+      const bag = metin.slice(bas, m.index + m[0].length + 20).replace(/\s+/g, ' ').trim();
+      const konum = metin.slice(bas, m.index).replace(/\s+/g, ' ').replace(/^ /, '').length;
       // Satır başında "8.10 Mod şekilleri": bölüm başlığının numarası, ondalık değil.
       const baslik = tur === 'nokta' && (m.index === 0 || metin[m.index - 1] === '\n')
         && /^ [A-ZÇĞİÖŞÜ]/.test(metin.slice(m.index + m[0].length, m.index + m[0].length + 2));
-      const ad = tur === 'sonda %' ? null : (baslik ? 'bölüm başlığı' : sinifla(m[0], bag));
+      const ad = tur === 'sonda %' ? null : (baslik ? 'bölüm başlığı' : sinifla(m[0], bag, konum));
       if (ad) adlar[ad] = (adlar[ad] || 0) + 1;
       else sorun.push({ tur, sayi: m[0], bag });
     }

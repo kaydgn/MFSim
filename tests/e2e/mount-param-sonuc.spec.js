@@ -36,9 +36,12 @@ async function kur(page, nTip = 6) {
   await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('57RS') >= 0), null, { timeout: 20000 });
   await page.waitForTimeout(500);
   return page.evaluate((nTip) => {
+    // nTip taramanın ADAYI: aday olmayan tip (57RS — Canlı Not 133; tahminli ya da eksik tip) sayılmaz
     const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
-    const tum = Object.keys(veMntGetLibraryMap());
-    tum.forEach((k) => { if (tut.length < nTip && tut.indexOf(k) < 0) tut.push(k); });
+    const M = veMntGetLibraryMap(), tum = Object.keys(M);
+    const aday = (k) => M[k].aday !== false && _mntLibTam(M[k]) && !_mntLibTahmin(M[k]).length;
+    let say = tut.filter(aday).length;
+    tum.forEach((k) => { if (say < nTip && tut.indexOf(k) < 0 && aday(k)) { tut.push(k); say++; } });
     const n = createNode('mnt-parametric', 900, 120);
     n.data = { haric: tum.filter((k) => tut.indexOf(k) < 0) };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
@@ -185,8 +188,8 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
     return { n: td.length, kesik: td.filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent) };
   });
   // aday satırları kütüphanenin TAM ve TAHMİNSİZ tipleri (2026-11-10: 24 → 27, teknik resimlerle ölçülen
-  // AMC kodları; tahminli tip — Canlı Not 113 — aday değil)
-  const nTam = await page.evaluate(() => { const m = veMntGetLibraryMap(); return Object.keys(m).filter((k) => _mntLibTam(m[k]) && !_mntLibTahmin(m[k]).length).length; });
+  // AMC kodları; tahminli tip — Canlı Not 113 — aday değil; dört 57RS tipi aday değil — Canlı Not 133)
+  const nTam = await page.evaluate(() => { const m = veMntGetLibraryMap(); return Object.keys(m).filter((k) => m[k].aday !== false && _mntLibTam(m[k]) && !_mntLibTahmin(m[k]).length).length; });
   expect(ad).toEqual({ n: 3 * 2 + nTam, kesik: [] });
   await page.click('#ve-mnt-param-btn-' + id);
   await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 60000 });
@@ -284,7 +287,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
   const g1 = await geo();
   expect(g1.metin).toBe('Durdur');
   expect(g1.il && g1.il.gorus).toBe(true);                      // ilerleme düğmenin yanında, görüşte
-  const nKomb = await page.evaluate(() => { const m = veMntGetLibraryMap(), t = Object.keys(m).filter((k) => _mntLibTam(m[k]) && !_mntLibTahmin(m[k]).length).length; return veSayi(t * t, 0); });
+  const nKomb = await page.evaluate(() => { const m = veMntGetLibraryMap(), t = Object.keys(m).filter((k) => m[k].aday !== false && _mntLibTam(m[k]) && !_mntLibTahmin(m[k]).length).length; return veSayi(t * t, 0); });
   expect(g1.il.y).toMatch(new RegExp('^Kombinasyon [\\d.]+ / ' + nKomb.replace('.', '\\.') + '$'));
   await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 120000 });
   await page.waitForTimeout(400);

@@ -260,10 +260,16 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
 // ── ANGST+PFISTER APSOvib® — js/mount-ap.js (86 kod: konik · HD konik · H-takoz ·
-// marine · jeneratör). Dinamik rijitlik yayımlanmıyor: dx/dy/dz boş, tip EKSİK
-// (Takoz Özellikleri'nden tamamlanır); girdiler AMC'nin ardına, ailenin sırasıyla.
+// marine · jeneratör). Dinamik rijitlik yayımlanmıyor: TAHMİNİ (NR'de (Sh+20)/50);
+// marine ve jeneratörde X · Y yok, tip EKSİK; girdiler AMC'nin ardına, ailenin sırasıyla.
 var _MNT_AP = (typeof VE_MNT_AP !== 'undefined') ? VE_MNT_AP
   : ((typeof require === 'function') ? require('./mount-ap.js') : null);
+// ── LASPAR — js/mount-laspar.js (43 kod: konik · üniversal mobil · kabin · şok · temel;
+// genel katalog 2018). Yalnız eksenel yayımlanıyor: konikte radyal LMT-1433-00'ın FEA
+// oranıyla TAHMİNİ, dinamik (Sh+20)/50 TAHMİNİ; öteki ailelerde X · Y yok, tip EKSİK.
+// Girdiler A+P'nin ardına. TK035/040/050 (MLMT-0216-33) ve LMT-1433-xx de LASPAR'ın.
+var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
+  : ((typeof require === 'function') ? require('./mount-laspar.js') : null);
 // ── MARKA (kullanıcı 2026-11-10, Canlı Not 106: *"Takoz tiplerini markalarına
 // göre kategorize edelim. Kullanıcı marka seçsin, ona göre seçeneklerini
 // seçsin."*) ───────────────────────────────────────────────────────────────
@@ -271,40 +277,43 @@ var _MNT_AP = (typeof VE_MNT_AP !== 'undefined') ? VE_MNT_AP
 // o markanın tiplerini sorar. Kaynak:
 //   • AMC Mecanocaucho — üreticinin altı haneli kodu ("(AMC 137963)"); girdiler
 //     js/mount-amc.js'ten markasıyla gelir (VE_MNT_AMC.girdi).
-//   • Angst+Pfister — LMT-1433-xx ve "Mount 1": BMC FEA raporlarının teknik
-//     resimleri A+P logosu taşıyor (KATALOGLA TEYİT EDİLMEDİ, yukarıdaki
-//     LMT-1433-00 bloğu); marka yanlışsa düzeltme TEK alan: `marka`.
-//   • Diğer — 57RS… ve TK035/040/050: kaynak belgelerde marka yazılı değil.
+//   • Angst+Pfister — katalog kodları ("(A+P 12.2140.2503)"), js/mount-ap.js.
+//   • LASPAR — katalog kodları (js/mount-laspar.js) ve programın LASPAR takozları:
+//     LMT-1433-00 (katalogda: Endüstriyel Konik Takoz 1433), LMT-1433-37 ve aynı FEA
+//     raporunun "Mount 1"i; TK035/040/050 = MLMT-0216-33-TK0xx (LASPAR'ın kod kuralı:
+//     "LMT/MLMT-xxxx-yy-TKnn", TKnn Shore sertliği — kullanıcı 2026-11-11). Raporların
+//     çizimindeki A+P logosu A+P'nin Bursa ortaklığından (LASPAR ile, 2012).
+//   • Diğer — 57RS… (A26): kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
 // dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
 // örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
 // mount-param.test.js → *ADAY OLMAYAN TİP*.
-var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer'];
+var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
-  'amc55sha':         { marka:'Angst+Pfister', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
+  'amc55sha':         { marka:'LASPAR', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { marka:'Diğer', aday:false, name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
   '57RS313774':       { marka:'Diğer', aday:false, name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
   '57RS313773-sr116': { marka:'Diğer', aday:false, name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
   '57RS313774-sr116': { marka:'Diğer', aday:false, name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
-  'TK035': { marka:'Diğer', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+  'TK035': { marka:'LASPAR', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
       z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
   // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
-  'TK040': { marka:'Diğer', name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+  'TK040': { marka:'LASPAR', name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
       z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
   // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
-  'TK050': { marka:'Diğer', name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+  'TK050': { marka:'LASPAR', name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
@@ -319,20 +328,20 @@ var VE_MOUNT_LIBRARY = {
   // ── LMT-1433-00 — BMC güç grubu FEA raporlarının takozu ─────────────────
   // TEK RİJİTLİK TABANI: kaynak statik/dinamik AYRIMI YAPMIYOR → sx = dx.
   // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
-  'lmt1433-00-40sh': { marka:'Angst+Pfister', name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
-  'lmt1433-00-55sh': { marka:'Angst+Pfister', name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
-  'lmt1433-00-70sh': { marka:'Angst+Pfister', name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
+  'lmt1433-00-40sh': { marka:'LASPAR', name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
+  'lmt1433-00-55sh': { marka:'LASPAR', name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
+  'lmt1433-00-70sh': { marka:'LASPAR', name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
   // ── "Mount 1" — aynı raporun ÖTEKİ standart parçası, PARÇA NUMARASI YOK ──
   // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
   // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
   // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
-  'bmc-mount1-40sh': { marka:'Angst+Pfister', name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
-  'bmc-mount1-55sh': { marka:'Angst+Pfister', name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
-  'bmc-mount1-70sh': { marka:'Angst+Pfister', name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
+  'bmc-mount1-40sh': { marka:'LASPAR', name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { marka:'LASPAR', name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { marka:'LASPAR', name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 // AMC girdileri: eski 10 kod TK050'nin ardındaki yerine (sözlüğün sırası korunur),
 // kalan kodlar sona — ailenin, tipin, sertliğin sırasıyla.
-(function(L, A, P){
+(function(L, A, P, LP){
   if(!A) return;
   var k=Object.keys(L), yer=k.indexOf('TK050')+1, bas={}, son={};
   k.slice(0, yer).forEach(function(x){ bas[x]=L[x]; });
@@ -340,10 +349,11 @@ var VE_MOUNT_LIBRARY = {
   k.slice(yer).forEach(function(x){ bas[x]=L[x]; });
   A.kodlar().forEach(function(kod){ if(!bas['amc'+kod]) son['amc'+kod]=A.girdi(kod); });
   if(P) P.kodlar().forEach(function(kod){ son['ap'+kod]=P.girdi(kod); });
+  if(LP) LP.kodlar().forEach(function(kod){ son[LP.anahtar(kod)]=LP.girdi(kod); });
   k.forEach(function(x){ delete L[x]; });
   Object.keys(bas).forEach(function(x){ L[x]=bas[x]; });
   Object.keys(son).forEach(function(x){ L[x]=son[x]; });
-})(VE_MOUNT_LIBRARY, _MNT_AMC, _MNT_AP);
+})(VE_MOUNT_LIBRARY, _MNT_AMC, _MNT_AP, _MNT_LP);
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
 // Gömülü katalog (VE_MOUNT_LIBRARY) fabrika varsayılanıdır ve ÇALIŞMA ANINDA
@@ -366,7 +376,7 @@ function veMntGetLibraryMap(){
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
-      amc:m.amc||null, ap:m.ap||null,                       // üreticinin künyesi (js/mount-amc.js · js/mount-ap.js)
+      amc:m.amc||null, ap:m.ap||null, lp:m.lp||null,        // üreticinin künyesi (mount-amc · mount-ap · mount-laspar)
       tahmin:(m.tahmin && m.tahmin.length) ? m.tahmin.slice() : null };   // tahmini alanlar (Canlı Not 113)
   });
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
@@ -387,9 +397,9 @@ function veMntGetLibraryMap(){
           dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true, aday:base.aday,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
-          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc, ap:base.ap,
+          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc, ap:base.ap, lp:base.lp,
           tahmin:tah.length ? tah : null };
-        var Ure=base.amc ? _MNT_AMC : (base.ap ? _MNT_AP : null);
+        var Ure=base.amc ? _MNT_AMC : (base.ap ? _MNT_AP : (base.lp ? _MNT_LP : null));
         if(tah.length && Ure && Ure.tamamla) Ure.tamamla(map[k]);
       });
     }
@@ -443,11 +453,16 @@ function _mntLibTahminAdi(e){
   var T=_mntLibTahmin(e), r=T.indexOf('sx')>=0 || T.indexOf('sy')>=0;
   return r ? (T.indexOf('dz')>=0 ? 'Radyal ve dinamik tahmini' : 'Radyal tahmini') : 'Dinamik tahmini';
 }
-// Tahminin künyesi. AMC (radyal): "kz × x 2,12 · y 1,39 · Cone 38, 40–60 ShA" (aynı tipin
+// Tahminin künyesi. LASPAR: "kz × 2,06 · LMT-1433-00 FEA · statik × 1,60 · 60 ShA, (Sh + 20)/50 ·
+// AMC NR koniler" (konikte radyal + dinamik; öteki ailelerde yalnız dinamik).
+// AMC (radyal): "kz × x 2,12 · y 1,39 · Cone 38, 40–60 ShA" (aynı tipin
 // ölçülmüş sertlikleri arası) · "kz × 2,44 · Solid cone, 4 tip" (ailenin ölçülmüş tipleri) ·
 // "kz × 1,98 · 7 tipin medyanı", sonda ölçümün belgesi (AMC-EO · AMC çizimi). A+P (dinamik):
 // "statik × 1,6 · 60 ShA, (Sh + 20)/50 · AMC NR koniler" · "statik × 1,52 · AMC-EO, 9 NR kodun medyanı".
 function _mntLibTahminKunye(e){
+  var Lt=e && e.lp && e.lp.tahmin;
+  if(Lt) return (Lt.radyal!=null ? 'kz × '+_mntS(Lt.radyal,2)+' · LMT-1433-00 FEA · ' : '')
+    + 'statik × '+_mntS(Lt.din,2)+' · '+veSayi(Lt.sh,0)+' ShA, (Sh + 20)/50 · AMC NR koniler';
   var D=e && e.ap && e.ap.dinamik;
   if(D) return 'statik × '+_mntS(D.din,2)+' · '+(D.tur==='sertlik'
     ? veSayi(D.sh,0)+' ShA, (Sh + 20)/50 · AMC NR koniler'
@@ -459,8 +474,8 @@ function _mntLibTahminKunye(e){
         : K.tur==='aile' ? K.ad+', '+K.n+' tip' : K.n+' tipin medyanı';
   return 'kz × '+oran+' · '+kay+' · '+((K.belge && K.belge.length) ? K.belge.join(' · ') : 'AMC-EO');
 }
-// Listelerin sırası: üretici veritabanı dışı katalog kendi sırasıyla, sonra AMC ve
-// A+P kodları ailenin, tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın
+// Listelerin sırası: üretici veritabanı dışı katalog kendi sırasıyla, sonra AMC, A+P ve
+// LASPAR kodları ailenin, tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın
 // kombinasyon sırası).
 // AMC ADIN SAYI SIRASIYLA (kullanıcı 2026-11-11, Canlı Not 134: *"AMC takoz isimlerini Cone
 // sıralarına göre diz. Yani Cone 38, Cone 39 şeklinde sıralı gitsin"*): ailenin sırası Cone
@@ -477,7 +492,8 @@ function _mntLibSirali(list){
   var yer={};
   (_MNT_AMC ? _MNT_AMC.kodlar() : []).forEach(function(k, i){ yer['amc'+k]=i; });
   (_MNT_AP ? _MNT_AP.kodlar() : []).forEach(function(k, i){ yer['ap'+k]=100000+i; });
-  var id=function(e){ return e.amc ? 'amc'+e.amc.kod : (e.ap ? 'ap'+e.ap.kod : null); };
+  (_MNT_LP ? _MNT_LP.kodlar() : []).forEach(function(k, i){ yer[_MNT_LP.anahtar(k)]=200000+i; });
+  var id=function(e){ return e.amc ? 'amc'+e.amc.kod : (e.ap ? 'ap'+e.ap.kod : (e.lp && _MNT_LP ? _MNT_LP.anahtar(e.lp.kod) : null)); };
   var ure=list.filter(function(e){ return yer[id(e)]!==undefined; });
   var obur=list.filter(function(e){ return yer[id(e)]===undefined; });
   ure.sort(function(a, b){
@@ -4511,17 +4527,23 @@ function _mntLibKimlikHTML(node, e, setter){
 function _mntLibAmcKunye(e){
   return (e && e.amc && _MNT_AMC) ? _MNT_AMC.kunye(e.amc.kod) : null;
 }
-// A+P künyesi: katalog kodu (e.ap) ya da programın BMC girdisinin katalog eşi (LMT-1433-00).
+// A+P künyesi: katalog kodu (e.ap).
 function _mntLibApKunye(e){
-  if(!e || !_MNT_AP) return null;
-  return e.ap ? _MNT_AP.kunye(e.ap.kod) : _MNT_AP.kunyeEs(e.key);
+  return (e && e.ap && _MNT_AP) ? _MNT_AP.kunye(e.ap.kod) : null;
 }
-// (i)'nin niteliği tipi söyler: data-amc (AMC kodu) · data-ap (A+P makale no) · data-ap-es
-// (BMC girdisinin anahtarı → katalog eşinin resmi).
+// LASPAR künyesi: katalog kodu (e.lp) ya da programın LASPAR girdisi (TK035/040/050 →
+// MLMT-0216-33, LMT-1433-00 → katalog tipi 1433, LMT-1433-37).
+function _mntLibLpKunye(e){
+  if(!e || !_MNT_LP) return null;
+  return e.lp ? _MNT_LP.kunye(e.lp.kod) : _MNT_LP.kunyeEski(e.key);
+}
+// (i)'nin niteliği tipi söyler: data-amc (AMC kodu) · data-ap (A+P makale no) · data-lp (LASPAR
+// kodu) · data-lp-eski (programın LASPAR girdisinin anahtarı → katalog tipinin resmi).
 function _mntLibCizimDugme(node, e){
   var K=_mntLibAmcKunye(e), nit;
   if(K) nit='data-amc="'+_mntEsc(K.kod)+'"';
-  else { K=_mntLibApKunye(e); if(K) nit=e.ap ? 'data-ap="'+_mntEsc(e.ap.kod)+'"' : 'data-ap-es="'+_mntEsc(e.key)+'"'; }
+  else if((K=_mntLibApKunye(e))) nit='data-ap="'+_mntEsc(e.ap.kod)+'"';
+  else if((K=_mntLibLpKunye(e))) nit=e.lp ? 'data-lp="'+_mntEsc(e.lp.kod)+'"' : 'data-lp-eski="'+_mntEsc(e.key)+'"';
   if(!K || !K.cizim) return '';
   return '<button type="button" class="mntlib-bilgi" id="mntlib-bilgi-'+node.id+'" '+nit
     + ' aria-label="Teknik resim" title="Teknik resim" aria-haspopup="dialog"'
@@ -4530,10 +4552,12 @@ function _mntLibCizimDugme(node, e){
 // (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner.
 function veMntLibCizimAc(dugme){
   if(!dugme) return false;
-  var a=dugme.getAttribute('data-amc'), p=dugme.getAttribute('data-ap'), es=dugme.getAttribute('data-ap-es');
+  var a=dugme.getAttribute('data-amc'), p=dugme.getAttribute('data-ap');
+  var l=dugme.getAttribute('data-lp'), le=dugme.getAttribute('data-lp-eski');
   var K=a ? (_MNT_AMC ? _MNT_AMC.kunye(a) : null)
       : p ? (_MNT_AP ? _MNT_AP.kunye(p) : null)
-      : es ? (_MNT_AP ? _MNT_AP.kunyeEs(es) : null) : null;
+      : l ? (_MNT_LP ? _MNT_LP.kunye(l) : null)
+      : le ? (_MNT_LP ? _MNT_LP.kunyeEski(le) : null) : null;
   if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
   return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
 }
@@ -4552,8 +4576,8 @@ function _mntLibAmcKunyeHTML(e){
     + '</tbody></table>';
   return h+'</div>';
 }
-// A+P künyesi: katalog tipinde veri; programın BMC girdisinde (LMT-1433-00) katalog eşi.
-// Teknik resim (i)'nin penceresinde (Canlı Not 111); kapasite yazılmaz (Canlı Not 65).
+// A+P künyesi: katalog tipinde veri. Teknik resim (i)'nin penceresinde (Canlı Not 111);
+// kapasite yazılmaz (Canlı Not 65).
 function _mntApOlcu(o){
   if(!o) return null;
   var n=function(v){ return veSayi(v, (v%1)?1:0); }, p=[];
@@ -4574,15 +4598,42 @@ function _mntLibApKunyeHTML(e){
   var K=_mntLibApKunye(e); if(!K) return '';
   var sat=function(ad, v){ return v==null || v==='' ? '' : '<tr><th scope="row">'+ad+'</th><td>'+v+'</td></tr>'; };
   var en=function(t){ return '<span lang="en">'+_mntEsc(t)+'</span>'; };
-  var h='<div class="ve-mnt-amc" data-ap="'+_mntEsc(K.kod || K.uretici)+'">'
+  var h='<div class="ve-mnt-amc" data-ap="'+_mntEsc(K.kod)+'">'
     + '<table class="ve-mnt-amc-veri"><tbody>'
-    + (K.uretici ? sat('Üretici kodu', _mntEsc(K.uretici)) + sat('Katalog eşi', en(K.aile+' '+K.tipAdi))
-                 : sat('Kod', 'A+P '+_mntEsc(K.kod)) + sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi)))
+    + sat('Kod', 'A+P '+_mntEsc(K.kod)) + sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi))
     + (K.sinif ? sat('Sertlik', en(K.sinif)+(K.sh!=null ? ' · ~'+veSayi(K.sh, 0)+' ShA' : '')) : '')
     + sat('Ölçüler', _mntApOlcu(K.olcu))
     + sat('Yükseklik', K.olcu && K.olcu.yuk!=null ? veSayi(K.olcu.yuk, (K.olcu.yuk%1)?1:0)+' mm' : null)
     + sat('Rijitlik toleransı', K.tol!=null ? '±%'+veSayi(K.tol, 0) : null)
     + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
+    + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
+    + '</tbody></table>';
+  return h+'</div>';
+}
+// LASPAR künyesi: katalog tipinde veri; programın LASPAR girdisinde kod, sertlik, kaynak (ve
+// katalog tipi). Teknik resim (i)'de; kapasite yazılmaz (Canlı Not 65).
+function _mntLpOlcu(o){
+  if(!o) return null;
+  var n=function(v){ return veSayi(v, (v%1)?1:0); }, p=[];
+  if(o.cap!=null && o.boy==null) p.push('Ø'+n(o.cap)+' mm');
+  var a=_mntApOlcu({ boy:o.boy, en:o.en, dBoy:o.dBoy, dEn:o.dEn, dCap:o.dCap, dis:o.dis });
+  if(a) p.push(a);
+  if(o.ic!=null) p.push('iç Ø'+n(o.ic));
+  return p.length ? p.join(' · ') : null;
+}
+function _mntLibLpKunyeHTML(e){
+  var K=_mntLibLpKunye(e); if(!K) return '';
+  var sat=function(ad, v){ return v==null || v==='' ? '' : '<tr><th scope="row">'+ad+'</th><td>'+v+'</td></tr>'; };
+  var en=function(t){ return '<span lang="en">'+_mntEsc(t)+'</span>'; };
+  var es=(K.apEsi && _MNT_AP && _MNT_AP.TIP[K.apEsi]) ? _MNT_AP.AILE[_MNT_AP.TIP[K.apEsi][0]][1]+' '+_MNT_AP.TIP[K.apEsi][1] : null;
+  var h='<div class="ve-mnt-amc" data-lp="'+_mntEsc(K.kod)+'">'
+    + '<table class="ve-mnt-amc-veri"><tbody>'
+    + sat('Kod', 'LASPAR '+_mntEsc(K.kod))
+    + (K.aile ? sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi)) : '')
+    + sat('Sertlik', K.sh!=null ? veSayi(K.sh, 0)+' ShA' : null)
+    + sat('Ölçüler', _mntLpOlcu(K.olcu))
+    + sat('Yükseklik', K.olcu && K.olcu.yuk!=null ? veSayi(K.olcu.yuk, (K.olcu.yuk%1)?1:0)+' mm' : null)
+    + sat('A+P eşi', es ? en(es) : null)
     + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
   return h+'</div>';
@@ -4627,7 +4678,7 @@ function getMntLibraryPropertiesHTML(node){
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
   var D=_mntLibDurumlari(node, sel);
   var kategoriler=[
-    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)+_mntLibApKunyeHTML(sel)),
+    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)+_mntLibApKunyeHTML(sel)+_mntLibLpKunyeHTML(sel)),
       durum:_mntDurum('ok') },
     { k:'oneri', ad:'Öneri', govde:_mntLibOneriHTML(node, grup, sel) },
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
@@ -6083,7 +6134,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye, _mntLibTahminAdi: _mntLibTahminAdi,
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
-    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, veMntLibCizimAc: veMntLibCizimAc,
+    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, _mntLibLpKunyeHTML: _mntLibLpKunyeHTML,
+    veMntLibCizimAc: veMntLibCizimAc,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,

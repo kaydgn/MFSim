@@ -56,6 +56,9 @@ describe('yazım taraması', () => {
     ['— Kong 2016, Beikmann 1996 verisi', 'kaynak yılı'],
     ['EA (Čepon 2011 · Michon 2006 · Shangguan 2013)', 'kaynak yılı'],
     ['Arch. Automot. Eng. 55(2), 2019, Tab. 3', 'kaynak yılı'],
+    ['Kaynak LASPAR genel kataloğu 2018 · s. 52', 'kaynak yılı'],
+    ['Conical mount 1423 45 ShA (LASPAR LMT-1423-00-TK45)', 'parça / katalog no'],
+    ['Industrial Conical Mounts Tip 1433 Sertlik 60 ShA', 'parça / katalog no'],
     ['TARİH 27 Eylül 2026', 'tarih'],
     ['Q = 9549 · P ⁄ n', 'formül sabiti'],
   ])('ad olan sayı affedilir: %s → %s', (metin, sinif) => {
@@ -77,6 +80,11 @@ describe('yazım taraması', () => {
   });
   test('ad yalnız KENDİ çevresinde aranır — satırın uzağındaki ad affetmez', () => {
     expect(O.tara('Allison 3200 SP şanzımanı · çıkış devri 2800 rpm').sorun.map((s) => s.sayi)).toEqual(['2800']);
+    expect(O.tara('Tip 1433 · en büyük yük 2800 N').sorun.map((s) => s.sayi)).toEqual(['2800']);
+  });
+  test('sayının çevresi KENDİ yerinde: aynı sayı bağda daha önce de geçse (önceki satırın kodu)', () => {
+    expect(O.tara('… (LASPAR LMT-1423-00-TK45)\nConical mount 1423 60 ShA (LASPAR LMT-1423-00-TK60)').sorun).toEqual([]);
+    expect(O.tara('Tip 1423 seçildi; LMT-1423 grubunda 1423 N yük').sorun.map((s) => s.sayi)).toEqual(['1423']);
   });
 });
 
