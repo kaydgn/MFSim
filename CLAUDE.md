@@ -407,6 +407,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, aday olmaz; öteki ailelerde X · Y yok → eksik.
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
+- **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
+  kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
+  kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer
+  yük kitabının Kerb Strike satırında. Örneğin kaydı okunur (Siper: Adams'ın 3,5 g virajla aynı). Kapı:
+  `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE BOŞ** (kullanıcı 2026-11-11, Canlı Not 1001:
   *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*): pencere yalnız

@@ -158,7 +158,7 @@ describe('PENCERE — Araç ekseni yok, yön kendiliğinden (Canlı Not 121)', (
     delete n.data.ileri;
     ac(n);
     const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
-    expect(bolumler).toEqual(['Kaldırım darbesi', 'Yük kitabı']);
+    expect(bolumler).toEqual(['Yük kitabı']);                                  // kaldırım darbesi standart (Canlı Not 144)
     expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
     expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
     expect(document.body.textContent).not.toMatch(/Onaylanmadı|Onayla|Diziliş önerisi/);
