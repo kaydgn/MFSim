@@ -260,7 +260,19 @@ test('YÜKLEME EKRANI: kart önce, model arkasında kurulur, kart söner; sayfa 
   await bootApp(page);
   await takozGir(page);
   await page.evaluate(() => { window.VE_MNT_YUKLEME_ZORLA = true; });
-  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle');
+  // Canlı Not 131: çubuk bekleyiş boyunca İLERLER — yeni kartın ilk karesinde verilen genişlik
+  // geçişsiz uygulanıyordu (çubuk %71'e sıçrayıp duruyordu). Tık ve iki örnek sayfanın İÇİNDE:
+  // araya giren yoklama (görünürlük) düzeni erkenden hesaplatıp hatayı örtüyordu.
+  const ilerleme = await page.evaluate(() => new Promise((coz) => {
+    const oran = () => { const c = document.querySelector('#ve-mnt-yukleme .ve-mnt-yukleme-cubuk');
+      return c ? c.firstChild.getBoundingClientRect().width / c.getBoundingClientRect().width : null; };
+    document.querySelector('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle').click();
+    setTimeout(() => { const d1 = oran(); setTimeout(() => coz({ d1, d2: oran(),
+      model: window.nodes.some((n) => n.type === 'mnt-mount') }), 500); }, 300);
+  }));
+  expect(ilerleme.model).toBe(false);
+  expect(ilerleme.d1).toBeLessThan(0.7);
+  expect(ilerleme.d2 - ilerleme.d1).toBeGreaterThan(0.08);
   const kart = page.locator('#ve-mnt-yukleme .ve-mnt-yukleme-kart');
   await expect(kart).toBeVisible();
   const ilk = await page.evaluate(() => ({
