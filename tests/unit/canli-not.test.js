@@ -462,9 +462,13 @@ describe('GÜNCELLİK — yayındaki program ana dalın kendisi mi', () => {
       !T.GIRDILER.some((g) => y === g || y.startsWith(g + '/')));
     expect(kapsanmayan).toEqual([]);
     expect(yollar.size).toBeGreaterThan(20);   // tarama gerçekten bir şey buldu
-    // Canlı Not'un kendi dosyaları da girdi
-    ['tools/canli-not.html', 'tools/canli-not-kopru.js', 'tools/canli-not-cekirdek.js', 'tools/canli-not.js']
-      .forEach((f) => expect(T.GIRDILER).toContain(f));
+    // Programa giren Canlı Not dosyaları girdi (paketleyici, köprü); sayfanın dosyaları
+    // DEĞİL — sayfa değişikliği programın yayınını istemez (2026-11-11: #1340 kilit
+    // değişikliğinden sonra hüküm "programı güncelle" diyordu, program aynıydı).
+    ['tools/canli-not-kopru.js', 'tools/canli-not.js'].forEach((f) => expect(T.GIRDILER).toContain(f));
+    ['tools/canli-not.html', 'tools/canli-not-cekirdek.js'].forEach((f) => expect(T.GIRDILER).not.toContain(f));
+    const pkt = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.js'), 'utf8');
+    expect(pkt).toMatch(/const html = kopruGom\(fs\.readFileSync\(mfsim, 'utf8'\), fs\.readFileSync\(KOPRU, 'utf8'\)\);/);
   });
 
   test('--dal bayrağı tanınır, bilinmeyen bayrak SESSİZCE yutulmaz', () => {

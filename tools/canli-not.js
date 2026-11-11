@@ -188,15 +188,18 @@ function sayfaKur(sablon, cekirdek, ayar) {
 // ── güncellik ──────────────────────────────────────────────────────────────
 // Yayınlanan program ANA DALIN kendisidir (kullanıcı 2026-11-05: "güncelliğinden
 // emin olalım, öyle devam edelim"): kullanıcı programı Canlı Not'ta kullanıyor,
-// eski kopyanın üstüne yazılan not boşa gider. Paketin girdileri build.js'in
-// okuduğu her yol + Canlı Not'un kendi dosyaları; karşılama kareleri bu yayında
-// yok. Liste build.js'e karşı testte bağlı (canli-not.test.js → GÜNCELLİK).
+// eski kopyanın üstüne yazılan not boşa gider. Programın girdileri build.js'in
+// okuduğu her yol + programa giren Canlı Not dosyaları (paketleyici ve köprü);
+// karşılama kareleri bu yayında yok. Sayfanın dosyaları (şablon, çekirdek) programa
+// GİRMEZ — onların güncelliği sayfanın denetimi (`denetle <index.html>`); burada
+// olsalardı sayfa değişikliği 18 MB'lık program yayını isterdi. Liste build.js'e
+// karşı testte bağlı (canli-not.test.js → GÜNCELLİK).
 const GIRDILER = [
   'index.html', 'js', 'css', 'vendor', 'pwa/icon.svg', 'assets/examples', 'assets/degisiklik', 'assets/belge', 'assets/kilavuz',
   'assets/takoz',
   'programlar/kayit.json', 'build.js', 'build-shield.js', 'tools/version-info.js', 'tools/degisiklik-resim.js',
   'tools/karsilama-webp.js', 'tools/kilavuz-resim.js',
-  'tools/canli-not.js', 'tools/canli-not.html', 'tools/canli-not-kopru.js', 'tools/canli-not-cekirdek.js'
+  'tools/canli-not.js', 'tools/canli-not-kopru.js'
 ];
 
 function git(args) {
