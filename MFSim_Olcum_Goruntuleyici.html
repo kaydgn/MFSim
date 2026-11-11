@@ -11688,13 +11688,14 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-liste .ve-fw-kl{ grid-template-columns:22px minmax(0,1fr) auto 16px; }
 .ve-mw-kl-d{ display:flex; align-items:center; justify-content:center; }
 .ve-mw-kl-d .mf-ico{ width:13px; height:13px; }
-/* ÜÇLÜ SATIR (x · y · z) etiketi ÜSTTE taşır, üç kutu satırın tamamını alır.
-   Etiket solda 66 px'lik sütundaydı: "Dinamik [N/mm]" (91 px) iki satıra
-   kırılıyor, birimi alt satıra düşüyordu; tekli satırların kutusu 78 px'ten
-   başladığı için de denetimlerin sol kenarı satırdan satıra 15 px kayıyordu. */
-.ve-fw-ed-alan.ve-mw-ed-xyz{ grid-template-columns:repeat(3, minmax(0,1fr)); gap:4px 5px; }
-.ve-fw-ed-alan.ve-mw-ed-xyz > span:first-child{ grid-column:1 / -1; white-space:nowrap; }
-.ve-mw-ed-xyz .ve-fw-inp{ padding:0 6px; }
+/* ÜÇLÜ SATIR (x · y · z) etiketi YANDA taşır (Canlı Not 136: *"Koordinat değerleri aşağıda
+   değil yanda olsun"*): kutular tekli satırların kutusuyla aynı sütunda başlar (81 + 5 =
+   78 + 8 px), etiket tek satır (birim bölümün başlığında). Sütun gövde ve takoz adımlarında
+   Başlangıç'ınki gibi 380 px: 316 px'te kutu 65 px'ti ve örneklerin "-948,697"si sığmıyordu. */
+#ve-mw-body .ve-fw-masa-duzen[data-adim="govde"],
+#ve-mw-body .ve-fw-masa-duzen[data-adim="takoz"]{ grid-template-columns:minmax(0,1fr) 380px; }
+.ve-fw-ed-alan.ve-mw-ed-xyz{ grid-template-columns:81px repeat(3, minmax(0,1fr)); column-gap:5px; }
+.ve-mw-ed-xyz .ve-fw-inp{ padding:0 4px; }
 /* Not, tekli satırların kutusuyla aynı sütunda başlar (78 px etiket + 8 ara). */
 .ve-mw-not{ font-size:var(--fs-micro); line-height:1.45; color:var(--ink-warning); padding-left:86px; }
 /* SEÇİLİ GÖVDE · SEÇİLİ TAKOZ BÖLÜMLÜ (Canlı Not 117 · 118: *"Başlıklar yok, bold yazılar yok.
@@ -11713,11 +11714,11 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-ed .ve-fw-ed-alan > span:first-child u{ text-decoration:none; font-weight:400; color:var(--text-muted); }
 .ve-mw-eks{ position:relative; display:block; min-width:0; }
 .ve-mw-eks > i{
-  position:absolute; left:7px; top:50%; transform:translateY(-50%); pointer-events:none;
+  position:absolute; left:6px; top:50%; transform:translateY(-50%); pointer-events:none;
   font-style:normal; font-size:var(--fs-micro); font-weight:600; color:var(--text-muted);
 }
-.ve-mw-ed-xyz .ve-mw-eks .ve-fw-inp{ padding-left:20px; }
-.ve-mw-ed-xyz .ve-mw-eks--iki .ve-fw-inp{ padding-left:26px; }
+.ve-mw-ed-xyz .ve-mw-eks .ve-fw-inp{ padding-left:16px; }
+.ve-mw-ed-xyz .ve-mw-eks--iki .ve-fw-inp{ padding-left:22px; }
 .ve-mw-lj{ flex:none; display:inline-block; width:11px; height:11px; box-sizing:border-box; background:var(--bg-primary); }
 /* 3B (Canlı Not 37): Görünümler'in çizimi masada yalın — kenarsız; masanın
    ızgarası düz görünüşlerin (3B'nin kendi zemini ve tabanı var) */

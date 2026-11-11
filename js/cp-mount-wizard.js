@@ -872,6 +872,9 @@ function _mwBolum(baslik, ic){
 function _mwEks(on, inp){
   return '<label class="ve-mw-eks' + (on.length > 1 ? ' ve-mw-eks--iki' : '') + '"><i aria-hidden="true">' + on + '</i>' + inp + '</label>';
 }
+// ÜÇLÜ YANDA (kullanıcı 2026-11-11, Canlı Not 136: *"Koordinat değerleri aşağıda değil yanda
+// olsun."*): etiket solda, x · y · z kutuları tekli satırların kutusuyla aynı sütunda. Kapı:
+// mount-sihirbaz.spec.js → *ÜÇLÜ YANDA*.
 function _mwUclu(et, P, r, alanlar, adlar, sinif){
   return _mwAlan(et, alanlar.map(function(a, i){
     return _mwEks(adlar[i], _mwInp(P + a[0], r[a[0]], { baslik:a[1] }));
@@ -2230,16 +2233,17 @@ function _mwGovdeEditorHTML(g){
     + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!g.pointMass) + '" onclick="veMntWizNokta(\'' + k + '\', false)">Atalet tensörü</button>'
     + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!!g.pointMass) + '" onclick="veMntWizNokta(\'' + k + '\', true)">Nokta kütle</button></div>';
   var atalet = _mwAlan('Model', nokta);
+  // Birim bölümün başlığında (Canlı Not 136): etiket kutuların yanında tek satır kalsın
   if(!g.pointMass){
-    atalet += _mwUclu('Eksenel <u>[kg·m²]</u>' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixx', 'Ixx'], ['Iyy', 'Iyy'], ['Izz', 'Izz']], ['xx', 'yy', 'zz'])
-      + _mwUclu('Çarpım <u>[kg·m²]</u>' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixy', 'Ixy'], ['Ixz', 'Ixz'], ['Iyz', 'Iyz']], ['xy', 'xz', 'yz']);
+    atalet += _mwUclu('Eksenel' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixx', 'Ixx'], ['Iyy', 'Iyy'], ['Izz', 'Izz']], ['xx', 'yy', 'zz'])
+      + _mwUclu('Çarpım' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixy', 'Ixy'], ['Ixz', 'Ixz'], ['Iyz', 'Iyz']], ['xy', 'xz', 'yz']);
   }
   var h = '<div class="ve-fw-ed ve-mw-ed">'
     + _mwBolum('Kimlik', _mwAlan('Tip', tip) + _mwAlan('Ad', _mwInp(P + 'ad', g.ad, { text:true, baslik:'Ad' })))
     + _mwBolum('Kütle ve ağırlık merkezi',
         _mwAlan('Kütle <u>[kg]</u>' + _mwKaynakIsaret(g, 'mass'), _mwInp(P + 'mass', g.mass, { ph:'zorunlu', baslik:'Kütle' }))
       + _mwUclu('CG <u>[mm]</u>' + _mwKaynakIsaret(g, 'cg'), P, g, [['cgx', 'CG x'], ['cgy', 'CG y'], ['cgz', 'CG z']], ['x', 'y', 'z']))
-    + _mwBolum('Atalet', atalet);
+    + _mwBolum('Atalet' + (g.pointMass ? '' : ' <u>[kg·m²]</u>'), atalet);
   h += '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizGovdeSil(\'' + k + '\')">'
     + _mwIkon('trash') + ' Sil</button></div></div>';
   return h;
@@ -2304,7 +2308,7 @@ function _mwTakozEditorHTML(t){
   var h = '<div class="ve-fw-ed ve-mw-ed">'
     + _mwBolum('Kimlik', _mwAlan('Ad', _mwInp(P + 'ad', t.ad, { text:true, baslik:'Ad' })))
     + _mwBolum('Konum <u>[mm]</u>' + _mwKaynakIsaret(t, 'konum'),
-        _mwUclu('Üst yüzeyin merkezi', P, t, [['x', 'Konum x'], ['y', 'Konum y'], ['z', 'Konum z']], ['x', 'y', 'z']))
+        _mwUclu('Üst yüzey', P, t, [['x', 'Konum x'], ['y', 'Konum y'], ['z', 'Konum z']], ['x', 'y', 'z']))
     + _mwBolum('Rijitlik <u>[N/mm]</u>',
         _mwAlan('Katalog', _mwKatalogSecHTML(t))
       + (veMntWizTakozElle(t) ? '<div class="ve-mw-not">Rijitlik katalogdan farklı — elle girildi.</div>' : '')
