@@ -287,15 +287,169 @@ function _mntParamOlcucu(M, ctx){
 }
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
-// PENCERE BOŞ (kullanıcı 2026-11-11, Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ
-// temizleyelim. İçerikleri, onu bunu. Her şeyi kaldıralım. Adım adım kurgulayacağız
-// sistemimizi."*): pencere yalnız kimlik (başlık · ad · sil) — bölüm, sağ sütun ve eylem
-// yok. Eski pencere (_mntParamEskiPencereHTML) ve arkasındaki tarama, Sonuç, Excel ve
-// rapor kodda ve testli, pencereye BAĞLI DEĞİL: yeniden kurulumda parça parça bağlanır
-// ya da emekli edilir (e2e onu bu işlevin yerine koyar — mount-param-sonuc.spec.js).
+// YENİDEN KURULUM — pencere adım adım kurulur (kullanıcı 2026-11-11, Canlı Not 1001:
+// *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi."*).
+// Eski pencere (_mntParamEskiPencereHTML) ve arkasındaki tarama, Sonuç, Excel ve rapor
+// kodda ve testli, pencereye BAĞLI DEĞİL: yeniden kurulumda parça parça bağlanır ya da
+// emekli edilir (e2e onu bu işlevin yerine koyar — mount-param-sonuc.spec.js).
+//
+// Canlı Not 1002 (*"Kullanıcının ilk takoz konumlarını baz alarak, model üzerindeki takoz
+// dağılımlarını çıkaracağız … kullanıcı takoz yerlerine göre parametrik analize katılacak
+// takozları seçecek. İstediği kadar takoz seçebilir. Ardından seçilen tüm takozlar, kendi
+// aralarında kombinasyon yapılıp … çözdürülecek"*; Excel'i: Tulga_takoz_konfigurasyonlari):
+//   TAKOZ YERLEŞİMİ  modelin takozları yerlerine göre gruplanır (tek takoz · sağ/sol çift —
+//                    veMntKatalog.gruplar); plan görünüşü (ön solda, sağ üstte) ve föy
+//   ADAYLAR          yer (grup) başına aday tip: tip × grup işaret tablosu
+//   Kombinasyon = işaretli grupların tip sayılarının çarpımı; işaretsiz grup mevcut tipinde
+//   kalır. Seçim node.data.adaylar'da: { grubun anahtarı: [tip anahtarı] } (kütüphane sırası).
 function getMntParamPropertiesHTML(node){
   if(!node.data) node.data={};
-  return _mntPencereKabuk(node, [], '');
+  var Y=_mntParamYeni(node);
+  return _mntPencereKabuk(node, [
+    { k:'yerlesim', ad:'Takoz yerleşimi', govde:_mntParamYerlesimHTML(node, Y) },
+    { k:'aday', ad:'Adaylar', govde:_mntParamMatrisHTML(node, Y) }
+  ], _mntParamYeniYanHTML(node, Y));
+}
+
+// Aday tipler: kütüphanenin TAM ve TAHMİNSİZ tipleri, aday:false olmayanlar (eski pencerenin
+// kuralı — tahminli tip çözülür ama aday değil: _mntParamAdaylar); kütüphane sırası.
+function _mntParamAdayTipler(M){
+  var tam=(typeof _mntLibTam==='function') ? _mntLibTam : function(){ return true; };
+  var tahmin=(typeof _mntLibTahmin==='function') ? _mntLibTahmin : function(){ return []; };
+  return Object.keys(M.lib).filter(function(k){ return M.lib[k].aday!==false && tam(M.lib[k]) && !tahmin(M.lib[k]).length; })
+    .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:true }; });
+}
+// Pencerenin bütün girdisi: model, gruplar, aday tipler, grup başına seçim ve kombinasyon.
+// Seçimden bugün olmayan grup ve aday olmayan tip düşer (model değişmiş olabilir).
+function _mntParamYeni(node){
+  var M=_mntParamModel(), A=_mntParamAdayTipler(M), ham=(node && node.data && node.data.adaylar) || {};
+  var var_={};
+  A.forEach(function(a){ var_[a.key]=true; });
+  var sec={};
+  M.G.forEach(function(g){
+    var l=(Array.isArray(ham[g.anahtar]) ? ham[g.anahtar] : []).filter(function(k){ return var_[k]; });
+    if(l.length) sec[g.anahtar]=l;
+  });
+  var say=M.G.map(function(g){ return (sec[g.anahtar] || []).length; });
+  var taranan=say.filter(function(s){ return s>0; }).length;
+  var N=taranan ? say.reduce(function(p, s){ return p*(s || 1); }, 1) : 0;
+  var eksik=!M.tak.length ? 'Takoz yok'
+    : !A.length ? 'Aday tip yok'
+    : N>veMntKatalog.MAKS_KOMB ? 'Kombinasyon sayısı '+_mntS(veMntKatalog.MAKS_KOMB, 0)+' üstünde' : '';
+  return { M:M, A:A, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
+}
+
+// PLAN — yerleşimin şeması, üstten: sütun grup (önden arkaya, x sırasıyla; aralık x'ten,
+// sütunlar en az %14 ayrık), satır yan (sağ üstte, merkez, sol altta). Çiftin iki takozu
+// kesikli çizgiyle bağlı; numara grubun numarası, taranan grubun balonu dolu. Ölçekli
+// plan değil: ASFAT'ın ön çifti (y ±51 mm) ölçekte iki balonu üst üste koyuyordu.
+function _mntParamPlanHTML(node, Y){
+  var G=Y.M.G, T=Y.M.tak, n=G.length;
+  if(!n) return '';
+  var ara=n>1 ? Math.min(14, 100/(n-1)) : 0, dx=G[n-1].x-G[0].x, i;
+  var p=G.map(function(g, k){ return n<2 ? 50 : dx>0 ? 100*(g.x-G[0].x)/dx : 50+(k-(n-1)/2)*ara; });
+  for(i=1;i<n;i++) p[i]=Math.max(p[i], p[i-1]+ara);
+  if(n>1 && p[n-1]>100){ p[n-1]=100; for(i=n-2;i>=0;i--) p[i]=Math.min(p[i], p[i+1]-ara); }
+  var tol=veMntKatalog.TOL_MM, yuzde=function(v){ return v.toFixed(2)+'%'; };   // makine: CSS konumu
+  var h='';
+  G.forEach(function(g, k){
+    var sira=g.uyeler.slice().sort(function(a, b){ return T[b].y-T[a].y; });   // +y (sağ) üstte
+    var y0=T[sira[0]].y, satir=g.cift ? [0, 100] : [y0>tol ? 0 : y0<-tol ? 100 : 50];
+    if(g.cift) h+='<i class="ve-prm-plan-bag" style="left:'+yuzde(p[k])+'"></i>';
+    sira.forEach(function(u, j){
+      var t=T[u];
+      h+='<span class="ve-prm-plan-t"'+(Y.sec[g.anahtar] ? ' data-tara' : '')+' style="left:'+yuzde(p[k])+';top:'+satir[j]+'%"'
+       + ' title="'+_mntEsc(t.name+' · x '+_mntS(t.x, 0)+' · y '+_mntS(t.y, 0)+' mm')+'">'+g.no+'</span>';
+    });
+  });
+  return '<div class="ve-prm-plan" id="ve-mnt-param-plan-'+node.id+'" data-tazele role="img" aria-label="Takoz yerleşimi">'
+    + '<div class="ve-prm-plan-a"><i class="ve-prm-plan-eksen"></i>'
+    + '<span class="ve-prm-plan-yon" data-yer="sag">Sağ</span><span class="ve-prm-plan-yon" data-yer="on">Ön</span>'
+    + '<span class="ve-prm-plan-yon" data-yer="sol">Sol</span><span class="ve-prm-plan-yon" data-yer="arka">Arka</span>'
+    + h+'</div></div>';
+}
+function _mntParamYerlesimHTML(node, Y){
+  var G=Y.M.G;
+  if(!G.length) return _mntBolum('Takoz yerleşimi', '0 grup', '');           // durum sağ sütunda, bir kez
+  // Mevcut tipin kodu tek blok (`.ve-mnt-ek`, "(57RS326612M)"): sütun dar pencerede de onu taşır.
+  var h=_mntFoyAc([{ b:'No', gen:'9%' }, { b:'Grup', gen:'28%', sinif:'sol' }, { b:'Adet', gen:'13%' },
+    { b:'x <u>[mm]</u>', gen:'13%' }, { b:'Mevcut tip', gen:'37%', sinif:'sol' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
+  G.forEach(function(g){
+    var tip=(g.tip && Y.M.lib[g.tip]) ? Y.M.lib[g.tip].name : '—';
+    h+='<tr><td><span class="ve-prm-no">'+g.no+'</span></td><td class="sol sar">'+_mntParamAd(g.ad)+'</td>'
+     + '<td>'+g.uyeler.length+'</td><td>'+_mntS(g.x, 0)+'</td><td class="sol sar">'+_mntParamAd(tip)+'</td></tr>';
+  });
+  return _mntBolum('Takoz yerleşimi', G.length+' grup · '+Y.M.tak.length+' takoz', _mntParamPlanHTML(node, Y)+h+_MNT_FOY_KAPA);
+}
+
+// ADAYLAR — tip × grup: satır kütüphanenin aday tipi (marka marka), sütun grup (numarası
+// plan ve föyle aynı). Marka satırının kutusu markanın bütün tiplerini o gruba alır ya da
+// bırakır; mevcut tipin hücresi tonlu. Son satır grup başına seçili tip sayısı.
+function _mntParamMatrisHTML(node, Y){
+  var G=Y.M.G, A=Y.A;
+  if(!G.length || !A.length) return _mntBolum('Adaylar', A.length+' tip', '');   // durum sağ sütunda, bir kez
+  var gen=(36/G.length).toFixed(3)+'%';                                                    // makine: sütun genişliği
+  var h=_mntFoyAc([{ b:'Tip', gen:'46%', sinif:'sol' }, { b:_mntSym('k<sub>z</sub>')+' stat. <u>[N/mm]</u>', gen:'18%' }]
+    .concat(G.map(function(g){ return { b:'<span class="ve-prm-no">'+g.no+'</span>', gen:gen, sinif:'ve-mnt-sec', ipucu:g.ad }; })),
+    'Aday tipler', 've-mnt-foy--sar ve-mnt-foy--ad ve-prm-mx');
+  var secili=function(g, k){ return (Y.sec[g.anahtar] || []).indexOf(k)>=0; };
+  _mntParamMarkalar(A).forEach(function(Mk, mi){
+    h+='<tr class="ve-prm-mx-marka" id="ve-mnt-param-mx-'+node.id+'-'+mi+'" data-tazele><th class="sol" colspan="2" scope="rowgroup">'+_mntEsc(Mk.ad)+'</th>';
+    G.forEach(function(g){
+      var hepsi=Mk.A.every(function(a){ return secili(g, a.key); });
+      h+='<td class="ve-mnt-sec"><input type="checkbox"'+(hepsi ? ' checked' : '')+' aria-label="'+_mntEsc(Mk.ad+' · '+g.ad)+'"'
+       + ' data-marka="'+_mntEsc(Mk.ad)+'" onchange="veMntParamGrupMarka(\''+node.id+'\','+g.no+',this.dataset.marka,this.checked)"></td>';
+    });
+    h+='</tr>';
+    Mk.A.forEach(function(a){
+      h+='<tr><td class="sol sar">'+_mntParamAd(a.name)+'</td><td>'+_mntS(_mntNum(a.e.sz, NaN), 0)+'</td>';
+      G.forEach(function(g){
+        h+='<td class="ve-mnt-sec"'+(g.tip===a.key ? ' data-mevcut title="Mevcut tip"' : '')+'><input type="checkbox"'+(secili(g, a.key) ? ' checked' : '')
+         + ' aria-label="'+_mntEsc(a.name+' · '+g.ad)+'" onchange="veMntParamGrupAday(\''+node.id+'\','+g.no+',\''+_mntEsc(a.key)+'\',this.checked)"></td>';
+      });
+      h+='</tr>';
+    });
+  });
+  h+='<tr class="ve-prm-mx-say" id="ve-mnt-param-mx-say-'+node.id+'" data-tazele><td class="sol" colspan="2">Seçili</td>'
+   + Y.say.map(function(s){ return '<td class="ve-mnt-sec">'+s+'</td>'; }).join('')+'</tr>';
+  return _mntBolum('Adaylar', A.length+' tip', h+_MNT_FOY_KAPA);
+}
+
+// Sağ sütun: taranan grup ve kombinasyon; eksik varsa durumu.
+function _mntParamYeniYanHTML(node, Y){
+  var ozet=_mntBolum('Analiz', '', _mntIzgara(2, _mntOku('Taranan grup', Y.taranan+' / '+Y.M.G.length)
+    + _mntOku('Kombinasyon', _mntS(Y.N, 0))), { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
+  var yon=Y.eksik ? _mntParamEksikYonu(Y.eksik) : '';
+  return ozet+'<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'
+    + (Y.eksik ? _mntDurumKutu('<b>'+Y.eksik+'</b>'+(yon ? '. '+yon : ''), 'warn') : '')+'</div>';
+}
+
+// Grubun aday tipi alınır ya da bırakılır; liste kütüphane sırasında. Pencere yerinde tazelenir
+// (saveState → veMntPencereTazele): sayılar, marka kutuları, plan ve özet.
+function _mntParamSecimYaz(n, g, keys, A){
+  var s=Object.assign({}, n.data.adaylar || {}), set={};
+  keys.forEach(function(k){ set[k]=true; });
+  var l=A.filter(function(a){ return set[a.key]; }).map(function(a){ return a.key; });
+  if(l.length) s[g.anahtar]=l; else delete s[g.anahtar];
+  if(Object.keys(s).length) n.data.adaylar=s; else delete n.data.adaylar;
+}
+function veMntParamGrupAday(nodeId, no, key, dahil){
+  var n=_mntParamDugum(nodeId); if(!n) return;
+  var Y=_mntParamYeni(n), g=Y.M.G[no-1]; if(!g) return;
+  var l=(Y.sec[g.anahtar] || []).filter(function(k){ return k!==key; });
+  if(dahil) l.push(key);
+  _mntParamSecimYaz(n, g, l, Y.A);
+  if(typeof saveState==='function') saveState();
+}
+// Markanın bütün aday tipleri gruba alınır ya da bırakılır; tip kutuları için pencere kurulur.
+function veMntParamGrupMarka(nodeId, no, marka, dahil){
+  var n=_mntParamDugum(nodeId); if(!n) return;
+  var Y=_mntParamYeni(n), g=Y.M.G[no-1]; if(!g) return;
+  var keys=Y.A.filter(function(a){ return ((a.e && a.e.marka) || 'Diğer')===marka; }).map(function(a){ return a.key; });
+  var l=(Y.sec[g.anahtar] || []).filter(function(k){ return keys.indexOf(k)<0; });
+  _mntParamSecimYaz(n, g, dahil ? l.concat(keys) : l, Y.A);
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(n);
 }
 
 // ESKİ PENCERE (Canlı Not 1001'e dek) — kategoriler, gövdede alt alta: GRUPLAR (model
@@ -710,6 +864,8 @@ function veMntParamTara(nodeId){
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntParamPropertiesHTML: getMntParamPropertiesHTML, _mntParamEskiPencereHTML: _mntParamEskiPencereHTML,
+    _mntParamYeni: _mntParamYeni, _mntParamAdayTipler: _mntParamAdayTipler, veMntParamGrupAday: veMntParamGrupAday,
+    veMntParamGrupMarka: veMntParamGrupMarka,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
     _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,

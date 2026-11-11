@@ -209,7 +209,8 @@ var _GM_KURUCU = {
   'mnt-motor': 'getMntMassPropertiesHTML', 'mnt-gearbox': 'getMntMassPropertiesHTML',
   'mnt-mount': 'getMntMountPropertiesHTML', 'mnt-library': 'getMntLibraryPropertiesHTML',
   'mnt-solver': 'getMntSolverPropertiesHTML',
-  'mnt-2dview': 'getMnt2DViewPropertiesHTML', 'mnt-report': 'getMntReportPropertiesHTML'
+  'mnt-2dview': 'getMnt2DViewPropertiesHTML', 'mnt-report': 'getMntReportPropertiesHTML',
+  'mnt-parametric': 'getMntParamPropertiesHTML'
 };
 
 var _gmPaketOnbellek = null;
@@ -458,7 +459,7 @@ var _GM_PALET = [
   { k: 'motor', ad: 'Motor', not: 'Tuvale sürüklenir.', yer: 'sag' },
   { k: 'takoz', ad: 'Takoz', not: 'Her takoz için bir tane.', yer: 'sag' },
   { k: 'ozellik', ad: 'Takoz Özellikleri', not: 'Takoz tiplerinin kataloğu.', yer: 'sag' },
-  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Tuvale sürüklenir.', yer: 'sag' },
+  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Takozların yerleşimi ve grup başına aday tipler.', yer: 'sag' },
   { k: 'daralt', ad: 'Daralt', not: 'Sütunu kapatır.', yer: 'sol-orta' },
   { k: 'tuval', ad: 'Tuval', not: 'Bileşen buraya bırakılır.', cerceve: false, yer: 'sol-orta' }
 ];
@@ -511,6 +512,18 @@ var _GM_KUTUPHANE = [
   { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
   { k: 'egri', bolum: 'Kuvvet–sehim', ad: 'Kuvvet–sehim', not: 'Üç eksen tek diyagramda; z-eğrisi özel takozda girilir.' }
+];
+
+var _GM_PARAM = [
+  { k: 'yerlesim', bolum: 'Takoz yerleşimi', ad: 'Takoz yerleşimi', not: 'Takozlar yerlerine göre gruplu: şema ve grupların föyü.' },
+  { k: 'plan', s: '.ve-prm-plan', ad: 'Şema', yer: 'sag', not: 'Üstten: ön solda, sağ üstte; balonun numarası grubun numarası, taranan grubun balonu dolu.' },
+  { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Taranan grup ve kombinasyon sayısı.' }
+];
+
+var _GM_PARAM_ADAY = [
+  { k: 'aday', bolum: 'Adaylar', ad: 'Adaylar', not: 'Satır tip, sütun grup; işaretli tip o grupta denenir.' },
+  { k: 'marka', s: 'tr.ve-prm-mx-marka th', ad: 'Marka satırı', yer: 'ic-sag', not: 'Kutusu markanın bütün tiplerini o gruba alır.' },
+  { k: 'mevcut', s: 'td[data-mevcut]', ad: 'Mevcut tip', yer: 'sag', not: 'Grubun bugünkü tipi; hücresi tonlu.' }
 ];
 
 var _GM_GORUNUM = [
@@ -828,7 +841,7 @@ function _gmSec5(){
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
       + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', _gmB('cad')],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', _gmB('rapor')],
-    ['<strong>Parametrik Analiz</strong>', 'Pencerede bölüm yok', _gmB('parametrik')]
+    ['<strong>Parametrik Analiz</strong>', 'Takozların yerleşimi ve grup başına aday tipler', _gmB('parametrik')]
   ], ['Bileşen', 'Ne', 'Not']);
   h += _gmH3('Girdiler ve türeyenler', 'girdi');
   h += _gmAlanTablo('Girdi / türeyen ayrımı', [
@@ -1641,13 +1654,31 @@ function _gmSec16(){
 }
 
 // ═══ 17 — PARAMETRİK ANALİZ ═══════════════════════════════════════════════
-// Pencere BOŞ (kullanıcı 2026-11-11, Canlı Not 1001): bölüm anlatılmaz; pencere
-// yeniden kuruldukça bölüm bölüm yazılır.
+// Pencere adım adım kuruluyor (Canlı Not 1001 · 1002): bugün Takoz yerleşimi ve
+// Adaylar; tarama ve sonuç pencereye bağlandıkça yazılır.
 function _gmSec17(){
   var h = _gmH2('m17');
   h += '<p><strong>Parametrik Analiz</strong> bileşeni <strong>Bileşenler</strong> sütunundan tuvale '
-    + 'sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + '); çift tık penceresini açar. '
-    + 'Pencerede bölüm yoktur.</p>';
+    + 'sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + '); çift tık penceresini açar '
+    + '(' + _gmS('parametrik-p') + '). <strong>Takoz yerleşimi</strong> modelin takozlarını yerlerine göre '
+    + 'gruplar: aynı adın sağ ve sol takozu ya da y’de aynalı iki takoz bir çifttir, kalanı tek takozdur; '
+    + 'grupların numarası önden arkaya artar. <strong>Adaylar</strong> her grubun denenecek tiplerini '
+    + 'seçer (' + _gmS('parametrik-aday') + '). Tip işaretlenmeyen grup mevcut tipinde kalır.</p>';
+  h += _gmSahne('parametrik-p', _gmPencere('mnt-parametric', { tut: ['Takoz yerleşimi'] }),
+    'Parametrik Analiz penceresi, örnek model: Takoz yerleşimi ve Analiz.', null, _GM_PARAM);
+  h += _gmSahne('parametrik-aday', _gmPencere('mnt-parametric', { tut: ['Adaylar'], yan: false }),
+    'Parametrik Analiz penceresinin Adaylar bölümü.', 640, _GM_PARAM_ADAY);
+  h += _gmAlanTablo('Parametrik Analiz penceresi', [
+    ['Takoz yerleşimi', 'Üstten şema; grupların föyü: numara, ad, adet, ortalama x, mevcut tip',
+      'Çift: ad sağ/sol eşi ya da y’de aynalı konum (±10 mm). Mevcut tip, takozun değerlerini '
+      + 'birebir taşıyan kütüphane tipidir'],
+    ['Adaylar', 'Tip × grup işaret tablosu, marka satırları, grup başına seçili tip sayısı',
+      'Aday: altı rijitliği tam ve tahminsiz kütüphane tipi'],
+    ['Analiz', 'Taranan grup, kombinasyon',
+      'Kombinasyon, işaretli grupların tip sayılarının çarpımıdır (örneğin üç grupta 24’er tip: 13.824); '
+      + 'üst sınır ' + ((typeof veMntKatalog !== 'undefined' && typeof veSayi === 'function')
+        ? veSayi(veMntKatalog.MAKS_KOMB, 0) : '200.000')]
+  ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   return h;
 }
 
@@ -1885,6 +1916,8 @@ function _gmEkA(){
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Kuvvet–sehim</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Yük durumları; kaldırım ve şok darbesi standart, ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Yük kitabı</strong>'],
+      ['Takoz grupları', 'Parametrik Analiz', '<strong>Takoz yerleşimi</strong>'],
+      ['Grup başına aday tipler', 'Parametrik Analiz', '<strong>Adaylar</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],

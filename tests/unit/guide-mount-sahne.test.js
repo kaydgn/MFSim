@@ -110,8 +110,8 @@ describe('ŞEKİLLER — programdan, işaretli', () => {
   });
 
   test('şekil sayısı ve sırası: numaralar boşluksuz', () => {
-    // Parametrik Analiz'in iki şekli pencereyle birlikte kalktı (pencere boş — Canlı Not 1001)
-    expect(SEKIL.length).toBeGreaterThanOrEqual(24);
+    // Parametrik Analiz: Takoz yerleşimi ve Adaylar iki şekil (Canlı Not 1002)
+    expect(SEKIL.length).toBeGreaterThanOrEqual(26);
     SEKIL.forEach((f, i) => {
       const cap = f.querySelector(':scope > figcaption');
       expect(cap.textContent).toMatch(new RegExp('^Şekil ' + (i + 1) + ' —'));

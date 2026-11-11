@@ -284,31 +284,148 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
   });
 });
 
-// PENCERE BOŞ (kullanıcı 2026-11-11, Canlı Not 1001: "TÜM BİLEŞEN PENCERESİNİ temizleyelim
-// … Her şeyi kaldıralım. Adım adım kurgulayacağız sistemimizi"): pencere yalnız kimlik.
-// Eski pencere aşağıda PARKTA (_mntParamEskiPencereHTML) — tarama, Sonuç, Excel ve rapor
-// testleri onunla koşar; pencereye bağlı değil.
-describe('PENCERE BOŞ — Canlı Not 1001', () => {
+// YERLEŞİM ve ADAYLAR (kullanıcı 2026-11-11, Canlı Not 1002: "Kullanıcının ilk takoz
+// konumlarını baz alarak, model üzerindeki takoz dağılımlarını çıkaracağız … kullanıcı takoz
+// yerlerine göre parametrik analize katılacak takozları seçecek. İstediği kadar takoz
+// seçebilir. Ardından seçilen tüm takozlar, kendi aralarında kombinasyon yapılıp … çözdürülecek";
+// Excel'i Tulga_takoz_konfigurasyonlari: grup sütunları Ön Takoz · Sağ/Sol Ön Takoz · Sağ/Sol Arka
+// Takoz, 24 tip × 3 grup = 13.824 kombinasyon). Pencere Canlı Not 1001'de boşaltıldı, adım adım
+// kuruluyor: tarama henüz bağlı değil; eski pencere aşağıda PARKTA (_mntParamEskiPencereHTML).
+describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
-  test('bölüm, sağ sütun, eylem ve yazı yok; kök işareti yerinde; taranmış modelde de boş', () => {
-    modelKur('kamyon');
-    const n = { id: 'pb', type: 'mnt-parametric', data: { haric: [] } };
-    global.nodes.push(n);
-    const bos = (d) => {
-      expect(d.querySelector('[data-mnt-pencere="pb"]')).not.toBeNull();   // Canlı Not'un odağı ve yerinde tazeleme bunu arar
-      expect(d.querySelectorAll('.ve-fp-kat').length).toBe(0);
-      expect(d.querySelector('.ve-fp-side')).toBeNull();
-      expect(d.querySelector('.ve-fp-split--tek')).not.toBeNull();
-      expect(d.querySelector('button, input, select, svg')).toBeNull();
-      expect(d.textContent.trim()).toBe('');
-    };
-    bos(dom(P.getMntParamPropertiesHTML(n)));
-    const Hz = P._mntParamHazirlik(n), O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
-    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday.slice(0, 3), sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2 });
-    it.adim(Infinity);
-    PS._mntParamSonucKaydet(n.id, Hz, O, it.depo());
-    bos(dom(P.getMntParamPropertiesHTML(n)));                               // Sonuç da pencerede yok
-    expect(dom(P._mntParamEskiPencereHTML(n)).querySelector('.ve-fp-kat[data-k="sonuc"]')).not.toBeNull();   // parkta duruyor
+  const kur = (ad, data) => { modelKur(ad); const n = { id: 'py', type: 'mnt-parametric', data: data || {} }; global.nodes.push(n); return n; };
+  const balon = (d) => [...d.querySelectorAll('.ve-prm-plan-t')].map((e) => ({
+    no: e.textContent, x: parseFloat(e.style.left), y: parseFloat(e.style.top), ad: e.title.split(' · ')[0], tara: e.hasAttribute('data-tara') }));
+  const yan = (d) => [...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value);
+
+  test('YERLEŞİM: Tulga’nın üç grubu Excel’in sütunları; şema önden arkaya, sağ üstte, çift aynalı', () => {
+    const n = kur('tulga'), d = dom(P.getMntParamPropertiesHTML(n));
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
+    const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
+    expect(satir).toEqual([
+      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA (57RS326612M)'],
+      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA (57RS329001M)'],
+      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA (57RS328045)']]);
+    expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
+    // şema: ön solda (x sırası), merkezdeki tek takoz eksende, çiftin sağı üstte solu altta
+    expect(balon(d)).toEqual([
+      { no: '1', x: 0, y: 50, ad: 'Ön Takoz', tara: false },
+      { no: '2', x: 40.31, y: 0, ad: 'Sağ Ön Takoz', tara: false }, { no: '2', x: 40.31, y: 100, ad: 'Sol Ön Takoz', tara: false },
+      { no: '3', x: 100, y: 0, ad: 'Sağ Arka Takoz', tara: false }, { no: '3', x: 100, y: 100, ad: 'Sol Arka Takoz', tara: false }]);
+    expect(d.querySelectorAll('.ve-prm-plan-bag').length).toBe(2);           // iki çift
+  });
+
+  test('YERLEŞİM: yakın çift ve yakın sütun üst üste binmez (ASFAT: ön çift y ±51 mm, iki çift x’te 101 mm)', () => {
+    const d = dom(P.getMntParamPropertiesHTML(kur('asfat'))), b = balon(d);
+    const sutun = [...new Set(b.map((e) => e.x))];
+    expect(sutun.length).toBe(3);
+    for (let i = 1; i < sutun.length; i++) expect(sutun[i] - sutun[i - 1]).toBeGreaterThanOrEqual(14 - 1e-9);
+    expect(b.filter((e) => e.no === '1').map((e) => e.y)).toEqual([0, 100]);  // ölçekte 11 px ayrık olurdu
+    // tek takozlu, çiftsiz model: kendi yanında (hafif: şanzıman takozu eksende)
+    const h = balon(dom(P.getMntParamPropertiesHTML(kur('hafif'))));
+    expect(h.map((e) => [e.no, e.x, e.y])).toEqual([['1', 0, 0], ['1', 0, 100], ['2', 100, 50]]);
+  });
+
+  test('ADAYLAR: satır aday tip (marka marka), sütun grup; mevcut tipin hücresi grubun sütununda', () => {
+    const n = kur('tulga'), Y = P._mntParamYeni(n), d = dom(P.getMntParamPropertiesHTML(n));
+    expect(Y.A.length).toBe(24);
+    const tip = [...d.querySelectorAll('.ve-prm-mx tbody tr:not(.ve-prm-mx-marka):not(.ve-prm-mx-say)')];
+    expect(tip.length).toBe(24);
+    tip.forEach((r) => expect(r.querySelectorAll('input[type="checkbox"]').length).toBe(3));
+    expect(d.querySelectorAll('.ve-prm-mx tr.ve-prm-mx-marka').length).toBe(P._mntParamMarkalar(Y.A).length);
+    // sütun başı grubun numarası, ipucu adı
+    expect([...d.querySelectorAll('.ve-prm-mx thead th.ve-mnt-sec')].map((t) => [t.textContent, t.title]))
+      .toEqual([['1', 'Ön Takoz'], ['2', 'Sağ/Sol Ön Takoz'], ['3', 'Sağ/Sol Arka Takoz']]);
+    expect([...d.querySelectorAll('td[data-mevcut]')].map((td) => [td.parentNode.cells[0].textContent.split(' ')[0], td.cellIndex - 1]))
+      .toEqual([['TK035', 3], ['TK040', 2], ['TK050', 1]]);
+    // her kutunun adı tip · grup (adsız denetim yok)
+    d.querySelectorAll('.ve-prm-mx input').forEach((i) => expect(i.getAttribute('aria-label')).toMatch(/ · /));
+    expect(yan(d)).toEqual(['0 / 3', '0']);
+    expect(d.querySelector('.ve-fp-durum')).toBeNull();
+    expect(d.querySelector('.ve-fp-solve')).toBeNull();                       // tarama henüz pencereye bağlı değil
+  });
+
+  test('SEÇİM: grup başına; kütüphane sırasında yazılır, boşalan grup ve alan silinir; marka yalnız o grubun', () => {
+    const n = kur('tulga');
+    global.saveState = jest.fn(); global.showNodeProperties = jest.fn();
+    const Y = P._mntParamYeni(n), G = Y.M.G, A = Y.A;
+    P.veMntParamGrupAday('py', 2, A[5].key, true);
+    P.veMntParamGrupAday('py', 2, A[1].key, true);
+    expect(n.data.adaylar).toEqual({ [G[1].anahtar]: [A[1].key, A[5].key] });
+    expect(global.saveState).toHaveBeenCalledTimes(2);
+    P.veMntParamGrupAday('py', 2, A[1].key, true);                          // ikinci kez: tekrar yok
+    expect(n.data.adaylar[G[1].anahtar]).toEqual([A[1].key, A[5].key]);
+    const amc = A.filter((a) => a.e.marka === 'AMC Mecanocaucho').map((a) => a.key);
+    expect(amc.length).toBeGreaterThan(1);
+    P.veMntParamGrupMarka('py', 3, 'AMC Mecanocaucho', true);
+    expect(n.data.adaylar[G[2].anahtar]).toEqual(amc);
+    expect(n.data.adaylar[G[0].anahtar]).toBeUndefined();
+    expect(global.showNodeProperties).toHaveBeenCalledWith(n);
+    let d = dom(P.getMntParamPropertiesHTML(n));
+    const markaKutu = (g) => d.querySelector('tr.ve-prm-mx-marka input[data-marka="AMC Mecanocaucho"][aria-label$="' + G[g].ad + '"]');
+    expect(markaKutu(2).checked).toBe(true);
+    P.veMntParamGrupAday('py', 3, amc[0], false);                            // bir tipi bırakınca marka kutusu düşer
+    d = dom(P.getMntParamPropertiesHTML(n));
+    expect(markaKutu(2).checked).toBe(false);
+    P.veMntParamGrupMarka('py', 3, 'AMC Mecanocaucho', false);
+    P.veMntParamGrupAday('py', 2, A[1].key, false);
+    P.veMntParamGrupAday('py', 2, A[5].key, false);
+    expect(n.data.adaylar).toBeUndefined();
+    P.veMntParamGrupAday('py', 9, A[0].key, true);                           // olmayan grup: yazılmaz
+    P.veMntParamGrupAday('yok', 1, A[0].key, true);
+    expect(n.data.adaylar).toBeUndefined();
+  });
+
+  test('KOMBİNASYON: seçili grupların tip sayılarının çarpımı; seçilmeyen grup mevcut tipinde; sınırı aşınca durum', () => {
+    const n = kur('tulga'), Y0 = P._mntParamYeni(n), G = Y0.M.G, A = Y0.A;
+    const sec = (g, k) => A.slice(0, k).map((a) => a.key);
+    n.data.adaylar = { [G[0].anahtar]: sec(0, 4), [G[2].anahtar]: sec(2, 6) };
+    let Y = P._mntParamYeni(n), d = dom(P.getMntParamPropertiesHTML(n));
+    expect([Y.say, Y.taranan, Y.N]).toEqual([[4, 0, 6], 2, 24]);
+    expect(yan(d)).toEqual(['2 / 3', '24']);
+    expect([...d.querySelectorAll('tr.ve-prm-mx-say td.ve-mnt-sec')].map((t) => t.textContent)).toEqual(['4', '0', '6']);
+    expect(balon(d).map((e) => e.tara)).toEqual([true, false, false, true, true]);
+    // Excel'in taraması: 24 tip × 3 grup
+    n.data.adaylar = Object.fromEntries(G.map((g) => [g.anahtar, A.map((a) => a.key)]));
+    expect(yan(dom(P.getMntParamPropertiesHTML(n)))).toEqual(['3 / 3', '13.824']);
+    // bugün aday olmayan tip ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
+    n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key], 'x|y': [A[1].key] };
+    expect(P._mntParamYeni(n).N).toBe(1);
+    // sınır: Kombinasyon sayısı … üstünde (sağ sütunda tek durum)
+    n.data.adaylar = Object.fromEntries(G.map((g) => [g.anahtar, A.map((a) => a.key)]));
+    const maks = K.MAKS_KOMB;
+    try {
+      K.MAKS_KOMB = 1000;
+      d = dom(P.getMntParamPropertiesHTML(n));
+      expect(d.querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
+      expect(d.querySelectorAll('.ve-fp-durum').length).toBe(1);
+    } finally { K.MAKS_KOMB = maks; }
+  });
+
+  test('takozsuz model: bölümler başlıklı ve boş, durum sağ sütunda bir kez', () => {
+    modelKur('tulga');
+    global.nodes = global.nodes.filter((x) => !/^mnt-mount$/.test(x.type));
+    const n = { id: 'py', type: 'mnt-parametric', data: {} }; global.nodes.push(n);
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
+    expect(d.querySelector('.ve-prm-plan')).toBeNull();
+    expect(d.querySelectorAll('.ve-fp-main table').length).toBe(0);
+    expect(d.textContent.match(/Takoz yok/g).length).toBe(1);
+    expect(d.querySelector('.ve-fp-durum').textContent).toMatch(/^Takoz yok\. /);
+  });
+
+  test('yerinde tazeleme: tip işaretlenince sayı, marka kutusu, şema ve özet pencere kurulmadan değişir', () => {
+    const n = kur('tulga'), Y = P._mntParamYeni(n), A = Y.A;
+    global.saveState = () => cp.veMntPencereTazele();
+    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    const govde = document.querySelector('#ve-fp-panes-py');
+    const lp = A.filter((a) => a.e.marka === 'LASPAR');
+    lp.forEach((a) => P.veMntParamGrupAday('py', 1, a.key, true));
+    expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);
+    expect([...document.querySelectorAll('#ve-mnt-param-mx-say-py td.ve-mnt-sec')].map((t) => t.textContent)).toEqual([String(lp.length), '0', '0']);
+    expect([...document.querySelectorAll('#ve-mnt-param-ozet-py input')].map((i) => i.value)).toEqual(['1 / 3', String(lp.length)]);
+    expect(document.querySelector('tr.ve-prm-mx-marka input[data-marka="LASPAR"][aria-label$="Ön Takoz"]').checked).toBe(true);
+    expect(document.querySelector('.ve-prm-plan-t').hasAttribute('data-tara')).toBe(true);
   });
 });
 

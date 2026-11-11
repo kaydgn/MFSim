@@ -414,12 +414,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yük kitabının Kerb Strike satırında. Örneğin kaydı okunur (Siper: Adams'ın 3,5 g virajla aynı). Kapı:
   `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
-  **Parametrik Analiz** (`mnt-parametric`). **PENCERE BOŞ** (kullanıcı 2026-11-11, Canlı Not 1001:
-  *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*): pencere yalnız
-  kimlik; aşağıdaki pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI
-  DEĞİL (`_mntParamEskiPencereHTML`, e2e onu yerine koyar) — yeniden kurulumda parça parça bağlanır
-  ya da emekli edilir. Kapı: `mount-param.test.js` → *PENCERE BOŞ* + `pencere-kabuk.test.js` →
-  `BOS_PENCERE`. İlk analizi **Katalogdan seçim** (kullanıcı
+  **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
+  Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
+  Canlı Not 1002 (*"takoz yerlerine göre parametrik analize katılacak takozları seçecek"*):
+  **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; üstten ŞEMA — sütun grup x sırasıyla,
+  satır yan; ölçekli değil: ASFAT'ın ön çifti ölçekte üst üste biniyordu) + **Adaylar** (tip × grup
+  işaret tablosu; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında; işaretsiz
+  grup mevcut tipinde) + sağda taranan grup · kombinasyon (grup sayılarının çarpımı). Aşağıdaki
+  pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
+  (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır — grup
+  başına liste bağlanırken karışık tabana geçer. Kapı: `mount-param.test.js` → *YERLEŞİM ve
+  ADAYLAR*. İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
