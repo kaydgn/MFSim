@@ -387,7 +387,7 @@ var _GM_TUVAL = [
 ];
 
 var _GM_EKRAN = [
-  { k: 'komutlar', ad: 'Komutlar', not: 'Proje, düzen ve dışa aktarma komutları.', yer: 'sol-orta' },
+  { k: 'komutlar', ad: 'Komutlar', not: 'MFSim’e basınca açılır: proje, düzen ve dışa aktarma.', yer: 'sag' },
   { k: 'bilesenler', ad: 'Bileşenler’i aç', not: 'Tuvale sürüklenen bileşenlerin sütunu.', yer: 'sag' },
   { k: 'topoloji', ad: 'Topoloji', not: 'Tuval: modeli kurmak ve pencereleri açmak.', yer: 'sag' },
   { k: 'sonuclar', ad: 'Sonuçlar', not: 'Çözümün sinyalleri ve diyagramları.', yer: 'sag' },
@@ -446,7 +446,7 @@ var _GM_RAPOR = [
 ];
 
 var _GM_KOMUT = [
-  { k: 'dugme', ad: 'Komutlar', not: 'Ekranın sağ üst köşesi.', yer: 'sol-orta' },
+  { k: 'dugme', ad: 'MFSim', not: 'Ekranın sol üst köşesi; Komutlar’ı açar.', yer: 'sag' },
   { k: 'yeni', ad: 'Yeni proje', not: 'Boş bir proje açar.', yer: 'sag-orta' },
   { k: 'ac', ad: 'Proje aç', not: 'Kaydedilmiş .json dosyasını açar.', yer: 'sag-orta' },
   { k: 'kaydet', ad: 'Kaydet', not: 'Ctrl+S; proje .json olarak kaydedilir.', yer: 'sag-orta' },
@@ -764,7 +764,7 @@ function _gmSec3(){
   h += _gmEkran('rapor', 'rapor', _GM_RAPOR, 'İndirilen raporun ilk sayfası.');
   h += _gmH3('Kaydetmek ve modülden çıkmak', 'tur-kaydet');
   h += _gmAdimlar([
-    'Sağ üstteki ' + _gmN(_GM_KOMUT, 'dugme') + ' <strong>Komutlar</strong> düğmesine basın (' + _gmS('komut') + ').',
+    'Sol üstteki ' + _gmN(_GM_KOMUT, 'dugme') + ' <strong>MFSim</strong>’e basın; Komutlar açılır (' + _gmS('komut') + ').',
     _gmN(_GM_KOMUT, 'kaydet') + ' <strong>Kaydet</strong>’e (Ctrl+S) basın: proje <code>.json</code> '
       + 'dosyası olarak kaydedilir. ' + _gmN(_GM_KOMUT, 'ac') + ' <strong>Proje aç</strong> onu geri yükler.',
     'Tuvalin sol üstündeki düğme (' + _gmS('tuval') + ', ' + _gmN(_GM_TUVAL, 'geri') + ') ana topolojiye '

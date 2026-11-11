@@ -77,9 +77,9 @@ var veProjectName = '';
 // [ikon kutusu] [proje adı]. İsim boşsa ya da uygulamanın kendi <title>'ıysa
 // sade "MFSim" markası gösterilir (kırpılmış başlık görünmez).
 // textContent = gösterilen isim → results.js'in geri-okuması korunur.
-// Menü kaldırıldığından chevron da yok: tıklanabilirlik vaat eden bir işaret
-// bırakmak, tıklayınca hiçbir şey olmayan bir yüzey demekti. Kırpılan uzun
-// isim title'da tam hâliyle durur.
+// Marka komutların penceresini açan düğmenin içinde (Canlı Not 125); ok düğmede,
+// bu kabın DIŞINDA — burada yalnız ad yazılır. Kırpılan uzun isim title'da tam
+// hâliyle durur.
 function veSetProjectNameButton(name) {
   var btn = document.getElementById('ve-project-name-btn');
   if(!btn) return;

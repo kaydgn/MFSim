@@ -85,7 +85,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Sihirbazı bileşenini (`mnt-wizard`) taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Takoz'a girişte Bileşenler sütunu KAPALI** (kullanıcı 2026-11-06, Canlı
   Not 62: *"otomatik açık olarak geliyor. Gelmesin"*): `veMntPaletKapat` geçişsiz ve kadrajdan
-  önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). Kapı:
+  önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). **Örneğin
+  Yükle'si önce YÜKLEME EKRANINI açar** (kullanıcı 2026-11-11, Canlı Not 128: *"Tık diye
+  açılıyor"*): kart (ad · künye · kademeli çubuk), model kartın arkasında kurulur, kart söner
+  (`veMntOrnekYuklemeli`, `VE_MNT_YUKLEME_MS`); otomasyonda ve jsdom'da gecikmesiz. Kapı:
+  `mount-baslangic.test.js` → *YÜKLEME EKRANI* + `mount-baslangic.spec.js` → *YÜKLEME EKRANI*. Kapı:
   `mount-baslangic.test.js` → *TAKOZ'A GİRİŞ* + `mount-baslangic.spec.js` → *BOŞ KANVAS*. **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
   AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
   iddiası taşımaz (kurgunun tasarım özellikleri testte sayıyla kilitli). Gerçek aracın satırı da
@@ -791,9 +795,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Kapı: `durum-seridi.test.js` + `validation.test.js` → *sonuç bildirimde* +
   `kabuk-sutun.spec.js` → *DURUM ŞERİDİ YOK*.
 - **ŞERİDİN GÖVDESİ YOK — komutlar kenardaki küçük pencerede** (kullanıcı
-  2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın sağ ucundaki
-  **Komutlar** düğmesi (`#ve-rb-expand`) bandın altında YÜZEN pencereyi
-  (`#ve-rb-dock`: sekmeler + başlıklı iki sütunlu liste) açar; komut, dışarı tık
+  2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın SOL ucundaki
+  **MFSim ▾** markası (`#ve-rb-expand`; kullanıcı 2026-11-11, Canlı Not 125: *"MFSim
+  yazısına tıkladığımızda açılan şekle getirelim"*) altında YÜZEN pencereyi
+  (`#ve-rb-dock`: sekmeler + hesap düğmesi + başlıklı liste) açar; bandın sağ ucu boş
+  (avatar pencerenin başlığında); komut, dışarı tık
   (yakalama evresinde — Kayış Tablosu mousedown'ı yutuyor) ve Esc kapatır;
   `--ribbon-h` hep bandın boyu, sayfa itilmez. Kılavuzda komutun yeri
   "Komutlar’daki …". Kapı: `kabuk-bant.test.js` → *ŞERİT BANDI İNCE* +

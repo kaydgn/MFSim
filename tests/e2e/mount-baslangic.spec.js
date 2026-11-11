@@ -252,6 +252,34 @@ test('ÖRNEK SATIRI: Yükle TEK TIKLA kurar, sayfa çekilir; Ctrl+Z TEK adımda 
   expect((await say(page)).hepsi).toBe(0);
 });
 
+// YÜKLEME EKRANI (kullanıcı 2026-11-11, Canlı Not 128: *"Tık diye açılıyor"*): kullanıcının
+// tarayıcısında Yükle önce kartı açar (ad · künye · çubuk), model kartın arkasında kurulur,
+// kart söner. Otomasyonda gecikme yok; burada kullanıcının yolu zorlanır.
+test('YÜKLEME EKRANI: kart önce, model arkasında kurulur, kart söner; sayfa çekilir', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await takozGir(page);
+  await page.evaluate(() => { window.VE_MNT_YUKLEME_ZORLA = true; });
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle');
+  const kart = page.locator('#ve-mnt-yukleme .ve-mnt-yukleme-kart');
+  await expect(kart).toBeVisible();
+  const ilk = await page.evaluate(() => ({
+    ad: document.querySelector('#ve-mnt-yukleme .ve-mnt-yukleme-bas b').textContent,
+    kunye: document.querySelector('#ve-mnt-yukleme .ve-mnt-yukleme-kunye').textContent,
+    model: window.nodes.some((n) => n.type === 'mnt-mount'),
+    ortu: (() => { const r = document.getElementById('ve-mnt-yukleme').getBoundingClientRect();
+      const m = document.getElementById('ve-page-topoloji').getBoundingClientRect();
+      return [r.left - m.left, r.top - m.top, r.width - m.width, r.height - m.height].map(Math.round); })(),
+  }));
+  expect(ilk.ad).toBe('TULGA');
+  expect(ilk.kunye).toMatch(/^8 gövde · 5 takoz · 788 kg$/);
+  expect(ilk.model).toBe(false);                               // kart görünürken model kurulmadı
+  expect(ilk.ortu).toEqual([0, 0, 0, 0]);                      // modülün alanının tamamı
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 15000 });
+  await expect(page.locator('#ve-mnt-yukleme')).toHaveCount(0, { timeout: 5000 });
+  await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
+});
+
 test('SİHİRBAZ KAPISI: pencere FEAD sihirbazının kabuğuyla açılır, Esc kapatır', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);

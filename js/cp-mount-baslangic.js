@@ -231,7 +231,7 @@ function veMntBaslangicEylem(ad, v){
     return !!(typeof veMntKanvasBos === 'function' && veMntKanvasBos().length);
   if(ad === 'ornek'){
     if(!v || typeof veMntOrnekYukle !== 'function') return false;
-    return !!veMntOrnekYukle(v);
+    return veMntOrnekYuklemeli(v);
   }
   if(ad === 'donus')
     return !!(typeof veMntCloseEditor === 'function' && (veMntCloseEditor(), true));
@@ -241,6 +241,73 @@ function veMntBaslangicEylem(ad, v){
     return true;
   }
   return false;
+}
+
+// ── ÖRNEĞİN YÜKLEME EKRANI (kullanıcı 2026-11-11, Canlı Not 128: *"Örnek yüklediğimiz
+// zaman direkt topolojiyi ekrana veriyor. Böyle bir yükleme ekranı gibi bir şey olsun,
+// biraz geç yüklensin yani. Profesyonelliği belli olsun. Tık diye açılıyor."*) ──────────
+// Yükle → modülün alanında kart: örneğin adı, künyesi (gövde · takoz · kütle) ve kademeli
+// çubuk. Model kartın ARKASINDA kurulur ve sığdırılır, çubuk dolar, kart söner. Süre
+// VE_MNT_YUKLEME_MS. Otomasyonda (navigator.webdriver) ve jsdom'da gecikme YOK: kurucu
+// eşzamanlı çağrılır — testler ve ürün turu birebir eski (`zorla` yalnız kapı içindir).
+var VE_MNT_YUKLEME_MS = 1400;
+var VE_MNT_YUKLEME_ID = 've-mnt-yukleme';
+function _mntYuklemeGecikmesiz(){
+  if(typeof window !== 'undefined' && window.VE_MNT_YUKLEME_ZORLA) return false;
+  if(typeof navigator === 'undefined' || typeof document === 'undefined' || !document.body) return true;
+  if(navigator.webdriver === true) return true;
+  return /jsdom/i.test(navigator.userAgent || '');
+}
+function veMntOrnekYuklemeHTML(o){
+  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
+  var e = function(x){ return String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  return '<div class="ve-mnt-yukleme-kart" role="status" aria-live="polite">'
+    + '<div class="ve-mnt-yukleme-bas">' + (typeof veIkon === 'function' ? veIkon('settings', 've-mnt-yukleme-ico') : '')
+    + '<b>' + e(o.arac || o.ad) + '</b></div>'
+    + '<div class="ve-mnt-yukleme-kunye">' + n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz · ' + n(o.kutle) + ' kg</div>'
+    + '<div class="ve-mnt-yukleme-cubuk" role="progressbar" aria-label="' + e(o.arac || o.ad) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>'
+    + '</div>';
+}
+function _mntYuklemeIlerle(el, yuzde){
+  if(!el) return;
+  var c = el.querySelector('.ve-mnt-yukleme-cubuk');
+  if(!c) return;
+  c.setAttribute('aria-valuenow', String(Math.round(yuzde)));
+  c.firstChild.style.width = yuzde + '%';
+}
+// Kartı kurar (görünür, çubuk boş). Döner: kartın kabı ya da null.
+function veMntOrnekYuklemeKur(key){
+  if(typeof document === 'undefined') return null;
+  var o = veMntBaslangicOrnekler().filter(function(x){ return x.key === key; })[0];
+  var kap = document.getElementById('ve-page-topoloji') || document.querySelector('.ve-main');
+  if(!o || !kap) return null;
+  var eski = document.getElementById(VE_MNT_YUKLEME_ID);
+  if(eski) eski.remove();
+  var el = document.createElement('div');
+  el.id = VE_MNT_YUKLEME_ID;
+  el.className = 've-mnt-yukleme';
+  el.innerHTML = veMntOrnekYuklemeHTML(o);
+  kap.appendChild(el);
+  return el;
+}
+// Yükle'nin eylemi: kartla gecikmeli yükleme; gecikmesiz ortamda doğrudan kurucu.
+function veMntOrnekYuklemeli(key, opt){
+  opt = opt || {};
+  if(!opt.zorla && _mntYuklemeGecikmesiz()) return !!veMntOrnekYukle(key);
+  var el = veMntOrnekYuklemeKur(key);
+  if(!el) return !!veMntOrnekYukle(key);
+  var ms = (opt.ms > 0) ? opt.ms : VE_MNT_YUKLEME_MS;
+  var sonraki = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : function(f){ setTimeout(f, 16); };
+  sonraki(function(){ el.classList.add('acik'); _mntYuklemeIlerle(el, 72); });
+  setTimeout(function(){
+    try { veMntOrnekYukle(key); } catch(e){ if(typeof console !== 'undefined') console.error(e); }
+    _mntYuklemeIlerle(el, 100);
+    setTimeout(function(){
+      el.classList.remove('acik');
+      setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 220);
+    }, Math.round(ms * 0.2));
+  }, Math.round(ms * 0.65));
+  return true;
 }
 
 // ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
@@ -278,6 +345,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntBaslangicGerekli: veMntBaslangicGerekli, veMntBaslangicOrnekler: veMntBaslangicOrnekler,
     veMntBaslangicHTML: veMntBaslangicHTML, veMntBaslangicSayfa: veMntBaslangicSayfa,
     veMntBaslangicEylem: veMntBaslangicEylem, veMntBaslangicKapsam: veMntBaslangicKapsam,
+    veMntOrnekYuklemeli: veMntOrnekYuklemeli, veMntOrnekYuklemeKur: veMntOrnekYuklemeKur,
+    VE_MNT_YUKLEME_MS: VE_MNT_YUKLEME_MS, _mntYuklemeGecikmesiz: _mntYuklemeGecikmesiz,
     veMntBaslangicTazele: veMntBaslangicTazele, veMntBaslangicAcik: veMntBaslangicAcik,
     veMntBaslangicKimlik: veMntBaslangicKimlik,
     veMntBaslangicKapilar: veMntBaslangicKapilar,
