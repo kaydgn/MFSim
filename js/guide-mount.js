@@ -515,8 +515,8 @@ var _GM_KUTUPHANE = [
 ];
 
 var _GM_PARAM = [
-  { k: 'yerlesim', bolum: 'Takoz yerleşimi', ad: 'Takoz yerleşimi', not: 'Takozlar yerlerine göre gruplu: şema ve grupların föyü.' },
-  { k: 'plan', s: '.ve-prm-plan', ad: 'Şema', yer: 'sag', not: 'Üstten: ön solda, sağ üstte; balonun numarası grubun numarası, taranan grubun balonu dolu.' },
+  { k: 'yerlesim', bolum: 'Takoz yerleşimi', ad: 'Takoz yerleşimi', not: 'Takozlar yerlerine göre gruplu: çizim ve grupların föyü.' },
+  { k: 'plan', s: '.ve-prm-ak', ad: 'Çizim', yer: 'sag', not: 'Güç grubu; takozun çipi grubun numarası, küpü grubun rengi. Sürükle döndürür.' },
   { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Taranan grup ve kombinasyon sayısı.' }
 ];
 
@@ -1669,7 +1669,7 @@ function _gmSec17(){
   h += _gmSahne('parametrik-aday', _gmPencere('mnt-parametric', { tut: ['Adaylar'], yan: false }),
     'Parametrik Analiz penceresinin Adaylar bölümü.', 640, _GM_PARAM_ADAY);
   h += _gmAlanTablo('Parametrik Analiz penceresi', [
-    ['Takoz yerleşimi', 'Üstten şema; grupların föyü: numara, ad, adet, ortalama x, mevcut tip',
+    ['Takoz yerleşimi', 'Güç grubunun çizimi (takozun çipi grubun numarası, küpü grubun rengi); grupların föyü: numara, ad, adet, ortalama x, mevcut tip',
       'Çift: ad sağ/sol eşi ya da y’de aynalı konum (±10 mm). Mevcut tip, takozun değerlerini '
       + 'birebir taşıyan kütüphane tipidir'],
     ['Adaylar', 'Tip × grup işaret tablosu, marka satırları, grup başına seçili tip sayısı',

@@ -294,11 +294,11 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
 describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   const kur = (ad, data) => { modelKur(ad); const n = { id: 'py', type: 'mnt-parametric', data: data || {} }; global.nodes.push(n); return n; };
-  const balon = (d) => [...d.querySelectorAll('.ve-prm-plan-t')].map((e) => ({
-    no: e.textContent, x: parseFloat(e.style.left), y: parseFloat(e.style.top), ad: e.title.split(' · ')[0], tara: e.hasAttribute('data-tara') }));
   const yan = (d) => [...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value);
+  // çizimin modeli: takozun numarası ve rengi grubunki (Canlı Not 1003 · 1006)
+  const cizimModeli = (n) => cp._mntAksoModel(P._mntParamAksoVeri(n.id)).takoz.map((t) => [t.ad, t.no, t.renk]);
 
-  test('YERLEŞİM: Tulga’nın üç grubu Excel’in sütunları; şema önden arkaya, sağ üstte, çift aynalı', () => {
+  test('YERLEŞİM: Tulga’nın üç grubu Excel’in sütunları; çizim güç grubunun aksonometrisi, takozun çipi ve rengi grubunki', () => {
     const n = kur('tulga'), d = dom(P.getMntParamPropertiesHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
@@ -307,23 +307,29 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
       ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA (57RS329001M)'],
       ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA (57RS328045)']]);
     expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
-    // şema: ön solda (x sırası), merkezdeki tek takoz eksende, çiftin sağı üstte solu altta
-    expect(balon(d)).toEqual([
-      { no: '1', x: 0, y: 50, ad: 'Ön Takoz', tara: false },
-      { no: '2', x: 40.31, y: 0, ad: 'Sağ Ön Takoz', tara: false }, { no: '2', x: 40.31, y: 100, ad: 'Sol Ön Takoz', tara: false },
-      { no: '3', x: 100, y: 0, ad: 'Sağ Arka Takoz', tara: false }, { no: '3', x: 100, y: 100, ad: 'Sol Arka Takoz', tara: false }]);
-    expect(d.querySelectorAll('.ve-prm-plan-bag').length).toBe(2);           // iki çift
+    // föyün numarası grubun renginde rozet
+    expect([...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')].map((e) => [e.textContent, e.dataset.renk]))
+      .toEqual([['1', '1'], ['2', '2'], ['3', '3']]);
+    // çizim: Görünümler'in bileşeni, bu pencerenin kaynağıyla; tam ekranı yok (Görünümler'in modelini kurardı)
+    const ak = d.querySelector('#ve-mnt-param-ak-py');
+    expect(ak.querySelector('svg.ve-mnt2d-akso')).not.toBeNull();
+    expect(ak.querySelector('button[aria-label="Tam ekran"]')).toBeNull();
+    expect(ak.querySelector('.ve-mnt-kroki-lej').textContent).toMatch('takoz · grup numarası');
+    expect(cizimModeli(n)).toEqual([
+      ['Ön Takoz', '1', 1], ['Sağ Ön Takoz', '2', 2], ['Sağ Arka Takoz', '3', 3], ['Sol Ön Takoz', '2', 2], ['Sol Arka Takoz', '3', 3]]);
+    // küpler ve çipler grubun renginde
+    const renk = (sec) => [...ak.querySelectorAll(sec)].map((g) => (/ve-ak-renk-(\d)/.exec(g.getAttribute('class')) || [])[1]).sort().join('');
+    expect(renk('g.ve-ak-t')).toBe('12233');
+    expect([...ak.querySelectorAll('g.ve-ak-cip.t-cip')].every((c) => /ve-ak-renk-\d/.test(c.getAttribute('class')))).toBe(true);
+    // Görünümler'in kendi çizimi değişmedi: T numarası, renksiz
+    expect(cp._mntAksoModel(cp._mnt2DPencereVeri()).takoz.map((t) => [t.no, t.renk])).toEqual([['T1', undefined], ['T2', undefined], ['T3', undefined], ['T4', undefined], ['T5', undefined]]);
   });
 
-  test('YERLEŞİM: yakın çift ve yakın sütun üst üste binmez (ASFAT: ön çift y ±51 mm, iki çift x’te 101 mm)', () => {
-    const d = dom(P.getMntParamPropertiesHTML(kur('asfat'))), b = balon(d);
-    const sutun = [...new Set(b.map((e) => e.x))];
-    expect(sutun.length).toBe(3);
-    for (let i = 1; i < sutun.length; i++) expect(sutun[i] - sutun[i - 1]).toBeGreaterThanOrEqual(14 - 1e-9);
-    expect(b.filter((e) => e.no === '1').map((e) => e.y)).toEqual([0, 100]);  // ölçekte 11 px ayrık olurdu
-    // tek takozlu, çiftsiz model: kendi yanında (hafif: şanzıman takozu eksende)
-    const h = balon(dom(P.getMntParamPropertiesHTML(kur('hafif'))));
-    expect(h.map((e) => [e.no, e.x, e.y])).toEqual([['1', 0, 0], ['1', 0, 100], ['2', 100, 50]]);
+  test('YERLEŞİM: ASFAT ve hafif — çiftin iki takozu aynı numara ve renkte; renk dörtten sonra döner', () => {
+    const ad = (m) => m.map((t) => t[1] + ':' + t[2]).sort().join(' ');
+    expect(ad(cizimModeli(kur('asfat')))).toBe('1:1 1:1 2:2 2:2 3:3 3:3');
+    expect(ad(cizimModeli(kur('hafif')))).toBe('1:1 1:1 2:2');
+    expect([1, 2, 3, 4, 5, 6, 9].map(P._mntParamRenk)).toEqual([1, 2, 3, 4, 1, 2, 1]);
   });
 
   test('ADAYLAR: satır aday tip (marka marka), sütun grup; mevcut tipin hücresi grubun sütununda', () => {
@@ -384,7 +390,6 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     expect([Y.say, Y.taranan, Y.N]).toEqual([[4, 0, 6], 2, 24]);
     expect(yan(d)).toEqual(['2 / 3', '24']);
     expect([...d.querySelectorAll('tr.ve-prm-mx-say td.ve-mnt-sec')].map((t) => t.textContent)).toEqual(['4', '0', '6']);
-    expect(balon(d).map((e) => e.tara)).toEqual([true, false, false, true, true]);
     // Excel'in taraması: 24 tip × 3 grup
     n.data.adaylar = Object.fromEntries(G.map((g) => [g.anahtar, A.map((a) => a.key)]));
     expect(yan(dom(P.getMntParamPropertiesHTML(n)))).toEqual(['3 / 3', '13.824']);
@@ -408,24 +413,24 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     const n = { id: 'py', type: 'mnt-parametric', data: {} }; global.nodes.push(n);
     const d = dom(P.getMntParamPropertiesHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
-    expect(d.querySelector('.ve-prm-plan')).toBeNull();
+    expect(d.querySelector('.ve-prm-ak')).toBeNull();
     expect(d.querySelectorAll('.ve-fp-main table').length).toBe(0);
     expect(d.textContent.match(/Takoz yok/g).length).toBe(1);
     expect(d.querySelector('.ve-fp-durum').textContent).toMatch(/^Takoz yok\. /);
   });
 
-  test('yerinde tazeleme: tip işaretlenince sayı, marka kutusu, şema ve özet pencere kurulmadan değişir', () => {
+  test('yerinde tazeleme: tip işaretlenince sayı, marka kutusu ve özet pencere kurulmadan değişir; çizim yerinde', () => {
     const n = kur('tulga'), Y = P._mntParamYeni(n), A = Y.A;
     global.saveState = () => cp.veMntPencereTazele();
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
-    const govde = document.querySelector('#ve-fp-panes-py');
+    const govde = document.querySelector('#ve-fp-panes-py'), cizim = document.querySelector('#ve-mnt-param-ak-py');
     const lp = A.filter((a) => a.e.marka === 'LASPAR');
     lp.forEach((a) => P.veMntParamGrupAday('py', 1, a.key, true));
     expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);
     expect([...document.querySelectorAll('#ve-mnt-param-mx-say-py td.ve-mnt-sec')].map((t) => t.textContent)).toEqual([String(lp.length), '0', '0']);
     expect([...document.querySelectorAll('#ve-mnt-param-ozet-py input')].map((i) => i.value)).toEqual(['1 / 3', String(lp.length)]);
     expect(document.querySelector('tr.ve-prm-mx-marka input[data-marka="LASPAR"][aria-label$="Ön Takoz"]').checked).toBe(true);
-    expect(document.querySelector('.ve-prm-plan-t').hasAttribute('data-tara')).toBe(true);
+    expect(document.querySelector('#ve-mnt-param-ak-py')).toBe(cizim);                     // seçim çizimi değiştirmez
   });
 });
 

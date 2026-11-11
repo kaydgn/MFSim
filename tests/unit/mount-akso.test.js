@@ -1600,3 +1600,30 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
     expect(eski.svg).not.toContain('ve-ak-kilavuz-uc');
   });
 });
+
+// GRUBUN RENGİ (Canlı Not 1003 · 1006 — Parametrik Analiz'in Takoz yerleşimi): takozun `renk`i
+// (1–4) küpüne ve çipine `ve-ak-renk-N` olarak geçer; çipin yeri anahtarına girmez (yapışkan yer
+// renkle değişmez). Renksiz takoz eskisi gibi çizilir.
+describe('GRUBUN RENGİ — takozun küpü ve çipi', () => {
+  test('renk küpe ve çipe sınıf olarak geçer; renksiz çizim birebir eski; yazı yeri renkten bağımsız', () => {
+    yukle('tulga');
+    const o = { W: 354, H: 320, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket: 'ad' };
+    const m0 = cp._mntAksoModel(), r0 = AK.ciz(m0, o);
+    expect(r0.svg).not.toMatch('ve-ak-renk');
+    const m = cp._mntAksoModel();
+    m.takoz.forEach((t, i) => { t.renk = (i % 2) + 1; });
+    const r = AK.ciz(m, o);
+    const kupler = [...r.svg.matchAll(/<g class="ve-ak-t([^"]*)" data-ak="(T\d)"/g)].map((x) => [x[2], x[1].trim()]);
+    expect(kupler.length).toBe(m.takoz.length);
+    kupler.forEach(([k, sinif]) => {
+      const t = m.takoz.find((x) => x.k === k);
+      expect(sinif).toBe('ve-ak-renkli ve-ak-renk-' + t.renk);
+    });
+    const cipler = [...r.svg.matchAll(/<g class="ve-ak-cip t-cip([^"]*)" data-ak="(T\d)"/g)];
+    expect(cipler.length).toBeGreaterThan(0);
+    cipler.forEach((x) => expect(x[1]).toMatch(/ve-ak-renkli ve-ak-renk-[12]/));
+    // renk dışında aynı çizim: sınıflar silinince svg eskisinin aynısı, yazı yerleri aynı
+    expect(r.svg.replace(/ ve-ak-renkli ve-ak-renk-\d/g, '')).toBe(r0.svg);
+    expect(JSON.stringify(r.yer)).toBe(JSON.stringify(r0.yer));
+  });
+});
