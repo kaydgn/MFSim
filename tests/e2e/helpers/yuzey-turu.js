@@ -350,6 +350,15 @@ async function takozTuru(page, olc) {
     await page.evaluate(() => { const x = document.getElementById('ve-mnt-fs-x'); if (x) x.click(); });
     await page.waitForTimeout(150);
   }
+  // KONUM TARAMASI (F007): aynı düğüm, üç grup × dokuz konum (729 kombinasyon) —
+  // Konum kategorisi, gruplarda z, önerinin x · z'si ve mod ayrışması.
+  await page.evaluate((i) => {
+    const n = nodes.find((x) => x.id === i);
+    n.data = { analiz: 'konum', konum: { dxAdim: 50, dzAdim: 20 }, acik: { darbe: false } };
+    veMntParamTara(i);
+  }, pid);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i] && _MNT_PARAM_SONUC[i].M.analiz === 'konum', pid, { timeout: 60000 });
+  await pencereler(page, olc, ['mnt-parametric']);
 }
 
 async function feadTuru(page, olc) {

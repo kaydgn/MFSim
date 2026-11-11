@@ -44,7 +44,10 @@ var _MNT_PARAM_GEN = {};        // düğüm → çizimin genişliği (gövdenin 
 function _mntParamImza(H){
   var c=veMntKatalog.baglam(H.ctx), sv=H.M.solver || { data:{} }, g=H.M.gather, s=H.sabit || {}, tara={};
   H.M.G.forEach(function(gr){ if(!s[gr.anahtar]) gr.uyeler.forEach(function(i){ tara[i]=true; }); });
-  var tk=g.mounts.map(function(m, i){ return tara[i] ? { id:m.id, name:m.name, x:m.x, y:m.y, z:m.z } : m; });
+  // Konum taramasında tip taranmaz: taranan takozun tip alanları da imzada; konumu
+  // her durumda imzada — uygulanan konum taramanın merkezini taşır, tarama eskir.
+  var konum=H.analiz==='konum';
+  var tk=g.mounts.map(function(m, i){ return (tara[i] && !konum) ? { id:m.id, name:m.name, x:m.x, y:m.y, z:m.z } : m; });
   return JSON.stringify([{ components:g.components, mounts:tk, torque:g.torque, yon:g.yon }, (sv.data && sv.data.solveMode) || 'auto',
     _mntZetaOf(sv), H.M.fAtes, H.aday.map(function(a){ return [a.key, a.e]; }), Object.keys(s).sort(),
     c.acik.tolerans ? c.s.tolerans : 0, c.s.surunme]);
@@ -622,8 +625,14 @@ function veMntParamKSec(nodeId, k){
   if(n && typeof showNodeProperties==='function') showNodeProperties(n);
 }
 // Konfigürasyonun grup başına tip adı (taranmayan grup ve K0: modelin tipi).
-function _mntPrmKAdi(ent, k){
+// Konum taramasında kayma (Δx · Δz); `mutlak`: grubun konumu (x · z).
+function _mntPrmKAdi(ent, k, mutlak){
   var M=ent.M;
+  if(M.analiz==='konum') return M.G.map(function(g, i){
+    if(!mutlak) return k.tipler[i] ? _mntParamAdayAdi(M, k.tipler[i]) : _mntParamMevcutAdi(M, g);
+    var p=_mntParamGrupKonum(M, g, k.tipler[i]);
+    return 'x '+_mntS(p.x, 0)+' · z '+_mntS(p.z, 0)+' mm';
+  });
   return M.G.map(function(g, i){
     var key=k.tipler[i] || g.tip;
     return (key && M.lib[key]) ? M.lib[key].name : '—';
@@ -633,7 +642,7 @@ function _mntPrmKAdi(ent, k){
 // aynı kısa adı alan iki tip ayrı yazılır, K adları Excel'in Özet'iyle birebir.
 function _mntPrmKisaF(ent){
   var M=ent.M, X=(typeof veMntParamExcel!=='undefined') ? veMntParamExcel : null;
-  if(!X || !X.ayirici) return function(ad){ return String(ad); };
+  if(!X || !X.ayirici || M.analiz==='konum') return function(ad){ return String(ad); };
   var adlar=((ent.D && ent.D.adaylar) || []).map(function(a){ return a.name; });
   M.G.forEach(function(g){ if(g.tip && M.lib[g.tip]) adlar.push(M.lib[g.tip].name); });
   return X.ayirici(adlar);
@@ -687,7 +696,7 @@ function _mntPrmKriterler(ent, Z, c, idx){
 // Seçilen K'nın ayrıntısı: grup başına tip (K0'ınkinden değişen kalın), TR ve statik
 // sehim (K0 → seçilen), kriterler, eylemler.
 function _mntParamSeciliHTML(node, ent, Z, c, L, sec){
-  var k=L[sec], k0=L[0], M=ent.M, ad=_mntPrmKAdi(ent, k), ad0=_mntPrmKAdi(ent, k0);
+  var k=L[sec], k0=L[0], M=ent.M, konum=M.analiz==='konum', ad=_mntPrmKAdi(ent, k, true), ad0=_mntPrmKAdi(ent, k0, true);
   var h='<div class="ve-prm-og">';
   M.G.forEach(function(g, i){
     var tip;
@@ -699,8 +708,14 @@ function _mntParamSeciliHTML(node, ent, Z, c, L, sec){
   });
   h+='</div>';
   var ok=function(a, b, d){ return k.mevcut ? _mntS(a, d) : _mntS(a, d)+' → '+_mntS(b, d); };
-  h+=_mntIzgara(2, _mntOku('Statik sehim <u>[mm]</u>', ok(k0.d, k.d, 2))
-                 + _mntOku('TR <u>[%]</u>', ok(k0.T*100, k.T*100, 1)));
+  // Konumda modların ayrışması da (KED: zıplama ve yalpa modlarının küçüğü, %).
+  var ked=function(x){
+    var o=x.mevcut ? ent.mevcut.o1 : null, v=x.mevcut ? (o && o.ked ? Math.min(o.ked.bounce, o.ked.roll) : NaN) : ent.D.X.ayrisma[x.idx];
+    return v*100;
+  };
+  h+=_mntIzgara(konum ? 3 : 2, _mntOku('Statik sehim <u>[mm]</u>', ok(k0.d, k.d, 2))
+                 + _mntOku('TR <u>[%]</u>', ok(k0.T*100, k.T*100, 1))
+                 + (konum ? _mntOku('Mod ayrışması <u>[%]</u>', ok(ked(k0), ked(k), 0)) : ''));
   var R=_mntPrmKriterler(ent, Z, c, k.idx);
   var td=function(x){
     return '<td'+(x.ok===false ? ' class="kr"' : '')+' title="'+_mntEsc(x.v)+'">'+x.v+(x.ok===null ? '' : veDurumIkon(x.ok ? 'ok' : 'err'))+'</td>';
@@ -756,7 +771,7 @@ function _mntPrmDagV(ent, c, L, sec){
 }
 function _mntPrmModelde(ent, idx){
   var t=ent.D.tipler(idx);
-  return ent.M.G.every(function(g, i){ return !t[i] || t[i]===g.tip; });
+  return ent.M.G.every(function(g, i){ return !t[i] || _mntParamAdayAyni(ent.M, g, t[i]); });
 }
 // Uygula düğmesi; kombinasyon modeldeyse kapalı, sebebi ipucunda.
 function _mntPrmUygulaDugme(nodeId, ent, idx, ad, yazi){
@@ -801,9 +816,13 @@ function _mntParamSaglayanHTML(Z){
   return _mntBolum('Kriterleri sağlayan', _mntS(S.N, 0)+' kombinasyon', h+_MNT_FOY_KAPA);
 }
 // Galerinin listesi: çizilebilen diyagramlar (kesit iki, tasarım uzayı üç taranan grup ister).
+// Tip ekseninin (k_z sırası) diyagramları konum taramasında yok: aday bir Δx · Δz
+// kaymasıdır, tek eksene dizilmez.
+var _MNT_PRM_TIP_EKSEN = { d8:true, d5:true, d4:true, d2:true, d3:true, d1:true };
 function _mntPrmGaleri(ent){
-  var n=ent.D.taranan.length;
+  var n=ent.D.taranan.length, konum=ent.M && ent.M.analiz==='konum';
   return _MNT_PRM_DIYAGRAM.filter(function(d){
+    if(konum && _MNT_PRM_TIP_EKSEN[d[0]]) return false;
     return d[0]==='d1' ? n>=3 : (d[0]==='d5' || d[0]==='d4' || d[0]==='d3') ? n>=2 : true;
   });
 }
@@ -908,7 +927,7 @@ function _mntParamIpucu(nodeId, idx){
   if(!ent || !node || !(idx>=0 && idx<ent.D.N)) return '';
   var H=_mntParamHazirlik(node), c=veMntKatalog.baglam(H.ctx), Z=_mntParamOzet(ent, c), D=ent.D;
   var t=D.tipler(idx), sat=[];
-  ent.M.G.forEach(function(g, i){ if(t[i]) sat.push(g.no+' · '+((ent.M.lib[t[i]] || {}).name || t[i])); });
+  ent.M.G.forEach(function(g, i){ if(t[i]) sat.push(g.no+' · '+_mntParamAdayAdi(ent.M, t[i])); });
   if(D.d1[idx]!==1) return sat.concat(['Çözülemedi']).join('\n');
   sat.push('T %'+_mntS(D.T[idx]*100, 1)+' · δs '+_mntS(D.d[idx], 2)+' mm');
   var m=Z.Hk.m[idx], boz=[];
@@ -1024,7 +1043,9 @@ function veMntParamCizKur(){
 // MODELE UYGULA — kombinasyonun tiplerini taranan grupların takozlarına
 // yazar (Takoz penceresinin yazıcısı _mntLibUygula), bütün takozlar TEK
 // geri-al adımı. Tarama eskimez (imza taranan grubun tipini içermez): Sonuç
-// yerinde kalır, uygulanan kombinasyon "Mevcut" olur. Dönüş: değişen takoz.
+// yerinde kalır, uygulanan kombinasyon "Mevcut" olur. KONUM taramasında
+// takozun x · z'si yazılır ve tarama ESKİR (konum imzada): yeni konum bir
+// sonraki taramanın merkezidir. Dönüş: değişen takoz.
 function veMntParamUygula(nodeId, idx){
   var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
   if(!node || !ent) return 0;
@@ -1034,12 +1055,19 @@ function veMntParamUygula(nodeId, idx){
   var t=ent.D.tipler(idx), n=0;
   ent.M.G.forEach(function(g, i){
     if(!t[i]) return;
-    g.idler.forEach(function(id){
+    var kk=veMntKatalog.konumOku(t[i]);
+    g.idler.forEach(function(id, j){
       var tk=_mntDugum(id);
       if(!tk) return;
       if(!tk.data) tk.data={};
       var once=JSON.stringify(tk.data);
-      if(_mntLibUygula(tk.data, t[i]) && JSON.stringify(tk.data)!==once) n++;
+      if(kk){
+        // Konum: taramanın tabanındaki konum + kayma (taze tarama: taban bugünkü konum).
+        var m=ent.M.gather.mounts[g.uyeler[j]];
+        if(kk.dx) tk.data.x=Math.round((_mntNum(m.x)+kk.dx)*1e6)/1e6;
+        if(kk.dz) tk.data.z=Math.round((_mntNum(m.z)+kk.dz)*1e6)/1e6;
+        if(JSON.stringify(tk.data)!==once) n++;
+      } else if(_mntLibUygula(tk.data, t[i]) && JSON.stringify(tk.data)!==once) n++;
     });
   });
   if(!n) return 0;
@@ -1062,7 +1090,8 @@ function _mntParamZenginlestir(ent, Z, H){
     }
     return Object.assign({}, k, { o1:o1, o2:o2, h:o1 ? veMntKatalog.hepsi(o1, null, c).sonuc : {}, ad:_mntPrmKAdi(ent, k) });
   });
-  return { S:Z.S, M:ent.M, A:H.aday, sabit:H.sabit, ctx:c, kSay:VE_MNT_PRM_XLS_KONFIG, konfig:konfig, tarih:new Date() };
+  return { S:Z.S, M:ent.M, A:H.aday, sabit:H.sabit, ctx:c, kSay:VE_MNT_PRM_XLS_KONFIG, konfig:konfig, tarih:new Date(),
+           analiz:ent.M.analiz || 'katalog' };
 }
 // Raporu bugünkü sınırlarla indirir (tarama yinelenmez).
 function veMntParamRapor(nodeId){
@@ -1077,7 +1106,7 @@ function veMntParamRapor(nodeId){
     if(!ok){ _mntParamYaz(nodeId, 'Rapor varlıkları yüklenemedi', 'no'); return; }
     try {
       var html=veMntParamRaporHTML(E);
-      _mntReportDownload(html, 'takoz_katalogdan_secim.html');
+      _mntReportDownload(html, ent.M.analiz==='konum' ? 'takoz_konum_taramasi.html' : 'takoz_katalogdan_secim.html');
       _mntParamYaz(nodeId, 'İndirildi ('+_mntS(html.length/1024, 0)+' KB)', 'ok');
     } catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); }
   });
@@ -1116,8 +1145,8 @@ function _mntPrmUygunluk(bits, kesin){
 function _mntParamExcelPlan(ent, H){
   var c=veMntKatalog.baglam(H.ctx), Z=_mntParamOzet(ent, c), S=Z.S, Hk=Z.Hk, D=ent.D, M=ent.M, O=ent.O;
   var kesin=_mntPrmKesinBit(), bitK=_MNT_PRM_KESIN.map(_mntPrmBit);
-  var libAd=function(key){ return key ? ((M.lib[key] || {}).name || key) : null; };
-  var mevAd=M.G.map(function(g){ return libAd(g.tip) || '—'; });
+  var libAd=function(key){ return _mntParamAdayAdi(M, key); };
+  var mevAd=M.G.map(function(g){ return _mntParamMevcutAdi(M, g); });
   var grupOf=[];
   M.G.forEach(function(g, gi){ g.uyeler.forEach(function(i){ grupOf[i]=gi; }); });
   var tipAd=function(t){ return M.G.map(function(g, gi){ return (t && t[gi]) ? libAd(t[gi]) : mevAd[gi]; }); };

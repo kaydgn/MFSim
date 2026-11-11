@@ -128,6 +128,49 @@ var veMntKatalog = (function() {
     return t ? N : 0;
   }
 
+  // ── 1b) KONUM ADAYLARI (F007 · konum taraması) ─────────────────────────────
+  // Taramanın ikinci analizi: tip modeldeki gibi kalır, grubun takozları
+  // boyuna (Δx) ve düşey (Δz) kayar. Grubun iki takozu AYNI kaymayı alır (y
+  // aynası korunur). Aday bir kaymadır; anahtarı makine biçiminde
+  // ("konum:dx:dz", mm) — tarayıcı ve depo adayı anahtarıyla taşır, ölçücü
+  // anahtardan okur (js/cp-mount-param.js). Seri SIFIRDAN dışa doğru adımlanır:
+  // mevcut konum (Δ 0) her zaman adaydır. Eğim açısı ayrı iş (F044: takozun
+  // eksenleri bugün araç eksenleriyle aynı).
+  var KONUM_VARSAYILAN = { dxMin:-50, dxMax:50, dxAdim:25, dzMin:-20, dzMax:20, dzAdim:10 };
+  var KONUM_EKSEN_MAKS = 41;     // eksen başına en çok değer
+  function konumAyar(k){
+    k = k || {};
+    var o = {};
+    ['dx', 'dz'].forEach(function(e){
+      var a = Number(k[e + 'Min']), b = Number(k[e + 'Max']), h = Number(k[e + 'Adim']);
+      var V = KONUM_VARSAYILAN;
+      o[e + 'Min'] = (Number.isFinite(a) && a <= 0) ? a : V[e + 'Min'];
+      o[e + 'Max'] = (Number.isFinite(b) && b >= 0) ? b : V[e + 'Max'];
+      o[e + 'Adim'] = (Number.isFinite(h) && h > 0) ? h : V[e + 'Adim'];
+    });
+    return o;
+  }
+  function _seri(a, b, h){
+    var v = [0], i;
+    for(i = 1; i * h <= -a + 1e-9 && v.length < KONUM_EKSEN_MAKS; i++) v.unshift(_yuvar(-i * h));
+    for(i = 1; i * h <= b + 1e-9 && v.length < KONUM_EKSEN_MAKS; i++) v.push(_yuvar(i * h));
+    return v;
+  }
+  function _yuvar(x){ return Math.round(x * 1e6) / 1e6; }
+  function konumAnahtar(dx, dz){ return 'konum:' + _yuvar(dx) + ':' + _yuvar(dz); }
+  function konumOku(key){
+    var m = /^konum:(-?[\d.e+-]+):(-?[\d.e+-]+)$/.exec(String(key == null ? '' : key));
+    if(!m) return null;
+    var dx = Number(m[1]), dz = Number(m[2]);
+    return (Number.isFinite(dx) && Number.isFinite(dz)) ? { dx:dx, dz:dz } : null;
+  }
+  // Ayar → { ax:[Δx], az:[Δz], adaylar:[{ key, dx, dz }] } (Δx ana sıra, ikisi artan).
+  function konumAdaylari(k){
+    var o = konumAyar(k), ax = _seri(o.dxMin, o.dxMax, o.dxAdim), az = _seri(o.dzMin, o.dzMax, o.dzAdim), A = [];
+    ax.forEach(function(dx){ az.forEach(function(dz){ A.push({ key:konumAnahtar(dx, dz), dx:dx, dz:dz }); }); });
+    return { ayar:o, ax:ax, az:az, adaylar:A };
+  }
+
   // ── 2) KISITLAR ───────────────────────────────────────────────────────────
   // Kriter 1 · 1a · 1b · 2 programın uygunluk tablosunun AYNISI (cp-mount-report.js
   // veMntUygunluk · çekirdek modePlacement): sınır, eşitlik yönü ve taban aynı.
@@ -638,6 +681,8 @@ var veMntKatalog = (function() {
     ACIK_VARSAYILAN: ACIK_VARSAYILAN, SINIR_ARALIK: SINIR_ARALIK,
     K1_ORAN: K1_ORAN, K1A_HZ: K1A_HZ, K1B: K1B, K2_T: K2_T,
     yanAyir: yanAyir, gruplar: gruplar, kombinasyonSayisi: kombinasyonSayisi,
+    KONUM_VARSAYILAN: KONUM_VARSAYILAN, KONUM_EKSEN_MAKS: KONUM_EKSEN_MAKS, konumAyar: konumAyar,
+    konumAnahtar: konumAnahtar, konumOku: konumOku, konumAdaylari: konumAdaylari,
     baglam: baglam, degerlendir: degerlendir, hepsi: hepsi, isletmeMi: isletmeMi,
     pareto: pareto, uzlasi: uzlasi, tarayici: tarayici, ked: ked, siralama: siralama,
     olcu: olcu, hukum: hukum, hukumler: hukumler, ozet: ozet, baglayici: baglayici, duyarlilik: duyarlilik,

@@ -398,7 +398,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kaldırım · tork yönü) dâhil, yalnız takozlar değişir: yön düşünce yük durumları varsayılana
   iniyordu (Tulga'nın iki tork durumu ters, Adams'tan RMS 17,28 mm). Kapı: `mount-katalog.test.js`
   (→ *SIRA* · *DEPO* · *CANLI* · *TAM* · *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *TEK YOL — yön
-  ayarıyla* · *AYNI HÜKÜM* · *PENCERE* · *SONUÇ* · *KOŞUCU* · *RAPOR*).
+  ayarıyla* · *AYNI HÜKÜM* · *PENCERE* · *SONUÇ* · *KOŞUCU* · *RAPOR*). **İkinci analiz KONUM TARAMASI** (F007,
+  `node.data.analiz = 'konum'`; tür seçimi sağ sütunun Analiz bölümünde): tip modeldeki gibi,
+  grubun takozları AYNI Δx · Δz kaymasını alır; aday bir kaymadır, anahtarı `konum:dx:dz`
+  (`veMntKatalog.konumAdaylari`, seri sıfırdan dışa — mevcut konum adaydır) ve AYNI tarayıcıdan,
+  AYNI ölçücüden, AYNI sıralamadan geçer (ayrı tarama yazılmaz). Konum imzada: Modele uygula
+  x · z yazar, tarama eskir. Tip ekseninin (k_z) diyagramları konumda yok. Eğim açısı YOK —
+  takozun eksenleri araç eksenleriyle aynı (F044 ayrı iş). Kapı: `mount-param-konum.test.js`.
 - `js/mount-param-ciz.js` + `js/cp-mount-param-sonuc.js` — Parametrik Analiz'in
   **Sonuç** kategorisi (kullanıcı kararları 2026-10-18; *"Tablo + iki sade grafik,
   diğer diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"*; 2026-11-11: Excel'in
