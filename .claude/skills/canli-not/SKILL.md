@@ -383,6 +383,7 @@ oluşturmanı istiyorum."*
 | Sayfa | Odak | Adres |
 |-------|------|-------|
 | MFSim Canlı Not | — | https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91 |
+| Canlı Not · Parametrik Analiz | `parametrik` | https://claude.ai/artifact/MP2etxUfqMpw2nTmcE3GXT |
 
 - **Ayrı Artifact:** kendi kaydı (`notlar` · `yayin/son` · `oturum/aktif` · `istek/guncelle`),
   varlık deposu ve sahibi; §0–§3 aynen geçerli, adres o sayfanınki. Araç komutları
