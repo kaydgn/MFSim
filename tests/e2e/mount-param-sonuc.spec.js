@@ -356,6 +356,56 @@ test('EXCEL: gerçek tık indirir; sıkıştırılmış dosya açılır, Özet �
   expect(hata).toEqual([]);
 });
 
+// HTML RAPORU (2026-11-11, kullanıcı: "HTML raporunun temelini kur"): gerçek tık indirir; dosya
+// tarayıcıda açılır — Özet'in K'ları, Tarama'nın satırına tık Sonuç'u o konfigürasyonla açar,
+// sehim Excel'in planının değeri; geri tuşu Tarama'ya döner. Düğme satırı dört düğmeyle taşmaz.
+test('HTML: gerçek tık indirir; dosya açılır, Özet · Tarama · Sonuç; satıra tık o konfigürasyonun sonucu; düğme satırı taşmaz', async ({ page, context }) => {
+  const hata = [];
+  page.on('pageerror', (e) => hata.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
+  const id = await kur(page);
+  await page.click('#ve-mnt-param-btn-' + id);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 60000 });
+  await page.waitForTimeout(600);
+  const dugme = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem button[data-html]');
+  await dugme.scrollIntoViewIfNeeded();
+  const satir = await page.evaluate(() => {
+    const e = document.querySelector('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem');
+    const r = e.getBoundingClientRect();
+    return { n: e.querySelectorAll('button').length, tasma: e.scrollWidth > e.clientWidth + 1,
+      disari: [...e.querySelectorAll('button')].filter((b) => { const q = b.getBoundingClientRect(); return q.right > r.right + 1 || q.left < r.left - 1; }).length };
+  });
+  expect(satir).toEqual({ n: 4, tasma: false, disari: 0 });
+  const [indir] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), dugme.click()]);
+  expect(indir.suggestedFilename()).toBe('takoz_konfigurasyonlari.html');
+  await expect(page.locator('#ve-mnt-param-st-' + id)).toHaveText(/^İndirildi \([\d.]+ KB\)$/);
+  const ref = await page.evaluate((i) => {
+    const P = _mntParamExcelPlan(_MNT_PARAM_SONUC[i], _mntParamHazirlik(_mntParamDugum(i)));
+    P.adim.forEach((f) => f());
+    const E = P.E();
+    return { K: E.konfig.map((k) => 'K' + k.K), z: veSayi(E.tarama.veri.kod[2] / 100, 2), n: E.tarama.satirlar.length };
+  }, id);
+  const yol = test.info().outputPath('takoz_konfigurasyonlari.html');          // uzantısız geçici yol sayfa olarak açılmaz
+  await indir.saveAs(yol);
+  const r = await context.newPage();
+  const h2 = [];
+  r.on('pageerror', (e) => h2.push(String(e)));
+  r.on('console', (m) => { if (m.type() === 'error') h2.push(m.text()); });
+  await r.goto('file://' + yol);
+  await r.waitForFunction(() => !!window.veRapor, null, { timeout: 30000 });
+  expect(await r.evaluate(() => [...document.querySelectorAll('#ve-ozet tbody tr td:first-child')].map((c) => c.textContent))).toEqual(ref.K);
+  await r.click('#n-tarama');
+  await expect(r.locator('#ve-tarama .sayac').first()).toHaveText(new RegExp('^1–[\\d.]+ / ' + ref.n.toLocaleString('tr-TR').replace('.', '\\.') + '$'));
+  await r.click('#ve-tarama tbody tr:first-child td:nth-child(3)');
+  await expect(r.locator('#ve-sonuc h2')).toHaveText('No 1');
+  expect(r.url()).toMatch(/#T1$/);
+  expect(await r.evaluate(() => document.querySelector('#ve-sonuc table tbody tr').children[3].textContent)).toBe(ref.z);
+  await r.goBack();
+  await expect(r.locator('#v-tarama')).toBeVisible();
+  expect(hata).toEqual([]);
+  expect(h2).toEqual([]);
+});
+
 // EXCEL DİLİMLİ (2026-11-10): kitabın kurulumu ve dosyanın yazımı (XML, UTF-8, CRC,
 // sıkıştırma) parça parça — 13.824 satırlık kitap tek görevde 1,7 sn donduruyordu. On beş
 // adayla 3.375 kombinasyon: eski yazımda 210 ve 60 ms'lik iki görev; yenisinde en uzunu 21 ms.

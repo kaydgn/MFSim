@@ -1674,8 +1674,10 @@ function _gmSec17(){
     + 'geçirir; dört kesin kriteri sağlayanları 1 g statik sehimi en küçükten başlayarak sıralar. '
     + 'Tarama bitince pencerenin <strong>Sonuç</strong> bölümü mevcut tasarımı (K0) ve sıranın ilk dokuzunu '
     + '(K1 … K9), seçilen konfigürasyonun tiplerini ve kriterlerini, iki grafiği taşır; taramanın dokuz diyagramı '
-    + 'tam ekranda açılır. Ayrıntılı rapor (<em>takoz_katalogdan_secim.html</em>) ve Excel çıktısı '
-    + '(<em>takoz_konfigurasyonlari.xlsx</em>) aynı listeyi yazar. Bileşen <strong>Bileşenler</strong> sütunundan '
+    + 'tam ekranda açılır. Ayrıntılı rapor (<em>takoz_katalogdan_secim.html</em>), Excel çıktısı '
+    + '(<em>takoz_konfigurasyonlari.xlsx</em>) ve HTML çıktısı (<em>takoz_konfigurasyonlari.html</em>) aynı '
+    + 'listeyi yazar; HTML çıktısında Özet’in ya da Tarama’nın satırı o konfigürasyonun sonucunu açar. '
+    + 'Bileşen <strong>Bileşenler</strong> sütunundan '
     + 'tuvale sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + ').</p>';
   h += _gmSahne('parametrik', _gmPencere('mnt-parametric', { tut: ['Gruplar'] }),
     'Parametrik Analiz penceresi, örnek modelde: gruplar ve tarama.', null, _GM_PARAM);

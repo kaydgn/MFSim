@@ -467,6 +467,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   DİLİMLİ (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*). Kapı: `mount-param-excel.test.js` (→ *TIKLA* ·
   *SONUÇ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js` (→ *SEÇİM ve ONAY* · *TEK YOL* · *TARAMA* ·
   *TIKLA*) + `xlsx-yaz.test.js` (→ *biçimli akış*) + `mount-param-sonuc.spec.js` → *EXCEL* · *EXCEL DİLİMLİ*.
+- `js/mount-param-html.js` — Parametrik Analiz'in **HTML çıktısı, TEMEL** (kullanıcı 2026-11-11: *"HTML
+  raporunun temelini kur … sadece temel yapıyı oluştur yeter"* — parametrik analizde büyük değişiklik
+  gelecek, ayrıntı onunla): Sonuç'un eylem satırındaki **HTML’i indir** → tek dosya, çevrimdışı; Özet
+  (K0…Kn) · Tarama (sayı sütunu sıralar, 100'lük sayfa) · Sonuç (tıklanan konfigürasyon: yük durumu × takoz
+  × X/Y/Z, modlar; adres #K1 · #T25, geri tuşu). **Excel'in PLANINDAN** (`_mntParamExcelPlan`): iki çıktı
+  aynı satırı ve sayıyı yazar. **Belge OKUR, hesaplamaz**: sonuç gömülü veriden (Veri kodu ikili — Int16'ya
+  sığarsa Int16 — base64); sayı programın yazıcısıyla (`js/sayi.js`'in kaynağı gömülü), yüz
+  `veThemeFontFaceCss`. Kurulum dilimli (`is(E).adim()` → `parcalar()`), dosya parça parça Blob (tek görevde
+  birleşik belge ve Blob donduruyordu). Kapı: `mount-param-html.test.js` (→ *VERİ* · *DİLİMLİ* · *SAYFA* ·
+  *OKUR*) + `mount-param-excel-tta.test.js` → *HTML — Excel'in planı* + `mount-param-sonuc.spec.js` → *HTML*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık
