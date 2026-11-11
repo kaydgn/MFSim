@@ -76,6 +76,9 @@
  *       çekirdekte: CN.ODAKLAR). Ayrı Artifact: kendi kaydı, varlık deposu ve sahibi;
  *       yerel dizinleri .canli-not/<ad>/yayin · .canli-not/<ad>/dokum. Sayfa programı
  *       her açılışta o bileşende açar; notları kendi aralığında numaralar.
+ *       BELGE ODAĞI (`belge`, örn. param-html): çerçevede programın ÜRETTİĞİ belge —
+ *       hazirla programı derler, belgeyi gerçek tarayıcıda programın kendi yolundan üretir
+ *       (BELGE_URET), künye ve köprü belgeye girer; sonuc o belgeyi açar.
  *
  * Protokol (açılış, yayın, sıra, durum, yanıt): skill `canli-not`.
  */
@@ -216,6 +219,16 @@ function kopruGom(html, kopru) {
   if (yer > 1024) throw new Error('mfsim.html: <meta charset> ilk 1024 baytın dışında (' + yer + ')');
   const etiket = '<script>/* canli-not köprüsü */\n' + kopru.replace(/<\/script/gi, '<\\/script') + '\n</script>';
   return html.slice(0, yer) + etiket + html.slice(yer);
+}
+
+// BELGE ODAĞI: belgeye programın künyesi (kunyeOku okur — denetim ve yayın programınkiyle
+// aynı yoldan) ve belge işareti (köprünün programDurumu: kayıt işlevi yok, yüklenince hazır).
+function belgeKunyele(html, kunye) {
+  const kapa = html.indexOf('</head>');
+  if (kapa < 0) throw new Error('belge: </head> yok');
+  const etiket = '<script>window.__MFSIM_BUILD = ' + JSON.stringify(kunye).replace(/</g, '\\u003c') + ';\n' +
+    'window.__cnBelge = true;\n</script>\n';
+  return html.slice(0, kapa) + etiket + html.slice(kapa);
 }
 
 // Odaklı sayfanın adı kendi başlığı (galeride ve sekmede iki Canlı Not ayrılsın);
@@ -588,15 +601,18 @@ function sayfaYaz(cikti, env, odak) {
   return { yol: yol, ayar: ayar, kunye: kunye, boyut: Buffer.byteLength(sayfa) };
 }
 
-function hazirla(o) {
+async function hazirla(o) {
   const cikti = o.cikti || yayinDizini(o);
-  const env = Object.assign({}, process.env, { MFSIM_BUILD_OUT: path.join(cikti, 'mfsim.html'), MFSIM_KARSILAMA: 'yok' });
+  const mfsim = path.join(cikti, 'mfsim.html'), odak = CN.odakBul(o.odak), belge = !!(odak && odak.belge);
+  // Belge odağında program kendi dosyasına derlenir; çerçeveye giden (mfsim.html) onun ürettiği belge.
+  const env = Object.assign({}, process.env, { MFSIM_BUILD_OUT: belge ? path.join(cikti, 'kaynak.html') : mfsim, MFSIM_KARSILAMA: 'yok' });
   if (!o.dal) anaDalKapisi(env);
   fs.mkdirSync(cikti, { recursive: true });
-  const mfsim = env.MFSIM_BUILD_OUT;
   const r = spawnSync(process.execPath, [path.join(KOK, 'build.js')], { cwd: KOK, encoding: 'utf8', env: env });
   if (r.status !== 0) throw new Error('build.js durdu:\n' + ((r.stdout || '') + (r.stderr || '')).slice(-3000));
-  const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
+  let html = fs.readFileSync(env.MFSIM_BUILD_OUT, 'utf8');
+  if (belge) html = belgeKunyele(await belgeUret(o.odak, env.MFSIM_BUILD_OUT), kunyeOku(html));
+  html = kopruGom(html, fs.readFileSync(KOPRU, 'utf8'));
   fs.writeFileSync(mfsim, html);
   const s = sayfaYaz(cikti, env, o.odak);
 
@@ -703,6 +719,45 @@ function liste(o) {
 // ── görüntü ────────────────────────────────────────────────────────────────
 // tools/kullanim.js ile aynı sözleşme: MFSIM_CHROMIUM, yoksa konteynerin kurulu
 // tarayıcısı (projenin playwright sürümü kendi indirmesini arıyor).
+// BELGE ODAĞI (çekirdek → ODAKLAR, `belge`): çerçeveye giden belge programın ÜRETTİĞİDİR —
+// derlenmiş program (file://, ağsız) gerçek tarayıcıda açılır, belge programın kendi yolundan
+// alınır; elle kurulmaz. Üretici odağın adıyla.
+const BELGE_URET = {
+  // Parametrik Analiz'in HTML raporu (js/mount-param-html.js): Tulga örneği (Parametrik
+  // Analiz'in odaklı sayfasıyla aynı), varsayılan adaylar, tarama; indirme düğmesinin yolu
+  // (veMntParamHtmlIndir) — dosya indirilmez, belge döner.
+  'param-html': async (sayfa) => {
+    await sayfa.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+    await sayfa.waitForTimeout(500);
+    await sayfa.evaluate(() => veMntOrnekYukle('tulga'));
+    await sayfa.waitForFunction(() => nodes.filter((n) => n.type === 'mnt-mount').length >= 3, null, { timeout: 30000 });
+    const id = await sayfa.evaluate(() => createNode('mnt-parametric', 1200, 120).id);
+    await sayfa.evaluate((i) => veMntParamTara(i), id);
+    await sayfa.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 600000 });
+    return sayfa.evaluate((i) => { window._mntParamDosyaIndir = function () {}; return veMntParamHtmlIndir(i); }, id);
+  }
+};
+async function belgeUret(ad, programYolu) {
+  if (!BELGE_URET[ad]) throw new Error('belge üreticisi yok: ' + ad);
+  const { chromium } = require('playwright');
+  const tarayici = await chromium.launch(tarayiciYolu() ? { executablePath: tarayiciYolu() } : {});
+  const hatalar = [];
+  try {
+    const sayfa = await tarayici.newPage({ viewport: { width: 1440, height: 900 } });
+    sayfa.on('pageerror', (e) => hatalar.push(String(e && e.message ? e.message : e)));
+    await sayfa.route(/^https?:/, (r) => r.abort());
+    await sayfa.addInitScript((a) => { try { localStorage.setItem('mfsim_auth_token', a); } catch (e) { /* özel pencere */ } }, girisAnahtari());
+    await sayfa.goto('file://' + programYolu);
+    await girisGec(sayfa);
+    const html = await BELGE_URET[ad](sayfa);
+    if (hatalar.length) throw new Error('belge üretilirken sayfa hatası: ' + hatalar.slice(0, 3).join(' | '));
+    if (typeof html !== 'string' || !/^<!doctype html>/i.test(html)) throw new Error('belge üretilmedi: ' + ad);
+    return html;
+  } finally {
+    await tarayici.close();
+  }
+}
+
 function tarayiciYolu() {
   if (process.env.MFSIM_CHROMIUM) return process.env.MFSIM_CHROMIUM;
   const kurulu = '/opt/pw-browsers/chromium';
@@ -795,11 +850,22 @@ function girisAnahtari() {
   return m[1];
 }
 
+// Programın girişi: giriş anahtarı initScript'te; karşılama geçilir, açılış perdesi beklenir.
+async function girisGec(sayfa) {
+  await sayfa.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
+  await sayfa.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+  await sayfa.waitForFunction(() => { const e = document.getElementById('mfsim-loading-screen'); return !e || e.style.display === 'none'; }, null, { timeout: 120000 });
+}
+
 async function sonuc(o) {
   const no = Number(o.konum[0]);
   if (!(Number.isInteger(no) && no > 0)) throw new Error('not numarası gerekli (örnek: sonuc 36)');
-  const dosya = o.dosya || path.join(KOK, 'MFSim_Code.html');
-  if (!fs.existsSync(dosya)) throw new Error((path.relative(KOK, dosya) || dosya) + ' yok — önce npm run build');
+  // Belge odağının notu belgenin kendisinde: hazirla'nın ürettiği (köprü üst pencere yokken kurulmaz).
+  const odak = CN.odakBul(o.odak), belge = !!(odak && odak.belge);
+  const dosya = o.dosya || (belge ? path.join(yayinDizini(o), 'mfsim.html') : path.join(KOK, 'MFSim_Code.html'));
+  if (!fs.existsSync(dosya)) {
+    throw new Error((path.relative(KOK, dosya) || dosya) + ' yok — önce ' + (belge ? 'node tools/canli-not.js hazirla --dal --odak ' + o.odak : 'npm run build'));
+  }
   const hazirlik = o.hazirlik ? fs.readFileSync(o.hazirlik, 'utf8') : '';
   const cikti = o.cikti || path.join(KOK, '.canli-not', 'sonuc', 'not-' + no + '.png');
   fs.mkdirSync(path.dirname(cikti), { recursive: true });
@@ -814,9 +880,8 @@ async function sonuc(o) {
     await sayfa.route(/^https?:/, (r) => r.abort());
     await sayfa.addInitScript((a) => { try { localStorage.setItem('mfsim_auth_token', a); } catch (e) { /* özel pencere */ } }, girisAnahtari());
     await sayfa.goto('file://' + dosya);
-    await sayfa.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
-    await sayfa.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
-    await sayfa.waitForFunction(() => { const e = document.getElementById('mfsim-loading-screen'); return !e || e.style.display === 'none'; }, null, { timeout: 120000 });
+    if (belge) await sayfa.waitForFunction(() => window.__cnBelge === true, null, { timeout: 120000 });
+    else await girisGec(sayfa);
     if (o.modul) {
       await sayfa.evaluate((g) => { const n = createNode(g.tip, 400, 300); window[g.ac](n.id); }, MODUL_GIRIS[o.modul]);
       await sayfa.waitForTimeout(700);
@@ -826,7 +891,7 @@ async function sonuc(o) {
       await sayfa.waitForTimeout(900);
     }
     // Odaklı sayfanın notu: sayfanın açtığı yerin AYNISI — köprünün tarifi metin olarak.
-    if (o.odak) {
+    if (o.odak && !belge) {
       await sayfa.evaluate('(' + require('./canli-not-kopru.js').ODAKLAR[o.odak].toString() + ')(window)');
       await sayfa.waitForTimeout(400);
     }
@@ -922,7 +987,9 @@ async function duman(o) {
     await sayfa.waitForFunction(() => { const e = document.getElementById('cn-acilis'); return e && e.hidden; }, null, { timeout: 120000 });
     const cerceve = sayfa.frames().find((f) => f !== sayfa.mainFrame());
     if (!cerceve) throw new Error('program çerçevesi yok');
-    await cerceve.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
+    const belgeOdak = !!(odak && odak.belge);
+    if (belgeOdak) await cerceve.waitForFunction(() => window.__cnBelge === true && !!window.veRapor, null, { timeout: 120000 });
+    else await cerceve.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
     sure = Date.now() - t0;
     surum = await sayfa.evaluate(() => document.getElementById('cn-surum').textContent);
     const uzunluk = await sayfa.evaluate(() => (document.getElementById('cn-program').getAttribute('srcdoc') || '').length);
@@ -930,11 +997,14 @@ async function duman(o) {
     if (odak) {
       await sayfa.waitForFunction(() => /^(tamam|hata)$/.test(document.getElementById('cn').getAttribute('data-odak') || ''), null, { timeout: 120000 });
       odakDurum = await sayfa.evaluate(() => document.getElementById('cn').getAttribute('data-odak'));
-      const acik = await cerceve.evaluate((tip) => {
-        const k = typeof veMufettisKonusu === 'function' ? veMufettisKonusu() : null;
-        return !!(k && k.type === tip && document.querySelector('.ve-properties-content [data-mnt-pencere="' + k.id + '"]'));
-      }, odak.tip);
-      if (odakDurum !== 'tamam' || !acik) hatalar.push('odak: ' + odak.ad + ' penceresi açılmadı (' + odakDurum + ')');
+      // Bileşen odağında penceresi açık mı; belge odağında belge çizildi mi (Özet'in satırları).
+      const acik = belgeOdak
+        ? await cerceve.evaluate(() => document.querySelectorAll('#ve-ozet tbody tr').length > 0)
+        : await cerceve.evaluate((tip) => {
+          const k = typeof veMufettisKonusu === 'function' ? veMufettisKonusu() : null;
+          return !!(k && k.type === tip && document.querySelector('.ve-properties-content [data-mnt-pencere="' + k.id + '"]'));
+        }, odak.tip);
+      if (odakDurum !== 'tamam' || !acik) hatalar.push('odak: ' + odak.ad + (belgeOdak ? ' açılmadı' : ' penceresi açılmadı') + ' (' + odakDurum + ')');
     }
   } finally {
     await tarayici.close();
@@ -977,4 +1047,4 @@ module.exports = { ayristir, notlarAyristir, parcaAyristir, kopruGom, sayfaKur, 
   yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA,
   ESIK, PARCA_SINIRI, VARLIK_SINIRI, ozetle, parcala, paketle, paketAc, bol, planKur, planBirlestir, parcaAnahtari, planKarsilastir, yayinKur,
   yayinVarliklari, oturumKimligi, oturumAdresi, sahipHukmu, siraHukmu, dokumOku, dumanKaydi, yayin, denetle,
-  BASLIK_CAPA, yayinDizini, dokumDizini };
+  BASLIK_CAPA, yayinDizini, dokumDizini, belgeKunyele, BELGE_URET };

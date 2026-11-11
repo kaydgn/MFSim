@@ -453,7 +453,8 @@ describe('GÜNCELLİK — yayındaki program ana dalın kendisi mi', () => {
     ['tools/canli-not-kopru.js', 'tools/canli-not.js'].forEach((f) => expect(T.GIRDILER).toContain(f));
     ['tools/canli-not.html', 'tools/canli-not-cekirdek.js'].forEach((f) => expect(T.GIRDILER).not.toContain(f));
     const pkt = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.js'), 'utf8');
-    expect(pkt).toMatch(/const html = kopruGom\(fs\.readFileSync\(mfsim, 'utf8'\), fs\.readFileSync\(KOPRU, 'utf8'\)\);/);
+    // köprü programa (ya da belge odağında programın ürettiği belgeye) KOPRU dosyasından girer
+    expect(pkt).toMatch(/html = kopruGom\(html, fs\.readFileSync\(KOPRU, 'utf8'\)\);\n {2}fs\.writeFileSync\(mfsim, html\);/);
   });
 
   test('--dal bayrağı tanınır, bilinmeyen bayrak SESSİZCE yutulmaz', () => {
@@ -1491,6 +1492,7 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     const js = jsKaynak();
     Object.keys(CN.ODAKLAR).forEach((ad) => {
       const o = CN.ODAKLAR[ad], kaynak = K.ODAKLAR[ad].toString();
+      if (o.belge) return;                                              // belge odağı aşağıda (BELGE ODAĞI)
       expect(Boolean(o.ad && o.baslik && o.tip && o.taban > 0)).toBe(true);
       expect(js).toContain("'" + o.tip + "': {");
       expect(kaynak).toContain("TIP = '" + o.tip + "'");
@@ -1515,9 +1517,57 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     expect(CN.sonrakiNo([])).toBe(1);
     expect(CN.sonrakiNo([n(131), n(132)])).toBe(133);
     expect(CN.sonrakiNo([n(999)])).toBe(1000);
-    expect(CN.sonrakiNo([n(1000)])).toBe(1000 + CN.NO_ARALIK + 1);    // ana sayfa aralığa girmez
+    expect(CN.sonrakiNo([], 'param-html')).toBe(2001);
+    expect(CN.sonrakiNo([n(2001)], 'param-html')).toBe(2002);
+    expect(CN.sonrakiNo([n(1000)])).toBe(3001);                       // ana sayfa iki odağın aralığına da girmez
     const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
     expect(sablon).toContain('CN.sonrakiNo(notlar, AYAR.odak)');
+  });
+
+  // BELGE ODAĞI (kullanıcı 2026-11-11: *"Bu HTML belgesini 'canlı not' tarzına alsana"*):
+  // çerçevede programın ÜRETTİĞİ belge. İki hata SESSİZ: üretici programda olmayan bir işlevi
+  // çağırırsa yayın kurulamaz ama sayfa eski belgeyle durur; köprü belgeyi hazır saymazsa
+  // sayfa açılır, odak hiç istenmez.
+  test('BELGE ODAĞI: çekirdekte belge, köprüde tarif, araçta üretici; üreticinin dokunduğu her şey programda', () => {
+    const belgeler = Object.keys(CN.ODAKLAR).filter((ad) => CN.ODAKLAR[ad].belge);
+    expect(belgeler).toEqual(['param-html']);
+    const js = jsKaynak();
+    belgeler.forEach((ad) => {
+      const o = CN.ODAKLAR[ad];
+      expect(Boolean(o.ad && o.baslik && o.taban > 0 && !o.tip)).toBe(true);
+      expect(typeof K.ODAKLAR[ad]).toBe('function');
+      expect(typeof T.BELGE_URET[ad]).toBe('function');
+      const uret = T.BELGE_URET[ad].toString();
+      const islevler = [...new Set([...uret.matchAll(/\b(ve[A-Z]\w*|createNode)\(/g)].map((m) => m[1]))];
+      expect(islevler).toEqual(expect.arrayContaining(['createNode', 'veMntOpenEditor', 'veMntOrnekYukle', 'veMntParamTara', 'veMntParamHtmlIndir']));
+      islevler.forEach((f) => expect([f, new RegExp('^function ' + f + '\\(', 'm').test(js)]).toEqual([f, true]));
+      ['_MNT_PARAM_IS', '_MNT_PARAM_SONUC', 'nodes'].forEach((g) => expect([g, new RegExp('^var ' + g + '\\b', 'm').test(js)]).toEqual([g, true]));
+      // tarif belgenin görüntüleyicisini bekler — belge onu kurar
+      const tarif = K.ODAKLAR[ad].toString(), belge = fs.readFileSync(path.join(KOK, 'js', 'mount-param-html.js'), 'utf8');
+      expect(tarif).toContain('win.veRapor');
+      expect(belge).toContain('window.veRapor = ');
+      expect(tarif).toContain("getElementById('ve-ozet')");
+      expect(belge).toContain('id="ve-ozet"');
+    });
+  });
+
+  test('BELGE ODAĞI: künye ve işaret </head>\'dan önce, kunyeOku okur; köprü işaretli belgeyi hazır sayar; tarif görüntüleyiciyle tamam', async () => {
+    const kunye = { shortSha: 'abc1234', sha: 'a'.repeat(40), prNumber: 1361, notlar: '</script><b>' };
+    const h = T.belgeKunyele('<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n<title>t</title>\n</head>\n<body></body>\n</html>\n', kunye);
+    expect(T.kunyeOku(h)).toEqual(kunye);
+    expect(h.indexOf('window.__cnBelge = true;')).toBeLessThan(h.indexOf('</head>'));
+    expect(h).not.toContain('</script><b>');                                // künyenin metni betiği kapatmaz
+    expect(() => T.belgeKunyele('<html><body></body></html>', kunye)).toThrow(/head/);
+    const fr = document.createElement('iframe');
+    document.body.appendChild(fr);
+    const w = fr.contentWindow;
+    expect(K.programDurumu(w).hazir).toBe(false);                           // işaretsiz, kayıt işlevsiz: hazır değil
+    w.__cnBelge = true;
+    expect(K.programDurumu(w)).toEqual({ giris: false, perde: false, hazir: true });
+    await expect(K.ODAKLAR['param-html'](w)).rejects.toThrow(/HTML raporu/);
+    w.document.body.innerHTML = '<div id="ve-ozet"></div>';
+    w.veRapor = {};
+    await expect(K.ODAKLAR['param-html'](w)).resolves.toEqual({ belge: true });
   });
 
   // Sahte program: yalnız tarifin dokunduğu globaller. `w` verilirse (köprünün jsdom

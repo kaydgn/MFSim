@@ -326,7 +326,10 @@
     var giris = acik('mfsim-login-overlay');
     var perde = acik('mfsim-loading-screen');
     var islev = typeof win._veSettingsApplyProjectData === 'function' && Array.isArray(win.veTabs);
-    return { giris: giris, perde: perde, hazir: !giris && !perde && islev };
+    // Belge odağı (çekirdek → ODAKLAR, `belge`): çerçevede programın ürettiği belge — kayıt
+    // işlevi yok, yüklenince hazır (canli-not.js → belgeKunyele işaretler).
+    var belge = win.__cnBelge === true;
+    return { giris: giris, perde: perde, hazir: !giris && !perde && (islev || belge) };
   }
 
   // ── DOM fotoğrafı ────────────────────────────────────────────────────────
@@ -475,6 +478,13 @@
         // (Canlı Not 1001'den beri pencere boş, yeniden kuruluyor).
         return kosul(function () { return win.document.querySelector('.ve-properties-content [data-mnt-pencere="' + n.id + '"]'); }, 15000);
       }).then(function () { return { tip: TIP, id: n.id, kurulan: kurulan }; });
+    },
+    // Belge odağı — Parametrik Analiz'in HTML raporu (js/mount-param-html.js): belge kendini
+    // açar; tarif yalnız görüntüleyicinin kurulduğunu söyler.
+    'param-html': function (win) {
+      return win.veRapor && win.document.getElementById('ve-ozet')
+        ? Promise.resolve({ belge: true })
+        : Promise.reject(new Error('odak: HTML raporu açılmadı'));
     }
   };
 
