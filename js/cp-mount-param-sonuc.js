@@ -1274,6 +1274,48 @@ function veMntParamExcelIndir(nodeId){
   });
 }
 
+// KÜNYENİN BAŞI (Canlı not 2008: "Buraya aracın ismini falan da yazalım. Yani bilgi versin
+// kullanıcıya."): HTML raporunun başlığında aracın kimliği — programın bildiği kadarı, bilinmeyen
+// null. Araç tuvalin örneğinden (Başlangıç Sihirbazı'nın data.ornek'i), adı başlangıç sayfasının
+// ve sihirbazın yazdığı ad (kayıt defterinin vehicle'ı) — kimlikle eşlenir: getMountExample
+// bilinmeyen anahtarda ilk örneğe düşer, eskimiş bir anahtar başka aracın adını yazardı. Motor ve
+// şanzıman önce 3B'nin veri sayfasından (Motor modeli · Şanzıman ailesi — 3D Görüntüleyici'nin rol
+// kaydı), yoksa gövde penceresinin Katalog'undan (Motor · Vites konfigürasyonu). Yalnız HTML:
+// Excel'in girdisi değişmez.
+function _mntParamKimlik(){
+  var nl=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
+  var key=(typeof veMntTuvalOrnegi==='function') ? veMntTuvalOrnegi() : null;
+  var ex=(key && typeof veMountCore!=='undefined' && veMountCore.getMountExampleList)
+    ? veMountCore.getMountExampleList().filter(function(e){ return e && String(e.id)===String(key); })[0] : null;
+  var ev=nl.filter(function(n){ return n && n.type==='mnt-viewer'; })[0];
+  var roller=(ev && ev.data && ev.data.cad && Array.isArray(ev.data.cad.roller)) ? ev.data.cad.roller : [];
+  var sayfa=function(tip){
+    for(var i=0;i<roller.length;i++){
+      var r=roller[i], v=(r && r.rol===tip && typeof veMntStpVs==='function') ? veMntStpVs(r.yog, tip) : null;
+      if(v) return (v.uretici && String(v.ad).indexOf(v.uretici)!==0) ? v.uretici+' '+v.ad : v.ad;
+    }
+    return null;
+  };
+  var katalog=function(tip, alan, ad){
+    for(var i=0;i<nl.length;i++){
+      var d=nl[i] && nl[i].type===tip ? nl[i].data : null, a=(d && d[alan]) ? ad(d[alan]) : null;
+      if(a) return a;
+    }
+    return null;
+  };
+  return {
+    arac:ex ? (ex.vehicle || ex.name || null) : null,
+    motor:sayfa('mnt-motor') || katalog('mnt-motor', 'enginePreset', function(k){
+      var P=(typeof _mntEnginePresets==='function') ? _mntEnginePresets() : null;
+      return (P && P[k]) ? (P[k].name || k) : null;
+    }),
+    sanziman:sayfa('mnt-gearbox') || katalog('mnt-gearbox', 'gearPreset', function(k){
+      var d=(typeof _mntVsKatalog==='function') ? _mntVsKatalog().disli.filter(function(x){ return x.k===k; })[0] : null;
+      return d ? d.ad : null;
+    })
+  };
+}
+
 // HTML RAPORU (js/mount-param-html.js; kullanıcı 2026-11-11: "HTML raporunun temelini
 // kur"): Excel'in PLANINDAN — aynı satırlar, aynı sayılar; belge okur, hesaplamaz. İki evre
 // aynı dilimden geçer: satırların çözümü (P.adim), belgenin kurulumu (veri · base64).
@@ -1300,7 +1342,7 @@ function veMntParamHtmlIndir(nodeId){
     var B=null, Pz=null, j=0, bl=[], TIP='text/html;charset=utf-8';
     var adim=function(){
       if(is.i<is.n){ P.adim[is.i++](); return true; }
-      if(!B) B=veMntParamHtml.is(P.E());
+      if(!B) B=veMntParamHtml.is(Object.assign(P.E(), _mntParamKimlik()));   // künyenin başı (Canlı not 2008)
       if(!Pz){
         if(B.adim()){ is.dosya=0.9*B.oran(); return true; }
         Pz=B.parcalar(); return true;
@@ -1354,7 +1396,7 @@ if(typeof module!=='undefined' && module.exports){
     _MNT_PARAM_SECIM: _MNT_PARAM_SECIM,
     _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz,
     _mntParamExcelPlan: _mntParamExcelPlan, veMntParamExcelIndir: veMntParamExcelIndir, _mntPrmUygunluk: _mntPrmUygunluk,
-    veMntParamHtmlIndir: veMntParamHtmlIndir, _mntParamDosyaIndir: _mntParamDosyaIndir,
+    veMntParamHtmlIndir: veMntParamHtmlIndir, _mntParamDosyaIndir: _mntParamDosyaIndir, _mntParamKimlik: _mntParamKimlik,
     VE_MNT_PRM_XLS_TAVAN: VE_MNT_PRM_XLS_TAVAN
   };
 }

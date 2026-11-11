@@ -8,6 +8,8 @@
 // kurulur (E — js/mount-param-excel.js'in başlığı), iki çıktı aynı sayıyı yazar.
 // Belge OKUR, hesaplamaz: tıklanan konfigürasyonun sonucu gömülü veriden çizilir
 // (Excel makrosuz bir tıkla değer taşıyamadığı için her bloğu hazır yazar).
+//   Başlık — künye: aracın kimliği (E.arac · E.motor · E.sanziman — bilinen; Excel
+//            yazmaz, Canlı not 2008), ateşleme, rölanti, silindir, ζ, kütle, tarih
 //   Özet   — K0…Kn: grupların tipi, Uygunluk, statik sehim, dört kesin kriter,
 //            TR, en düşük mod (frekans payı yok — Canlı not 2003)
 //   Tarama — çözülen kombinasyonlar, Excel'in sırası (sağlanan kriter sayısı, sonra
@@ -71,6 +73,7 @@ var veMntParamHtml = (function(){
     var T = E.tarama || {}, V = T.veri || null, L = T.satirlar || [];
     var D = {
       v:1, baslik:E.baslik || 'Takoz konfigürasyonları', tarih:tarih((opt && opt.tarih) || new Date()),
+      arac:E.arac || null, motor:E.motor || null, sanziman:E.sanziman || null,
       fAtes:yuv(E.fAtes, 4), trSinir:XL ? XL.trSinir(E) : 0.15, rolanti:yuv(E.rolanti, 1), silindir:E.silindir || null,
       zeta:yuv(E.zeta, 4), kutle:yuv(E.kutle, 1),
       gruplar:(E.gruplar || []).map(kok), takozlar:(E.takozlar || []).map(function(t){ return { ad:kok(t.ad), grup:t.grup }; }),
@@ -250,12 +253,14 @@ var veMntParamHtml = (function(){
     // Sütunlar sıralamanın ve SÜZGECİN tek tanımı (Canlı not 2001: "Excel'deki gibi 'Filtrele'"):
     // `liste` sütununda değer listesi (ara · tümünü seç · satır sayısı), `sayi` sütununda en az ·
     // en çok. Liste, öteki süzgeçlerden geçen satırların değerleri (Excel gibi).
+    // `suz:false` başlıkta Filtrele yok (Canlı not 2005); `sira:false` başlığa tık sıralamaz,
+    // sıra Filtrele'nin panelinden (Canlı not 2006: takozlar).
     var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100, suz = {}, acikSuz = null;
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
     var SUT = [], SUTK = {};
     if(T){
-      SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, deger:function(i){ return i + 1; } });
-      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, deger:function(i){ return tipAdi(j, i); } }); });
+      SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, suz:false, deger:function(i){ return i + 1; } });
+      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, sira:false, deger:function(i){ return tipAdi(j, i); } }); });
       SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
       SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
       SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
@@ -395,10 +400,10 @@ var veMntParamHtml = (function(){
       var a = sayfa * ADIM, b = Math.min(n, a + ADIM), suzSay = Object.keys(suz).length;
       var bs = function(c){
         var ac = !!suz[c.k];
-        return '<th data-sira="' + c.k + '"' + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
+        return '<th' + (c.sira === false ? '' : ' data-sira="' + c.k + '"') + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
           + (anahtar === c.k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '><span class="bas">' + c.ad + '</span>'
-          + '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"' + (ac ? ' aria-pressed="true"' : '') + '>'
-          + (ac ? HUNI : OK_ALT) + '</button></th>';
+          + (c.suz === false ? '' : '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"'
+            + (ac ? ' aria-pressed="true"' : '') + '>' + (ac ? HUNI : OK_ALT) + '</button>') + '</th>';
       };
       var h = '<div class="arac"><span class="sayac">' + (n ? s(a + 1, 0) + '–' + s(b, 0) : '0') + ' / ' + s(n, 0)
         + (T.N > T.n ? ' (' + s(T.N, 0) + ' kombinasyon)' : '') + '</span>'
@@ -602,8 +607,13 @@ var veMntParamHtml = (function(){
       var sayi = SAYI ? [SAYI.veSayi, SAYI.veSayiUstel, SAYI.veSayiMakine, SAYI.veSayiOku].map(String).join('\n')
         : 'function veSayi(v){ return String(v); }\nfunction veSayiOku(v){ return parseFloat(v); }';
       var T0 = D.tarama;
-      // Künye: ad ve değer hücreleri (Canlı not 2004: "Daha güzel bir şekilde … yayalım bu bilgileri")
+      // Künye: ad ve değer hücreleri (Canlı not 2004: "Daha güzel bir şekilde … yayalım bu bilgileri");
+      // başında aracın kimliği (Canlı not 2008: "Buraya aracın ismini falan da yazalım. Yani bilgi
+      // versin kullanıcıya.") — bilinmeyen hücre yazılmaz; belgenin adında (<title>) da araç
       var kunye = [
+        D.arac ? ['Araç', D.arac] : null,
+        D.motor ? ['Motor', D.motor] : null,
+        D.sanziman ? ['Şanzıman', D.sanziman] : null,
         ['Ateşleme frekansı [Hz]', tr(D.fAtes, 2)],
         D.rolanti ? ['Rölanti [dev/dk]', tr(D.rolanti, 0)] : null,
         D.silindir ? ['Silindir', tr(D.silindir, 0)] : null,
@@ -614,7 +624,7 @@ var veMntParamHtml = (function(){
       ].filter(Boolean).map(function(x){ return '<div><dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('');
       var ust = '<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n'
         + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        + '<title>' + esc(D.baslik) + '</title>\n<style>\n' + yuz + '\n' + CSS + '\n</style>\n</head>\n<body>\n'
+        + '<title>' + esc((D.arac ? D.arac + ' — ' : '') + D.baslik) + '</title>\n<style>\n' + yuz + '\n' + CSS + '\n</style>\n</head>\n<body>\n'
         + '<header><h1>' + esc(D.baslik) + '</h1><dl class="kunye">' + kunye + '</dl>'
         + '<nav><a id="n-ozet" href="#ozet">Özet</a>' + (T0 ? '<a id="n-tarama" href="#tarama">Tarama</a>' : '<a id="n-tarama" href="#tarama" hidden>Tarama</a>')
         + '<a id="n-sonuc" href="#sonuc">Sonuç</a></nav></header>\n<main>\n'

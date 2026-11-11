@@ -8,7 +8,8 @@
 //              kodu (sehim mm/100) ikili ve base64 — Int16'ya sığarsa Int16, sığmazsa Int32;
 //              "sonuç yok" korunur
 //   DİLİMLİ  — adım adım kurulum tek çağrının aynısı; parçalar birleşince aynı belge
-//   SAYFA    — açılış Özet; Tarama sayaç · sıralama · sayfa; satıra tık Sonuç'u o
+//   SAYFA    — açılış Özet; künyenin başı aracın kimliği, yalnız bilinen (Canlı not 2008);
+//              Tarama sayaç · sıralama · sayfa; satıra tık Sonuç'u o
 //              konfigürasyonla açar (sehim gömülü veriden); K'nın sonucu kendi yük durumları;
 //              adres (#T2 · #tarama) görünümü seçer; geri · ileri
 //   OKUR     — belge hesaplamaz: programın çözücüsüne ve penceresine başvuru yok; sayı
@@ -31,7 +32,8 @@ function E_(buyuk) {
     .forEach((f, i) => f.forEach((v, j) => { modF[i * 6 + j] = v; modAd[i * 6 + j] = j % 2; }));
   const vaka = (ad, dz) => ({ ad, d: [[0.2, 0, dz[0]], [-0.5, 0.0044, dz[1]], [-0.45, 0.0044, dz[2]]] });
   return {
-    baslik: '10 Ton TTA — takoz konfigürasyonları', fAtes: 35, trSinir: 0.15, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
+    baslik: 'Takoz konfigürasyonları', arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4500 SP',
+    fAtes: 35, trSinir: 0.15, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
     gruplar: ['Ön takoz · 57RS313774', 'Sağ/Sol arka takoz · 57RS313773'],
     takozlar: [{ ad: 'Ön takoz · 57RS313774', grup: 0 }, { ad: 'Sağ arka takoz · 57RS313773', grup: 1 }, { ad: 'Sol arka takoz · 57RS313773', grup: 1 }],
     konfig: [
@@ -86,7 +88,7 @@ describe('VERİ', () => {
   test('belge tek dosya: doctype, lang="tr", başlık; veri JSON\'u K\'ları ve Tarama\'nın satırlarını taşır', () => {
     const E = E_(), html = H.belge(E, TARIH), D = veriOku(html);
     expect(html.startsWith('<!doctype html>\n<html lang="tr">')).toBe(true);
-    expect(html).toMatch(/<title>10 Ton TTA — takoz konfigürasyonları<\/title>/);
+    expect(html).toMatch(/<title>10 Ton TTA — Takoz konfigürasyonları<\/title>/);
     expect(D.konfig.map((k) => [k.K, k.u, k.tip])).toEqual([
       [0, 'Uygun değil', ['57RS313774', '57RS313773']],                        // "ASR…" eki yazılmaz
       [1, 'En uygun', ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)']],
@@ -158,8 +160,30 @@ describe('SAYFA', () => {
     expect(c[9]).toBe('%10,3');
     // Canlı not 2004 ("Daha güzel bir şekilde … yayalım bu bilgileri"): künye ad · değer hücreleri
     expect([...d.querySelectorAll('.kunye > div')].map((x) => [metin(x.querySelector('dt')), metin(x.querySelector('dd'))])).toEqual([
+      ['Araç', '10 Ton TTA'], ['Motor', 'Cummins ISM11'], ['Şanzıman', 'Allison 4500 SP'],
       ['Ateşleme frekansı [Hz]', '35,00'], ['Rölanti [dev/dk]', '700'], ['Silindir', '6'], ['Sönüm oranı ζ', '0,020'],
       ['Kütle [kg]', '1.739,1'], ['Kombinasyon', '4'], ['Tarih', '11.11.2026']]);
+  });
+
+  // Canlı not 2008: "Buraya aracın ismini falan da yazalım. Yani bilgi versin kullanıcıya." — künyenin
+  // başı aracın kimliği (Araç · Motor · Şanzıman), yalnız bilinen; başlık aynı, belgenin adında araç
+  test('künyenin başı aracın kimliği: Araç · Motor · Şanzıman; bilinmeyen hücre yok; belgenin adında araç', () => {
+    const hucre = (h) => [...ac(h).document.querySelectorAll('.kunye > div')].map((x) => metin(x.querySelector('dt')) + ' · ' + metin(x.querySelector('dd')));
+    expect(hucre(html).slice(0, 4)).toEqual(['Araç · 10 Ton TTA', 'Motor · Cummins ISM11', 'Şanzıman · Allison 4500 SP', 'Ateşleme frekansı [Hz] · 35,00']);
+    expect(metin(ac(html).document.querySelector('h1'))).toBe('Takoz konfigürasyonları');
+    expect(veriOku(html)).toMatchObject({ arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4500 SP' });
+    const E = E_(); delete E.motor; delete E.sanziman;
+    expect(hucre(H.belge(E, TARIH)).slice(0, 2)).toEqual(['Araç · 10 Ton TTA', 'Ateşleme frekansı [Hz] · 35,00']);
+    E.arac = 'TULGA <4x4>';                                                  // ad yazı olarak, kaçışlı
+    const h1 = H.belge(E, TARIH);
+    expect(hucre(h1)[0]).toBe('Araç · TULGA <4x4>');
+    expect(h1).toContain('<title>TULGA &lt;4x4&gt; — Takoz konfigürasyonları</title>');
+    delete E.arac;                                                           // kimlik bilinmiyor: künye eskisi gibi
+    const h0 = H.belge(E, TARIH);
+    expect(hucre(h0)[0]).toBe('Ateşleme frekansı [Hz] · 35,00');
+    expect(hucre(h0).some((x) => /^(Araç|Motor|Şanzıman) · /.test(x))).toBe(false);
+    expect(h0).toContain('<title>Takoz konfigürasyonları</title>');
+    expect(veriOku(h0)).toMatchObject({ arac: null, motor: null, sanziman: null });
   });
 
   test('Tarama: sayaç, satırlar; statik sehim başlığı sıralar (iki yön), sayfa düğmeleri kapalı', () => {
@@ -175,6 +199,9 @@ describe('SAYFA', () => {
     expect(no()).toEqual(['3', '2', '1']);
     d.querySelector('#ve-tarama th[data-sira="sag"]').click();               // sağlanan: çoktan aza
     expect(no()).toEqual(['1', '2', '3']);
+    d.querySelector('#ve-tarama th[data-sira="no"]').click();                // No süzgeçsiz, başlığı sıralar
+    d.querySelector('#ve-tarama th[data-sira="no"]').click();
+    expect(no()).toEqual(['3', '2', '1']);
     expect([...d.querySelectorAll('#ve-tarama button[data-sayfa]')].map((b) => b.disabled)).toEqual([true, true]);
   });
 
@@ -241,7 +268,9 @@ describe('SAYFA', () => {
 
     test('tip sütunu: değerler satır sayısıyla; birini kaldırıp Tamam — satırlar, sayaç, özet, düğme; Filtreleri temizle', () => {
       const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
-      expect(d.querySelectorAll('#ve-tarama thead button[data-suz]').length).toBe(d.querySelectorAll('#ve-tarama thead th').length);
+      // Canlı not 2005: "'No' kısmında filtre olmasın." — No'nun başlığında düğme yok, öteki her başlıkta var
+      expect(d.querySelector('#ve-tarama th[data-sira="no"] button')).toBeNull();
+      expect(d.querySelectorAll('#ve-tarama thead button[data-suz]').length).toBe(d.querySelectorAll('#ve-tarama thead th').length - 1);
       ac_(d, 'g0');
       expect(p.hidden).toBe(false);
       expect([...p.querySelectorAll('label[data-deger]')].map((l) => [l.getAttribute('data-deger'), metin(l.querySelector('.say'))])).toEqual([
@@ -295,6 +324,33 @@ describe('SAYFA', () => {
       ac_(d, 'g0');
       d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(p.hidden).toBe(true);
+    });
+
+    // Canlı not 2006: "Takozların üstüne tıklayınca sıralıyor, onu da istemiyorum. Filtreleyince çıkan
+    // sonuç sıralanır zaten." — takozun başlığı sıralamaz (tık sırayı ve oku değiştirmez, el imleci
+    // yok); takoz Filtrele'nin panelinden sıralanır, ok başlıkta; sayı sütununun başlığı sıralar.
+    test('takozun başlığı sıralamaz: tık sırayı ve oku değiştirmez, el imleci yok; panelden sıralanınca ok başlıkta', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      const takoz = () => d.querySelector('#ve-tarama button[data-suz="g0"]').closest('th');
+      const sehim = () => d.querySelector('#ve-tarama th[data-sira="d"]');
+      expect(takoz().hasAttribute('data-sira')).toBe(false);
+      expect(w.getComputedStyle(takoz()).cursor).not.toBe('pointer');
+      expect(w.getComputedStyle(sehim()).cursor).toBe('pointer');
+      sehim().click(); sehim().click();                                    // statik sehim: büyükten küçüğe
+      expect(no(d)).toEqual(['3', '2', '1']);
+      takoz().querySelector('.bas').click();
+      takoz().click();
+      expect(no(d)).toEqual(['3', '2', '1']);
+      expect(takoz().hasAttribute('aria-sort')).toBe(false);
+      expect(sehim().getAttribute('aria-sort')).toBe('descending');
+      ac_(d, 'g0');
+      p.querySelector('[data-suz-is="artan"]').click();                  // A'dan Z'ye: Cone 39 · Cone 121 · Mount
+      expect(no(d)).toEqual(['2', '1', '3']);
+      expect(takoz().getAttribute('aria-sort')).toBe('ascending');
+      takoz().click();                                                    // başlık yönü çevirmez
+      expect(no(d)).toEqual(['2', '1', '3']);
+      expect(takoz().getAttribute('aria-sort')).toBe('ascending');
+      expect(takoz().querySelector('button[data-suz]')).not.toBeNull();   // Filtrele yerinde
     });
   });
 
