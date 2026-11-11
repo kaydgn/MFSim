@@ -237,7 +237,7 @@ describe('ekran görüntüleri ve derleme', () => {
         expect(k[3]).toBeGreaterThan(k[1]);
       });
     });
-    // Canlı Not yayını 16 MB'a sığmak zorunda (tools/canli-not.js): kılavuzun payı küçük kalır
+    // Tek dosyanın boyutu takip edilir: kılavuzun payı küçük kalır (Canlı Not artık parçalı yayınlanıyor; sınır o değil)
     expect(toplam).toBeLessThan(700 * 1024);
   });
 

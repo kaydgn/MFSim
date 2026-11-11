@@ -22,6 +22,10 @@
  *              her yolu kapsar (kapsamasaydı denetim değişen programa "aynı" derdi)
  *   GÜNCELLEME program kayıttaki yayından (yayin/son); açık sayfa kendiliğinden
  *              YENİLENMEZ, pencere sorar, Güncelle yükler; notta sonucun görüntüsü
+ *   PARÇALI YAYIN  program yuvalara ayrılır (kod + uzun satırlar), geri kurma bire
+ *              bir; değişmeyen yuva yeniden yüklenmez ve indirilmez; sayfa program gömmez
+ *   İKİ KAPI   tek yazar (yalnız oturum/aktif yayınlar) · sıra (yayın geri gitmez)
+ *   YOKLAMA    sayfadan açılabilen oturum komutları ölçülür; yoklama oturum açmaz
  *   SONUÇ      `sonuc` komutu (her oturumun aynı kalıbı): bayraklar sessizce
  *              yutulmaz; giriş js/auth.js'in özetinden, modülün açıcısı programda var
  */
@@ -379,52 +383,30 @@ describe('YAYIN — köprü ve sayfa', () => {
     expect(T.govde({ no: 2, metin: 'b' })).toEqual({ no: 2, metin: 'b' });
   });
 
-  // İKİ SINIR (kullanıcı 2026-11-10: "Canlı notu güncelleyelim"): AMC görselleri programı 14,5 →
-  // 17,8 MB yaptı. Tek 16 MB denetimi programın GÜNCELLEMESİNİ de durduruyordu; oysa güncelleme
-  // varlık olarak gider (metin varlığı 20 MiB) ve 17,8 MiB'lık kopya kabul edildi. 16 MB yalnız
-  // sayfanın gömdüğü kopya içindir.
-  test('SINIR: varlık 20 MiB\'a, sayfaya gömülü kopya 16 MiB\'a kadar; ikisi ayrı hüküm', () => {
-    const MiB = 1048576;
-    expect(T.SINIR).toBe(16 * MiB);
-    expect(T.VARLIK_SINIRI).toBe(20 * MiB);
-    expect(T.sinirHukmu(11.4 * MiB)).toEqual({ varlik: true, sayfa: true });          // Not 27 çağındaki program
-    expect(T.sinirHukmu(16 * MiB)).toEqual({ varlik: true, sayfa: true });            // sınırın kendisi sığar
-    expect(T.sinirHukmu(16 * MiB + 1)).toEqual({ varlik: true, sayfa: false });       // yalnız varlık
-    expect(T.sinirHukmu(18675972)).toEqual({ varlik: true, sayfa: false });           // AMC görselleriyle program
-    expect(T.sinirHukmu(20 * MiB)).toEqual({ varlik: true, sayfa: false });
-    expect(T.sinirHukmu(20 * MiB + 1)).toEqual({ varlik: false, sayfa: false });      // hiçbiri
-  });
-
-  test('hazırla: 16 MB\'ı aşan program varlık olarak hazırlanır (durmaz), sayfa yayını kapalı söylenir', () => {
-    const arac = fs.readFileSync(path.join(KOK, 'tools/canli-not.js'), 'utf8');
-    expect(arac).toMatch(/if \(!hukum\.varlik\) \{\s*throw new Error/);              // yalnız 20 MB aşılınca durur
-    expect(arac).not.toMatch(/if \(boyut > SINIR\) \{\s*throw/);                     // eski tek sınır dönmedi
-    expect(arac).toContain("'YAPILAMAZ (program 16 MB\\'ı aşıyor)'");                  // sayfa yayını sebebiyle kapalı
-  });
 });
 
 // ═══ GÜNCELLİK ═════════════════════════════════════════════════════════════
 // Kullanıcı 2026-11-05: "güncelliğinden emin olalım, öyle devam edelim".
-// SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE (2026-11-11): program 16 MB'ı aşınca sayfa
-// yeni programı gömemez; yayındaki mfsim.html korunur (publish `files`'sız) ve sayfanın
-// ayar satırı o gömülü programın künyesini taşır — yayındaki sayfadan okunur.
-describe('SAYFA — gömülü program yerinde, ayar yayındaki sayfadan', () => {
-  test('ayar yayındaki sayfadan; şablon ve çekirdek bugünkü; ayarsız sayfa reddedilir', () => {
+// SAYFA PROGRAM GÖMMEZ (2026-11-11, parçalı yayın): gömülü kopya 16 MB'a sığmıyordu ve
+// eskiyordu; program hep kayıttaki yayından yüklenir. `sayfa` yalnız sayfayı kurar —
+// şablon ve çekirdek bugünkü, ayar sayfanın KENDİ künyesi.
+describe('SAYFA — yalnız sayfa kurulur, program gömülmez', () => {
+  test('sayfa bugünkü şablon ve çekirdekle; ayar sayfanın künyesi; yayın dosyasız', () => {
     const os = require('os');
     const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
     const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
     const dizin = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-sayfa-'));
-    const eski = path.join(dizin, 'index.html');
-    const ayar = { surum: 'b42cb54', pr: 1325, zaman: '2026-11-11T06:30:00Z', boyut: 17000000 };
-    fs.writeFileSync(eski, T.sayfaKur(sablon.replace('Programı güncelle', 'ESKİ'), cekirdek, ayar));   // eski şablon
-    const r = T.sayfaYayini({ konum: [eski], dal: true, cikti: dizin });
-    expect(r.ayar).toEqual(ayar);
-    expect(r.guncel).toBe(false);                                         // yayındaki sayfa eski şablondu
+    const cikti = [];
+    const gunluk = jest.spyOn(console, 'log').mockImplementation((m) => cikti.push(String(m)));
+    let r;
+    try { r = T.sayfaYayini({ konum: [], dal: true, cikti: dizin }); } finally { gunluk.mockRestore(); }
     const yeni = fs.readFileSync(r.sayfa, 'utf8');
-    expect(T.sayfaHukmu(yeni, sablon, cekirdek)).toEqual({ guncel: true, ayar });
-    fs.writeFileSync(eski, '<html><body>başka</body></html>');
-    expect(() => T.sayfaYayini({ konum: [eski], dal: true, cikti: dizin })).toThrow(/ayar satırı/);
-    expect(() => T.sayfaYayini({ konum: [], dal: true })).toThrow(/yayındaki sayfa gerekli/);
+    expect(T.sayfaHukmu(yeni, sablon, cekirdek)).toEqual({ guncel: true, ayar: r.ayar });
+    expect(Object.keys(r.ayar).sort()).toEqual(['pr', 'surum', 'zaman']);          // gömülü programın boyutu yok
+    expect(fs.readdirSync(dizin)).toEqual(['canli-not.html']);                     // program derlenmedi, gömülmedi
+    expect(cikti.join('\n')).toMatch(/files YOK/);
+    expect(sablon).not.toContain('mfsim.html');                                    // sayfa gömülü dosyaya başvurmaz
+    expect(r.boyut).toBeLessThan(16 * 1048576);
   });
 });
 
@@ -494,11 +476,14 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(CN.guncellemeVar({ surum: 'abcdef1', program: { id: 'x' } }, 'bbbbbbb', '')).toBe(false);
   });
 
-  test('açılışın kaynağı: kayıttaki yayın gömülü programdan başkaysa varlık, değilse dosya', () => {
-    expect(CN.programKaynagi(yayinB('abcdef1', ID('a')), 'abcdef1')).toEqual({ tur: 'dosya' });
-    expect(CN.programKaynagi(yayinB('abcdef2', ID('b')), 'abcdef1')).toEqual({ tur: 'varlik', id: ID('b'), surum: 'abcdef2', pr: 1300 });
-    expect(CN.programKaynagi(null, 'abcdef1')).toEqual({ tur: 'dosya' });
-    expect(CN.programKaynagi({ surum: 'abcdef2' }, 'abcdef1')).toEqual({ tur: 'dosya' });
+  test('programın kaynağı kayıttaki yayın: parçalı ya da tek varlık; geçerli yayın yoksa program da yok', () => {
+    expect(CN.programKaynagi(yayinB('abcdef2', ID('b')))).toEqual({ tur: 'varlik', id: ID('b'), surum: 'abcdef2', pr: 1300 });
+    const parcalar = [{ yuva: 0, id: ID('a'), ozet: 'o0', sik: 'gzip' }, { yuva: 1, id: ID('b'), ozet: 'o1', sik: 'yok' }];
+    expect(CN.programKaynagi({ surum: 'abcdef3', pr: 1301, program: { boyut: 9, uzunluk: 7, parcalar } }))
+      .toEqual({ tur: 'parcali', parcalar, uzunluk: 7, surum: 'abcdef3', pr: 1301 });
+    expect(CN.programKaynagi(null)).toEqual({ tur: 'yok' });
+    expect(CN.programKaynagi({ surum: 'abcdef2' })).toEqual({ tur: 'yok' });
+    expect(CN.programKaynagi({ surum: 'abcdef2', program: { parcalar: [] } })).toEqual({ tur: 'yok' });
   });
 
   test('güncelleme sorusu: yüklü sürüm sorulmaz, "Sonra" denen sürüm yeniden sorulmaz', () => {
@@ -522,14 +507,24 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(T.notlarAyristir('6, 8-10,12')).toEqual([6, 8, 9, 10, 12]);
     expect(() => T.notlarAyristir('6,x')).toThrow(/okunamadı/);
     expect(() => T.notlarAyristir('9-3')).toThrow(/bozuk/);
-    const o = T.ayristir(['yayin', '--program', ID('e'), '--notlar', '6,8-9']);
-    expect([o.komut, o.program, o.notlar]).toEqual(['yayin', ID('e'), [6, 8, 9]]);
+    const oz = '0123456789abcdef';
+    const o = T.ayristir(['yayin', '--parca', oz + '=' + ID('e'), '--parca', oz + '.2=' + ID('f'), '--notlar', '6,8-9', '--ilk']);
+    expect([o.komut, o.parca, o.notlar, o.ilk]).toEqual(['yayin', { [oz]: ID('e'), [oz + '.2']: ID('f') }, [6, 8, 9], true]);
+    expect(() => T.ayristir(['yayin', '--parca', 'kisa=' + ID('e')])).toThrow(/--parca/);
+    expect(() => T.ayristir(['yayin', '--parca', oz + '=kisa'])).toThrow(/--parca/);
     const k = { sha: 'f'.repeat(40), shortSha: 'fffffff', prNumber: 1301 };
+    // eski biçim (tek varlık) hâlâ kurulur ve okunur
     const y = T.yayinKaydi(k, { id: ID('e'), boyut: 11 }, [6], '2026-11-05T12:00:00Z');
     expect(y).toEqual({ surum: 'fffffff', sha: 'f'.repeat(40), pr: 1301, zaman: '2026-11-05T12:00:00Z', program: { id: ID('e'), boyut: 11 }, notlar: [6] });
     expect(() => T.yayinKaydi(k, { id: 'kisa' }, [])).toThrow(/program\.id/);
+    // parçalı biçim: boyut · uzunluk · parçalar; yayınlayan oturum kayıtta
+    const parcalar = [{ yuva: 0, id: ID('a'), ozet: oz, boyut: 5, sik: 'gzip', ad: 'kod' }];
+    const y2 = T.yayinKaydi(k, { boyut: 11, uzunluk: 10, parcalar }, [], '2026-11-11T09:00:00Z', 'https://claude.ai/code/session_x');
+    expect(y2.program).toEqual({ boyut: 11, uzunluk: 10, parcalar });
+    expect(y2.oturum).toBe('https://claude.ai/code/session_x');
+    expect(() => T.yayinKaydi(k, { parcalar: [{ yuva: 1, id: ID('a'), sik: 'gzip' }] }, [])).toThrow(/yuva 0 yok/);
     expect(T.yayinOku({ id: 'son', version: 2, data: y })).toEqual({ sha: 'f'.repeat(40), shortSha: 'fffffff', prNumber: 1301 });
-    expect(T.yayinOku(y).shortSha).toBe('fffffff');
+    expect(T.yayinOku(y2).shortSha).toBe('fffffff');
     expect(() => T.yayinOku({ no: 1 })).toThrow(/yayın belgesi/);
   });
 
@@ -550,8 +545,15 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
         set: (v) => { yazilan.push(['set', p, v]); return Promise.resolve(); } })
     };
     document.body.innerHTML = tam.replace(/<script>[\s\S]*?<\/script>/g, '');
-    window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : (ad === 'comments' ? (opt.yorum || null) : null)) };
-    const yanit = (u) => ({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>' + u + '</body></html>') });
+    const yetkiler = { db, comments: opt.yorum || null, mcp: opt.mcp || null, permissions: opt.izin || null };
+    window.claude = { use: (ad) => Promise.resolve(yetkiler[ad] || null) };
+    // Varlık deposu: `opt.varlik` kimlik → metin (null: indirilemez); yoksa adresini taşıyan tam
+    // belge. `opt.getir(u)`: indirmeyi bekleten söz (kilit testleri).
+    const yanit = (u) => {
+      const v = opt.varlik ? opt.varlik[u.replace('/_blob/', '')] : undefined;
+      return { ok: v !== null, status: v === null ? 404 : 200,
+        text: () => Promise.resolve(v !== undefined ? v : '<!doctype html><html><body>' + u + '</body></html>') };
+    };
     window.fetch = (u) => { getirilen.push(u); return opt.getir ? opt.getir(u).then(() => yanit(u)) : Promise.resolve(yanit(u)); };
     [...tam.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((m) => (0, eval)(m[1]));
     const d = document;
@@ -583,7 +585,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
       sendToClaude: (t) => { gonderilen.push(t); return Promise.resolve({ threadId: 'konu-1' }); } };
     const a = sayfa({ yorum });
     await bekle();
-    a.yayinGonder(null);
+    a.yayinGonder(yayinB('aaaaaaa', ID('a'), []));               // açık program: kayıttaki yayın
     await bekle();
     const b = a.d.getElementById('cn-istek');
     expect([b.disabled, b.textContent]).toEqual([false, 'Programı güncelle']);
@@ -591,7 +593,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     await bekle(30);
     expect(a.yazilan.filter((w) => w[1] === 'istek/guncelle').map((w) => [w[0], w[2].durum || '', w[2].konu || '', w[2].sayfaSurum || '']))
       .toEqual([['set', 'bekliyor', '', 'aaaaaaa'], ['update', '', 'konu-1', '']]);
-    expect(gonderilen).toEqual([{ anchor: { el: 'cn-istek' }, text: 'Program güncelleme isteği · açık sürüm aaaaaaa · #1290' }]);
+    expect(gonderilen).toEqual([{ anchor: { el: 'cn-istek' }, text: 'Program güncelleme isteği · açık sürüm aaaaaaa · #1300' }]);
     expect([b.disabled, b.textContent]).toEqual([true, 'Güncelleniyor…']);
     a.istekGonder({ durum: 'yapiliyor', zaman: new Date().toISOString() });
     await bekle();
@@ -599,7 +601,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     // oturum yayınladı: pencere sormaz, program yüklenir (proje taşınır)
     a.yayinGonder(yayinB('eeeeeee', ID('e'), []));
     await bekle();
-    expect(a.getirilen).toEqual(['/_blob/' + ID('e')]);
+    expect(a.getirilen).toEqual(['/_blob/' + ID('a'), '/_blob/' + ID('e')]);
     expect(a.gizli('cn-guncel')).toBe(true);
     expect(a.d.getElementById('cn-surum').textContent).toBe('eeeeeee · #1300');
     a.istekGonder({ durum: 'tamam', zaman: new Date().toISOString(), surum: 'eeeeeee' });
@@ -651,15 +653,17 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
   });
 
   // Varlık yüklenirken görülsün diye indirme elle bırakılır (jsdom'da köprü yok: açılan
-  // çerçeve "basladi" demeden yüklenir, yani "Program açılmadı" yolu).
+  // çerçeve "basladi" demez — "Program açılmadı" yolu çerçevenin yükleme olayıyla).
   const tutulan = () => { const t = { bekleyen: [] }; t.getir = () => new Promise((r) => t.bekleyen.push(r)); t.birak = () => t.bekleyen.splice(0).forEach((r) => r()); return t; };
 
   test('KİLİT: "Güncelleniyor…" iken program perdeli ve inert, Yenile kapalı; yeni program açılınca açılır', async () => {
     const indirme = tutulan();
     const a = sayfa({ yorum: yorumVar(), getir: indirme.getir });
     await bekle();
-    a.yayinGonder(null);
+    a.yayinGonder(yayinB('aaaaaaa', ID('a'), []));           // açık program: kayıttaki yayın
     await bekle();
+    indirme.birak();
+    await bekle(30);
     expect(kilit(a)).toEqual([true, false, false, '']);
     a.d.getElementById('cn-istek').click();
     await bekle(30);
@@ -693,8 +697,10 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     const indirme = tutulan();
     const a = sayfa({ yorum: yorumVar(), getir: indirme.getir });
     await bekle();
-    a.yayinGonder(null);                                     // açılış: gömülü program (aaaaaaa)
+    a.yayinGonder(yayinB('aaaaaaa', ID('a'), []));           // açık program: kayıttaki yayın
     await bekle();
+    indirme.birak();
+    await bekle(30);
     a.d.getElementById('cn-istek').click();
     await bekle(30);
     expect(kilit(a)[0]).toBe(false);
@@ -714,10 +720,12 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     await bekle(30);
     a.istekGonder({ durum: 'guncel', zaman: new Date().toISOString(), surum: 'bbbbbbb' });
     await bekle();
-    expect(a.getirilen).toEqual(['/_blob/' + ID('b')]);
+    expect(a.getirilen).toEqual(['/_blob/' + ID('a'), '/_blob/' + ID('b')]);
     expect(kilit(a)).toEqual([false, true, true, 'Yükleniyor · bbbbbbb']);
-    indirme.birak();                                         // program açılmadı: kilit kalkar
+    indirme.birak();
     await bekle(30);
+    // çerçeve yüklendi ama köprü konuşmadı (jsdom srcdoc'u yüklemez: olay elle): program açılmadı, kilit kalkar
+    a.cerceve.dispatchEvent(new Event('load'));
     expect(kilit(a)[0]).toBe(true);
     expect(a.d.getElementById('cn-acilis').textContent).toBe('Program açılmadı.');
   });
@@ -745,7 +753,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(sablon).toContain("yetki.db.doc('yayin/son').onSnapshot(");
   });
 
-  test('açılış: kayıttaki yeni yayın varlıktan yüklenir; yayın yoksa dosya', async () => {
+  test('açılış: program kayıttaki yayından yüklenir; yayın yoksa program da yok, sonradan gelen yayın yüklenir', async () => {
     const a = sayfa();
     await bekle();
     a.yayinGonder(yayinB('bbbbbbb', ID('b'), [6]));
@@ -754,26 +762,42 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.cerceve.getAttribute('srcdoc')).toContain(ID('b'));
     expect(a.cerceve.hasAttribute('src')).toBe(false);
     expect(a.d.getElementById('cn-surum').textContent).toBe('bbbbbbb · #1300');
+    expect(a.d.getElementById('cn-surum').title).toBe('Sayfa aaaaaaa · #1290');   // sayfanın kendi künyesi ipucunda
     expect(a.gizli('cn-guncel')).toBe(true);                    // açılışta sormaz: yüklenen zaten en yenisi
     const b = sayfa();
     await bekle();
     b.yayinGonder(null);
     await bekle();
     expect(b.getirilen).toEqual([]);
-    expect(b.cerceve.getAttribute('src')).toBe('mfsim.html');
-    expect(b.d.getElementById('cn-surum').textContent).toBe('aaaaaaa · #1290');
+    expect(b.cerceve.hasAttribute('src')).toBe(false);          // gömülü dosya yok
+    expect(b.cerceve.hasAttribute('srcdoc')).toBe(false);
+    expect([b.gizli('cn-acilis'), b.d.getElementById('cn-acilis').textContent]).toEqual([false, 'Program yayını yok.']);
+    expect(b.d.getElementById('cn-surum').textContent).toBe('');
+    b.yayinGonder(yayinB('ccccccc', ID('c'), []));               // yayın sonradan geldi: sormadan yüklenir
+    await bekle();
+    expect(b.getirilen).toEqual(['/_blob/' + ID('c')]);
+    expect(b.gizli('cn-guncel')).toBe(true);
+    // indirilemeyen varlık: durum yazılır, yeni yayın yeniden denenir
+    const c = sayfa({ varlik: { [ID('d')]: null } });
+    await bekle();
+    c.yayinGonder(yayinB('ddddddd', ID('d'), []));
+    await bekle();
+    expect(c.d.getElementById('cn-acilis').textContent).toBe('Program indirilemedi.');
+    c.yayinGonder(yayinB('eeeeeee', ID('e'), []));
+    await bekle();
+    expect(c.d.getElementById('cn-surum').textContent).toBe('eeeeeee · #1300');
   });
 
   test('açıkken gelen yayın programı DEĞİŞTİRMEZ: pencere sorar; Güncelle yükler, Sonra erteler', async () => {
     const a = sayfa();
     await bekle();
-    a.yayinGonder(null);
+    a.yayinGonder(yayinB('aaaaaaa', ID('a'), []));
     await bekle();
-    const once = a.cerceve.getAttribute('src');
+    const once = a.cerceve.getAttribute('srcdoc');
     a.yayinGonder(yayinB('ccccccc', ID('c'), [6, 8, 9, 10]));
     await bekle();
-    expect(a.getirilen).toEqual([]);                             // kendiliğinden yüklenmedi
-    expect(a.cerceve.getAttribute('src')).toBe(once);
+    expect(a.getirilen).toEqual(['/_blob/' + ID('a')]);          // kendiliğinden yüklenmedi
+    expect(a.cerceve.getAttribute('srcdoc')).toBe(once);
     expect(a.gizli('cn-guncel')).toBe(false);
     expect(a.gizli('cn-guncel-ac')).toBe(false);
     expect(a.d.getElementById('cn-guncel-surum').textContent).toBe('ccccccc · #1300');
@@ -791,7 +815,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.gizli('cn-guncel')).toBe(false);
     a.d.getElementById('cn-guncel-evet').click();
     await bekle();
-    expect(a.getirilen).toEqual(['/_blob/' + ID('d')]);
+    expect(a.getirilen).toEqual(['/_blob/' + ID('a'), '/_blob/' + ID('d')]);
     expect(a.cerceve.getAttribute('srcdoc')).toContain(ID('d'));
     expect(a.cerceve.hasAttribute('src')).toBe(false);
     expect(a.gizli('cn-guncel')).toBe(true);
@@ -802,7 +826,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
   // Kullanıcı 2026-11-05: "canlı not içine yenileme butonu ekler misin … F5 yapıp sayfayı
   // tamamen yenilemek istemiyorum." Yenile yalnız programı yeniden yükler: sayfa (notlar,
   // kart) yerinde; yeni yayın varsa onu yükler.
-  test('Yenile: yalnız program yeniden yüklenir — varlık yeniden, dosya yeniden; yeni yayın varsa o', async () => {
+  test('Yenile: yalnız program yeniden yüklenir; yeni yayın varsa o; program yokken yayını dener', async () => {
     const a = sayfa();
     await bekle();
     const yenile = a.d.getElementById('cn-yenile');
@@ -825,18 +849,15 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.getirilen[a.getirilen.length - 1]).toBe('/_blob/' + ID('c'));
     expect(a.d.getElementById('cn-surum').textContent).toBe('ccccccc · #1300');
     expect(a.gizli('cn-guncel')).toBe(true);
-    // dosyadan açılmış program: çerçeve dosyayı yeniden açar, varlık getirilmez
+    // program yokken (yayın yok) Yenile bir şey indirmez
     const b = sayfa();
     await bekle();
     b.yayinGonder(null);
     await bekle();
-    const kayit = [];
-    new MutationObserver((m) => m.forEach((x) => kayit.push(x.attributeName))).observe(b.cerceve, { attributes: true });
     b.d.getElementById('cn-yenile').click();
     await bekle();
-    expect(kayit).toContain('src');
-    expect(b.cerceve.getAttribute('src')).toBe('mfsim.html');
     expect(b.getirilen).toEqual([]);
+    expect(b.d.getElementById('cn-acilis').textContent).toBe('Program yayını yok.');
   });
 
   test('Notlar listesi yeniden eskiye: en yeni not en üstte, yeni gelen tepeye oturur', async () => {
@@ -931,6 +952,355 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.d.getElementById('cn-buyuk-no').textContent).toBe('Not 9');
     a.d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(a.gizli('cn-buyuk')).toBe(true);
+  });
+
+  // PARÇALI YAYIN sayfada (kullanıcı 2026-11-11: boyut sınırı): yuvalar ayrı varlık; sayfa
+  // indirir, birleştirir, çerçeveye koyar. Güncellemede yalnız DEĞİŞEN yuva indirilir;
+  // Yenile hiçbir şey indirmez. Sıkıştırılmış yuvayı açan kod tarayıcının akışı: `duman` koşar.
+  const parcaliB = (surum, parcalar, uzunluk) => ({ surum, sha: surum + '0'.repeat(33), pr: 1300, program: { boyut: uzunluk, uzunluk, parcalar }, notlar: [] });
+  const parca = (yuva, id, ozet, sik) => ({ yuva, id, ozet, boyut: 1, sik: sik || 'yok' });
+
+  test('parçalı yayın: yuvalar indirilir ve birleşir; güncellemede yalnız değişen yuva; Yenile indirmez', async () => {
+    const iskelet = (v) => '<!doctype html><html><body>' + v + '\n@@CN-YUVA:1@@\n@@CN-YUVA:2@@\n</body></html>';
+    const varlik = { [ID('1')]: iskelet('kod-1'), [ID('2')]: 'TAKOZ-', [ID('3')]: 'GORSELI', [ID('4')]: 'BELGE', [ID('5')]: iskelet('kod-2') };
+    const tam1 = iskelet('kod-1').replace('@@CN-YUVA:1@@', 'TAKOZ-GORSELI').replace('@@CN-YUVA:2@@', 'BELGE');
+    const a = sayfa({ varlik });
+    await bekle();
+    // yuva 1 iki parça (bölünmüş): saklanan metinler sırayla eklenir
+    a.yayinGonder(parcaliB('bbbbbbb', [parca(0, ID('1'), 'oz-kod1'), parca(1, ID('2'), 'oz-takoz'), parca(1, ID('3'), 'oz-takoz'), parca(2, ID('4'), 'oz-belge')], tam1.length));
+    await bekle(30);
+    expect(a.getirilen.slice().sort()).toEqual([ID('1'), ID('2'), ID('3'), ID('4')].map((i) => '/_blob/' + i));
+    expect(a.cerceve.getAttribute('srcdoc')).toBe(tam1);
+    expect(a.d.getElementById('cn-surum').textContent).toBe('bbbbbbb · #1300');
+    // yeni yayın: yalnız kod değişti → Güncelle yalnız yuva 0'ı indirir
+    const tam2 = tam1.replace('kod-1', 'kod-2');
+    a.yayinGonder(parcaliB('ccccccc', [parca(0, ID('5'), 'oz-kod2'), parca(1, ID('2'), 'oz-takoz'), parca(1, ID('3'), 'oz-takoz'), parca(2, ID('4'), 'oz-belge')], tam2.length));
+    await bekle();
+    expect(a.gizli('cn-guncel')).toBe(false);
+    expect(a.getirilen.length).toBe(4);                           // sormadan indirilmedi
+    a.d.getElementById('cn-guncel-evet').click();
+    await bekle(30);
+    expect(a.getirilen.slice(4)).toEqual(['/_blob/' + ID('5')]);
+    expect(a.cerceve.getAttribute('srcdoc')).toBe(tam2);
+    expect(a.d.getElementById('cn-surum').textContent).toBe('ccccccc · #1300');
+    basladi(a);                                                   // yeni program açıldı: kilit kalkar
+    await bekle();
+    // Yenile: yuvalar bellekte, hiçbir şey indirilmez
+    a.d.getElementById('cn-yenile').click();
+    await bekle(30);
+    expect(a.getirilen.length).toBe(5);
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Program yenilendi.');
+  });
+
+  test('parçalı yayın: eksik birleşen program çerçeveye konmaz; durum yazılır', async () => {
+    const iskelet = '<!doctype html><html><body>\n@@CN-YUVA:1@@\n</body></html>';
+    // kayıttaki uzunluk tutmuyor (yarım ya da yanlış parça)
+    const a = sayfa({ varlik: { [ID('1')]: iskelet, [ID('2')]: 'X' } });
+    await bekle();
+    a.yayinGonder(parcaliB('bbbbbbb', [parca(0, ID('1'), 'k'), parca(1, ID('2'), 'v')], 999));
+    await bekle(30);
+    expect(a.cerceve.hasAttribute('srcdoc')).toBe(false);
+    expect(a.d.getElementById('cn-acilis').textContent).toBe('Program indirilemedi.');
+    // iskelette imi olan yuva kayıtta yok
+    const b = sayfa({ varlik: { [ID('1')]: iskelet + '\n@@CN-YUVA:2@@', [ID('2')]: 'X' } });
+    await bekle();
+    b.yayinGonder(parcaliB('bbbbbbb', [parca(0, ID('1'), 'k'), parca(1, ID('2'), 'v')], 0));
+    await bekle(30);
+    expect(b.cerceve.hasAttribute('srcdoc')).toBe(false);
+    // sıkıştırılmış yuva bu pencerede açılamıyor (akış yok): yarım program yerine durum
+    const c = sayfa({ varlik: { [ID('1')]: 'H4sIAAAA', [ID('2')]: 'X' } });
+    await bekle();
+    c.yayinGonder(parcaliB('bbbbbbb', [parca(0, ID('1'), 'k', 'gzip'), parca(1, ID('2'), 'v')], 0));
+    await bekle(30);
+    expect(c.cerceve.hasAttribute('srcdoc')).toBe(false);
+    expect(c.d.getElementById('cn-acilis').textContent).toBe('Program indirilemedi.');
+  });
+
+  // OTURUM BAĞLANTISI YOKLAMASI (kullanıcı 2026-11-11: her değişiklikte yeni oturum açmak
+  // pratik değil): sayfanın oturumu kendisinin başlatabilmesi için önce bu hesapta sayfaya
+  // açık komutlar ölçülür. Yoklama yalnız OKUR: izin ister, komutları listeler, ortamları
+  // okur ve kayda yazar; oturum açan hiçbir komutu çağırmaz.
+  test('Bağlantıyı yokla: izin · açık komutlar · ortamlar kayda yazılır; oturum açılmaz', async () => {
+    const cagri = [];
+    const mcp = {
+      listTools: (s) => { cagri.push(['listTools', s]); return Promise.resolve({ servers: [{ server: s, authStatus: 'connected', tools: [
+        { name: 'list_environments', description: 'x', annotations: { readOnlyHint: true } },
+        { name: 'create_session', description: 'y' }, { name: 'send_message', description: '' }] }] }); },
+      callTool: (s, t, i) => { cagri.push(['callTool', s, t, i]); return Promise.resolve({ payload: { environments: [{ id: 'env_1', name: 'Default' }] } }); }
+    };
+    const izin = { request: (n) => { cagri.push(['request', n]); return Promise.resolve({ 'mcp:Claude Code Remote': 'granted' }); } };
+    const a = sayfa({ mcp, izin });
+    await bekle();
+    const b = a.d.getElementById('cn-yokla');
+    expect([b.textContent, b.disabled]).toEqual(['Bağlantıyı yokla', false]);
+    b.click();
+    await bekle(40);
+    expect(cagri).toEqual([['request', ['mcp:Claude Code Remote']], ['listTools', 'Claude Code Remote'], ['callTool', 'Claude Code Remote', 'list_environments', {}]]);
+    const w = a.yazilan.filter((x) => x[1] === 'yoklama/baglanti');
+    expect(w.map((x) => x[0])).toEqual(['set']);
+    expect(w[0][2]).toMatchObject({ sunucu: 'Claude Code Remote', durum: 'var', izin: 'granted', kimlik: 'connected',
+      araclar: [{ ad: 'list_environments', tanim: true, salt: true }, { ad: 'create_session', tanim: true, salt: false }, { ad: 'send_message', tanim: false, salt: false }],
+      ortamlar: '{"environments":[{"id":"env_1","name":"Default"}]}' });
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 2 komut açık.');
+    expect(b.disabled).toBe(false);
+  });
+
+  test('yoklama: bağlantı yoksa, izin verilmediyse ya da komut hata verdiyse sonuç yine kayda yazılır', async () => {
+    const son = (x) => x.yazilan.filter((w) => w[1] === 'yoklama/baglanti').map((w) => w[2]);
+    const a = sayfa();                                           // bu görünümde bağlantı yok
+    await bekle();
+    a.d.getElementById('cn-yokla').click();
+    await bekle(40);
+    expect(son(a).map((v) => v.durum)).toEqual(['yok']);
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 0 komut açık.');
+    // izin reddi: liste beyandan gelir (tanımsız komutlar) — açık komut sayılmaz, ortam okunmaz
+    const cagri = [];
+    const mcp = { listTools: (s) => Promise.resolve({ servers: [{ server: s, authStatus: 'unknown', tools: [{ name: 'list_environments', description: '' }] }] }),
+      callTool: () => { cagri.push('callTool'); return Promise.resolve({}); } };
+    const b = sayfa({ mcp, izin: { request: () => Promise.resolve({ 'mcp:Claude Code Remote': 'denied' }) } });
+    await bekle();
+    b.d.getElementById('cn-yokla').click();
+    await bekle(40);
+    expect(son(b)[0]).toMatchObject({ durum: 'var', izin: 'denied', kimlik: 'unknown', araclar: [{ ad: 'list_environments', tanim: false, salt: false }] });
+    expect(cagri).toEqual([]);
+    expect(b.d.getElementById('cn-bildirim').textContent).toBe('Bağlantı yoklandı · 0 komut açık.');
+    // komut hata verirse kodu yazılır
+    const c = sayfa({ mcp: { listTools: () => Promise.reject({ code: 'not_granted' }) } });
+    await bekle();
+    c.d.getElementById('cn-yokla').click();
+    await bekle(40);
+    expect(son(c)[0]).toMatchObject({ durum: 'hata', hata: 'not_granted' });
+  });
+});
+
+// ═══ PARÇALI YAYIN ═════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-11 (boyut sınırı; "Tamam yapalım bakalım"). Program tek metin varlığıydı
+// (sınırı 20 MiB) ve 17,2 MiB'a gelmişti — bir haftada 5,3 MiB görsel; sayfanın gömdüğü kopya
+// 16 MB'ı çoktan aşmıştı. Artık uzun satırlar (gömülü veri, kütüphane) kendi yuvasında, kalan
+// kod iskelette durur. Buradaki hata SESSİZDİR: yanlış birleşen program açılır ama bozuktur.
+describe('PARÇALI YAYIN — program yuvalara ayrılır, geri kurma bire bir', () => {
+  const crypto = require('crypto');
+  const ID = (c) => c.repeat(32);
+  // sıkışmayan metin (taban64 görselin yerine): özet zinciri — her koşuda aynı
+  const karisik = (n) => Array.from({ length: n }, (_, i) => crypto.createHash('sha256').update('k' + i).digest('base64')).join('');
+  const veri = (ad, govde) => 'window.__MFSIM_' + ad + ' = {"a":"data:image/webp;base64,' + govde + '"};';
+  const TAKOZ = veri('TAKOZ', karisik(60)), BELGE = veri('BELGE', karisik(40));
+  const html = ['<!doctype html>', '<html><head><meta charset="utf-8">', '<script>', 'var kisa = "ğüş $& $1";', TAKOZ, 'var b = 2;', BELGE,
+    '</script></head><body>çÇ</body></html>'].join('\n');
+  const kunye = { shortSha: 'abcdef1', sha: 'a'.repeat(40), prNumber: 7 };
+  const KUCUK = { esik: 1000, sinir: 700 };
+
+  test('uzun satır kendi yuvasında, iskelette yerinde imi; adı globalden; im taşıyan program ayrılmaz', () => {
+    const y = T.parcala(html, 1000);
+    expect(y.map((x) => x.ad)).toEqual(['kod', 'takoz', 'belge']);
+    expect(y[0].metin.split('\n')).toEqual(['<!doctype html>', '<html><head><meta charset="utf-8">', '<script>', 'var kisa = "ğüş $& $1";',
+      '@@CN-YUVA:1@@', 'var b = 2;', '@@CN-YUVA:2@@', '</script></head><body>çÇ</body></html>']);
+    expect([y[1].metin, y[2].metin]).toEqual([TAKOZ, BELGE]);
+    expect(CN.programBirlestir(y.map((x) => x.metin))).toBe(html);
+    expect(T.parcala(html).length).toBe(1);                       // gerçek eşik 512 KiB: bu satırlar iskelette kalır
+    expect(T.parcala('a\n' + 'x'.repeat(1200) + '\nb', 1000)[1].ad).toBe('satir');   // adsız uzun satır (kütüphane)
+    expect(() => T.parcala('a\n@@CN-YUVA:1@@\nb')).toThrow(/yuva imi/);
+  });
+
+  test('saklanan biçim: sıkışan yuva gzip, sıkışmayan olduğu gibi, ASCII dışı hep gzip; açınca aynı metin', () => {
+    const kod = 'function a() { return 1; }\n'.repeat(500), rasgele = karisik(120);
+    expect(T.paketle(kod).sik).toBe('gzip');
+    expect(T.paketle(kod).veri.length).toBeLessThan(kod.length / 10);
+    expect(T.paketle(rasgele)).toEqual({ sik: 'yok', veri: rasgele });
+    expect(T.paketle(rasgele + 'ğ').sik).toBe('gzip');             // saklanan metin ASCII kalır: karakter = bayt
+    [kod, rasgele, rasgele + 'ğ', ''].forEach((m) => { const p = T.paketle(m); expect(T.paketAc(p.sik, p.veri)).toBe(m); });
+    expect(() => T.paketAc('lz4', 'x')).toThrow(/sıkıştırma/);
+    expect(T.bol('abcdefg', 3)).toEqual(['abc', 'def', 'g']);
+    expect(T.bol('', 3)).toEqual(['']);
+  });
+
+  test('plan: özet içeriğin; sınırı aşan yuva bölünür; plan programı bire bir geri kurar', () => {
+    const plan = T.planKur(html, kunye, KUCUK);
+    expect([plan.surum, plan.sha, plan.pr, plan.boyut, plan.uzunluk]).toEqual(['abcdef1', 'a'.repeat(40), 7, Buffer.byteLength(html), html.length]);
+    expect(plan.boyut).toBeGreaterThan(plan.uzunluk);             // Türkçe harf: bayt ≠ karakter
+    expect(plan.yuvalar.map((y) => [y.yuva, y.ad, y.sik, y.parcalar.length])).toEqual([[0, 'kod', 'gzip', 1], [1, 'takoz', 'yok', 4], [2, 'belge', 'yok', 3]]);
+    plan.yuvalar.forEach((y) => y.parcalar.forEach((v) => expect(v.length).toBeLessThanOrEqual(700)));
+    expect(plan.yuvalar[1].ozet).toBe(T.ozetle(TAKOZ));           // özet İÇERİĞİN: sıkıştırmanın baytına bağlı değil
+    expect(plan.yuvalar[1].ozet).toMatch(/^[0-9a-f]{16}$/);
+    expect(T.planBirlestir(plan)).toBe(html);
+    expect(T.parcaAnahtari(plan.yuvalar[0], 0)).toBe(plan.yuvalar[0].ozet);
+    expect(T.parcaAnahtari(plan.yuvalar[1], 1)).toBe(plan.yuvalar[1].ozet + '.2');
+    // sabitler: parça sınırı deponun metin varlığı sınırının altında
+    expect([T.ESIK, T.PARCA_SINIRI, T.VARLIK_SINIRI]).toEqual([512 * 1024, 12 * 1048576, 20 * 1048576]);
+  });
+
+  test('derleme gömülü veriyi TEK satıra yazar (ayrımın dayandığı biçim)', () => {
+    const build = fs.readFileSync(path.join(KOK, 'build.js'), 'utf8');
+    const satirlar = [...build.matchAll(/'window\.__MFSIM_([A-Z_]+) = ' \+ JSON\.stringify\(([^()]*)\)([^\n]*)/g)];
+    expect(satirlar.map((m) => m[1])).toEqual(expect.arrayContaining(['KARSILAMA', 'DEGISIKLIK', 'BELGE', 'TAKOZ', 'KILAVUZ']));
+    satirlar.forEach((m) => {
+      expect({ ad: m[1], girintisiz: !m[2].includes(',') }).toEqual({ ad: m[1], girintisiz: true });
+      expect({ ad: m[1], satirSonu: /';\\n' \+$|';<\/script>';$/.test(m[3]) }).toEqual({ ad: m[1], satirSonu: true });
+    });
+  });
+
+  test('yayın kaydı: yerinde duran yuva önceki varlığı taşır, yalnız değişen yüklenir; kimliksiz parça adıyla söylenir', () => {
+    const dosyala = (plan) => {
+      plan.yuvalar.forEach((y) => { y.parcalar = y.parcalar.map((v, i) => ({ dosya: 'parca/' + y.ad + '-' + T.parcaAnahtari(y, i) + '.txt', boyut: v.length })); });
+      return plan;
+    };
+    const p1 = dosyala(T.planKur(html, kunye, KUCUK));
+    const anahtarlar = [].concat(...p1.yuvalar.map((y) => y.parcalar.map((_, i) => T.parcaAnahtari(y, i))));
+    expect(anahtarlar.length).toBe(8);
+    // hiç kimlik verilmedi: hepsi eksik, dosyasıyla
+    const bos = T.yayinKur(p1, null, {});
+    expect(bos.eksik.map((e) => e.anahtar)).toEqual(anahtarlar);
+    expect(bos.eksik[0]).toMatchObject({ ad: 'kod', dosya: p1.yuvalar[0].parcalar[0].dosya });
+    // ilk yayın: bütün parçalar yeni
+    const verilen = {};
+    anahtarlar.forEach((a, i) => { verilen[a] = ID('12345678'[i]); });
+    const k1 = T.yayinKur(p1, null, verilen);
+    expect([k1.eksik.length, k1.yeni, k1.artik]).toEqual([0, 8, []]);
+    expect(k1.parcalar.map((p) => p.yuva)).toEqual([0, 1, 1, 1, 1, 2, 2, 2]);
+    const y1 = T.yayinKaydi(kunye, { boyut: p1.boyut, uzunluk: p1.uzunluk, parcalar: k1.parcalar }, [6], '2026-11-11T09:00:00Z');
+    expect(CN.yayinDogrula(y1)).toEqual([]);
+    expect(T.yayinVarliklari(y1).length).toBe(8);
+    // kod değişti: yalnız yuva 0 yüklenir; görseller önceki varlıklarıyla; eski kodun varlığı artık
+    const p2 = dosyala(T.planKur(html.replace('var b = 2;', 'var b = 3;'), kunye, KUCUK));
+    expect(T.planKarsilastir(p2, y1).map((y) => y.yerinde)).toEqual([false, true, true]);
+    expect(T.planKarsilastir(p2, null).map((y) => y.yerinde)).toEqual([false, false, false]);
+    expect(T.yayinKur(p2, y1, {}).eksik.map((e) => e.ad)).toEqual(['kod']);
+    const k2 = T.yayinKur(p2, y1, { [p2.yuvalar[0].ozet]: ID('9') });
+    expect([k2.eksik.length, k2.yeni, k2.artik]).toEqual([0, 1, [ID('1')]]);
+    expect(k2.parcalar.slice(1).map((p) => p.id)).toEqual(y1.program.parcalar.slice(1).map((p) => p.id));
+    expect(k2.parcalar[0]).toMatchObject({ yuva: 0, id: ID('9'), ad: 'kod', sik: 'gzip' });
+    // bölünme sınırı değişse de içerik aynıysa yuva yerinde: önceki parçalar OLDUĞU GİBI taşınır
+    const p3 = dosyala(T.planKur(html, kunye, { esik: 1000, sinir: 900 }));
+    expect(p3.yuvalar[1].parcalar.length).toBe(3);                // önceki yayında dört parçaydı
+    expect(T.planKarsilastir(p3, y1).map((y) => y.yerinde)).toEqual([true, true, true]);
+    expect(T.yayinKur(p3, y1, {}).parcalar.map((p) => p.id)).toEqual(y1.program.parcalar.map((p) => p.id));
+    // bölünmüş yuvanın yalnız bir parçası yüklendiyse öteki eksik sayılır (yarım yuva kurulmaz)
+    const yarim = T.yayinKur(p3, null, { [T.parcaAnahtari(p3.yuvalar[1], 0)]: ID('a') });
+    expect(yarim.eksik.map((e) => e.anahtar)).toEqual(expect.arrayContaining([T.parcaAnahtari(p3.yuvalar[1], 1), T.parcaAnahtari(p3.yuvalar[1], 2)]));
+    // eski biçimden (tek varlık) geçiş: hepsi yüklenir, eski varlık silinecekler arasında
+    const k3 = T.yayinKur(p1, { surum: 'abcdef0', program: { id: ID('e'), boyut: 1 } }, verilen);
+    expect([k3.yeni, k3.artik]).toEqual([8, [ID('e')]]);
+  });
+
+  test('kayıt doğrulaması: yuva 0 şart, yuvalar sıralı ve boşluksuz, sıkıştırma bilinen; birleştirme eksik yuvayı geçirmez', () => {
+    const p = (yuva, sik) => ({ yuva, id: ID('a'), ozet: 'o', sik: sik || 'yok' });
+    const y = (parcalar) => ({ surum: 'abcdef1', program: { parcalar } });
+    expect(CN.yayinDogrula(y([p(0), p(1), p(1), p(2)]))).toEqual([]);
+    expect(CN.yayinDogrula(y([])).join()).toMatch(/parcalar boş/);
+    expect(CN.yayinDogrula(y([p(1)])).join()).toMatch(/yuva 0 yok/);
+    expect(CN.yayinDogrula(y([p(0), p(2)])).join()).toMatch(/yuva 1 yok/);
+    expect(CN.yayinDogrula(y([p(1), p(0)])).join()).toMatch(/sırasız/);
+    expect(CN.yayinDogrula(y([p(0, 'lz4')])).join()).toMatch(/sik/);
+    expect(CN.yayinDogrula(y([{ yuva: 0, id: 'kisa', sik: 'yok' }])).join()).toMatch(/varlık kimliği/);
+    expect(CN.yuvaPlani([p(0), p(1), p(1), p(2)]).map((g) => g.length)).toEqual([1, 2, 1]);
+    expect(CN.yuvaImi(3)).toBe('@@CN-YUVA:3@@');
+    const iskelet = 'a\n@@CN-YUVA:1@@\nb $& \n@@CN-YUVA:2@@';
+    expect(CN.programBirlestir([iskelet, 'X $1', 'Y'])).toBe('a\nX $1\nb $& \nY');      // $ dizileri genişlemez
+    expect(() => CN.programBirlestir([iskelet, 'X'])).toThrow(/eksik yuva: 2/);
+    expect(() => CN.programBirlestir([iskelet, 'X', 'Y', 'Z'])).toThrow(/yuva sayısı/);
+    expect(CN.programBirlestir(['satır içi @@CN-YUVA:1@@ im değil'])).toBe('satır içi @@CN-YUVA:1@@ im değil');
+  });
+
+  test('duman kaydı: plan sayfanın okuduğu biçimde; her parçanın dosyası kimliğiyle', () => {
+    const plan = T.planKur(html, kunye, KUCUK);
+    plan.yuvalar.forEach((y) => { y.parcalar = y.parcalar.map((v, i) => ({ dosya: 'parca/' + y.ad + '-' + i + '.txt', boyut: v.length })); });
+    const d = T.dumanKaydi(plan);
+    expect(CN.yayinDogrula(d.kayit)).toEqual([]);
+    expect(CN.programKaynagi(d.kayit)).toMatchObject({ tur: 'parcali', uzunluk: html.length, surum: 'abcdef1' });
+    expect(Object.keys(d.dosya).length).toBe(8);
+    expect(new Set(d.kayit.program.parcalar.map((p) => p.id)).size).toBe(8);   // bölünmüş yuvanın parçaları ayrı kimlikte
+    d.kayit.program.parcalar.forEach((p) => expect(d.dosya[p.id]).toMatch(/^parca\//));
+  });
+});
+
+// ═══ İKİ KAPI ══════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-11: "diğer sessionlardan gelen güncellemelerle de bazen karışabiliyor".
+// Ölçüldü: her oturum her birleşmeden sonra Canlı Not'taki programı yeniliyordu (üç günde 57
+// birleşme; yayın kaydı 6 günde 74 kez yazıldı) ve kaydın sırası denetlenmiyordu — son yazan
+// kazanıyor, eski sürüm yenisinin üstüne yazabiliyordu.
+describe('İKİ KAPI — tek yazar ve sıra', () => {
+  const A = 'https://claude.ai/code/session_01KpdSQRdhtgMzMJyCqXgQ4V', B = 'https://claude.ai/code/session_01KpdSQVRcjQYjKzbhpxWn1H';
+  const ID = (c) => c.repeat(32);
+
+  test('oturumun kimliği adresten ve ortamdan; yayını yalnız oturum/aktif\'in gösterdiği oturum yapar', () => {
+    expect(T.oturumKimligi(A)).toBe('01KpdSQRdhtgMzMJyCqXgQ4V');
+    expect(T.oturumKimligi('')).toBe('');
+    const ortam = { CLAUDE_CODE_REMOTE_SDK_URL: 'https://api.anthropic.com/v1/code/sessions/cse_01KpdSQVRcjQYjKzbhpxWn1H' };
+    expect(T.oturumAdresi({}, ortam)).toBe(B);                    // bulut oturumunun kimliği ortamdan
+    expect(T.oturumAdresi({ oturum: A }, ortam)).toBe(A);         // bayrak ortamın önünde
+    expect(T.oturumAdresi({}, { MFSIM_OTURUM: A })).toBe(A);
+    expect(T.oturumAdresi({}, {})).toBe('');
+    expect(T.sahipHukmu({ oturum: A }, A)).toEqual({ sahip: true });
+    expect(T.sahipHukmu({ oturum: A, zaman: 'x' }, B)).toEqual({ sahip: false, sebep: 'Canlı Not şu oturumda: ' + A });
+    expect(T.sahipHukmu(null, B).sebep).toMatch(/sahiplik kaydı okunmadı/);
+    expect(T.sahipHukmu({ oturum: A }, '').sebep).toMatch(/--oturum/);
+  });
+
+  test('sıra: ileri ve aynı sürüm yayınlanır, KESİN geri gidiş yayınlanmaz, bilinmeyen engellemez', () => {
+    const tablo = (t) => (a, b) => (a + '>' + b in t ? t[a + '>' + b] : null);
+    expect(T.siraHukmu('a', 'a', () => { throw new Error('sorulmaz'); })).toEqual({ durum: 'ayni', yayinla: true });
+    expect(T.siraHukmu('', 'b', tablo({}))).toEqual({ durum: 'ayni', yayinla: true });                           // ilk yayın
+    expect(T.siraHukmu('a', 'b', tablo({ 'a>b': true }))).toEqual({ durum: 'ileri', yayinla: true });
+    expect(T.siraHukmu('b', 'a', tablo({ 'b>a': false, 'a>b': true }))).toEqual({ durum: 'geri', yayinla: false });
+    expect(T.siraHukmu('a', 'b', tablo({ 'a>b': false, 'b>a': false }))).toEqual({ durum: 'bilinmiyor', yayinla: true });   // ayrışmış
+    expect(T.siraHukmu('a', 'b', tablo({}))).toEqual({ durum: 'bilinmiyor', yayinla: true });                    // sığ klon: commit yerelde yok
+  });
+
+  test('yayin komutu: sahibi olmayan oturum, dal kurulumu ve yüklenmemiş parça kaydı YAZAMAZ; sahibi yazar', () => {
+    const os = require('os');
+    const dizin = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-yayin-')), dokum = path.join(dizin, 'dokum');
+    fs.mkdirSync(path.join(dokum, 'oturum'), { recursive: true });
+    fs.mkdirSync(path.join(dokum, 'yayin'), { recursive: true });
+    const oz = ['1111111111111111', '2222222222222222'];
+    const plan = { surum: 'abcdef1', sha: 'a'.repeat(40), pr: 9, boyut: 30, uzunluk: 28, yuvalar: [
+      { yuva: 0, ad: 'kod', ozet: oz[0], sik: 'gzip', uzunluk: 10, parcalar: [{ dosya: 'parca/kod-' + oz[0] + '.txt', boyut: 12 }] },
+      { yuva: 1, ad: 'takoz', ozet: oz[1], sik: 'yok', uzunluk: 18, parcalar: [{ dosya: 'parca/takoz-' + oz[1] + '.txt', boyut: 18 }] }] };
+    const planYol = path.join(dizin, 'yayin-plan.json'), sonYol = path.join(dizin, 'yayin-son.json');
+    const yaz = (yol, v) => fs.writeFileSync(yol, JSON.stringify(v));
+    yaz(planYol, plan);
+    // yayında aynı sürüm, eski biçimde (tek varlık) — sıra "aynı": git'e sorulmaz
+    yaz(path.join(dokum, 'yayin', 'son.json'), { id: 'son', version: 74, data: { surum: 'abcdef1', sha: 'a'.repeat(40), pr: 9, program: { id: ID('e'), boyut: 30 }, notlar: [] } });
+    const kos = (ek) => T.yayin(Object.assign({ kaynak: planYol, dokum, oturum: B }, ek));
+    const kimlikler = { [oz[0]]: ID('a'), [oz[1]]: ID('b') };
+    const gunluk = [];
+    const casus = jest.spyOn(console, 'log').mockImplementation((m) => gunluk.push(String(m)));
+    try {
+      expect(() => kos({ parca: kimlikler })).toThrow(/TEK YAZAR[\s\S]*sahiplik kaydı okunmadı/);
+      yaz(path.join(dokum, 'oturum', 'aktif.json'), { id: 'aktif', version: 2, data: { oturum: A, zaman: 'x' } });
+      expect(() => kos({ parca: kimlikler })).toThrow(new RegExp('TEK YAZAR[\\s\\S]*' + A));
+      expect(fs.existsSync(sonYol)).toBe(false);                   // sahibi olmayan hiçbir şey yazmadı
+      yaz(path.join(dokum, 'oturum', 'aktif.json'), { oturum: B, zaman: 'x' });     // çıplak döküm de okunur
+      expect(() => kos({})).toThrow(new RegExp('yüklenmemiş parça[\\s\\S]*--parca ' + oz[0] + '=<id>[\\s\\S]*takoz-' + oz[1]));
+      expect(() => kos({ program: ID('a') })).toThrow(/--program kalktı/);
+      expect(fs.existsSync(sonYol)).toBe(false);
+      // sahibi, bütün parçalar yüklü: kayıt yazılır; sürüm kilidi ve silinecek eski varlık söylenir
+      const r = kos({ parca: kimlikler, notlar: [6] });
+      const kayit = JSON.parse(fs.readFileSync(sonYol, 'utf8'));
+      expect(kayit).toEqual(r.kayit);
+      expect(CN.yayinDogrula(kayit)).toEqual([]);
+      expect([kayit.oturum, kayit.notlar, kayit.program.parcalar.map((p) => p.id)]).toEqual([B, [6], [ID('a'), ID('b')]]);
+      expect([kayit.program.boyut, kayit.program.uzunluk]).toEqual([30, 28]);
+      expect([r.artik, r.sira.durum, r.surum]).toEqual([[ID('e')], 'ayni', 74]);
+      expect(gunluk.join('\n')).toMatch(/if_version:74/);
+      expect(gunluk.join('\n')).toMatch(new RegExp('Artifact delete url:<adres> path:' + ID('e')));
+      // dal kurulumu yayınlanmaz
+      yaz(planYol, Object.assign({}, plan, { dal: true }));
+      expect(() => kos({ parca: kimlikler })).toThrow(/DAL KURULUMU/);
+      // önceki yayın okunmadıysa yazılmaz (kayıt hiç yoksa --ilk)
+      yaz(planYol, plan);
+      fs.unlinkSync(path.join(dokum, 'yayin', 'son.json'));
+      expect(() => kos({ parca: kimlikler })).toThrow(/önceki yayın okunmadı/);
+      expect(kos({ parca: kimlikler, ilk: true }).artik).toEqual([]);
+    } finally { casus.mockRestore(); }
+  });
+
+  test('kural yazılı: teslim akışında Canlı Not\'u yalnız sahibi günceller', () => {
+    const kural = fs.readFileSync(path.join(KOK, 'CLAUDE.md'), 'utf8');
+    expect(kural).toMatch(/CANLI NOT'U YALNIZ SAHİBİ OTURUM GÜNCELLER/);
+    const skill = fs.readFileSync(path.join(KOK, '.claude', 'skills', 'canli-not', 'SKILL.md'), 'utf8');
+    expect(skill).toMatch(/TEK YAZAR/);
+    expect(skill).toMatch(/node tools\/canli-not\.js yayin --parca/);
+    expect(skill).not.toMatch(/yayin --program/);                  // eski tek varlık komutu belgede kalmadı
   });
 });
 

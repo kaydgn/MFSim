@@ -285,6 +285,7 @@ button, textarea, input { font: inherit; color: inherit; }
     <button class="cn-dugme cn-guncel-ac" type="button" id="cn-guncel-ac" aria-controls="cn-guncel" hidden>Güncelleme</button>
     <button class="cn-dugme" type="button" id="cn-istek" title="Ana dalın son programını iste">Programı güncelle</button>
     <button class="cn-dugme" type="button" id="cn-yenile" title="Programı yeniden yükle">Yenile</button>
+    <button class="cn-dugme" type="button" id="cn-yokla" title="Sayfadan açılabilen oturum komutlarını yokla">Bağlantıyı yokla</button>
     <button class="cn-dugme" type="button" id="cn-liste-ac" aria-expanded="false" aria-controls="cn-liste">Notlar <span class="cn-sayac" id="cn-sayac" data-bekleyen="0">0</span></button>
   </header>
 
@@ -377,17 +378,18 @@ button, textarea, input { font: inherit; color: inherit; }
 
   var yetki = { db: null, comments: null, assets: null, downloads: null };
   var kayitDurum = 'bekle', claudeDurum = 'bekle';
-  var program = { basladi: false, hazir: false, yedek: false, ortam: null, kaynak: '', surum: AYAR.surum || '', pr: AYAR.pr || '' };
+  var program = { basladi: false, hazir: false, ortam: null, kaynak: '', bilgi: null, yuklenen: '', surum: '', pr: '' };
   var notlar = [], oncekiDurum = {}, ilkListe = true;
   var arac = 'imlec', cizilen = null;
   var taslak = { sekiller: [], secim: null, baglam: null, surum: 0 };
   var onceki = {};
 
-  // Şeritteki sürüm AÇIK programınki (gömülü dosya ya da kayıttaki yayın).
+  // Şeritteki sürüm AÇIK programınki (kayıttaki yayın); sayfanın kendi künyesi ipucunda.
   function surumYaz() {
     $('cn-surum').textContent = [program.surum, program.pr ? '#' + program.pr : ''].filter(Boolean).join(' · ');
   }
   surumYaz();
+  if (AYAR.surum) $('cn-surum').title = 'Sayfa ' + AYAR.surum + (AYAR.pr ? ' · #' + AYAR.pr : '');
 
   // ── bildirim ────────────────────────────────────────────────────────────
   var bildirimZaman = 0;
@@ -453,6 +455,7 @@ button, textarea, input { font: inherit; color: inherit; }
     var yzaman = setTimeout(programBaslat, 4000);
     yetki.db.doc('yayin/son').onSnapshot(function (snap) {
       clearTimeout(yzaman);
+      yayinOkundu = true;
       yayin = snap.exists ? (snap.data() || null) : null;
       if (!program.kaynak) programBaslat(); else guncellemeDenetle();
     }, function () { clearTimeout(yzaman); programBaslat(); });
@@ -460,40 +463,72 @@ button, textarea, input { font: inherit; color: inherit; }
   }
 
   // ── program: kaynağı ve güncellemesi ────────────────────────────────────
-  // Açılışta kayıttaki yayın (yayin/son) gömülü programdan başkaysa o varlık
-  // yüklenir, yoksa dosya (mfsim.html). Açıkken gelen yayın programı
-  // KENDİLİĞİNDEN değiştirmez: pencere sorar, Güncelle yükler; proje taşınır.
-  var yayin = null, ertelenen = '';
+  // Program KAYITTAKİ yayındır (yayin/son); sayfa program gömmez. Parçalı yayında
+  // (çekirdek: yuvaPlani · programBirlestir) her yuva ayrı varlıktır: sayfa yuvaları
+  // indirir, açar, birleştirir ve çerçeveye koyar. Açılmış yuva bu görünümün ömrünce
+  // bellekte kalır — güncellemede yalnız DEĞİŞEN yuva indirilir. Açıkken gelen yayın
+  // programı KENDİLİĞİNDEN değiştirmez: pencere sorar, Güncelle yükler; proje taşınır.
+  var yayin = null, yayinOkundu = false, ertelenen = '';
+  var yuvaBellek = {};                       // yuvanın özeti → açılmış metni
+  function acilisYaz(metin) { var el = $('cn-acilis'); el.textContent = metin; el.hidden = false; }
   function programBaslat() {
-    if (program.kaynak) return;
-    var k = CN.programKaynagi(yayin, AYAR.surum);
-    if (k.tur === 'varlik') {
-      program.kaynak = 'varlik';
-      programYukle(k, null).then(guncellemeDenetle, function () { program.kaynak = ''; dosyaAc(); });
-    } else dosyaAc();
+    if (program.kaynak || program.yuklenen) return;
+    var k = CN.programKaynagi(yayin);
+    if (k.tur === 'yok') {
+      acilisYaz(kayitDurum === 'yok' || kayitDurum === 'hata' ? 'Kayıt bağlı değil.' : (yayinOkundu ? 'Program yayını yok.' : 'Kayıt bekleniyor…'));
+      return;
+    }
+    programYukle(k, null).then(guncellemeDenetle, function () { acilisYaz('Program indirilemedi.'); });
   }
-  function dosyaAc() {
-    program.kaynak = 'dosya'; program.surum = AYAR.surum || ''; program.pr = AYAR.pr || '';
-    surumYaz();
-    cerceve.removeAttribute('srcdoc');
-    cerceve.src = 'mfsim.html';
-    guncellemeDenetle();
+  function getir(id) {
+    return fetch('/_blob/' + id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); });
   }
-  // Varlık: program metin olarak saklı (text/plain) → srcdoc.
+  // Saklanan biçim → metin: gzip'li yuva taban64'ten açılır (tarayıcının akışı).
+  function yuvaAc(sik, veri) {
+    if (sik !== 'gzip') return Promise.resolve(veri);
+    if (typeof DecompressionStream !== 'function') return Promise.reject(new Error('sıkıştırma açılamıyor'));
+    var ikili = atob(veri), b = new Uint8Array(ikili.length);
+    for (var i = 0; i < ikili.length; i++) b[i] = ikili.charCodeAt(i);
+    return new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+  function yuvaAnahtari(yuva) { return yuva[0].ozet || yuva.map(function (p) { return p.id; }).join('+'); }
+  function yuvaGetir(yuva, bitti) {
+    var anahtar = yuvaAnahtari(yuva);
+    if (typeof yuvaBellek[anahtar] === 'string') { yuva.forEach(bitti); return Promise.resolve(yuvaBellek[anahtar]); }
+    return Promise.all(yuva.map(function (p) { return getir(p.id).then(function (m) { bitti(); return m; }); }))
+      .then(function (m) { return yuvaAc(yuva[0].sik, m.join('')); })
+      .then(function (metin) { yuvaBellek[anahtar] = metin; return metin; });
+  }
+  function programGetir(k) {
+    if (k.tur === 'varlik') return getir(k.id);            // eski biçim: tek varlık
+    var plan = CN.yuvaPlani(k.parcalar), biten = 0, toplam = k.parcalar.length;
+    var bitti = function () { biten++; if (!program.kaynak) acilisYaz('MFSim indiriliyor · ' + biten + '/' + toplam); };
+    return Promise.all(plan.map(function (yuva) { return yuvaGetir(yuva, bitti); })).then(function (yuvalar) {
+      var html = CN.programBirlestir(yuvalar);
+      if (k.uzunluk && html.length !== k.uzunluk) throw new Error('program eksik');
+      var tutulan = {};                                    // bu yayında olmayan yuva bellekten düşer
+      plan.forEach(function (yuva) { tutulan[yuvaAnahtari(yuva)] = true; });
+      Object.keys(yuvaBellek).forEach(function (a) { if (!tutulan[a]) delete yuvaBellek[a]; });
+      return html;
+    });
+  }
   function programYukle(k, proje) {
-    return fetch('/_blob/' + k.id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then(function (html) {
-        if (!/^\s*<!doctype html/i.test(html)) throw new Error('program değil');
-        program.basladi = false; program.hazir = false; program.yedek = true;
-        program.kaynak = 'varlik'; program.id = k.id; program.surum = k.surum; program.pr = k.pr || '';
-        if (proje) onceki.proje = proje;
-        $('cn-acilis').textContent = 'MFSim açılıyor…'; $('cn-acilis').hidden = false;
-        surumYaz(); durumYaz();
-        cerceve.removeAttribute('src');
-        cerceve.srcdoc = html;
-      });
+    program.yuklenen = k.surum || '?';
+    if (!program.kaynak) acilisYaz('MFSim indiriliyor…');
+    return programGetir(k).then(function (html) {
+      if (!/^\s*<!doctype html/i.test(html)) throw new Error('program değil');
+      program.basladi = false; program.hazir = false;
+      program.kaynak = k.tur; program.bilgi = k; program.surum = k.surum; program.pr = k.pr || '';
+      if (proje) onceki.proje = proje;
+      acilisYaz('MFSim açılıyor…');
+      surumYaz(); durumYaz();
+      cerceve.srcdoc = html;
+      program.yuklenen = '';
+    }, function (hata) { program.yuklenen = ''; throw hata; });
   }
   function guncellemeDenetle() {
+    if (program.yuklenen) return;                          // yükleme sürerken sorulmaz; bitince yeniden bakılır
+    if (!program.kaynak) { programBaslat(); return; }      // program yokken gelen yayın yüklenir
     // Düğmeyle istenen güncelleme gelince sorulmaz, yüklenir (kullanıcı zaten istedi).
     if (istekBekle && CN.guncellemeVar(yayin, program.surum, '')) {
       istekBekle = false; guncelle(); return;
@@ -512,13 +547,14 @@ button, textarea, input { font: inherit; color: inherit; }
   }
   function guncelKapat() { $('cn-guncel').hidden = true; }
   function guncelle() {
-    if (!yayin || CN.yayinDogrula(yayin).length) return;
-    var y = yayin, btn = $('cn-guncel-evet');
+    var k = CN.programKaynagi(yayin), btn = $('cn-guncel-evet');
+    if (k.tur === 'yok' || program.yuklenen) return;
     btn.disabled = true;
-    yukleKilitle(y.surum);                    // proje şimdi alınır: yeni program açılana dek kilitli
-    programYukle({ id: y.program.id, surum: y.surum, pr: y.pr || '' }, programProjesi()).then(function () {
+    yukleKilitle(k.surum);                    // proje şimdi alınır: yeni program açılana dek kilitli
+    programYukle(k, programProjesi()).then(function () {
       ertelenen = ''; guncelKapat(); $('cn-guncel-ac').hidden = true;
-      bildir('Program güncellendi · ' + y.surum);
+      bildir('Program güncellendi · ' + k.surum);
+      guncellemeDenetle();
     }, function () { yukleKilitle(''); btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
   }
   // YENİLE (kullanıcı 2026-11-05: *"canlı not içine yenileme butonu ekler misin … F5
@@ -533,18 +569,9 @@ button, textarea, input { font: inherit; color: inherit; }
   }
   function yenile() {
     if (CN.guncellemeVar(yayin, program.surum, '')) { guncelle(); return; }
-    var proje = programProjesi();
-    if (program.kaynak === 'varlik' && program.id) {
-      programYukle({ id: program.id, surum: program.surum, pr: program.pr }, proje)
-        .then(function () { bildir('Program yenilendi.'); }, function () { bildir('Program indirilemedi.'); });
-      return;
-    }
-    program.basladi = false; program.hazir = false; program.yedek = false;
-    if (proje) onceki.proje = proje;
-    $('cn-acilis').textContent = 'MFSim açılıyor…'; $('cn-acilis').hidden = false;
-    durumYaz();
-    dosyaAc();
-    bildir('Program yenilendi.');
+    if (!program.bilgi) { programBaslat(); return; }
+    programYukle(program.bilgi, programProjesi())
+      .then(function () { bildir('Program yenilendi.'); }, function () { bildir('Program indirilemedi.'); });
   }
   // PROGRAMI GÜNCELLE (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı
   // güncelleyen bir buton koyalım"*): Güncelleme yalnız bir oturumun YAYINLADIĞINI yükler;
@@ -686,14 +713,11 @@ button, textarea, input { font: inherit; color: inherit; }
     }
   }
 
-  // Bridge yoksa (çerçeve engellendi) dosya bir kez de srcdoc'la açılır.
+  // Çerçeve yüklendi ama köprü konuşmadıysa program açılmamıştır.
   cerceve.addEventListener('load', function () {
     if (program.basladi || !program.kaynak) return;
-    if (program.yedek) { yukleKilitle(''); $('cn-acilis').textContent = 'Program açılmadı.'; return; }
-    program.yedek = true;
-    fetch('mfsim.html').then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then(function (html) { cerceve.removeAttribute('src'); cerceve.srcdoc = html; })
-      .catch(function () { $('cn-acilis').textContent = 'Program açılmadı.'; });
+    yukleKilitle('');
+    acilisYaz('Program açılmadı.');
   });
 
   // Program giriş ve açılıştan geçince önceki durum geri yüklenir.
@@ -873,7 +897,7 @@ button, textarea, input { font: inherit; color: inherit; }
       baglam: taslak.baglam || {},
       secim: taslak.secim || {},
       ortam: program.ortam || {},
-      sayfaSurum: program.surum || AYAR.surum || '',
+      sayfaSurum: program.surum || '',
       fotoDurum: yetki.assets ? 'aliniyor' : 'yok',
       gonderim: 'kayit'
     };
@@ -1170,6 +1194,45 @@ button, textarea, input { font: inherit; color: inherit; }
       if (!e || e.code !== 'declined') bildir('İndirme yapılamadı.');
     });
   }
+
+  // ── oturum bağlantısı: yoklama ──────────────────────────────────────────
+  // Kullanıcı 2026-11-11: değişiklik için her seferinde yeni oturum açmak pratik
+  // değil; sayfanın oturumu KENDİSİNİN başlatması isteniyor. Önce ölçülür: bu hesapta
+  // sayfaya Claude Code'un hangi komutları açık. Sonuç kayda yazılır
+  // (yoklama/baglanti); oturum oradan okur. Yoklama yalnız OKUR, oturum açmaz.
+  var SUNUCU = 'Claude Code Remote';
+  function yokla() {
+    var b = $('cn-yokla');
+    if (!window.claude || typeof window.claude.use !== 'function') { bildir('Bağlantı bu görünümde kapalı.'); return; }
+    b.disabled = true;
+    var s = { zaman: new Date().toISOString(), sunucu: SUNUCU, durum: 'yok' };
+    var kod = function (e) { return String((e && (e.code || e.message)) || e || 'hata').slice(0, 200); };
+    Promise.all([window.claude.use('mcp'), window.claude.use('permissions')]).then(function (r) {
+      var mcp = r[0], izin = r[1], ad = 'mcp:' + SUNUCU;
+      if (!mcp) return null;
+      var sor = izin && typeof izin.request === 'function'
+        ? izin.request([ad]).then(function (d) { s.izin = (d && d[ad]) || ''; }, function (e) { s.izin = 'hata:' + kod(e); })
+        : Promise.resolve();
+      return sor.then(function () { return mcp.listTools(SUNUCU); }).then(function (l) {
+        var sunucu = ((l && l.servers) || [])[0];
+        if (!sunucu) { s.durum = 'bagli-degil'; return null; }
+        s.durum = 'var'; s.kimlik = sunucu.authStatus || '';
+        s.araclar = (sunucu.tools || []).map(function (t) {
+          return { ad: t.name, tanim: !!t.description, salt: !!(t.annotations && t.annotations.readOnlyHint) };
+        });
+        if (!s.araclar.some(function (t) { return t.ad === 'list_environments' && t.tanim; })) return null;
+        return mcp.callTool(SUNUCU, 'list_environments', {}).then(function (c) {
+          s.ortamlar = JSON.stringify(c && c.payload !== undefined ? c.payload : c).slice(0, 20000);
+        }, function (e) { s.ortamHata = kod(e); });
+      });
+    }).catch(function (e) { s.durum = 'hata'; s.hata = kod(e); }).then(function () {
+      var acik = (s.araclar || []).filter(function (t) { return t.tanim; }).length;
+      var yaz = yetki.db ? yetki.db.doc('yoklama/baglanti').set(s) : Promise.reject(new Error('kayıt yok'));
+      return yaz.then(function () { bildir('Bağlantı yoklandı · ' + acik + ' komut açık.'); },
+        function () { bildir('Yoklama kayda yazılamadı.'); });
+    }).then(function () { b.disabled = false; });
+  }
+  $('cn-yokla').addEventListener('click', yokla);
 
   // ── klavye ──────────────────────────────────────────────────────────────
   document.addEventListener('keydown', function (e) {
