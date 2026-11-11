@@ -2693,13 +2693,14 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 }
 /* Modül SATIRI: simge · ad · ok; satırları ince bir çizgi ayırır. Vurgu
    satırın zemini, sol kenarın bakır çizgisi ve okun rengi — satır kaymıyor
-   (çizginin yeri hep ayrılmış, yalnız rengi gelir). */
+   (çizginin yeri hep ayrılmış, yalnız rengi gelir). Boy 52 px, simge 28 px, ok
+   16 px (Canlı Not 127: *"bir tık ufaltalım … çok değil"* — 58 · 32 · 18'di); ad 16 px. */
 .ve-module-card{
   display:flex;
   flex-direction:row;
   align-items:center;
   gap:14px;
-  height:58px;
+  height:52px;
   padding:0 12px 0 6px;
   border-left:2px solid transparent;
   border-bottom:1px solid var(--kesik-ayrac);
@@ -2726,8 +2727,8 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
    Mavi vurgu etkileşimin rengi: üstüne gelme, odak, ana düğme. */
 .ve-module-card-icon{
   flex-shrink:0;
-  width:32px;
-  height:32px;
+  width:28px;
+  height:28px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2760,8 +2761,8 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
              transform var(--dur-base) var(--ease-out);
 }
 .ve-module-card-arrow .mf-ico{
-  width:18px;
-  height:18px;
+  width:16px;
+  height:16px;
 }
 .ve-module-card:hover .ve-module-card-arrow,
 .ve-module-card:focus-visible .ve-module-card-arrow{

@@ -399,6 +399,18 @@ describe('KESİK — renk temadan bağımsız', () => {
     expect(ik).toContain('height:18px');
   });
 
+  // MODÜL SATIRININ BOYU (kullanıcı 2026-11-11, Canlı Not 127: *"Şu butonları da bir tık
+  // ufaltalım. Bir tık ama, çok değil."*): satır 58 → 52 px, simge 32 → 28 px, ok 18 → 16 px;
+  // ad 16 px kalır. Kısa ekranın satırı (48 px) ve birincil düğme (44 px) ondan ince.
+  test('MODÜL SATIRININ BOYU — 52 px, simge 28 px, ok 16 px, ad 16 px; kısa ekranda 48 px', () => {
+    expect(kural(CSS_WELCOME, '.ve-module-card')).toMatch(/(?:^|;|\s)height:52px/);
+    const ik = kural(CSS_WELCOME, '.ve-module-card-icon');
+    expect([ik.includes('width:28px'), ik.includes('height:28px')]).toEqual([true, true]);
+    expect(kural(CSS_WELCOME, '.ve-module-card-arrow .mf-ico')).toContain('width:16px');
+    expect(kural(CSS_WELCOME, '.ve-module-card-name')).toContain('font-size:var(--fs-title)');
+    expect(CSS).toMatch(/@media \(max-height:800px\)\{(?:\s*[^{}]+\{[^{}]*\})*?\s*\.ve-module-card\{ height:48px; \}/);
+  });
+
   test('üstüne gelinen satırın zemininde yazı ≥ 4,5:1', () => {
     // --kesik-kabar = yazının %7'si + kesik; jetonun kendisinden okunur.
     const p = parseFloat(jeton('--kesik-kabar').match(/(\d+(?:\.\d+)?)%/)[1]) / 100;
