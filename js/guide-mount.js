@@ -1352,7 +1352,8 @@ function _gmSec15(){
       _gmN(_GM_SIHIRBAZ, 'gorunus') + ' <strong>3B · 2B</strong> önizlemenin bakışını değiştirir. 3B’de '
     + 'sürüklemek döndürür; çipler parçaların adını ve kütlesini taşır. 2B’de Yandan, Önden ve Üstten '
     + 'tek sayfada, ortak eksenlerle durur; tekerlek yakınlaştırır, sürüklemek kaydırır, eksen '
-    + 'değerleri görünen aralıktan yazılır. G birleşik ağırlık merkezidir.');
+    + 'değerleri görünen aralıktan yazılır. İki bakışta da bir gövdeye ya da takoza tıklamak onu '
+    + 'seçer, boş yere tıklamak seçimi bırakır. G birleşik ağırlık merkezidir.');
   return h;
 }
 

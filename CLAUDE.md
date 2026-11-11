@@ -114,7 +114,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   masanın görünüşü 3B · **2B**: Yandan · Önden · Üstten TEK sayfada, ortak ölçek ve merkezle (X sütunu,
   Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
   görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
-  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); **masada boşluğa tık
+  seçimi BIRAKIR**, 3B'de ve 2B'de (kullanıcı 2026-11-11, Canlı Not 153: *"boş yere tıkladığımda tıklamamdan vaz
+  geçemiyorum"*): perde kalkar, Seçili gövde · Seçili takoz bölümü çekilir, liste kalır; sürükleme tık değil
+  (`_mwMasaBirak`; kapı `mount-sihirbaz-doku.test.js` · `mount-sihirbaz.spec.js` → *BOŞLUĞA TIK*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
   Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
   `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
