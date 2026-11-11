@@ -5080,9 +5080,11 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 /* Geniş (içerik-yoğun) pencereler: kimlik KOMPAKT-SOL satır — simge solda,
    ad/tip yanında, sil düğmesi sağa yaslı, altında ince ayraç. Böylece sağ sütun
    yukarı çıkar ve iki sütun düzeniyle hizalanır. Yalnız .ve-properties--wide'da. */
+/* Çizgi simgenin dibine yakın: dolgu 3 px (Canlı Not 123: *"Şu çizgiyi bir
+   miktar yukarıya taşıyalım"* — 9 px'ti); --compact AYNI ölçüde. */
 .ve-properties--wide .ve-prop-identity{
   flex-direction:row; align-items:center; gap:11px;
-  margin-bottom:10px; padding-bottom:9px;
+  margin-bottom:10px; padding-bottom:3px;
   border-bottom:1px solid var(--border-color);
 }
 .ve-properties--wide .ve-prop-identity .ve-prop-symbol{
@@ -5112,7 +5114,7 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .ve-properties.ve-properties--compact{ max-width:560px; }
 .ve-properties--compact .ve-prop-identity{
   flex-direction:row; align-items:center; gap:11px;
-  margin-bottom:10px; padding-bottom:9px;
+  margin-bottom:10px; padding-bottom:3px;
   border-bottom:1px solid var(--border-color);
 }
 .ve-properties--compact .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
