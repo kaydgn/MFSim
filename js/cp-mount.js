@@ -680,7 +680,7 @@ function getMntModulePropertiesHTML(node){
   var say = { govde:0, takoz:0, arac:0 };
   liste.forEach(function(n){
     var d=(n && _mntDef(n)) || {};
-    if(d.isMountBody) say.govde++; else if(d.isMount) say.takoz++; else say.arac++;
+    if(d.isMountBody) say.govde++; else if(d.isMount) say.takoz++; else if(d.isMountAski) say.aski=(say.aski||0)+1; else say.arac++;
   });
   // FEAD'in modül kartının grameri: salt okunur alan ızgarası (Kasnak · Gergi
   // · Kayış · Araç ↔ Kütle gövdesi · Takoz · Araç · Bağlantı). Takoz'da
@@ -688,6 +688,7 @@ function getMntModulePropertiesHTML(node){
   // FEAD'de yapısal olarak hep 0 olduğu için kalkmıştı.
   var icerik = kurulu
     ? _mntIzgara(2, _mntOku('Kütle gövdesi', String(say.govde)) + _mntOku('Takoz', String(say.takoz))
+                  + (say.aski ? _mntOku('Askı yayı', String(say.aski)) : '')
                   + _mntOku('Araç', String(say.arac)) + _mntOku('Bağlantı', String(nBag)))
     : _mntNot('Alt topoloji açılmadı.', '');
   icerik = _mntBolum('Bileşenler', kurulu ? liste.length+' bileşen · alt topolojide' : 'alt topolojide', icerik);
@@ -2235,6 +2236,106 @@ function getMntMountPropertiesHTML(node){
   return _mntPencereKabuk(node, kategoriler, _mntKrokiHTML(node, M));
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  ASKI YAYI PENCERESİ (2026-11-11)
+// ════════════════════════════════════════════════════════════════════════════
+// Kategoriler: Yay (katalog · yay sabiti · serbest ve blok boyu; tel çapı,
+// ortalama çap, aktif sarım ve Rm isteğe bağlı — gerilme denetimi) · Kurulum
+// (biçim ve değeri; karşılığı türetilir) · Konum. Sonuç yok: yayın yük
+// durumlarındaki kuvveti ve boyu raporda.
+var MNT_ASKI_KURULUM_AD = { kuvvet:'Statik montaj kuvveti', boy:'Statik montaj boyu', tasarim:'Tasarım konumundaki boy' };
+function getMntAskiPropertiesHTML(node){
+  if(!node.data) node.data={};
+  var M=_mntCanliModel();
+  var kategoriler=[
+    { k:'yay', ad:'Yay', govde:_mntAskiYayGovde(node), durum:_mntAskiYayDurumu(node) },
+    { k:'kurulum', ad:'Kurulum', govde:_mntAskiKurulumGovde(node), durum:_mntAskiKurulumDurumu(node) },
+    { k:'konum', ad:'Konum', govde:_mntTakozKonumGovde(node, M), durum:_mntTakozKonumDurumu(node) }
+  ];
+  return _mntPencereKabuk(node, kategoriler, _mntKrokiHTML(node, M));
+}
+function _mntAskiYayGovde(node){
+  var d=node.data||{};
+  var liste=(typeof VE_MNT_YAY!=='undefined') ? VE_MNT_YAY : [];
+  var sel='<select class="ve-fp-sel" id="ve-mnt-yay-'+node.id+'" onchange="veMntAskiYay(\''+node.id+'\',this.value)">'
+    + '<option value="">— elle gir —</option>'
+    + liste.map(function(e){ return '<option value="'+_mntEsc(e.k)+'"'+(d.yay===e.k?' selected':'')+'>'+_mntEsc(e.uretici+' '+e.ad)+'</option>'; }).join('')
+    + '</select>';
+  var h=_mntBolum('Yay', '', _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Katalog</span>'+sel+'</label>')
+    + _mntIzgara(3, _mntAlan(node, 'k', 'Yay sabiti <u>[N/mm]</u>', { zorunlu:true })
+      + _mntAlan(node, 'L0', 'Serbest boy <u>[mm]</u>', { zorunlu:true })
+      + _mntAlan(node, 'Lc', 'Blok boyu <u>[mm]</u>', { zorunlu:true })));
+  h+=_mntBolum('Gerilme', '', _mntIzgara(2,
+      _mntAlan(node, 'd', 'Tel çapı <u>[mm]</u>') + _mntAlan(node, 'D', 'Ortalama çap <u>[mm]</u>')
+    + _mntAlan(node, 'n', 'Aktif sarım') + _mntAlan(node, 'Rm', 'Çekme dayanımı <u>[MPa]</u>')));
+  return h;
+}
+function _mntAskiYayDurumu(node){
+  var d=node.data||{}, id=node.id;
+  if(!(_mntNum(d.k,0)>0)) return _mntDurum('eksik', 'yay sabiti eksik', 'Yay sabiti boş ya da ≤ 0.', 've-mnt-k-'+id);
+  var L0=_mntNum(d.L0,NaN), Lc=_mntNum(d.Lc,NaN);
+  if(!(L0>0)) return _mntDurum('eksik', 'serbest boy eksik', 'Serbest boy boş.', 've-mnt-L0-'+id);
+  if(!(Lc>=0)) return _mntDurum('eksik', 'blok boyu eksik', 'Blok boyu boş.', 've-mnt-Lc-'+id);
+  if(!(Lc<L0)) return _mntDurum('eksik', 'blok boyu?', 'Blok boyu serbest boydan kısa olmalı.', 've-mnt-Lc-'+id);
+  return _mntDurum('ok', 'tamam');
+}
+// Kurulumun değeri ve karşılığı: kuvvet [kgf] ↔ statik boy [mm] (L = L0 − F·g/k).
+function _mntAskiKurulumGovde(node){
+  var d=node.data||{}, kur=_mntAskiKurulum(d);
+  var sel='<select class="ve-fp-sel" id="ve-mnt-kurulum-'+node.id+'" onchange="veMntAskiKurulum(\''+node.id+'\',this.value)">'
+    + MNT_ASKI_KURULUM.map(function(k){ return '<option value="'+k+'"'+(kur===k?' selected':'')+'>'+MNT_ASKI_KURULUM_AD[k]+'</option>'; }).join('')
+    + '</select>';
+  var alan = kur==='tasarim' ? _mntAlan(node, 'tasarimL', 'Boy <u>[mm]</u>', { zorunlu:true })
+           : kur==='boy'     ? _mntAlan(node, 'montajL', 'Boy <u>[mm]</u>', { zorunlu:true })
+           :                   _mntAlan(node, 'montajF', 'Kuvvet <u>[kgf]</u>', { zorunlu:true });
+  var k=_mntNum(d.k,NaN), L0=_mntNum(d.L0,NaN), g=9.81, karsi='—', karsiAd='';
+  if(kur==='kuvvet'){ karsiAd='Statik boy <u>[mm]</u>'; var F=_mntNum(d.montajF,NaN); if(k>0 && L0>0 && F>=0) karsi=_mntS(L0-F*g/k, 2); }
+  else if(kur==='boy'){ karsiAd='Statik kuvvet <u>[kgf]</u>'; var L=_mntNum(d.montajL,NaN); if(k>0 && L0>0 && L>0) karsi=_mntS(k*(L0-L)/g, 1); }
+  else { karsiAd='Kuvvet <u>[kgf]</u>'; var Ld=_mntNum(d.tasarimL,NaN); if(k>0 && L0>0 && Ld>0) karsi=_mntS(Math.max(0, k*(L0-Ld)/g), 1); }
+  return _mntBolum('Kurulum', '', _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Biçim</span>'+sel+'</label>')
+    + _mntIzgara(2, alan + _mntOku(karsiAd, karsi, { id:'ve-mnt-askikarsi-'+node.id })));
+}
+function _mntAskiKurulumDurumu(node){
+  var d=node.data||{}, id=node.id, kur=_mntAskiKurulum(d);
+  var k=_mntNum(d.k,NaN), L0=_mntNum(d.L0,NaN), Lc=_mntNum(d.Lc,0);
+  if(kur==='kuvvet'){
+    var F=_mntNum(d.montajF,NaN);
+    if(!(F>=0)) return _mntDurum('eksik', 'kuvvet eksik', 'Statik montaj kuvveti boş.', 've-mnt-montajF-'+id);
+    if(k>0 && L0>0 && !(L0-F*9.81/k>Lc)) return _mntDurum('eksik', 'blok', 'Montaj kuvveti yayı blok boyuna indiriyor.', 've-mnt-montajF-'+id);
+  } else if(kur==='boy'){
+    var L=_mntNum(d.montajL,NaN);
+    if(!(L>0)) return _mntDurum('eksik', 'boy eksik', 'Statik montaj boyu boş.', 've-mnt-montajL-'+id);
+    if(L0>0 && L>L0) return _mntDurum('eksik', 'boy?', 'Montaj boyu serbest boydan uzun.', 've-mnt-montajL-'+id);
+    if(!(L>Lc)) return _mntDurum('eksik', 'boy?', 'Montaj boyu blok boyundan uzun olmalı.', 've-mnt-montajL-'+id);
+  } else {
+    var Ld=_mntNum(d.tasarimL,NaN);
+    if(!(Ld>0)) return _mntDurum('eksik', 'boy eksik', 'Tasarım boyu boş.', 've-mnt-tasarimL-'+id);
+    if(!(Ld>Lc)) return _mntDurum('eksik', 'boy?', 'Tasarım boyu blok boyundan uzun olmalı.', 've-mnt-tasarimL-'+id);
+  }
+  return _mntDurum('ok', 'tamam');
+}
+// Katalogdan yay: yay sabiti (kgf/mm → N/mm), boylar ve gerilme girdileri yazılır;
+// "— elle gir —" yalnız katalog bağını kaldırır (değerler yerinde). Kurulum değişmez.
+function veMntAskiYay(nodeId, key){
+  var node=_mntDugum(nodeId); if(!node) return;
+  if(!node.data) node.data={};
+  var e=(key && typeof veMntYay==='function') ? veMntYay(key) : null;
+  if(!e){ delete node.data.yay; if(typeof saveState==='function') saveState(); return; }
+  var d=node.data;
+  d.yay=e.k; d.k=+veMntYayNmm(e).toFixed(2); d.L0=e.L0; d.Lc=e.Lc;   // makine: alanın değeri
+  d.d=e.d; d.D=veMntYayOrtaCap(e); d.n=e.n; d.Rm=e.Rm;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntAskiKurulum(nodeId, val){
+  var node=_mntDugum(nodeId); if(!node) return;
+  if(!node.data) node.data={};
+  if(MNT_ASKI_KURULUM.indexOf(val)<0) return;
+  node.data.kurulum=val;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
 // Takoz'a uygulanmış nonlineer yasa için SALT-OKUNUR bilgi notu. Yasa artık
 // "Takoz Özellikleri" (kütüphane) bileşeninde bir takoz TİPİNİN özelliği olarak
 // tanımlanır; kütüphaneden uygulandığında node.data'ya kopyalanır. Burada
@@ -2284,6 +2385,7 @@ function _mntMountCurveNote(node){
 function _mntPencereHTML(node){
   if(!node) return '';
   if(node.type==='mnt-mount') return getMntMountPropertiesHTML(node);
+  if(node.type==='mnt-aski') return getMntAskiPropertiesHTML(node);
   if(node.type==='mnt-solver') return getMntSolverPropertiesHTML(node);
   if(node.type==='mnt-library') return getMntLibraryPropertiesHTML(node);
   if(node.type==='mnt-report') return getMntReportPropertiesHTML(node);
@@ -2567,7 +2669,7 @@ function veMntExportTopology(){
 
 // Örneği kayıtlı JSON topolojisinden yükle — iç topolojiyi tümüyle değiştirir.
 function _mntLoadExampleFromJSON(ref, ex){
-  var hasBodies = (typeof nodes!=='undefined') && nodes.some(function(n){ var d=_mntDef(n)||{}; return d.isMountBody||d.isMount; });
+  var hasBodies = (typeof nodes!=='undefined') && nodes.some(function(n){ var d=_mntDef(n)||{}; return d.isMountBody||d.isMount||d.isMountAski; });
   if(hasBodies && typeof confirm==='function'){
     if(!confirm('İç topoloji örnekle değiştirilecek. Devam edilsin mi?')) return;
   }
@@ -2631,6 +2733,8 @@ function _mntComputeSupportLinks(items){
   var cradles    = items.filter(function(it){ return it.kind==='mnt-bracket'; });
   var carried    = items.filter(function(it){ return CARRIED[it.kind]; });
   var mounts     = items.filter(function(it){ return it.kind==='mnt-mount'; });
+  var askilar    = items.filter(function(it){ return it.kind==='mnt-aski'; });
+  var sanzimanlar= pureBodies.filter(function(it){ return it.kind==='mnt-gearbox'; });
   var supportTargets = pureBodies.concat(cradles);
   var byId={}; items.forEach(function(it){ byId[it.id]=it; });
 
@@ -2653,6 +2757,7 @@ function _mntComputeSupportLinks(items){
   var byTarget={};
   function addRaw(src, tgt){ if(src&&tgt) (byTarget[tgt.id]=byTarget[tgt.id]||[]).push(src); }
   mounts.forEach(function(m){ addRaw(m, nearest(m, supportTargets)); });
+  askilar.forEach(function(a){ addRaw(a, nearest(a, sanzimanlar.length ? sanzimanlar : pureBodies)); });   // askı şanzımanın kuyruğunu taşır
   cradles.forEach(function(c){ addRaw(c, nearest(c, pureBodies)); });
   carried.forEach(function(p){ addRaw(p, nearest(p, (AKSESUAR[p.kind] && motors.length) ? motors : pureBodies)); });   // PTO/Pompa → taşıyıcı gövde, aksesuar → motor
 
@@ -2721,7 +2826,7 @@ function veMntDecorateConnections(svg){
   if(!svg || typeof document==='undefined' || typeof nodes==='undefined') return;
   var old = svg.querySelector('g.ve-mnt-chassis');
   if(old && old.parentNode) old.parentNode.removeChild(old);
-  var mountsN = nodes.filter(function(n){ return (_mntDef(n)||{}).isMount; });
+  var mountsN = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMount || d.isMountAski; });
   var bodiesN = nodes.filter(function(n){ return (_mntDef(n)||{}).isMountBody; });
   if(!mountsN.length && !bodiesN.length) return;
   var NS='http://www.w3.org/2000/svg';
@@ -2878,7 +2983,7 @@ function _mntLoadExampleFromModel(anahtar){
   var EX = (ex && ex.model) || veMountCore.TTAR_EXAMPLE; if(!EX) return;
 
   // Mevcut kütle/takoz bileşenlerini bul (Çözücü/Sihirbaz/Görüntüleyici korunur).
-  var toRemove = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMountBody || d.isMount; });
+  var toRemove = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMountBody || d.isMount || d.isMountAski; });
   if(toRemove.length){
     var ok = (typeof confirm==='undefined') ? true : confirm(toRemove.length+' kütle/takoz bileşeni silinecek. Devam edilsin mi?');
     if(!ok) return;
@@ -5091,7 +5196,7 @@ function _mntGatherTorque(liste){ return _mntGatherTorqueKaynakli(liste).t; }
 // bir takozla kayar ve başka takozun sehimi sessizce gösterilirdi).
 // Aracın ileri yönü Çözücü'nün ayarı: çözücü verilmezse listedeki çözücüden.
 function _mntGatherForSolver(solver, liste){
-  var masses=[], mounts=[];
+  var masses=[], mounts=[], askilar=[];
   var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[]);
   if(!solver) solver=L.filter(function(n){ return n && (_mntDef(n)||{}).isMountSolver; })[0] || null;
   var baglanti=null;
@@ -5115,6 +5220,12 @@ function _mntGatherForSolver(solver, liste){
                     curveX:(Array.isArray(m.curveX)?m.curveX:null),                  // ya da nokta tablosu (x/y/z)
                     curveY:(Array.isArray(m.curveY)?m.curveY:null),
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
+    } else if(def.isMountAski){
+      // Askı yayı (2026-11-11): şanzımanın kuyruğunu şasiye asan ön yüklü yay
+      var a=n.data||{};
+      askilar.push({ id:n.id, name:_mntNodeName(n), x:a.x, y:a.y, z:a.z, yay:a.yay||'', k:a.k, L0:a.L0, Lc:a.Lc,
+                     kurulum:_mntAskiKurulum(a), montajF:a.montajF, montajL:a.montajL, tasarimL:a.tasarimL,
+                     d:a.d, D:a.D, n:a.n, Rm:a.Rm });
     }
   });
   var sd=solver && solver.data, oneri=_mntIleriOnerisi(L), tork=_mntTorkOnerisi(L);
@@ -5122,7 +5233,7 @@ function _mntGatherForSolver(solver, liste){
   return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, oneri, tork),
            ileriOnay:_mntIleriOnayli(sd), ileriKaynak:_mntIleriOnayli(sd) ? 'proje' : (oneri ? 'dizilis' : 'varsayilan'),
            torkKaynak:_mntTorkKaynak(sd, tork), donus:tork.donus,
-           baglanti:baglanti };
+           baglanti:baglanti, askilar:askilar };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
@@ -5215,8 +5326,56 @@ function _mntToSI(gather, g){
       if(Object.keys(fits).length) mnt.fits=fits;
       if(Object.keys(curves).length) mnt.curves=curves;
       return mnt; }),
+    askilar: _mntAskilarSI(gather.askilar, g||9.81),
     loadCases: _mntYukDurumlari(gather)
   };
+}
+
+// ── ASKI YAYI (2026-11-11) ───────────────────────────────────────────────────
+// Kurulum üç biçimde girilir: statik montaj kuvveti [kgf] (varsayılan — föyün
+// dili), statik montaj boyu [mm] ya da tasarım konumundaki (takozlar yüksüzken)
+// boy [mm]. Statik ikisi çözümde tasarım boyuna çevrilir (çekirdek
+// askiTasarimBoylari): yay statik dengede o kuvveti taşır.
+var MNT_ASKI_KURULUM=['kuvvet', 'boy', 'tasarim'];
+function _mntAskiKurulum(d){ return MNT_ASKI_KURULUM.indexOf(d && d.kurulum)>=0 ? d.kurulum : 'kuvvet'; }
+// Toplayıcının askıları → SI: pos [m], k [N/m], L0 · Lc · Ls · Ld [m], Fs [N];
+// yay hesabının girdileri (d · D [mm], n, Rm [MPa]) olduğu gibi.
+function _mntAskilarSI(liste, g){
+  var C=veMountCore;
+  return (liste||[]).map(function(a){
+    var k=C.nPerMmToNPerM(_mntNum(a.k, NaN)), L0=C.mmToM(_mntNum(a.L0, NaN)), Lc=C.mmToM(_mntNum(a.Lc, 0));
+    var h={ id:a.id, name:a.name||'askı', pos:[C.mmToM(_mntNum(a.x)), C.mmToM(_mntNum(a.y)), C.mmToM(_mntNum(a.z))],
+            k:k, L0:L0, Lc:Lc, kurulum:a.kurulum||'kuvvet', yay:a.yay||'',
+            d:_mntNum(a.d, NaN), D:_mntNum(a.D, NaN), n:_mntNum(a.n, NaN), Rm:_mntNum(a.Rm, NaN) };
+    if(h.kurulum==='tasarim') h.Ld=C.mmToM(_mntNum(a.tasarimL, NaN));
+    else if(h.kurulum==='boy'){ h.Ls=C.mmToM(_mntNum(a.montajL, NaN)); h.Fs=k*(L0-h.Ls); }
+    else { h.Fs=_mntNum(a.montajF, NaN)*g; h.Ls=L0-h.Fs/k; }
+    return h;
+  });
+}
+// Askının girdisi çözülebilir mi — eksik ya da tutarsız alan için kısa durum
+// cümleleri (doğrulama listesine girer).
+function _mntAskiSorunlari(askilar){
+  var out=[];
+  (askilar||[]).forEach(function(h){
+    var ad=h.name||'Askı yayı', mm=function(v){ return v*1000; };
+    if(!(h.k>0)) out.push(ad+': yay sabiti girilmedi.');
+    if(!(h.L0>0)) out.push(ad+': serbest boy girilmedi.');
+    else if(!(h.Lc>=0) || !(h.Lc<h.L0)) out.push(ad+': blok boyu serbest boydan kısa olmalı.');
+    if(!(h.k>0) || !(h.L0>0) || !(h.Lc<h.L0)) return;
+    if(h.kurulum==='tasarim'){
+      if(!(mm(h.Ld)>0)) out.push(ad+': tasarım boyu girilmedi.');
+      else if(!(h.Ld>h.Lc)) out.push(ad+': tasarım boyu blok boyundan uzun olmalı.');
+    } else if(h.kurulum==='boy'){
+      if(!(mm(h.Ls)>0)) out.push(ad+': montaj boyu girilmedi.');
+      else if(h.Ls>h.L0) out.push(ad+': montaj boyu serbest boydan uzun.');
+      else if(!(h.Ls>h.Lc)) out.push(ad+': montaj boyu blok boyundan uzun olmalı.');
+    } else {
+      if(!(h.Fs>=0)) out.push(ad+': montaj kuvveti girilmedi.');
+      else if(!(h.Ls>h.Lc)) out.push(ad+': montaj kuvveti yayı blok boyuna indiriyor.');
+    }
+  });
+  return out;
 }
 
 // Sönüm oranı varsayılanı — TEK doğruluk kaynağı çekirdektir (veMountCore
@@ -5265,6 +5424,9 @@ function _mntImza(si, torque, sd, bag, yon){
     s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)],
     y:(function(Y){ return [Y.ileri, Y.kaldirimG, Y.kaldirimYon, Y.torkYon]; })(yon || _mntYonAyari(d))
   };
+  // Askı yayları yalnız varsa imzaya girer: askısız modelin imzası değişmez.
+  if(si.askilar && si.askilar.length) v.a=si.askilar.map(function(h){
+    return [h.id||'', h.pos, h.k, h.L0, h.Lc, h.kurulum, h.Fs||0, h.Ls||0, h.Ld||0, h.d||0, h.D||0, h.n||0, h.Rm||0]; });
   var s=JSON.stringify(v), h=5381;
   for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
   return (h>>>0).toString(36)+'.'+s.length;
@@ -5778,7 +5940,7 @@ function _mntPrepareFrom(gather, solver){
   solver=solver||{data:{}};
   var C=veMountCore;
   var si=_mntToSI(gather, 9.81);
-  var problems=C.validateModel(si.components, si.mounts);
+  var problems=C.validateModel(si.components, si.mounts).concat(_mntAskiSorunlari(si.askilar));
   if(problems.length) return { error:problems, gather:gather };
   var mp=C.combineMassProps(si.components);
   if(!mp) return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather };
@@ -5797,8 +5959,30 @@ function _mntPrepareFrom(gather, solver){
   }
   var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer mi
   var Kstat=C.buildK(mounts,mp.cg,false);
+  // Çözücünün kendi yolu, takoz listesiyle: askılı çözüm (çekirdek solveWithHangers)
+  // takozların ardına askı yaylarını ekleyip bunu çağırır.
+  var cozBase=function(ms, lc, onIter){
+    return solvedNL
+      ? C.solveCaseNL(ms, mp.cg, mp.m, si.g, lc, {useStop:true, onIter:onIter})
+      : C.solveCaseStop(ms===mounts ? Kstat : C.buildK(ms, mp.cg, false), ms, mp.cg, mp.m, si.g, lc, {useStop:true});
+  };
+  // Askı yayları: statik montaj (kuvvet · boy) tasarım boyuna çevrilir — yay
+  // statik dengede o kuvveti taşır. Tasarım boyu verilenler o dengede yaydır.
+  var askilar=(si.askilar||[]).map(function(h){ return Object.assign({}, h); });
+  if(askilar.length){
+    var statik=askilar.filter(function(h){ return h.kurulum!=='tasarim'; });
+    var tasarim=askilar.filter(function(h){ return h.kurulum==='tasarim'; });
+    if(statik.length){
+      var cozS=tasarim.length
+        ? function(ms, lc){ return C.solveWithHangers(cozBase, ms, mp.cg, mp.m, si.g, lc, tasarim); }
+        : cozBase;
+      var Ld=C.askiTasarimBoylari(cozS, mounts, mp.cg, mp.m, si.g, {name:'Static', n:[0,0,-1], T:[0,0,0]}, statik);
+      if(!Ld) return { error:['Askı yayının statik konumu çözülemedi.'], gather:gather };
+      statik.forEach(function(h, i){ h.Ld=Ld[i]; });
+    }
+  }
   var prep={
-    C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts,
+    C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts, askilar:askilar, cozBase:cozBase,
     solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
     zeta:_mntZetaOf(solver),               // şirket kabulü — tüm montaja tek değer
     loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque, gather.yon),
@@ -5811,7 +5995,9 @@ function _mntPrepareFrom(gather, solver){
   // (solveCaseNL), değilse metal-metal durdurucu (solveCaseStop). onIter (ops.) yalnız
   // nonlineer yolda anlamlı: her Newton adımının residual normunu bildirir (progress).
   prep.solveOne=function(lc, onIter){
-    var res = solvedNL
+    var res = askilar.length
+      ? C.solveWithHangers(function(ms, l2){ return cozBase(ms, l2, onIter); }, mounts, mp.cg, mp.m, si.g, lc, askilar)
+      : solvedNL
       ? C.solveCaseNL(mounts, mp.cg, mp.m, si.g, lc, {useStop:true, onIter:onIter})
       : C.solveCaseStop(Kstat, mounts, mp.cg, mp.m, si.g, lc, {useStop:true});
     return res ? {name:lc.name, loadCase:lc, res:res}
@@ -5824,15 +6010,27 @@ function _mntPrepareFrom(gather, solver){
   prep.solveModes=function(allCases){
     var M6=C.buildM6(mp.m, mp.I_G);
     prep.M6=M6;
+    // Askı yayları modal tabana statik dengedeki durumlarıyla girer (açık: 0,
+    // blok: rijit dayanak). Takoz başına çıktılar (sönüm, duyarlılık) yalnız
+    // takozlardan; frekans yanıtı ve şok aynı listeyi R.dinMounts'tan okur.
+    var ms=mounts;
+    if(askilar.length){
+      var st=null;
+      (allCases||[]).forEach(function(c){ if(!st && c && c.name==='Static') st=c; });
+      st=st||(allCases||[])[0];
+      var durum=(st && st.res && st.res.perHanger) ? st.res.perHanger.map(function(p){ return p.durum; }) : null;
+      ms=mounts.concat(C.askiTakozlari(askilar, durum));
+    }
+    prep.dinMounts=ms;
     if(solvedNL){
       var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
-      prep.Kmodal=C.buildKtangentDyn(mounts, mp.cg, qStat);
+      prep.Kmodal=C.buildKtangentDyn(ms, mp.cg, qStat);
       // Sönüm de AYNI tabandan: c = 2ζ√(k·m) içindeki k, modal frekansı üreten
       // dinamik tanjant olmalı. Nominal k_dyn kullanılırsa sertleşen takozda
       // ζ_mod = φᵀCφ/(2ωφᵀMφ) sistematik olarak kayar (√(k_dyn/k_tan) kadar).
       prep.kBasis=(typeof C.mountTangentKdyn==='function') ? C.mountTangentKdyn(mounts, mp.cg, qStat) : null;
     } else {
-      prep.Kmodal=C.buildK(mounts, mp.cg, true);
+      prep.Kmodal=C.buildK(ms, mp.cg, true);
       prep.kBasis=null;                        // lineerde tanjant == nominal k_dyn
     }
     return C.solveModal(prep.Kmodal, M6, mounts, mp.cg);
@@ -5858,9 +6056,16 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
           ileriOnay:prep.gather.ileriOnay, ileriKaynak:prep.gather.ileriKaynak, torkKaynak:prep.gather.torkKaynak, donus:prep.gather.donus,
           imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti, prep.gather.yon) };
+  // ── Askı yayları (2026-11-11): tanım (tasarım boyu dâhil) ve dinamik analizlerin
+  // takoz listesi (takozlar + askının z rijitliği). Askısız modelde alanlar yok.
+  if(prep.askilar && prep.askilar.length){
+    R.askilar=prep.askilar;
+    R.dinMounts=prep.dinMounts || prep.mounts;
+  }
   // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
-  // (çekirdek sectionMoment); hüküm raporda, Statik durumda sınıra göre
+  // (çekirdek sectionMoment, askının kuvveti dâhil); hüküm raporda, Statik durumda sınıra göre
   R.baglanti=_mntBaglantiMomenti(prep, allCases, designCases);
+  R.askiOneri=_mntAskiOneri(prep);
   // ── Takoz sönüm katsayıları — TEK ζ'den türetilir (çekirdek mountDamping).
   // Yük payı STATİK durumdan alınır; Static çözülemediyse damping null kalır
   // (yük payı bilinmeden c türetilemez — uydurma değer üretilmez).
@@ -5895,7 +6100,8 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
     // Takoz ve eksen başına frekans duyarlılığı — modları üreten AYNI taban
     // (prep.kBasis; lineerde null → k_din). Rapor §8.17 OKUR; bileşen
     // pencereleri sonuç göstermez (kullanıcı kararı 2026-10-16).
-    if(C.modalSensitivity) R.sensitivity = C.modalSensitivity(modes, prep.M6, prep.mounts, prep.mp.cg, prep.kBasis);
+    // Askılı modelde satırlar takozlar + askılar (R.dinMounts): her modda Σ e = ½ bütün yaylarda.
+    if(C.modalSensitivity) R.sensitivity = C.modalSensitivity(modes, prep.M6, prep.dinMounts || prep.mounts, prep.mp.cg, prep.kBasis);
   }
   // ── Sonuçlar paneli kanalları (js/mount-signals.js) ───────────────────────
   // Süpürmeler ÇÖZÜCÜNÜN kendi yolunu (prep.solveOne) kullanır — nonlineerse
@@ -5924,10 +6130,64 @@ function _mntBaglantiMomenti(prep, allCases, designCases){
   (allCases||[]).concat(designCases||[]).forEach(function(rc){
     var lc=(rc && rc.loadCase)||{}, T=lc.T||[0,0,0];
     if(Math.abs(T[0])+Math.abs(T[1])+Math.abs(T[2])>0) return;
-    var r=rc.res ? C.sectionMoment(prep.si.components, prep.mounts, rc.res, prep.si.g, lc.n, S, B.a) : null;
-    satirlar.push({ name:rc.name, egilme:r ? r.egilme : NaN, burulma:r ? r.burulma : NaN, m:r ? r.m : NaN, takoz:r ? r.takoz : 0 });
+    var r=rc.res ? C.sectionMoment(prep.si.components, prep.mounts, rc.res, prep.si.g, lc.n, S, B.a, prep.askilar) : null;
+    satirlar.push({ name:rc.name, egilme:r ? r.egilme : NaN, burulma:r ? r.burulma : NaN, m:r ? r.m : NaN, takoz:r ? r.takoz : 0,
+                    aski:r ? r.aski : 0, askiF:r ? r.askiF : 0 });
   });
   return { id:B.id, ad:B.name, S:B.S.slice(), a:B.a.slice(), sinir:B.sinir, satirlar:satirlar };
+}
+
+// ASKI MONTAJ ÖNERİSİ (2026-11-11) — bağlantı yüzündeki statik eğilme momenti
+// askının statik kuvvetiyle DOĞRUSAL değişir (yay statikte bilinen bir
+// kuvvettir): m(R₃) = m₀ + eğim·R₃. m₀ askısız momentin büyüklüğü, m(R₃) onun
+// yönündeki bileşen; ters dönen moment eksi. İki statik çözümden (askısız ·
+// şimdiki kuvvetler) eğim; momenti sıfırlayan toplam kuvvet ve Cummins'in
+// tercih bandı (0 ≤ m ≤ 0,2·sınır). Yaylar arasında paylaşım şimdiki gibi
+// (hepsi sıfırsa eşit). Dönüş: { m0, mSimdi, egim [N·m/N], R3sifir, R3bant
+// [alt, üst] | null, yaylar:[{ id, name, F, L, Fsifir, Lsifir, Fbant, Lbant }] } | null.
+function _mntAskiOneri(prep){
+  var C=prep.C, hs=prep.askilar||[], B=prep.gather && prep.gather.baglanti;
+  if(!hs.length || !B || !C.yukeKuvvetEkle || !prep.cozBase) return null;
+  var S=B.S.map(function(v){ return C.mmToM(v); }), g=prep.si.g, mp=prep.mp, comps=prep.si.components;
+  var lcS={ name:'Static', n:[0,0,-1], T:[0,0,0] };
+  // Statikte bilinen kuvvetlerle (yay rijitliksiz) kesit momenti vektörü
+  var momentVek=function(F){
+    var res=prep.cozBase(prep.mounts, C.yukeKuvvetEkle(lcS, hs.map(function(h, j){ return { pos:h.pos, f:[0,0,F[j]] }; }), mp.cg, mp.m, g));
+    if(!res) return null;
+    var r=C.sectionMoment(comps, prep.mounts, Object.assign({}, res, { perHanger:hs.map(function(h, j){ return { F:F[j] }; }) }), g, lcS.n, S, B.a, hs);
+    if(!r) return null;
+    var u=B.a, ax=r.M[0]*u[0]+r.M[1]*u[1]+r.M[2]*u[2];
+    return [r.M[0]-ax*u[0], r.M[1]-ax*u[1], r.M[2]-ax*u[2]];   // eğilme bileşeni
+  };
+  // Şimdiki statik kuvvetler askılı statik çözümden (tasarım boyu verilen yay da dâhil);
+  // açık ya da blok yayda ilişki doğrusal değil — öneri yok.
+  var stat=prep.solveOne(lcS);
+  if(!stat || !stat.res || !stat.res.perHanger || stat.res.perHanger.some(function(p){ return p.durum!=='normal'; })) return null;
+  var Fsimdi=stat.res.perHanger.map(function(p){ return p.F; });
+  var M0=momentVek(hs.map(function(){ return 0; }));
+  var top=Fsimdi.reduce(function(t, v){ return t+v; }, 0);
+  var pay=top>1 ? Fsimdi.map(function(v){ return v/top; }) : hs.map(function(){ return 1/hs.length; });
+  var Fdene=top>1 ? Fsimdi : pay.map(function(w){ return w*1000; });
+  var M1=momentVek(Fdene);
+  if(!M0 || !M1) return null;
+  var m0=Math.hypot(M0[0], M0[1], M0[2]);
+  if(!(m0>0)) return null;
+  var b=[M0[0]/m0, M0[1]/m0, M0[2]/m0];
+  var m1=M1[0]*b[0]+M1[1]*b[1]+M1[2]*b[2];
+  var topDene=Fdene.reduce(function(t, v){ return t+v; }, 0);
+  var egim=(m1-m0)/topDene;
+  if(!(egim<0)) return null;                       // askı momenti azaltmıyor (düzlemin önünde)
+  var mSimdi=m0+egim*top;
+  var R3sifir=-m0/egim;
+  var R3bant=(B.sinir>0) ? [(0.2*B.sinir-m0)/egim, R3sifir] : null;
+  if(R3bant && R3bant[0]<0) R3bant[0]=0;
+  var yay=function(R3){ return hs.map(function(h, j){ var F=pay[j]*R3; return { F:F, L:h.L0-F/h.k }; }); };
+  var sif=yay(R3sifir), alt=R3bant ? yay(R3bant[0]) : null, ust=R3bant ? yay(R3bant[1]) : null;
+  return { m0:m0, mSimdi:mSimdi, egim:egim, R3:top, R3sifir:R3sifir, R3bant:R3bant,
+           yaylar:hs.map(function(h, j){
+             return { id:h.id, name:h.name, F:Fsimdi[j], L:h.L0-Fsimdi[j]/h.k, Lc:h.Lc, L0:h.L0,
+                      Fsifir:sif[j].F, Lsifir:sif[j].L,
+                      Fbant:alt ? [alt[j].F, ust[j].F] : null, Lbant:alt ? [ust[j].L, alt[j].L] : null }; }) };
 }
 
 // Hesap çekirdeği — DOM'DAN BAĞIMSIZ, SYNC. _veMntLast'i üretir, döner.
@@ -6094,6 +6354,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntRaporFrekansHTML: _mntRaporFrekansHTML,
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
+    getMntAskiPropertiesHTML: getMntAskiPropertiesHTML, veMntAskiYay: veMntAskiYay, veMntAskiKurulum: veMntAskiKurulum,
+    _mntAskilarSI: _mntAskilarSI, _mntAskiSorunlari: _mntAskiSorunlari, _mntAskiOneri: _mntAskiOneri,
     _mntMountCurveNote: _mntMountCurveNote,
     // Pencere dili (2026-10-14): imza, canlı model, kroki, durumlar, tazeleme
     _mntImza: _mntImza,

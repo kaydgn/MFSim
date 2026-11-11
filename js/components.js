@@ -544,6 +544,15 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #1a7f37)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #535c67)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #5f6873)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #5f6873)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #5f6873)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #5f6873)" stroke-width="2.5"/></svg>',
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
+  // Askı Yayı (2026-11-11) — şanzımanın kuyruğunu şasiye asan ön yüklü helisel
+  // basma yayı (BMC 2K60377). Yalnız DÜŞEY kuvvet taşır; çözüme takozların
+  // yanında ayrı eleman olarak girer (cp-mount.js _mntGatherForSolver →
+  // askilar, çekirdek solveWithHangers). Çıkış portu taşıdığı gövdeye.
+  'mnt-aski': {
+    name: 'Askı Yayı',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="22" y="8" width="56" height="13" rx="3" fill="var(--text-secondary, #535c67)"/><path d="M50 21 L50 26 L32 32 L68 40 L32 48 L68 56 L32 64 L50 70 L50 75" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="79" x2="82" y2="79" stroke="var(--text-secondary, #535c67)" stroke-width="5"/><line x1="26" y1="79" x2="20" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/><line x1="50" y1="79" x2="44" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/><line x1="74" y1="79" x2="68" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/></svg>',
+    inputs: 0, outputs: 1, isMountAski: true, defaultWidth: 50, defaultHeight: 46
+  },
   // Takoz Özellikleri — takoz KATALOĞU/kütüphane yöneticisi. Fiziksel topolojiye
   // bağlanmaz (giriş/çıkış portu yok); node.data.mounts içinde kullanıcı tanımlı
   // takozları tutar. Buradaki girdiler her Takoz'un "Kütüphaneden yükle" listesinde

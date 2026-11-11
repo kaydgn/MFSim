@@ -20,7 +20,7 @@ eval(loadSource('components.js'));
 const cp = require('../../js/cp-mount.js');
 beforeEach(() => resetStubs(stubs));
 
-const ORNEKLER = ['tulga', 'siper', 'asfat', 'tta10', 'kutu', 'hafif', 'kamyon'];   // son üçü kurgu (mount-ornek-kurgu.test.js)
+const ORNEKLER = ['tulga', 'siper', 'asfat', 'tta10', 'tta10askili', 'kutu', 'hafif', 'kamyon'];   // son üçü kurgu (mount-ornek-kurgu.test.js)
 const oku = (ad) => JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/' + ad + '_topoloji.json'), 'utf8'));
 const ARAC = cp.VE_MNT_ARAC_TIPLERI;     // Takoz Özellikleri · 3D · Görünümler · Çözücü · Başlangıç Sihirbazı · Rapor
 const yakin = (a, b, t = 0.5) => Math.abs(a - b) <= t;

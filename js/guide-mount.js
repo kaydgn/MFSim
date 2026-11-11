@@ -1029,6 +1029,31 @@ function _gmSec8(){
     + 'Dörtten fazla takoz ise <em>aşırı-kısıtlı</em> bir modeldir: çözülür, ama yük dağılımı '
     + 'takozların birbirine göre rijitliğine çok duyarlı hâle gelir. Tipik bir güç grubu 3–4 '
     + 'takozla bağlanır ve model bunun dışını uyarı olarak yazar.');
+  h += _gmH3('Askı yayı', 'aski');
+  h += '<p><strong>Askı Yayı</strong>, şanzımanın kuyruğunu şasiye asan ön yüklü helisel basma yayıdır. '
+    + 'Takozdan farkı: yalnız düşeyde ve yalnız basmada çalışır. Yay boyu serbest boya uzayınca '
+    + '<strong>açılır</strong> (kuvvet sıfır), blok boyuna inince <strong>blok</strong> olur (rijit dayanak); '
+    + 'çözücü her yük durumunda yayın hangi durumda olduğunu kendisi bulur. Penceresi üç bölümdür: '
+    + '<strong>Yay</strong>, <strong>Kurulum</strong>, <strong>Konum</strong>.</p>';
+  h += _gmAdimlar([
+    'Bileşenler sütunundan <strong>Askı Yayı</strong>’nı tuvale sürükleyin ve çift tıklayın.',
+    '<strong>Katalog</strong> listesinden yayı seçin — yay sabiti, serbest boy, blok boyu ve gerilme alanları '
+      + 'dolar. Katalogda yoksa üç zorunlu alanı resimden yazın.',
+    '<strong>Kurulum</strong>’da biçimi seçin ve değerini yazın: statik montaj kuvveti (föylerin kg’ı), '
+      + 'statik montaj boyu ya da tasarım konumundaki boy. Karşılığı yanında türetilir.',
+    '<strong>Konum</strong>’a yayın şanzıman tarafındaki bağlantı noktasını yazın (mm, takozlarla aynı çerçevede).'
+  ]);
+  h += _gmAlanTablo('Askı yayı penceresi — alanlar', [
+    ['Yay sabiti [N/mm]', 'k — yay resminin kgf/mm değeri × 9,81', 'Yay resmi'],
+    ['Serbest boy · blok boyu [mm]', 'L<sub>0</sub> · L<sub>c</sub>', 'Yay resmi'],
+    ['Tel çapı · ortalama çap · aktif sarım · R<sub>m</sub>', 'Gerilme denetimi (EN 13906-1); boş bırakılabilir', 'Yay resmi ve malzeme şartnamesi'],
+    ['Statik montaj kuvveti [kgf]', 'Yayın statik dengede taşıdığı kuvvet', 'Montaj föyü'],
+    ['Statik montaj boyu [mm]', 'Yayın statik dengedeki boyu', 'Montaj resmi'],
+    ['Tasarım konumundaki boy [mm]', 'Takozlar yüksüzken yayın boyu', 'CAD montajı']
+  ]);
+  h += _gmNot('Askı yayı modlara da girer',
+      'Yay modal analizde, frekans yanıtında ve şokta düşey rijitliğiyle yer alır; sönümsüzdür. '
+    + 'Takozlar gibi Takoz Özellikleri’nden seçilmez ve Parametrik Analiz’in taramasında tipi değişmez.');
   return h;
 }
 
@@ -1304,6 +1329,11 @@ function _gmSec14(){
     + 'bileşeni burulmadır. Tablo torksuz bütün yük durumlarını verir; tork durumları tabloda yoktur. '
     + 'Sınır statik duruma uygulanır ve uygunluk tablosunun 5. satırıdır. Şanzıman tarafında takoz yoksa '
     + 'moment konsolunkidir: şanzımanın ağırlığı × ağırlık merkezinin bağlantı yüzüne uzaklığı.</p>';
+  h += '<p>Modelde askı yayı varsa raporun <strong>§8.20</strong> bölümü her yük durumunda yayın boyunu, kuvvetini ve '
+    + 'durumunu (normal · açık · blok), gerilmesini ve — bağlantı yüzü tanımlıysa — <strong>montaj önerisini</strong> verir: '
+    + 'bağlantı yüzündeki statik eğilme momentini sıfırlayan yay kuvveti ve Cummins’in tercih bandı (0 ile sınırın %20’si '
+    + 'arası), ikisi de statik montaj kuvveti ve boyu olarak. Yayın statik ve işletme durumlarında çalışma aralığında '
+    + 'kalması uygunluk tablosunun askı satırıdır.</p>';
   h += '<p>Güç grubunun <strong>hareket zarfı</strong> raporun <strong>§8.19</strong> bölümündedir: her gövdenin ağırlık '
     + 'merkezi ve eşdeğer kutusunun köşeleri bütün yük durumlarında, vites durumlarında ve tasarım yük koşullarında '
     + 'statik konuma göre ne kadar yer değiştiriyor — ±X, ±Y, ±Z, belirleyen nokta ve durumla. Aynı bölümde '
