@@ -494,7 +494,7 @@ describe('Örnek modelleri', () => {
     expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
     // tork durumları elle yazılmadı; işaret tork yönünden — Tulga'nın Adams'ı +X:
     // transferin çıkışı krankın tersine döner (F049), Tx = +T_shaft (ileri pozitif, geri negatif)
-    expect(m.solver).toEqual({ ileri: '-x' });
+    expect(m.solver).toEqual({ ileri: '-x', kaldirimG: 2.5 });   // kaldırım: Adams'ın Kerb Strike sonucundan
     expect(m.components.find(c => c.kind === 'mnt-transfer').donus).toBe('ters');
     const t = m.torque, chain = d => t.Te * t.Rstall * d.iGear * t.iTransfer * d.phiAxle * t.derate;
     const fwd = m.loadCases.find(c => c.name === 'Forward Torque');

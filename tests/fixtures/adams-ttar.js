@@ -21,7 +21,7 @@
  *      δy'nin işareti CAD ekseninin tersi, δz aynı (Z etrafında 180°): takozun
  *      raporladığı eksen takımı. Karşılaştırma Adams'ın X ve Y'sini çevirir.
  *   3. KALDIRIM DARBESİ 3,5 g, VİRAJLA AYNI YÖNDE. Programın varsayılanı
- *      (Tulga'nın Adams'ı) 1,55 g ve virajın tersi yönde; iki analizin tanımı
+ *      1,55 g ve virajın tersi yönde (Tulga'nın Adams'ı 2,5 g); iki analizin tanımı
  *      farklı. Örnek Çözücü'de 3,5 g · virajla aynı ile gelir.
  *
  * ── KİTAPTAKİ TUTARSIZLIKLAR (karşılaştırma dışı) ───────────────────────────

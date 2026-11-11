@@ -512,7 +512,8 @@ var MNT_AUTO_CASES = [
 // −X, SAĞI +Y olan eksende yazılı (Tulga'nın CAD ekseni). İleri +X olan modelde
 // (TTAR) n_x ve n_y çevrilir (Z etrafında 180°); yoksa fren ve viraj yükü ters
 // uygulanır. Kaldırım darbesi analize göre: varsayılan 1,55 g virajın tersi
-// yönde; TTAR'ın Adams'ı 3,5 g virajla aynı yönde.
+// yönde; Tulga'nın Adams'ı 2,5 g (sonuçlarından, kitabı doğrulanmadı) virajın
+// tersi; TTAR'ın Adams'ı 3,5 g virajla aynı yönde.
 // TORK YÖNÜ İLERİ YÖNDEN TÜRETİLMEZ: reaksiyon krankın modeldeki dönüş
 // yönünden ve aktarmanın dönüşü çevirip çevirmediğinden gelir. Krank önden
 // saat yönünde, motorun önü −X'te, çıkış krankla aynı yönde → Tx = −T_shaft

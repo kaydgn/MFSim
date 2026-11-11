@@ -2208,7 +2208,8 @@ var veMountCore = (function() {
     // Aracın ekseni: ileri −X, sağ +Y. Tork momenti +X — Tulga'nın Adams'ı
     // (tests/fixtures/adams-tulga.js → TORK YÖNÜ): transferin çıkışı krankın
     // tersine döner (Transfer Kutusu → donus 'ters'; motorun önü −X'te → +X, F049).
-    solver: { ileri:'-x' },
+    // Kaldırım darbesi 2,5 g: Adams'ın Kerb Strike sonuçlarından (fikstürün başlığı).
+    solver: { ileri:'-x', kaldirimG:2.5 },
     // Tork durumları tork zincirinden (torqueChain) TÜRETİLİR — elle yazılmaz ki
     // TULGA_TORQUE değişince sessizce eskimesin. İşaret tork yönünden
     // (transferin dönüşünden +X): Tx = +T_shaft (ileri viteste pozitif, geri viteste negatif).
