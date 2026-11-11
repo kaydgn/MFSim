@@ -358,9 +358,42 @@
     return { kilitli: true, asama: d, metin: KILIT_ASAMA[d], kalan: Math.max(0, kalan) };
   }
 
+  // OTURUMU ÇAĞIR (kullanıcı 2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"* ·
+  // *"bu iş olabildiğince kolay olsun"*): sayfa, Canlı Not'un oturumunu uyandıran görevi
+  // çalıştırır (`ayar/oturum` → `gorev`) ve çağrıyı kayda yazar (`oturum/cagri`: zaman + o
+  // anki `oturum/aktif` zamanı). Oturum geldiğini `oturum/aktif`i yeniden yazarak söyler:
+  // zamanı değiştiyse GELDİ — iki makinenin saati karşılaştırılmaz. Durum: yok (görev
+  // kayıtlı değil) · hazir · cagrildi · geldi. 10 dakikada gelmeyen çağrı eskir (düğme
+  // yeniden açılır); `kalan` eskimeye kalan ms.
+  var GOREV = /^trig_[A-Za-z0-9]{6,64}$/;
+  var CAGRI_ESKI_MS = 10 * 60 * 1000;
+  function cagriDurumu(ayar, cagri, aktif, simdi) {
+    if (!ayar || !GOREV.test(String(ayar.gorev || ''))) return { durum: 'yok', kalan: 0 };
+    var t = cagri && cagri.durum !== 'hata' ? Date.parse(cagri.zaman || '') : NaN;
+    if (!isFinite(t)) return { durum: 'hazir', kalan: 0 };
+    var z = String((aktif && aktif.zaman) || '');
+    if (z && z !== String(cagri.onceki || '')) return { durum: 'geldi', kalan: 0 };
+    var kalan = t + CAGRI_ESKI_MS - (simdi || 0);
+    return kalan > 0 ? { durum: 'cagrildi', kalan: kalan } : { durum: 'hazir', kalan: 0 };
+  }
+  // Çalışmayan çağrının kısa sebebi: bağlayıcının hata kodundan (bilinmeyen kod sebepsiz).
+  var CAGRI_HATA = {
+    approval_required: 'onay verilmedi', cancelled: 'onay verilmedi',
+    not_in_manifest: 'bağlayıcı bu sayfaya kapalı', not_granted: 'bağlayıcı bu sayfaya kapalı',
+    consent_required: 'bağlayıcı bu sayfaya kapalı',
+    capability_disabled: 'bağlayıcı bu görünümde kapalı', capability_removed: 'bağlayıcı bu görünümde kapalı',
+    needs_reauth: 'Claude Code bağlayıcısı bağlı değil', server_not_connected: 'Claude Code bağlayıcısı bağlı değil',
+    selection_required: 'Claude Code bağlayıcısı bağlı değil', server_not_found: 'Claude Code bağlayıcısı bağlı değil',
+    blocked_by_policy: 'kuruluş kuralı izin vermiyor', tool_error: 'görev çalışmadı'
+  };
+  function cagriHata(kod) {
+    var s = Object.prototype.hasOwnProperty.call(CAGRI_HATA, String(kod || '')) ? CAGRI_HATA[String(kod)] : '';
+    return 'Oturum çağrılamadı' + (s ? ': ' + s + '.' : '.');
+  }
+
   var api = {
     ISTEK_BASLIK: ISTEK_BASLIK, ISTEK_ESKI_MS: ISTEK_ESKI_MS, istekDurumu: istekDurumu, istekMetni: istekMetni,
-    kilitDurumu: kilitDurumu,
+    kilitDurumu: kilitDurumu, CAGRI_ESKI_MS: CAGRI_ESKI_MS, cagriDurumu: cagriDurumu, cagriHata: cagriHata,
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,

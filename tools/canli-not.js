@@ -468,7 +468,8 @@ function yayin(o) {
   console.log('  sıra: ' + (eski ? eski.surum + ' → ' + y.surum + ' (' + sira.durum + ')' : 'ilk yayın'));
   console.log('\n1. Notların sonucu ve cevabı ÖNCE yazılır (skill §2 · 6–7).');
   console.log('2. ArtifactData set collection:yayin doc_id:son file_path:' + goreli(cikti) +
-    (onceki && onceki.version !== undefined ? ' if_version:' + onceki.version : ''));
+    (onceki && onceki.version !== undefined ? ' if_version:' + onceki.version
+      : onceki ? ' if_version:<ArtifactData get\'in gösterdiği sürüm; döküm sürümü taşımıyor>' : ''));
   console.log('   Sürüm çakışırsa araya başka bir yayın girmiştir: yayin/son\'u yeniden oku, bu komutu yeniden çalıştır.');
   if (kur.artik.length) {
     console.log('3. Yazım BAŞARILI olduktan sonra artık kullanılmayan varlıklar silinir:');
