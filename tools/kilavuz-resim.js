@@ -176,9 +176,6 @@ const DURAKLAR = [
       rapor: { hepsi: '[data-type="mnt-report"] .ve-node-box' },
       gorunumler: { hepsi: '[data-type="mnt-2dview"] .ve-node-box' },
       goruntuleyici: { hepsi: '[data-type="mnt-viewer"] .ve-node-box' },
-      uyarilar: '#ve-warnings-chip',
-      sayac: '#ve-status-counts',
-      yakinlik: '#ve-status-zoom',
       harita: '#ve-minimap',
     },
     async kur(p) {

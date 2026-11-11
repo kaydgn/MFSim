@@ -626,7 +626,8 @@ kapısı bir RENK yüzünden düştü. Izgara artık çizimde en çok tekrar ede
 ## Atölye kabuğu — tek sütun ve alt durum şeridi (2026-09-22)
 
 > **Ray ↔ palet yarısı 2026-09-28'de emekli** — bkz. *"Ray kendi sütunu"*
-> (aşağıda). Durum şeridi yarısı aynen geçerli.
+> (aşağıda). **Durum şeridi yarısı da 2026-11-11'de emekli** (Canlı Not 129:
+> şerit, Uyarılar paneli ve okumaları programdan kalktı; kapı `durum-seridi.test.js`).
 
 **Hüküm.** Ray ile palet TEK sütun okunur: aynı zemin, aralarında dikey çizgi
 yok, sütunun sağ kenarında tek çizgi. Durum okumaları tuvalin ALTINDA, kendi
@@ -1037,7 +1038,8 @@ kurallar da taşınır. Devralınan bir kural, yazılı olmayan bir karardır.
 
 **Kapı:** `kabuk-sutun.spec.js` → *"karşılama ekranında durum şeridi
 GÖRÜNMÜYOR"* — hem gizlendiğini hem modüle girince **geri geldiğini** ölçer
-(gizleme kalıcı olmamalı). Düşmesi ölçüldü.
+(gizleme kalıcı olmamalı). Düşmesi ölçüldü. (Şerit 2026-11-11'de programdan
+kalktı — Canlı Not 129; kapı artık şeridin iki durumda da OLMADIĞINI ölçer.)
 
 
 ## Hover jetondan gelir, parlaklık filtresinden değil (2026-09-22)

@@ -217,7 +217,6 @@ function veAracOpenEditor(nodeId, _silent){
   // Topoloji kapsamı değişti → uyarı paneli tazelensin. Aksi hâlde panel
   // ana topolojinin (ya da statik yer tutucunun) durumunu göstermeye devam
   // eder ve alt topolojideki gerçek eksikleri saklar.
-  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 }
 
 // _silent: köke çökerken (veAracCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -252,7 +251,6 @@ function veAracCloseEditor(_silent){
   // Topoloji kapsamı değişti → uyarı paneli tazelensin. Aksi hâlde panel
   // ana topolojinin (ya da statik yer tutucunun) durumunu göstermeye devam
   // eder ve alt topolojideki gerçek eksikleri saklar.
-  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 
 }
 

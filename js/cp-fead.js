@@ -494,7 +494,6 @@ function veFeadOpenEditor(nodeId, _silent){
   if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veFeadUpdateBreadcrumb();
-  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 
   // ── BOŞ BİR FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR ────────────────
   //
@@ -532,7 +531,6 @@ function veFeadCloseEditor(_silent){
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('exit');
   veFeadUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
-  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 }
 
 function veFeadCollapseToRoot(){

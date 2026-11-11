@@ -84,7 +84,7 @@ const olc = () => {
   };
   return {
     ray: g('#ve-nav-rail'), palet: g('#ve-sidebar'), ana: g('.ve-main'),
-    durum: g('#ve-status-bar'), tuval: g('#ve-split-container'),
+    tuval: g('#ve-split-container'), ekranH: window.innerHeight,
     katli: !!document.querySelector('#ve-ribbon.is-collapsed'),
   };
 };
@@ -239,13 +239,14 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
   expect(k.ilkOge).toBe(f.ilkOge);
 });
 
-test('durum şeridi TUVALİN ALTINDA ve tuval genişliğinde', async ({ page }) => {
+// DURUM ŞERİDİ YOK (kullanıcı 2026-11-11, Canlı Not 129: *"Hem uyarılara, hem de sağ
+// taraftaki açıklamalara gerek yok … alt çubuk da kalkacak … Alan kazanırız"*): tuval
+// ekranın dibine iner; önce altında 24 px'lik şerit (Uyarılar · sayaç · yakınlık · kip).
+test('DURUM ŞERİDİ YOK — tuval ekranın dibine iner', async ({ page }) => {
   await modulAc(page);
   const r = await page.evaluate(olc);
-
-  expect(r.durum.y).toBeGreaterThanOrEqual(r.tuval.y + r.tuval.h - 1);
-  expect(r.durum.x).toBe(r.tuval.x);
-  expect(r.durum.w).toBe(r.tuval.w);
+  expect(await page.evaluate(() => document.querySelectorAll('#ve-status-bar, #ve-warnings-panel, #ve-warnings-chip').length)).toBe(0);
+  expect(Math.abs(r.tuval.y + r.tuval.h - r.ekranH)).toBeLessThanOrEqual(1);
 });
 
 // TEK TOPOLOJİ (kullanıcı 2026-11-09, Canlı Not 87: *"Programda genel olarak tek
@@ -267,7 +268,7 @@ test('TEK TOPOLOJİ — sekme şeridi yok; tuval üst bandın hemen altından ba
 
 // ŞERİDİN GÖVDESİ YOK (kullanıcı 2026-11-06, Canlı Not 59: *"Programı
 // daraltıyor"*): açık gövde tuvali 94 px kısaltıyordu. Komutların penceresi
-// bandın üstünde yüzer — açıkken de tuval ve durum şeridi yerinde.
+// bandın üstünde yüzer — açıkken de tuval yerinde.
 test('komutların penceresi tuvali OYNATMIYOR', async ({ page }) => {
   await modulAc(page);
   const a = await page.evaluate(olc);
@@ -276,11 +277,7 @@ test('komutların penceresi tuvali OYNATMIYOR', async ({ page }) => {
   const b = await page.evaluate(olc);
   expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-peek'))).toBe(true);
   expect(b.tuval).toEqual(a.tuval);
-  expect(b.durum).toEqual(a.durum);
-  [a, b].forEach((s) => {
-    expect(s.katli).toBe(true);
-    expect(s.durum.y).toBeGreaterThanOrEqual(s.tuval.y + s.tuval.h - 1);
-  });
+  [a, b].forEach((s) => expect(s.katli).toBe(true));
 });
 
 // ── KABUK TEK ÇİZGİ (2026-09-23) ───────────────────────────────────────────
@@ -311,13 +308,13 @@ test('KABUK TEK ÇİZGİ — iki başlık aynı bantta, tuval komşularına yap�
       const b = rg.getBoundingClientRect(); return b.top + b.height / 2;
     };
     const sb = k('.ve-sidebar-header'), mh = k('.ve-properties-header');
-    const sp = k('#ve-sidebar'), w = k('#ve-canvas-wrapper'), st = k('#ve-status-bar');
+    const sp = k('#ve-sidebar'), w = k('#ve-canvas-wrapper');
     const mu = k('#ve-properties');
     const wcs = getComputedStyle(document.querySelector('#ve-canvas-wrapper'));
     return {
       alt: [sb.bottom, mh.bottom], boy: [sb.height, mh.height], ust: [sb.top, mh.top],
       yazi: [orta('.ve-sidebar-title'), orta('#ve-properties-title')],
-      tuval: { sol: w.left - sp.right, ust: w.top - sb.top, sag: mu.left - w.right, alt: st.top - w.bottom },
+      tuval: { sol: w.left - sp.right, ust: w.top - sb.top, sag: mu.left - w.right, alt: window.innerHeight - w.bottom },
       kose: wcs.borderTopLeftRadius, golge: wcs.boxShadow, kenar: wcs.borderTopWidth,
     };
   });
@@ -501,41 +498,20 @@ test('müfettiş başlığı içeriğin kenarında; kimlik satırı iç kimliği
   expect(r.cozucu.kimlik).toBe(false);
 });
 
-// KARŞILAMA EKRANINDA DURUM ŞERİDİ YOK.
-// Kural eskiden GEREKMİYORDU: şerit belge bandının içindeydi ve onun
-// `.ve-no-module` kuralıyla birlikte gizleniyordu. Şerit tuvalin altına
-// taşınınca kapsamdan SESSİZCE çıktı ve karşılamanın dibinde
-// "0 bileşen, 0 bağlantı · %100 · Hazır" belirdi — arkada açık bir topoloji
-// varmış gibi. BİR ÖĞEYİ TAŞIMAK, ÜSTÜNDEKİ KURALLARI DA TAŞIMAKTIR.
-test('karşılama ekranında durum şeridi GÖRÜNMÜYOR', async ({ page }) => {
+// DURUM ŞERİDİ VE UYARILAR YOK — karşılamada da modülde de (Canlı Not 129). Önce
+// karşılamada gizleniyor, modülde geri geliyordu.
+test('durum şeridi ve Uyarılar paneli YOK — karşılamada ve modülde', async ({ page }) => {
   await page.goto('file://' + BUILD);
   await page.fill('#mfsim-login-password', 'mfsim2024');
   await page.press('#mfsim-login-password', 'Enter');
   await page.waitForFunction(() => Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
-
-  const karsilama = await page.evaluate(() => {
-    const g = (s) => {
-      const e = document.querySelector(s);
-      if (!e) return { yok: true };
-      const b = e.getBoundingClientRect();
-      return { gorunur: b.width > 0 && b.height > 0 };
-    };
-    return { durum: g('#ve-status-bar'), uyari: g('#ve-warnings-panel'),
-             modulYok: !!document.querySelector('.ve-main.ve-no-module') };
-  });
-  expect(karsilama.modulYok).toBe(true);
-  expect(karsilama.durum.gorunur).toBe(false);
-  expect(karsilama.uyari.gorunur).toBe(false);
-
-  // ve modüle girince GERİ GELİR — gizleme kalıcı olmamalı
+  const say = () => page.evaluate(() => document.querySelectorAll('#ve-status-bar, #ve-warnings-panel, #ve-warnings-chip, #ve-status-zoom').length);
+  expect(await page.evaluate(() => !!document.querySelector('.ve-main.ve-no-module'))).toBe(true);
+  expect(await say()).toBe(0);
   await page.click('.ve-module-card[data-module="fead-analysis"]');
   await page.waitForTimeout(1200);
-  const icerde = await page.evaluate(() => {
-    const b = document.querySelector('#ve-status-bar').getBoundingClientRect();
-    return b.width > 0 && b.height > 0;
-  });
-  expect(icerde).toBe(true);
+  expect(await say()).toBe(0);
 });
 
 // PALET: LİSTE SATIRI, KUTU DEĞİL (2026-09-23). Kullanıcı bildirimi (kenar

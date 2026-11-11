@@ -136,11 +136,11 @@ describe('Karşılama ekranı — kabuk kapanışı', () => {
     expect(document.body.classList.contains('ve-no-module')).toBe(false);
   });
 
-  test('CSS kuralları duruyor: şerit gizli, durum şeridi gizli, üst boşluk sıfır', () => {
+  test('CSS kuralları duruyor: şerit gizli, üst boşluk sıfır', () => {
     // Boşluğa toleranslı ama kuralın KENDİSİNİ arayan eşleşmeler. Belge bandı yok
-    // (Canlı Not 87 — sekme şeridi kalktı).
+    // (Canlı Not 87 — sekme şeridi kalktı), durum şeridi yok (Canlı Not 129).
     expect(CSS).toMatch(/body\.ve-no-module\s*#ve-ribbon\s*\{\s*display:\s*none/);
-    expect(CSS).toMatch(/\.ve-main\.ve-no-module\s*\.ve-status-bar\s*\{\s*display:\s*none/);
+    expect(CSS).not.toMatch(/\.ve-status-bar\b/);
     // Şerit gizlenince sayfa yukarı çıkmalı: #sayfa2.active { top:var(--chrome-h) }
     expect(CSS).toMatch(/body\.ve-no-module\s*\{\s*--chrome-h:\s*0px/);
     expect(CSS).toMatch(/#sayfa2\.active\{[^}]*top:var\(--chrome-h/);
@@ -397,6 +397,18 @@ describe('KESİK — renk temadan bağımsız', () => {
     const ik = kural(CSS_WELCOME, '.ve-welcome-open .mf-ico');
     expect(ik).toContain('width:18px');
     expect(ik).toContain('height:18px');
+  });
+
+  // MODÜL SATIRININ BOYU (kullanıcı 2026-11-11, Canlı Not 127: *"Şu butonları da bir tık
+  // ufaltalım. Bir tık ama, çok değil."*): satır 58 → 52 px, simge 32 → 28 px, ok 18 → 16 px;
+  // ad 16 px kalır. Kısa ekranın satırı (48 px) ve birincil düğme (44 px) ondan ince.
+  test('MODÜL SATIRININ BOYU — 52 px, simge 28 px, ok 16 px, ad 16 px; kısa ekranda 48 px', () => {
+    expect(kural(CSS_WELCOME, '.ve-module-card')).toMatch(/(?:^|;|\s)height:52px/);
+    const ik = kural(CSS_WELCOME, '.ve-module-card-icon');
+    expect([ik.includes('width:28px'), ik.includes('height:28px')]).toEqual([true, true]);
+    expect(kural(CSS_WELCOME, '.ve-module-card-arrow .mf-ico')).toContain('width:16px');
+    expect(kural(CSS_WELCOME, '.ve-module-card-name')).toContain('font-size:var(--fs-title)');
+    expect(CSS).toMatch(/@media \(max-height:800px\)\{(?:\s*[^{}]+\{[^{}]*\})*?\s*\.ve-module-card\{ height:48px; \}/);
   });
 
   test('üstüne gelinen satırın zemininde yazı ≥ 4,5:1', () => {

@@ -423,7 +423,6 @@ function veApLoadExample(nodeId){
     if(typeof updateAllConnections==='function') updateAllConnections();
     // Kamera: kayıttaki kamera örneği ÜRETEN pencerenin ölçüsüne göreydi.
     if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
-    if(typeof veUpdateWarnings==='function') veUpdateWarnings();
     if(typeof showToast==='function') showToast('Örnek yüklendi — ' + ex.vehicle + '.','info');
   });
 }

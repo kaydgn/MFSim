@@ -223,10 +223,8 @@ const ASAMALAR = {
         await p.evaluate(() => veFitViewToContent());
         await bekle(p, 600);
       }, bildirim: true },
-      { ad: 'Uyarılar paneli', kok: '#ve-warnings-panel', ac: async (p) => { await p.evaluate(() => veSetWarningsOpen(true)); await bekle(p, 400); } },
       { ad: 'Çoklu seçim penceresi', kok: '#ve-properties', ac: async (p) => {
         await p.evaluate(() => {
-          veSetWarningsOpen(false);
           clearSelection();
           nodes.filter((n) => ['engine', 'gearbox', 'differential'].includes(n.type)).forEach((n) => addToSelection(n));
           showMultipleSelection();

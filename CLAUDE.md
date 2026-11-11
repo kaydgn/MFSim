@@ -222,7 +222,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
   döndürür, tekerlek imlecin altını tutarak yakınlaştırır, sağ tık kaydırır) +
-  işaretlerin föyü; başlıkta bakışın adı ve görünüm düğmeleri (yakınlaştır ·
+  işaretlerin föyü — gövdenin ve takozun X · Y · Z'si föyde DÜZENLENİR (kullanıcı 2026-11-11,
+  Canlı Not 124: bileşenin kendi alanı, tek geri-al adımı, çizim yeni konumla; G türetilir;
+  kapı `mount-akso.test.js` → *İŞARETLER DÜZENLENİR*); başlıkta bakışın adı ve görünüm düğmeleri (yakınlaştır ·
   uzaklaştır · sıfırla · **tam ekran**). Açı yazısı, Görünüş, Katmanlar, Uygunluk,
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
@@ -779,9 +781,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   ekleme · kapatma · çoğaltma ve yan yana görünüm YOK; `veTabs` içte tek
   elemanlı kap (kayıt biçimi `tabs:[…]` değişmez). Çok sekmeli eski proje
   yüklenince yalnız etkin topoloji kurulur ve kalanların sayısı söylenir
-  (`veTekTopoloji`). Uyarılar durum çubuğundaki düğmesinin üstünde, pencere
-  ailesinin başlığıyla açılır (Canlı Not 90). Kapı: `tek-topoloji.test.js` +
+  (`veTekTopoloji`). Kapı: `tek-topoloji.test.js` +
   `kabuk-sutun.spec.js` → *"TEK TOPOLOJİ"*.
+- **DURUM ŞERİDİ YOK** (kullanıcı 2026-11-11, Canlı Not 129: *"Hem uyarılara, hem de
+  sağ taraftaki açıklamalara gerek yok … alt çubuk da kalkacak … Alan kazanırız"*):
+  tuvalin altındaki şerit (Uyarılar düğmesi ve paneli, bileşen · bağlantı sayısı,
+  yakınlık, kip) ve Komutlar'daki "Uyarılar" YOK; tuval ekranın dibine iner.
+  Doğrula'nın sonucu bildirimde (hazırsa kip, değilse eksik sayısı ve ilk eksik).
+  Kapı: `durum-seridi.test.js` + `validation.test.js` → *sonuç bildirimde* +
+  `kabuk-sutun.spec.js` → *DURUM ŞERİDİ YOK*.
 - **ŞERİDİN GÖVDESİ YOK — komutlar kenardaki küçük pencerede** (kullanıcı
   2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın sağ ucundaki
   **Komutlar** düğmesi (`#ve-rb-expand`) bandın altında YÜZEN pencereyi

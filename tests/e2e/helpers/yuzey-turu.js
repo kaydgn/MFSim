@@ -218,8 +218,6 @@ async function apTuru(page, olc) {
   });
   await pencereler(page, olc, ['road']);
   ik += await ikincil(page, olc, 'yol profili büyük', (id) => veManualSegExpandProfile(id), '#ve-mseg-profile-overlay', yol);
-  ik += await ikincil(page, olc, 'uyarılar paneli', () => veOpenWarningsPanel(), '#ve-warnings-panel');
-  await page.evaluate(() => veSetWarningsOpen(false));
   expect(ik).toBeGreaterThan(100);
 }
 

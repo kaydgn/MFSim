@@ -3273,11 +3273,9 @@ function deleteSelectedNodes() {
   updateNodeCount();
 }
 
+// Düğüm kümesi değişti (ekle/sil/geri-yükle/düzenle): kümeden türeyen
+// yüzeyler tazelenir. Durum şeridinin sayacı yok (Canlı Not 129).
 function updateNodeCount() {
-  var countEl = document.querySelector('.ve-toolbar-info');
-  if(countEl) {
-    countEl.innerHTML = nodes.length + ' bileşen, ' + connections.length + ' bağlantı';
-  }
   // Topoloji değişti (ekle/sil/geri-yükle/düzenle) → minimap'i tazele
   if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   // Takoz başlangıç sayfası düğüm kümesinden türer (js/cp-mount-baslangic.js):
