@@ -88,8 +88,6 @@ var VE_RIBBON_TABS = [
           state:function(){ return !veRibbonHasClass('ve-sidebar', 'collapsed'); } },
         { size:'sm', icon:'sliders',         label:'Özellikler', run:'veTogglePropertiesPanel',
           state:function(){ return veRibbonHasClass('ve-properties-overlay', 'visible'); } },
-        { size:'sm', icon:'alert-triangle',  label:'Uyarılar',   run:'veToggleWarnings',
-          state:function(){ return !veRibbonHasClass('ve-warnings-body', 'collapsed'); } },
         { size:'sm', icon:'map',             label:'Genel görünüm', run:'veMinimapToggle',
           // "ve-minimap-hidden" kullanıcı tercihi değil, çizecek içerik
           // olmadığında otomatik gelir. Basılı göstergesi kullanıcının GÖRDÜĞÜ

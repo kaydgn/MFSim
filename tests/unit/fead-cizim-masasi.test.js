@@ -760,8 +760,7 @@ describe('açıklığa ekle — TEK geri-al adımı', () => {
 describe('Kayış Tablosu kartın içinde — çekmece emekli', () => {
   const KABUK = '<div class="ve-canvas-area">'
     + '<div class="ve-split-container" id="ve-split-container"><div class="ve-split-pane focused">'
-    + '<div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div></div></div>'
-    + '<div id="ve-status-bar" class="ve-status-bar"></div></div>';
+    + '<div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div></div></div></div>';
   const kare = () => new Promise((r) => (typeof requestAnimationFrame === 'function'
     ? requestAnimationFrame(r) : setTimeout(r, 0)));
   afterEach(() => { delete global.veFitViewToContent; });

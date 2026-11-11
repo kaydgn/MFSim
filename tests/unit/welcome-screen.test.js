@@ -136,11 +136,11 @@ describe('Karşılama ekranı — kabuk kapanışı', () => {
     expect(document.body.classList.contains('ve-no-module')).toBe(false);
   });
 
-  test('CSS kuralları duruyor: şerit gizli, durum şeridi gizli, üst boşluk sıfır', () => {
+  test('CSS kuralları duruyor: şerit gizli, üst boşluk sıfır', () => {
     // Boşluğa toleranslı ama kuralın KENDİSİNİ arayan eşleşmeler. Belge bandı yok
-    // (Canlı Not 87 — sekme şeridi kalktı).
+    // (Canlı Not 87 — sekme şeridi kalktı), durum şeridi yok (Canlı Not 129).
     expect(CSS).toMatch(/body\.ve-no-module\s*#ve-ribbon\s*\{\s*display:\s*none/);
-    expect(CSS).toMatch(/\.ve-main\.ve-no-module\s*\.ve-status-bar\s*\{\s*display:\s*none/);
+    expect(CSS).not.toMatch(/\.ve-status-bar\b/);
     // Şerit gizlenince sayfa yukarı çıkmalı: #sayfa2.active { top:var(--chrome-h) }
     expect(CSS).toMatch(/body\.ve-no-module\s*\{\s*--chrome-h:\s*0px/);
     expect(CSS).toMatch(/#sayfa2\.active\{[^}]*top:var\(--chrome-h/);

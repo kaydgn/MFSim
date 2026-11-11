@@ -336,11 +336,15 @@ function veRenderValidationCard(res) {
   }
 }
 
+// Doğrula'nın sonucu BİLDİRİMDE (Canlı Not 129: Uyarılar paneli kalktı): hazırsa
+// kip, değilse eksik sayısı ve ilk eksiğin adı.
 function veSolverValidate() {
   var res = veCollectValidation();
   veRenderValidationCard(res);
-  // Asıl geri bildirim burada: kullanıcının GÖRDÜĞÜ panel
-  if(typeof veShowValidationInWarnings === 'function') veShowValidationInWarnings(res);
+  if(typeof showToast === 'function') {
+    if(res.allOk) showToast('Hesaplamaya hazır (' + res.mode + ').', 'success');
+    else showToast(res.errors.length + ' eksik: ' + res.errors[0].label + '.', 'error');
+  }
   return res.allOk;
 }
 

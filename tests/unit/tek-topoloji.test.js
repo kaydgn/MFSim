@@ -46,16 +46,10 @@ describe('TEK TOPOLOJİ — sekme ve yan yana görünüm yok', () => {
     expect(TOPO).not.toMatch(/veSplitMode|veSplitPanes/);
   });
 
-  test('sayfada sekme şeridi ve belge bandı yok; uyarı paneli durum çubuğunda, pencere ailesinin başlığıyla', () => {
+  test('sayfada sekme şeridi ve belge bandı yok; durum şeridi ve Uyarılar paneli de yok (Canlı Not 129)', () => {
     const HTML = oku('index.html');
     expect(HTML).not.toMatch(/id="ve-tab-bar"|id="ve-doc-dock"|class="ve-tab\b/);
-    const d = document.createElement('div');
-    d.innerHTML = HTML.slice(HTML.indexOf('<div id="ve-status-bar"'), HTML.indexOf('id="ve-status-mode"'));
-    const panel = d.querySelector('#ve-status-bar > #ve-warnings-panel');
-    expect(panel).not.toBeNull();
-    expect(panel.querySelector(':scope > .ve-settings-header .ve-settings-close .mf-ico-x')).not.toBeNull();
-    expect(panel.querySelector(':scope > #ve-warnings-body.collapsed')).not.toBeNull();
-    expect(d.querySelector('#ve-warnings-toggle').className).toMatch(/mf-ico-chevron-up/);   // yukarı açılır
+    expect(HTML).not.toMatch(/id="ve-status-bar"|id="ve-warnings-panel"|id="ve-warnings-chip"/);
   });
 });
 

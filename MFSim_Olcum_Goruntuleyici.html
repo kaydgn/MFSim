@@ -1725,13 +1725,6 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar-reveal{ displa
    transition'ı yumuşatıyor. */
 body.ve-no-module{ --chrome-h:0px; }
 body.ve-no-module #ve-ribbon{ display:none; }
-/* DURUM ŞERİDİ DE KARŞILAMADA GİZLİ. Bu kural eskiden GEREKMİYORDU: şerit
-   belge bandının İÇİNDEYDİ ve onunla birlikte gizleniyordu. Atölye turunda
-   şerit tuvalin altına taşındı ve kapsamdan sessizce çıktı — karşılama
-   ekranının dibinde "0 bileşen, 0 bağlantı · %100 · Hazır" beliriyordu,
-   yani arkada açık bir topoloji varmış gibi (kullanıcı bildirimi).
-   BİR ÖĞEYİ TAŞIMAK, ÜSTÜNDEKİ KURALLARI DA TAŞIMAKTIR. */
-.ve-main.ve-no-module .ve-status-bar{ display:none; }
 /* KARŞILAMA TAM KENAR. Karşılama kaplaması `.ve-canvas-wrapper`ın İÇİNDE
    duruyor (`inset:0`); tuval çukurlu olduğu dönemde (8 px dolgu + kenarlık +
    köşe) foto (9,9)'dan 1902×1014 çiziliyordu, 1920×1032 yerine (kullanıcı:
@@ -2321,92 +2314,6 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   height:1px;
   background:var(--border-color);
   margin:4px 6px;
-}
-
-.ve-toolbar-info{
-  font-size:var(--fs-tiny);
-  color:var(--text-secondary);
-  white-space:nowrap;
-  flex-shrink:0;
-}
-
-/* ===== ALT DURUM KÜMESİ (STATUS BAR) ===== */
-/* DURUM ŞERİDİ — tuvalin ALTINDA, kanvas alanının son satırı.
-   Eskiden sekme bandının SAĞ yarısındaydı (327 px) ve bant tuvalin üstündeydi;
-   o yerleşimin gerekçesi sekmelere aitti (sekme açtığı belgeye bağlanır),
-   duruma değil. Durum bir gezinme yüzeyi değil bir OKUMA. Ayrıntı ve ödenen
-   bedel: docs/decisions/ortak-yuzeyler.md. */
-.ve-status-bar{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-shrink:0;              /* tuval büyüyünce şerit ezilmez */
-  height:24px;
-  padding:0 12px;
-  background:var(--bg-secondary);
-  border-top:1px solid var(--border-color);
-  font-size:var(--fs-tiny);
-  color:var(--text-secondary);
-  user-select:none;
-  font-variant-numeric:tabular-nums;   /* sayaç/zoom rakamları hizalı, kayma yok */
-}
-/* Uyarı çipi solda kalır, ölçümler sağa toplanır: solda "sorun var mı",
-   sağda "ne kadar". Aradaki esneme ikisini pencere genişledikçe ayırır. */
-.ve-status-bar .ve-status-warnings{ margin-right:auto; }
-.ve-status-item{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  white-space:nowrap;
-  color:var(--text-secondary);
-}
-.ve-status-item .mf-ico{
-  color:var(--text-muted);
-}
-/* Durum çubuğundaki uyarı düğmesi — eski 32 px'lik uyarı BAŞLIĞININ yerine
-   geçer. Rozet (#ve-warnings-count) severity rengini JS'ten alır, yani sayı ve
-   şiddet panel kapalıyken de görünür kalır. */
-.ve-status-warnings{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  height:19px;
-  padding:0 7px;
-  border:1px solid transparent;
-  border-radius:var(--radius-sm);
-  background:transparent;
-  color:var(--text-secondary);
-  font-family:inherit;
-  font-size:var(--fs-tiny);
-  font-weight:500;
-  cursor:pointer;
-  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
-}
-.ve-status-warnings:hover{background:var(--bg-tertiary);color:var(--text-primary);}
-.ve-status-warnings[aria-expanded="true"]{
-  background:var(--bg-tertiary);
-  border-color:var(--border-color);
-  color:var(--text-heading);
-}
-.ve-status-warnings .mf-ico{color:var(--text-muted);}
-.ve-status-warnings[data-severity="warn"] .mf-ico{color:var(--accent-warning);}
-.ve-status-warnings[data-severity="error"] .mf-ico{color:var(--accent-danger);}
-#ve-warnings-toggle{font-size:var(--fs-micro);color:var(--text-muted);line-height:1;}
-
-/* Tıklanabilir durum-öğesi (ör. %zoom → tıkla %100) */
-.ve-status-clickable{cursor:pointer;border-radius:var(--radius-xs);padding:0 3px;transition:color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);}
-.ve-status-clickable:hover{color:var(--text-primary);background:var(--bg-tertiary);}
-.ve-status-sep{
-  width:1px;
-  height:12px;
-  background:var(--border-color);
-  opacity:0.6;
-}
-/* Dar pencerede sekmelere yer aç: önce yazılar düşer, göstergeler kalır.
-   Uyarı rozeti ve %zoom en son gider — ikisi de tıklanabilir kontrol. */
-@media (max-width: 900px){
-  .ve-status-warnings-label{display:none;}
-  #ve-status-counts{display:none;}
 }
 
 /* ===== SPLIT VIEW ===== */
@@ -4435,65 +4342,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   opacity:0.85;
 }
 
-/* UYARILAR — durum çubuğundaki düğmesinin ÜSTÜNDE açılan küçük pencere (kullanıcı
-   2026-11-09, Canlı Not 90: *"Uyarılar kısmı da temaya, yazı tipine uygun değil"*).
-   Başlık pencere ailesinin (.ve-settings-header + .ve-settings-close), gövde programın
-   gövde yazısında (12 px); köşe keskin, gölge yüzenin. Önce sekme bandının altında
-   tuvalin tamamı eninde, kendi başlık rengi ve 13 px yazısıyla açılıyordu (Canlı Not 87
-   o bandı kaldırdı). Açmak tuvali küçültmez, yalnız geçici olarak üzerini örter. */
-.ve-status-bar{ position:relative; }
-.ve-warnings-panel{
-  position:absolute;
-  left:6px;
-  bottom:calc(100% + 4px);
-  z-index:var(--z-canvas-ui);
-  width:min(420px, calc(100% - 12px));
-  max-height:min(320px, 50vh);
-  background:var(--bg-secondary);
-  border:1px solid var(--border-hover);
-  box-shadow:var(--shadow-lg);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  font-size:var(--fs-body);
-  color:var(--text-primary);
-  user-select:text;
-  animation:veWarningsIn var(--dur-fast) var(--ease-out);
-}
-/* Açık/kapalı gerçeğini tek yazıcı kurar: veSetWarningsOpen(). Gövdedeki
-   .collapsed sınıfı SÖZLEŞME olarak korunur — şerit düğmesi ve komut paleti
-   basılı durumu oradan okur; panelin .open sınıfı onunla birlikte yazılır. */
-.ve-warnings-panel:not(.open){display:none;}
-@keyframes veWarningsIn{
-  from{opacity:0; transform:translateY(6px);}    /* yukarı açılıyor → aşağıdan çıkar */
-  to{opacity:1; transform:translateY(0);}
-}
-@media (prefers-reduced-motion: reduce){ .ve-warnings-panel{ animation:none; } }
-.ve-warnings-panel > .ve-settings-header{ flex:none; }
-.ve-warnings-body{
-  overflow-y:auto;
-  flex:1;
-  min-height:0;
-  font-size:var(--fs-body);
-}
-.ve-warnings-bos{ padding:10px 12px; color:var(--text-muted); }
-.ve-warnings-bos.ok{ color:var(--ink-success); }
-.ve-warnings-body.collapsed{display:none;}
-.ve-warning-item{
-  padding:6px 12px;
-  border-bottom:1px solid var(--border-light);
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-/* Severity: sol renkli şerit + küçük nokta (önceki 🔴🟡🔵 emojileri yerine) */
-.ve-warning-item::before{
-  content:"";
-  width:7px; height:7px;
-  border-radius:50%;
-  flex-shrink:0;
-  background:var(--text-muted);
-}
 /* Grafik lejantının renk noktası — serinin rengi (currentColor). Eskiden '●'
    karakteriydi: yazı tipinden çiziliyor, boyu satırın puntosuyla oynuyordu. */
 .ve-lejant-nokta{
@@ -4507,39 +4355,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-durum-warn{ color:var(--ink-warning); }
 .ve-durum-err{ color:var(--ink-danger); }
 
-/* Bir bileşene işaret eden uyarı satırı tıklanabilir: seçer, ortalar, açar */
-.ve-warning-item.ve-warning-clickable{ cursor:pointer; }
-.ve-warning-item.ve-warning-clickable:hover{ background:var(--bg-input); }
-.ve-warning-git{
-  margin-left:auto; opacity:0; color:var(--text-muted);
-  transition:opacity var(--dur-fast,0.12s);
-}
-.ve-warning-item.ve-warning-clickable:hover .ve-warning-git{ opacity:0.8; }
-.ve-warning-item.ok{border-left:3px solid var(--accent-success);color:var(--ink-success);font-weight:600;}
-.ve-warning-item.ok::before{background:var(--accent-success);}
-.ve-warning-item.error{border-left:3px solid var(--accent-danger);}
-.ve-warning-item.error::before{background:var(--accent-danger);}
-.ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
-.ve-warning-item.warn::before{background:var(--accent-warning);}
-.ve-warning-item.info{border-left:3px solid var(--accent-primary);}
-.ve-warning-item.info::before{background:var(--accent-primary);}
-
-/* Uyarı sayacı rozeti — durum çubuğundaki düğmenin içinde, panel kapalıyken de
-   görünür. Severity'yi JS bir data-attribute olarak yazar (veRenderWarningsPanel),
-   renk eşlemesi burada: sıfırda sessiz, uyarıda amber, hatada kırmızı. */
-#ve-warnings-count{
-  min-width:16px;
-  padding:1px 6px;
-  border-radius:var(--radius-sm);
-  font-size:var(--fs-micro);
-  font-weight:700;
-  text-align:center;
-  font-variant-numeric:tabular-nums;
-  background:var(--bg-input);
-  color:var(--text-muted);
-}
-.ve-status-warnings[data-severity="warn"] #ve-warnings-count{background:var(--accent-warning);color:var(--on-warning);}
-.ve-status-warnings[data-severity="error"] #ve-warnings-count{background:var(--accent-danger);color:var(--on-danger);}
 
 /* Bileşen Özellikleri MODAL'ı: backdrop + ortalanmış kart (Ayarlar modal'ıyla
    aynı kalıp). Önceki sol-kayan yan-panel kaldırıldı. */

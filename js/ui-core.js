@@ -175,9 +175,6 @@ function updateCanvasTransform() {
   // Alt-topoloji çıkış çipi sınır çerçevesine tutunur; kamera her oynadığında
   // aynı karede yeniden konumlanmazsa çerçeveden kopup kayar.
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
-  // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
-  var _zoomStatus = document.getElementById('ve-status-zoom');
-  if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
   // Minimap'teki viewport dikdörtgenini tazele (pan/zoom)
   if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
 }
@@ -242,7 +239,7 @@ function veFitViewToContent(opts) {
 }
 
 // Yakınlaştırmayı %100'e sıfırlar — görünüm MERKEZİNİ sabit tutarak (pan korunur).
-// Durum çubuğundaki %zoom göstergesine tıklanınca çağrılır.
+// Komutlar'ın Görünüm › %100'ü çağırır.
 function veResetZoom() {
   if(typeof canvasZoom === 'undefined' || canvasZoom === 1) return; // zaten %100
   var wrapper = document.getElementById('ve-canvas-wrapper');
@@ -698,14 +695,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    // Escape tuşu - önce üstteki katmanı kapat, sonra seçimi temizle.
-    // Uyarı paneli tuvalin üzerine açılan yüzen bir katman olduğu için ilk Esc
-    // onu kapatır; seçim ikinci Esc'te temizlenir (alışılmış katman sırası).
+    // Escape tuşu — seçimi temizle.
     if(e.key === 'Escape') {
-      if(typeof veWarningsPanelOpen === 'function' && veWarningsPanelOpen()) {
-        veToggleWarnings();
-        return;
-      }
       clearSelection();
       cleanupTempLine();
     }
@@ -1153,8 +1144,7 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
   // Doğrulama YALNIZ motora aksesuar bağlandıysa: VE_ACC_PORT_MAP port ADINA
   // bakıyor (input-0/1/2) ve o adlar her çok girişli düğümde var. Koşul dışarıda
   // kaldığında Takoz'un destek bağlantıları (takoz → gövde input-N) Araç
-  // Performans'ın doğrulamasını koşturuyor ve Uyarılar panelini "Motor
-  // bileşeni eksik" diye açıyordu (2026-10-14, sihirbazın "Modeli kur"u).
+  // Performans'ın doğrulamasını koşturuyordu (2026-10-14, sihirbazın "Modeli kur"u).
   if(typeof VE_ACC_PORT_MAP !== 'undefined' && VE_ACC_PORT_MAP[toPort] && typeof veSyncEngineAccessories === 'function') {
     var _engN = nodes.find(function(n){ return n.id === toNodeId && n.type === 'engine'; });
     if(_engN) {

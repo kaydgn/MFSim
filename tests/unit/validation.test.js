@@ -1,9 +1,9 @@
 /**
  * Topoloji doğrulama çekirdeği — js/solver.js › veCollectValidation()
  * ──────────────────────────────────────────────────────────────────
- * Doğrulama artık iki yere birden çiziliyor (Çözücü kartı + görünür Uyarılar
- * paneli), ikisi de aynı yapılandırılmış listeden besleniyor. Listede sessiz
- * bir kayma olursa:
+ * Doğrulama Çözücü kartına çizilir ve sonucu bildirimde söylenir (Uyarılar
+ * paneli Canlı Not 129'da kalktı); ikisi de aynı yapılandırılmış listeden
+ * besleniyor. Listede sessiz bir kayma olursa:
  *
  *   • eksik bir bileşen "tamam" görünür → kullanıcı eksik topolojiyle
  *     çalıştığını sanır, Çalıştır ise reddeder (tam da düzelttiğimiz çelişki),
@@ -386,5 +386,25 @@ describe('veCollectValidation — yapı sözleşmesi', () => {
     expect(res.errors).toEqual(res.items.filter((i) => i.level === 'err'));
     expect(res.warnings).toEqual(res.items.filter((i) => i.level === 'warn'));
     expect(res.allOk).toBe(res.errors.length === 0);
+  });
+});
+
+// DOĞRULA'NIN SONUCU BİLDİRİMDE (kullanıcı 2026-11-11, Canlı Not 129: Uyarılar paneli
+// durum şeridiyle kalktı). Önce sonuç panele dökülüp panel açılıyordu; şimdi tek
+// bildirim: hazırsa kip, değilse eksik sayısı ve ilk eksiğin adı.
+describe('veSolverValidate — sonuç bildirimde (Uyarılar paneli yok)', () => {
+  test('hazır topoloji: başarı bildirimi kiple', () => {
+    saglikliTopoloji();
+    expect(veSolverValidate()).toBe(true);
+    expect(stubs.showToast).toHaveBeenCalledTimes(1);
+    expect(stubs.showToast).toHaveBeenCalledWith('Hesaplamaya hazır (Tam analiz).', 'success');
+  });
+  test('eksik topoloji: eksik sayısı ve ilk eksiğin adı', () => {
+    saglikliTopoloji();
+    global.nodes = global.nodes.filter((n) => n.type !== 'engine');
+    const res = veCollectValidation();
+    expect(veSolverValidate()).toBe(false);
+    expect(stubs.showToast).toHaveBeenCalledTimes(1);
+    expect(stubs.showToast).toHaveBeenCalledWith(res.errors.length + ' eksik: ' + res.errors[0].label + '.', 'error');
   });
 });

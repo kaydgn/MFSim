@@ -392,9 +392,6 @@ var _GM_EKRAN = [
   { k: 'topoloji', ad: 'Topoloji', not: 'Tuval: modeli kurmak ve pencereleri açmak.', yer: 'sag' },
   { k: 'sonuclar', ad: 'Sonuçlar', not: 'Çözümün sinyalleri ve diyagramları.', yer: 'sag' },
   { k: 'geri', ad: 'Ana topolojiye dön', not: 'Modülden çıkar.' },
-  { k: 'uyarilar', ad: 'Uyarılar', not: 'Doğrulamanın uyarı sayısı; tık listeyi açar.', yer: 'sag' },
-  { k: 'sayac', ad: 'Bileşen sayacı', not: 'Tuvaldeki bileşen ve bağlantı sayısı.', cerceve: false },
-  { k: 'yakinlik', ad: 'Yakınlık', not: 'Tuvalin ölçeği; tık %100’e döner.', cerceve: false },
   { k: 'harita', ad: 'Genel görünüm', not: 'Tuvalin küçük haritası; çerçeve görünen alan.' }
 ];
 
@@ -781,7 +778,7 @@ function _gmSec4(){
   var h = _gmH2('m4');
   h += _gmH3('Ekranın bölümleri', 'ekran-bolum');
   h += '<p>Model kurulduktan sonra ekranın her bölümü yerinde durur (' + _gmS('ekran') + '). Pencereler '
-    + 'sağ sütunda açılır, uyarılar ve tuvalin ölçeği durum çubuğundadır.</p>';
+    + 'sağ sütunda açılır.</p>';
   h += _gmEkran('ekran', 'tuval', _GM_EKRAN, 'Ekranın bölümleri.');
   h += _gmH3('Fare ve klavye', 'fare');
   h += _gmAlanTablo('Tuvalde fare', [
@@ -789,7 +786,7 @@ function _gmSec4(){
     ['Çift tık', 'Bileşenin penceresini açar; Başlangıç Sihirbazı’nda sihirbazı', 'Ana tuvaldeki Takoz kartında modüle girer'],
     ['Sürükle', 'Bileşeni taşır; boşlukta seçim kutusu çizer', 'Hesabı etkilemez'],
     ['Sağ tık + sürükle', 'Görünümü kaydırır', ''],
-    ['Tekerlek', 'Yakınlaştırır ve uzaklaştırır', 'Durum çubuğunda ölçek; tık %100’e döner']
+    ['Tekerlek', 'Yakınlaştırır ve uzaklaştırır', 'Komutlar’daki %100 ölçeği sıfırlar']
   ], ['Hareket', 'Ne yapar', 'Not']);
   h += '<p>Klavye kısayollarının listesi programdadır (<strong>?</strong> tuşu); ' + _gmS('kisayol') + ' aynı '
     + 'listedir.</p>';
