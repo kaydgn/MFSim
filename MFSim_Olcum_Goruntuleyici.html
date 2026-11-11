@@ -10289,6 +10289,43 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-prm-marka[open] > summary .mf-ico{ transform:rotate(180deg); }
 .ve-prm-marka > table{ margin:0; border-top:1px solid var(--border-light); }
 @media (prefers-reduced-motion: reduce){ .ve-prm-marka > summary .mf-ico{ transition:none; } }
+/* TAKOZ YERLEŞİMİ (Canlı Not 1002) — üstten şema: sütun grup (önden arkaya), satır yan
+   (sağ üstte, merkez, sol altta). Konum satır içinde VERİ (left/top), görünüm burada.
+   Balonun numarası föyün ve aday tablosunun sütun numarası; taranan grubun balonu dolu. */
+.ve-prm-plan{
+  margin:0 0 8px; padding:16px 44px; border:1px solid var(--border-color); border-radius:var(--radius-md);
+  background:var(--bg-primary);
+}
+.ve-prm-plan-a{ position:relative; height:64px; }
+.ve-prm-plan-eksen{ position:absolute; left:0; right:0; top:50%; border-top:1px dashed var(--border-hover); }
+.ve-prm-plan-bag{ position:absolute; top:0; bottom:0; border-left:1px dashed var(--border-hover); }
+.ve-prm-plan-yon{
+  position:absolute; transform:translateY(-50%); font-size:var(--fs-micro); line-height:1;
+  color:var(--text-muted); white-space:nowrap;
+}
+.ve-prm-plan-yon[data-yer="sag"]{ top:0; right:calc(100% + 12px); }
+.ve-prm-plan-yon[data-yer="on"]{ top:50%; right:calc(100% + 12px); }
+.ve-prm-plan-yon[data-yer="sol"]{ top:100%; right:calc(100% + 12px); }
+.ve-prm-plan-yon[data-yer="arka"]{ top:50%; left:calc(100% + 12px); }
+.ve-prm-no, .ve-prm-plan-t{
+  display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;
+  width:18px; height:18px; border:1px solid var(--border-hover); border-radius:50%;
+  background:var(--bg-secondary); color:var(--text-heading); font-size:var(--fs-micro); font-weight:700;
+  line-height:1; letter-spacing:normal; font-variant-numeric:tabular-nums; vertical-align:middle;
+}
+.ve-prm-plan-t{ position:absolute; z-index:1; transform:translate(-50%, -50%); cursor:default; }
+.ve-prm-plan-t[data-tara]{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
+/* ADAYLAR — tip × grup: marka satırı bölüm başı (ad büyük harfe dönmez), mevcut tipin
+   hücresi tonlu, son satır grup başına seçili tip sayısı. */
+.ve-properties-content .ve-mnt-foy.ve-prm-mx tr.ve-prm-mx-marka > *{ background:var(--bg-tertiary); }
+.ve-properties-content .ve-mnt-foy.ve-prm-mx tr.ve-prm-mx-marka th{
+  font-size:var(--fs-tiny); font-weight:700; letter-spacing:normal; text-transform:none;
+  color:var(--text-heading); border-bottom:1px solid var(--border-light);
+}
+.ve-properties-content .ve-mnt-foy.ve-prm-mx td[data-mevcut]{ background:var(--accent-tint-15); }
+.ve-properties-content .ve-mnt-foy.ve-prm-mx tr.ve-prm-mx-say td{
+  border-top:1px solid var(--border-color); border-bottom:0; font-weight:700; color:var(--text-heading);
+}
 /* Kriterler: rijitlik toleransının kutusu ve değeri yan yana. */
 .ve-prm-tol{ display:flex; align-items:center; gap:6px; }
 .ve-prm-tol .ve-fp-inp{ flex:1; min-width:0; }
@@ -11319,6 +11356,9 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   opacity:0; transition:opacity var(--dur-fast,0.14s) var(--ease-out,ease);
 }
 .ve-mnt-yukleme.acik{ opacity:1; }
+/* Sihirbazın yükleme ekranı (Canlı Not 146): pencerenin üstünde, başlık dâhil; asa dönmez */
+.ve-mw-yukleme{ z-index:60; }
+.ve-mw-yukleme .ve-mnt-yukleme-ico{ animation:none; }
 .ve-mnt-yukleme-kart{
   width:300px; box-sizing:border-box; padding:18px 20px 20px;
   background:var(--bg-secondary); border:1px solid var(--border-color);

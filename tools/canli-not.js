@@ -896,6 +896,9 @@ async function sonuc(o) {
       await sayfa.waitForTimeout(400);
     }
     if (hazirlik) await sayfa.evaluate('(async () => { const bekle = (ms) => new Promise((r) => setTimeout(r, ms));\n' + hazirlik + '\n})()');
+    // Bildirim görüntüye girmez (Not 1001'in ilk görüntüsünde "Örnek yüklendi" pencereyi örttü,
+    // görüntü yeniden alındı): sönmesi beklenir — bildirim 2,5 sn yaşar, en çok 6 sn.
+    await sayfa.waitForFunction(() => !document.querySelector('.ve-toast'), null, { timeout: 6000 }).catch(() => {});
     await sayfa.waitForTimeout(600);
     const secenek = { path: cikti };
     if (o.alan) secenek.clip = o.alan;

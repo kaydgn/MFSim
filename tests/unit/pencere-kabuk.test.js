@@ -145,7 +145,7 @@ const uygunlukVar = (el) => [...el.querySelectorAll('.ve-fp-sect b')].some((x) =
 // BOŞ PENCERE — kullanıcının kararıyla bölümsüz pencere (Canlı Not 1001: Parametrik Analiz
 // "Her şeyi kaldıralım. Adım adım kurgulayacağız"). Listedeki tipin penceresi BOŞ olmak
 // zorunda: yeniden kurulumda ilk bölüm girince tip listeden çıkar.
-const BOS_PENCERE = ['mnt-parametric'];
+const BOS_PENCERE = [];   // Parametrik Analiz Canlı Not 1002'de bölüm aldı
 function aile(d, t) {
   const b = [];
   if (BOS_PENCERE.indexOf(t) >= 0) {
@@ -385,8 +385,7 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     TAKOZ_TIP.forEach((t) => topla(takozPencere(t)));
     const govde = global.nodes.find((n) => n.type === 'mnt-motor');
     const nk = govde.data.pointMass; govde.data.pointMass = true; topla(takozPencere('mnt-motor')); govde.data.pointMass = nk;
-    // Parametrik Analiz'in penceresi BOŞ (Canlı Not 1001): bölüm başlığı vermez;
-    // kılavuzun Ek A'sı da onun bölümlerini anmaz.
+    // Parametrik Analiz (Canlı Not 1002): Takoz yerleşimi · Adaylar · Analiz — Ek A ikisini anar.
     // 3D Görüntüleyici'nin dosyalı bölümleri (Parçalar · Kütle · Model): güç
     // grubu, roller ve hesap — dosyasız pencere yalnız "STEP dosyası"nı taşır
     const STP = require('../../js/mount-step.js');
