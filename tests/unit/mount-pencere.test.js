@@ -203,6 +203,11 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect(cp._mntOranYayilim(t.data).yayilim).toBeGreaterThan(cp._MNT_ORAN_YAYILIM_SINIR);
     expect(cp._mntTakozTipDurumu(t).yazi).toBe('oran?');
     expect(cp._mntTakozKonumDurumu(t).d).toBe('ok');                     // takas konumu ilgilendirmez
+    // Rijitlik tablosunun altında oran satırı YOK (Canlı Not 138): sebep eksik bandında
+    const d = document.createElement('div'); d.innerHTML = cp.getMntMountPropertiesHTML(t);
+    expect(d.querySelectorAll('.ve-fp-gate')).toHaveLength(0);
+    expect(d.textContent).not.toMatch(/Eksenler arası oran yayılımı/);
+    expect(d.textContent).toMatch(/eksen takası olabilir/);
     t.data.y = '';
     expect(cp._mntTakozKonumDurumu(t).yazi).toBe('konum eksik');
   });
