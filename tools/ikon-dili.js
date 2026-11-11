@@ -99,6 +99,7 @@ const BELGE_DOSYA = {
   'js/cp-mount-report.js': ['veMntGenerateReport'],
   'js/cp-mount-param-rapor.js': [],
   'js/mount-param-excel.js': [],
+  'js/mount-param-html.js': [],
   'js/cp-fead-report.js': ['getFeadReportPropertiesHTML', '_frKindPicker', '_frDocFields', '_frStatus',
     'veFeadGenerateReport'],
   'js/cp-fead-summary.js': [],
