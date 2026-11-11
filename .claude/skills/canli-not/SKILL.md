@@ -94,8 +94,8 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
      her program 11–18 MB; açık görünüm eskisini zaten yüklemiş.
 - **Denetim:** `ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum`
   → `node tools/canli-not.js denetle <döküm>`: *Güncel* · *ESKİ … programı güncelle*
-  (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi; güncelleme
-  gerekmez). Belge yoksa sayfanın dosyası: `Artifact read url:<adres> path:mfsim.html`.
+  (programın girdileri değişti) · *yalnız künye eski* (belge ya da yalnız sayfa birleşmesi;
+  güncelleme gerekmez — sayfanın şablonu ve çekirdeği programa girmez). Belge yoksa sayfanın dosyası: `Artifact read url:<adres> path:mfsim.html`.
   Sayfanın kendisi: `Artifact read url:<adres> path:index.html` → `denetle <dosya>` —
   bugünkü şablon ve çekirdekle aynı mı (ayar satırı hariç); *Sayfa ESKİ* → sayfanın yayını.
 - **Ne zaman:** her birleşmeden sonra (CLAUDE.md → Teslim Akışı, 6) ve her
