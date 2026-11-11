@@ -23,7 +23,7 @@
 var veMntParamHtml = (function(){
   'use strict';
 
-  var SAYI = (typeof veSayi === 'function') ? { veSayi:veSayi, veSayiUstel:veSayiUstel }
+  var SAYI = (typeof veSayi === 'function') ? { veSayi:veSayi, veSayiUstel:veSayiUstel, veSayiMakine:veSayiMakine, veSayiOku:veSayiOku }
     : (typeof require === 'function' ? require('./sayi.js') : null);
   var XL = (typeof veMntParamExcel !== 'undefined') ? veMntParamExcel
     : (typeof require === 'function' ? require('./mount-param-excel.js') : null);
@@ -144,8 +144,34 @@ var veMntParamHtml = (function(){
     'th{background:var(--zemin);font-weight:600;color:var(--ink);position:sticky;top:0}',
     'th.sol,td.sol{text-align:left}',
     'th[data-sira]{cursor:pointer}',
-    'th[aria-sort="ascending"]::after{content:" \\2191"}',
-    'th[aria-sort="descending"]::after{content:" \\2193"}',
+    'th[aria-sort="ascending"] .bas::after{content:" \\2191"}',
+    'th[aria-sort="descending"] .bas::after{content:" \\2193"}',
+    '.suz-dug{margin-left:6px;width:18px;height:18px;padding:0;display:inline-flex;align-items:center;justify-content:center;',
+    '  vertical-align:-3px;color:var(--soluk);background:var(--kagit);border:1px solid var(--cizgi-koyu);border-radius:var(--radius-sm)}',
+    '.suz-dug svg{width:10px;height:10px}',
+    '.suz-dug[aria-pressed="true"],.suz-dug[aria-expanded="true"]{color:var(--vurgu);border-color:var(--vurgu);background:var(--vurgu-zemin)}',
+    '.suz{position:fixed;z-index:20;width:280px;display:flex;flex-direction:column;gap:8px;padding:10px;overflow:auto;',
+    '  background:var(--kagit);border:1px solid var(--cizgi-koyu);box-shadow:0 6px 14px rgba(27,36,48,.16);font-weight:400;text-align:left}',
+    '.suz[hidden]{display:none}',
+    '.suz-is{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;border-bottom:1px solid var(--cizgi)}',
+    '.suz-is button{border:0;background:none;text-align:left;padding:4px 6px}',
+    '.suz-is button:hover:not([disabled]){background:var(--vurgu-zemin);color:var(--ink)}',
+    '.suz-ara,.suz-aralik input{font:inherit;color:var(--ink);border:1px solid var(--cizgi-koyu);border-radius:var(--radius-sm);padding:4px 6px;width:100%}',
+    '.suz-liste{border:1px solid var(--cizgi);max-height:240px;overflow:auto;padding:4px 0}',
+    '.suz-liste label{display:flex;align-items:center;gap:6px;padding:3px 8px;white-space:nowrap;cursor:pointer}',
+    '.suz-liste label[hidden]{display:none}',
+    '.suz-liste label:hover{background:var(--zemin)}',
+    '.suz-liste .ad{flex:1;overflow:hidden;text-overflow:ellipsis}',
+    '.suz-liste .say{color:var(--soluk)}',
+    '.suz-hep{font-weight:600;border-bottom:1px solid var(--cizgi)}',
+    '.suz-aralik{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.suz-aralik label{display:flex;flex-direction:column;gap:4px;color:var(--soluk)}',
+    '.suz-alt{display:flex;justify-content:flex-end;gap:8px}',
+    '.suz-alt .ana{background:var(--vurgu);border-color:var(--vurgu);color:#ffffff}',
+    '.suz-alt .ana[disabled]{background:var(--kagit);color:var(--soluk);border-color:var(--cizgi)}',
+    '.suz-ozet{display:inline-flex;align-items:center;gap:4px;color:var(--vurgu);font-weight:600}',
+    '.suz-ozet svg{width:11px;height:11px}',
+    'td.bos{color:var(--soluk);padding:14px 10px}',
     'tbody tr[data-s]{cursor:pointer}',
     'tbody tr[data-s]:hover td{background:var(--vurgu-zemin)}',
     'td a{color:var(--vurgu);text-decoration:none;font-weight:600}',
@@ -210,40 +236,170 @@ var veMntParamHtml = (function(){
     }
 
     // ── Tarama ──
-    var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100;
-    if(T) for(var i = 0; i < T.n; i++) sira.push(i);
-    var DEGER = {
-      no:function(i){ return i; }, d:function(i){ return T.d[i]; }, T:function(i){ return T.T[i]; },
-      fB:function(i){ return T.fB[i]; }, sag:function(i){ return sag(T.k[i]); }, pay:function(i){ return T.pay[i]; }
-    };
-    function sirala(a){
-      if(a === anahtar) yon = -yon; else { anahtar = a; yon = (a === 'sag' || a === 'pay') ? -1 : 1; }
-      var f = DEGER[a];
-      sira.sort(function(p, q){
-        var x = f(p), y = f(q), xn = x == null || !isFinite(x), yn = y == null || !isFinite(y);
-        if(xn || yn) return xn === yn ? p - q : (xn ? 1 : -1);
-        return (x - y) * yon || p - q;
-      });
-      sayfa = 0; tarama();
-    }
+    // Sütunlar sıralamanın ve SÜZGECİN tek tanımı (Canlı not 2001: "Excel'deki gibi 'Filtrele'"):
+    // `liste` sütununda değer listesi (ara · tümünü seç · satır sayısı), `sayi` sütununda en az ·
+    // en çok. Liste, öteki süzgeçlerden geçen satırların değerleri (Excel gibi).
+    var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100, suz = {}, acikSuz = null;
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
+    var SUT = [], SUTK = {};
+    if(T){
+      SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, deger:function(i){ return i + 1; } });
+      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, deger:function(i){ return tipAdi(j, i); } }); });
+      SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
+      SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
+      SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
+      V.kriter.forEach(function(q, j){ SUT.push({ k:'k' + j, ad:esc(q.ad), baslik:q.s, tur:'liste', ok:true, deger:function(i){ return (T.k[i] & (1 << j)) ? '✓' : '✗'; } }); });
+      SUT.push({ k:'sag', ad:'Sağlanan', tur:'liste', azalan:true, deger:function(i){ return sag(T.k[i]) + ' / 4'; } });
+      SUT.push({ k:'pay', ad:'Frekans payı [Hz]', tur:'sayi', azalan:true, deger:function(i){ return T.pay[i]; } });
+      SUT.forEach(function(c){ SUTK[c.k] = c; });
+      for(var i = 0; i < T.n; i++) sira.push(i);
+    }
+    function bos(v){ return v == null || (typeof v === 'number' && !isFinite(v)); }
+    function siraUygula(){
+      var c = SUTK[anahtar];
+      sira.sort(function(p, q){
+        var x = c.deger(p), y = c.deger(q);
+        if(bos(x) || bos(y)) return bos(x) === bos(y) ? p - q : (bos(x) ? 1 : -1);   // değersiz hep sonda
+        var f = c.tur === 'sayi' ? x - y : String(x).localeCompare(String(y), 'tr', { numeric:true });
+        return f * yon || p - q;
+      });
+    }
+    function sirala(a, y){
+      if(y){ anahtar = a; yon = y; }
+      else if(a === anahtar) yon = -yon;
+      else { anahtar = a; yon = SUTK[a].azalan ? -1 : 1; }
+      siraUygula(); sayfa = 0; tarama();
+    }
+    function gecer(i, haric){
+      for(var k in suz){
+        if(k === haric || !Object.prototype.hasOwnProperty.call(suz, k)) continue;
+        var f = suz[k], v = SUTK[k].deger(i);
+        if(f.izin){ if(!f.izin[v]) return false; continue; }
+        if(bos(v) || (f.min != null && v < f.min) || (f.max != null && v > f.max)) return false;
+      }
+      return true;
+    }
+    function suzgecUygula(){
+      sira = [];
+      for(var i = 0; i < T.n; i++) if(gecer(i)) sira.push(i);
+      siraUygula(); sayfa = 0; tarama();
+    }
+    // süzgecin paneli (Excel'in açılır listesi): sırala · temizle · değerler ya da aralık · Tamam · İptal
+    var OK_ALT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+    var HUNI = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1.5h8L6 5.2V9L4 8V5.2z" fill="currentColor"/></svg>';
+    function degerYaz(c, v){
+      if(c.ok) return v === '✓' ? '<span class="ok">✓</span> Sağlanıyor' : '<span class="no">✗</span> Sağlanmıyor';
+      return esc(v);
+    }
+    function suzAc(k, dug){
+      if(acikSuz && acikSuz.k === k){ suzKapat(); return; }
+      var c = SUTK[k], f = suz[k], p = $('ve-suz');
+      var h = '<div class="suz-is">'
+        + '<button type="button" data-suz-is="artan">' + (c.tur === 'sayi' ? 'Küçükten büyüğe sırala' : 'A’dan Z’ye sırala') + '</button>'
+        + '<button type="button" data-suz-is="azalan">' + (c.tur === 'sayi' ? 'Büyükten küçüğe sırala' : 'Z’den A’ya sırala') + '</button>'
+        + '<button type="button" data-suz-is="temizle"' + (f ? '' : ' disabled') + '>Filtreyi temizle</button></div>';
+      if(c.tur === 'liste'){
+        var say = {}, degerler = [];
+        for(var i = 0; i < T.n; i++){
+          if(!gecer(i, k)) continue;
+          var v = c.deger(i);
+          if(!Object.prototype.hasOwnProperty.call(say, v)){ say[v] = 0; degerler.push(v); }
+          say[v]++;
+        }
+        if(f) Object.keys(f.izin).forEach(function(v){ if(!Object.prototype.hasOwnProperty.call(say, v)){ say[v] = 0; degerler.push(v); } });
+        degerler.sort(function(a, b){ return String(a).localeCompare(String(b), 'tr', { numeric:true }); });
+        if(c.azalan) degerler.reverse();
+        h += (degerler.length > 8 ? '<input type="search" class="suz-ara" aria-label="Ara" placeholder="Ara">' : '')
+          + '<div class="suz-liste"><label class="suz-hep"><input type="checkbox" data-suz-hep> Tümünü seç</label>'
+          + degerler.map(function(v){
+            return '<label data-deger="' + esc(v) + '"><input type="checkbox" data-suz-deger="' + esc(v) + '"' + (!f || f.izin[v] ? ' checked' : '') + '>'
+              + '<span class="ad">' + degerYaz(c, v) + '</span><span class="say">' + s(say[v], 0) + '</span></label>';
+          }).join('') + '</div>';
+      } else {
+        var yaz = function(v){ return v == null ? '' : esc(veSayi(v, null, { binlik:false })); };
+        h += '<div class="suz-aralik"><label>En az<input type="text" inputmode="decimal" data-suz-min value="' + yaz(f && f.min) + '"></label>'
+          + '<label>En çok<input type="text" inputmode="decimal" data-suz-max value="' + yaz(f && f.max) + '"></label></div>';
+      }
+      h += '<div class="suz-alt"><button type="button" class="ana" data-suz-is="tamam">Tamam</button><button type="button" data-suz-is="iptal">İptal</button></div>';
+      p.innerHTML = h;
+      p.hidden = false;
+      acikSuz = { k:k, dug:dug };
+      dug.setAttribute('aria-expanded', 'true');
+      hepYaz();
+      konumla();
+      var ilk = p.querySelector('.suz-ara, [data-suz-min]');
+      if(ilk) ilk.focus();
+    }
+    function konumla(){
+      var p = $('ve-suz'), d = acikSuz && acikSuz.dug;
+      if(!d || !d.getBoundingClientRect) return;
+      var r = d.getBoundingClientRect(), g = p.offsetWidth || 280;
+      p.style.left = Math.max(8, Math.min(r.right - g, window.innerWidth - g - 8)) + 'px';
+      p.style.top = (r.bottom + 4) + 'px';
+      p.style.maxHeight = Math.max(160, window.innerHeight - r.bottom - 16) + 'px';
+    }
+    function suzKapat(){
+      var p = $('ve-suz');
+      if(acikSuz && acikSuz.dug) acikSuz.dug.removeAttribute('aria-expanded');
+      p.hidden = true; p.innerHTML = ''; acikSuz = null;
+    }
+    function gorunenKutular(){
+      return Array.prototype.filter.call($('ve-suz').querySelectorAll('label[data-deger]'), function(l){ return !l.hidden; })
+        .map(function(l){ return l.querySelector('input'); });
+    }
+    function hepYaz(){
+      var p = $('ve-suz'), hep = p.querySelector('[data-suz-hep]'), tamam = p.querySelector('[data-suz-is="tamam"]');
+      if(!hep) return;
+      var k = gorunenKutular(), on = k.filter(function(x){ return x.checked; }).length;
+      hep.checked = on > 0 && on === k.length;
+      hep.indeterminate = on > 0 && on < k.length;
+      tamam.disabled = !on;
+    }
+    function suzTamam(){
+      var k = acikSuz.k, c = SUTK[k], p = $('ve-suz');
+      if(c.tur === 'liste'){
+        var ara = p.querySelector('.suz-ara'), aranan = ara && ara.value.trim();
+        var kutular = aranan ? gorunenKutular() : Array.prototype.slice.call(p.querySelectorAll('[data-suz-deger]'));
+        var izin = {}, hepsi = !aranan;
+        kutular.forEach(function(x){ if(x.checked) izin[x.getAttribute('data-suz-deger')] = true; else hepsi = false; });
+        if(hepsi) delete suz[k]; else suz[k] = { izin:izin };
+      } else {
+        var mn = veSayiOku(p.querySelector('[data-suz-min]').value), mx = veSayiOku(p.querySelector('[data-suz-max]').value);
+        mn = isFinite(mn) ? mn : null; mx = isFinite(mx) ? mx : null;
+        if(mn != null && mx != null && mn > mx){ var t_ = mn; mn = mx; mx = t_; }
+        if(mn == null && mx == null) delete suz[k]; else suz[k] = { min:mn, max:mx };
+      }
+      suzKapat(); suzgecUygula();
+    }
+    function suzIs(is){
+      var k = acikSuz.k;
+      if(is === 'tamam') suzTamam();
+      else if(is === 'iptal') suzKapat();
+      else if(is === 'temizle'){ delete suz[k]; suzKapat(); suzgecUygula(); }
+      else { suzKapat(); sirala(k, is === 'artan' ? 1 : -1); }
+    }
     function tarama(){
       if(!T){ $('ve-tarama').innerHTML = ''; return; }
-      var son = Math.ceil(T.n / ADIM) - 1;
+      var n = sira.length, son = Math.max(0, Math.ceil(n / ADIM) - 1);
       sayfa = Math.max(0, Math.min(son, sayfa));
-      var a = sayfa * ADIM, b = Math.min(T.n, a + ADIM);
-      var bs = function(k, ad, sol){
-        return '<th data-sira="' + k + '"' + (sol ? ' class="sol"' : '') + (anahtar === k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + ad + '</th>';
+      var a = sayfa * ADIM, b = Math.min(n, a + ADIM), suzSay = Object.keys(suz).length;
+      var bs = function(c){
+        var ac = !!suz[c.k];
+        return '<th data-sira="' + c.k + '"' + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
+          + (anahtar === c.k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '><span class="bas">' + c.ad + '</span>'
+          + '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"' + (ac ? ' aria-pressed="true"' : '') + '>'
+          + (ac ? HUNI : OK_ALT) + '</button></th>';
       };
-      var h = '<div class="arac"><span class="sayac">' + s(a + 1, 0) + '–' + s(b, 0) + ' / ' + s(T.n, 0)
-        + (T.N > T.n ? ' (' + s(T.N, 0) + ' kombinasyon)' : '') + '</span><span class="bosluk"></span>'
+      var h = '<div class="arac"><span class="sayac">' + (n ? s(a + 1, 0) + '–' + s(b, 0) : '0') + ' / ' + s(n, 0)
+        + (T.N > T.n ? ' (' + s(T.N, 0) + ' kombinasyon)' : '') + '</span>'
+        + (suzSay ? '<span class="suz-ozet">' + HUNI + ' ' + s(n, 0) + ' / ' + s(T.n, 0) + '</span>'
+          + '<button type="button" data-suz-hepsi>Filtreleri temizle</button>' : '')
+        + '<span class="bosluk"></span>'
         + '<button type="button" data-sayfa="-1" aria-label="Önceki sayfa"' + (sayfa <= 0 ? ' disabled' : '') + '>‹</button>'
         + '<span class="sayac">' + s(sayfa + 1, 0) + ' / ' + s(son + 1, 0) + '</span>'
         + '<button type="button" data-sayfa="1" aria-label="Sonraki sayfa"' + (sayfa >= son ? ' disabled' : '') + '>›</button></div>'
-        + '<div class="kap"><table><thead><tr>' + bs('no', 'No', true)
-        + T.gruplar.map(function(g){ return '<th class="sol">' + esc(V.gruplar[g]) + '</th>'; }).join('')
-        + bs('d', 'Statik sehim [mm]') + bs('T', 'TR [%]') + bs('fB', 'Zıplama f<sub>b</sub> [Hz]') + kBas()
-        + bs('sag', 'Sağlanan') + bs('pay', 'Frekans payı [Hz]') + '</tr></thead><tbody>';
+        + '<div class="kap"><table><thead><tr>' + SUT.map(bs).join('') + '</tr></thead><tbody>';
+      if(!n) h += '<tr><td class="sol bos" colspan="' + SUT.length + '">Süzgece uyan satır yok.</td></tr>';
       for(var r = a; r < b; r++){
         var x = sira[r];
         h += '<tr data-s="T' + (x + 1) + '"><td class="sol"><a href="#T' + (x + 1) + '">' + s(x + 1, 0) + '</a></td>'
@@ -289,7 +445,7 @@ var veMntParamHtml = (function(){
         ust = ['#tarama', '← Tarama']; liste = sira.map(function(x){ return 'T' + (x + 1); }); yer = sira.indexOf(i);
       }
       var etiket = function(id){ var q = konu(id); return q.tur === 'K' ? 'K' + V.konfig[q.n].K : 'No ' + s(q.n + 1, 0); };
-      var geri = yer > 0 ? liste[yer - 1] : null, ileri = yer < liste.length - 1 ? liste[yer + 1] : null;
+      var geri = yer > 0 ? liste[yer - 1] : null, ileri = yer >= 0 && yer < liste.length - 1 ? liste[yer + 1] : null;
       h += '<div class="arac"><a class="dugme" href="' + ust[0] + '">' + ust[1] + '</a><span class="bosluk"></span>'
         + (geri ? '<a class="dugme" href="#' + geri + '">← ' + etiket(geri) + '</a>' : '')
         + (ileri ? '<a class="dugme" href="#' + ileri + '">' + etiket(ileri) + ' →</a>' : '') + '</div>';
@@ -338,6 +494,12 @@ var veMntParamHtml = (function(){
     }
     document.addEventListener('click', function(e){
       var t = e.target;
+      var sd = t.closest && t.closest('button[data-suz]');
+      if(sd){ suzAc(sd.getAttribute('data-suz'), sd); return; }
+      var pi = t.closest && t.closest('#ve-suz');
+      if(pi){ var is = t.closest('[data-suz-is]'); if(is && !is.disabled) suzIs(is.getAttribute('data-suz-is')); return; }
+      if(acikSuz){ suzKapat(); return; }                         // dışarı tık paneli kapatır (Excel gibi)
+      if(t.closest && t.closest('[data-suz-hepsi]')){ suz = {}; suzgecUygula(); return; }
       var th = t.closest && t.closest('th[data-sira]');
       if(th){ sirala(th.getAttribute('data-sira')); return; }
       var sb = t.closest && t.closest('button[data-sayfa]');
@@ -348,8 +510,33 @@ var veMntParamHtml = (function(){
       if(tr_) git('#' + tr_.getAttribute('data-s'));
     });
     window.addEventListener('hashchange', function(){ goster(); });
+    document.addEventListener('change', function(e){
+      var t = e.target;
+      if(!acikSuz || !(t.closest && t.closest('#ve-suz'))) return;
+      if(t.hasAttribute('data-suz-hep')) gorunenKutular().forEach(function(x){ x.checked = t.checked; });
+      hepYaz();
+    });
+    document.addEventListener('input', function(e){
+      var t = e.target;
+      if(!acikSuz || !t.classList || !t.classList.contains('suz-ara')) return;
+      var q = t.value.trim().toLocaleLowerCase('tr');
+      Array.prototype.forEach.call($('ve-suz').querySelectorAll('label[data-deger]'), function(l){
+        l.hidden = !!q && String(l.getAttribute('data-deger')).toLocaleLowerCase('tr').indexOf(q) < 0;
+      });
+      hepYaz();
+    });
+    document.addEventListener('keydown', function(e){
+      if(!acikSuz) return;
+      if(e.key === 'Escape'){ suzKapat(); return; }
+      if(e.key === 'Enter' && e.target.closest && e.target.closest('#ve-suz') && e.target.tagName === 'INPUT'){
+        e.preventDefault();
+        var tm = $('ve-suz').querySelector('[data-suz-is="tamam"]');
+        if(tm && !tm.disabled) suzTamam();
+      }
+    });
+    window.addEventListener('resize', function(){ if(acikSuz) konumla(); });
     ozet(); tarama(); sonuc(); goster();
-    window.veRapor = { goster:goster, sirala:sirala, secili:function(){ return secili; } };
+    window.veRapor = { goster:goster, sirala:sirala, secili:function(){ return secili; }, sira:function(){ return sira.slice(); } };
   }
 
   // ── iş: dilimli kurulum ──────────────────────────────────────────────────
@@ -403,7 +590,8 @@ var veMntParamHtml = (function(){
       var json = JSON.stringify(D).replace(/</g, '\\u003c'), govde = [];
       json.split(/@@B(\d+)@@/).forEach(function(p, j){ if(j % 2) Array.prototype.push.apply(govde, parca[+p]); else govde.push(p); });
       var yuz = (typeof veThemeFontFaceCss === 'function') ? veThemeFontFaceCss() : '';
-      var sayi = SAYI ? [SAYI.veSayi, SAYI.veSayiUstel].map(String).join('\n') : 'function veSayi(v){ return String(v); }';
+      var sayi = SAYI ? [SAYI.veSayi, SAYI.veSayiUstel, SAYI.veSayiMakine, SAYI.veSayiOku].map(String).join('\n')
+        : 'function veSayi(v){ return String(v); }\nfunction veSayiOku(v){ return parseFloat(v); }';
       var T0 = D.tarama;
       var kunye = [
         'Ateşleme frekansı ' + tr(D.fAtes, 2) + ' Hz',
@@ -423,6 +611,7 @@ var veMntParamHtml = (function(){
         + '<section id="v-ozet"><div class="kap" id="ve-ozet"></div></section>\n'
         + '<section id="v-tarama" hidden><div id="ve-tarama"></div></section>\n'
         + '<section id="v-sonuc" hidden><div id="ve-sonuc"></div></section>\n</main>\n'
+        + '<div class="suz" id="ve-suz" role="dialog" aria-label="Filtrele" hidden></div>\n'
         + '<script type="application/json" id="ve-veri">';
       var alt = '<\/script>\n<script>\n' + sayi + '\n(' + _sayfa.toString() + ')();\n<\/script>\n</body>\n</html>\n';
       return [ust].concat(govde, [alt]);

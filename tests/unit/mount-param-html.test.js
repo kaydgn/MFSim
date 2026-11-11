@@ -221,6 +221,73 @@ describe('SAYFA', () => {
     expect(w.location.hash).toBe('#tarama');
   });
 
+  // SÜZGEÇ (Canlı not 2001: "Tarama kısmında Excel'deki gibi 'Filtrele' özelliği koyalım"): her
+  // başlıkta düğme; liste sütununda değerler (satır sayısıyla, öteki süzgeçlerden geçenler), sayı
+  // sütununda en az · en çok; sayaç, geri · ileri ve sıralama süzülmüş listeyi izler.
+  describe('SÜZGEÇ', () => {
+    const no = (d) => [...d.querySelectorAll('#ve-tarama tbody tr[data-s]')].map((r) => metin(r.children[0]));
+    const ac_ = (d, k) => d.querySelector('#ve-tarama button[data-suz="' + k + '"]').click();
+    const isaret = (w, kutu, on) => { kutu.checked = on; kutu.dispatchEvent(new w.Event('change', { bubbles: true })); };
+
+    test('tip sütunu: değerler satır sayısıyla; birini kaldırıp Tamam — satırlar, sayaç, özet, düğme; Filtreleri temizle', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      expect(d.querySelectorAll('#ve-tarama thead button[data-suz]').length).toBe(d.querySelectorAll('#ve-tarama thead th').length);
+      ac_(d, 'g0');
+      expect(p.hidden).toBe(false);
+      expect([...p.querySelectorAll('label[data-deger]')].map((l) => [l.getAttribute('data-deger'), metin(l.querySelector('.say'))])).toEqual([
+        ['Cone 39 50 ShA (AMC 137982)', '1'], ['Cone 121 NP 55 ShA (AMC 137829)', '1'], ['Mount 1 40 ShA', '1']]);
+      expect(p.querySelector('[data-suz-hep]').checked).toBe(true);
+      isaret(w, p.querySelector('input[data-suz-deger="Mount 1 40 ShA"]'), false);
+      expect(p.querySelector('[data-suz-hep]').indeterminate).toBe(true);
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(p.hidden).toBe(true);
+      expect(no(d)).toEqual(['1', '2']);
+      expect(metin(d.querySelector('#ve-tarama .sayac'))).toBe('1–2 / 2 (4 kombinasyon)');
+      expect(metin(d.querySelector('#ve-tarama .suz-ozet'))).toBe('2 / 3');
+      expect(d.querySelector('#ve-tarama button[data-suz="g0"]').getAttribute('aria-pressed')).toBe('true');
+      d.querySelector('#ve-tarama [data-suz-hepsi]').click();
+      expect(no(d)).toEqual(['1', '2', '3']);
+      expect(d.querySelector('#ve-tarama .suz-ozet')).toBeNull();
+    });
+
+    test('sayı sütunu: en az (virgüllü) · en çok; panel değeri hatırlar; Filtreyi temizle', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      ac_(d, 'd');
+      p.querySelector('[data-suz-min]').value = '15,05';
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(no(d)).toEqual(['3']);
+      ac_(d, 'd');
+      expect(p.querySelector('[data-suz-min]').value).toBe('15,05');
+      p.querySelector('[data-suz-max]').value = '15,08';                  // aralıkta satır yok
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(no(d)).toEqual([]);
+      expect(metin(d.querySelector('#ve-tarama td.bos'))).toBe('Süzgece uyan satır yok.');
+      ac_(d, 'd');
+      p.querySelector('[data-suz-is="temizle"]').click();
+      expect(no(d)).toEqual(['1', '2', '3']);
+    });
+
+    test('kriter: Sağlanıyor · Sağlanmıyor; süzülmüş listede geri · ileri; panelden Z’den A’ya; hiçbiri seçilmeden Tamam kapalı; Esc kapatır', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      ac_(d, 'k1');
+      expect([...p.querySelectorAll('label[data-deger]')].map((l) => metin(l))).toEqual(['✓ Sağlanıyor1', '✗ Sağlanmıyor2']);
+      isaret(w, p.querySelector('[data-suz-hep]'), false);
+      expect(p.querySelector('[data-suz-is="tamam"]').disabled).toBe(true);
+      isaret(w, p.querySelector('input[data-suz-deger="✗"]'), true);
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(no(d)).toEqual(['2', '3']);
+      d.querySelectorAll('#ve-tarama tbody tr')[0].children[2].click();
+      expect([...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => x.getAttribute('href'))).toEqual(['#tarama', '#T3']);
+      w.location.hash = '#tarama'; w.veRapor.goster();
+      ac_(d, 'g0');
+      p.querySelector('[data-suz-is="azalan"]').click();
+      expect(no(d)).toEqual(['3', '2']);                                  // Mount › Cone 39 (Z'den A'ya)
+      ac_(d, 'g0');
+      d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(p.hidden).toBe(true);
+    });
+  });
+
   test('adres görünümü seçer: #T3 o sonuç; #sonuc son seçilen (varsayılan K1); bozuk adres Özet', () => {
     expect(metin(ac(html, '#T3').document.querySelector('#ve-sonuc h2'))).toBe('No 3');
     const w = ac(html, '#sonuc');
