@@ -405,6 +405,29 @@ describe('YAYIN — köprü ve sayfa', () => {
 
 // ═══ GÜNCELLİK ═════════════════════════════════════════════════════════════
 // Kullanıcı 2026-11-05: "güncelliğinden emin olalım, öyle devam edelim".
+// SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE (2026-11-11): program 16 MB'ı aşınca sayfa
+// yeni programı gömemez; yayındaki mfsim.html korunur (publish `files`'sız) ve sayfanın
+// ayar satırı o gömülü programın künyesini taşır — yayındaki sayfadan okunur.
+describe('SAYFA — gömülü program yerinde, ayar yayındaki sayfadan', () => {
+  test('ayar yayındaki sayfadan; şablon ve çekirdek bugünkü; ayarsız sayfa reddedilir', () => {
+    const os = require('os');
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
+    const dizin = fs.mkdtempSync(path.join(os.tmpdir(), 'cn-sayfa-'));
+    const eski = path.join(dizin, 'index.html');
+    const ayar = { surum: 'b42cb54', pr: 1325, zaman: '2026-11-11T06:30:00Z', boyut: 17000000 };
+    fs.writeFileSync(eski, T.sayfaKur(sablon.replace('Programı güncelle', 'ESKİ'), cekirdek, ayar));   // eski şablon
+    const r = T.sayfaYayini({ konum: [eski], dal: true, cikti: dizin });
+    expect(r.ayar).toEqual(ayar);
+    expect(r.guncel).toBe(false);                                         // yayındaki sayfa eski şablondu
+    const yeni = fs.readFileSync(r.sayfa, 'utf8');
+    expect(T.sayfaHukmu(yeni, sablon, cekirdek)).toEqual({ guncel: true, ayar });
+    fs.writeFileSync(eski, '<html><body>başka</body></html>');
+    expect(() => T.sayfaYayini({ konum: [eski], dal: true, cikti: dizin })).toThrow(/ayar satırı/);
+    expect(() => T.sayfaYayini({ konum: [], dal: true })).toThrow(/yayındaki sayfa gerekli/);
+  });
+});
+
 describe('GÜNCELLİK — yayındaki program ana dalın kendisi mi', () => {
   test('künye build.js\'in yazdığı biçimden geri okunur (</script> kaçışı dâhil)', () => {
     const kunye = { sha: 'a'.repeat(40), shortSha: 'aaaaaaa', branch: 'main', prNumber: 1240, prTitle: 'x </script> y' };
@@ -510,24 +533,93 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
   // gövdeye, betikler genel kapsamda; sahte kayıt ve varlık deposu. Çerçeve
   // kaynaksız başlar, kaynağı kayıt seçer.
   const bekle = (ms) => new Promise((r) => setTimeout(r, ms || 15));
-  function sayfa() {
+  function sayfa(opt) {
+    opt = opt || {};
     const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
     const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
     const tam = T.sayfaKur(sablon, cekirdek, { surum: 'aaaaaaa', pr: 1290 });
-    const dinle = {}, getirilen = [];
+    const dinle = {}, getirilen = [], yazilan = [];
     const db = {
       collection: (p) => ({ orderBy: () => ({ onSnapshot: (f) => { dinle[p] = f; f({ docs: [] }); return () => {}; } }) }),
-      doc: (p) => ({ onSnapshot: (f) => { dinle[p] = f; return () => {}; }, update: () => Promise.resolve(), set: () => Promise.resolve() })
+      doc: (p) => ({ onSnapshot: (f) => { dinle[p] = f; return () => {}; },
+        update: (v) => { yazilan.push(['update', p, v]); return Promise.resolve(); },
+        set: (v) => { yazilan.push(['set', p, v]); return Promise.resolve(); } })
     };
     document.body.innerHTML = tam.replace(/<script>[\s\S]*?<\/script>/g, '');
-    window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : null) };
+    window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : (ad === 'comments' ? (opt.yorum || null) : null)) };
     window.fetch = (u) => { getirilen.push(u); return Promise.resolve({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>' + u + '</body></html>') }); };
     [...tam.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((m) => (0, eval)(m[1]));
     const d = document;
     const yayinGonder = (y) => dinle['yayin/son']({ exists: !!y, data: () => y, metadata: { fromCache: false } });
     const notGonder = (liste) => dinle.notlar({ docs: liste.map((n) => ({ id: n.id, data: () => n })) });
-    return { d, getirilen, yayinGonder, notGonder, cerceve: d.getElementById('cn-program'), gizli: (id) => d.getElementById(id).hidden };
+    const istekGonder = (v) => dinle['istek/guncelle']({ exists: !!v, data: () => v });
+    return { d, getirilen, yazilan, yayinGonder, notGonder, istekGonder, cerceve: d.getElementById('cn-program'), gizli: (id) => d.getElementById(id).hidden };
   }
+
+  // PROGRAMI GÜNCELLE (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı
+  // güncelleyen bir buton koyalım. Yani şu an güncelle dediğimiz zaman sanırım canlı not
+  // üzerinden yaptığımız değişiklikleri güncelliyor"*): Güncelleme yalnız bir oturumun
+  // yayınladığını yükler; düğme ana dalın SON hâlini ister.
+  test('istek: durum kayıttan; 30 dakikadan eski "bekliyor" ESKİ; yorumun metni başlıkla', () => {
+    const simdi = Date.parse('2026-11-11T08:00:00Z');
+    expect(CN.istekDurumu(null, simdi)).toBe('yok');
+    expect(CN.istekDurumu({ durum: 'garip' }, simdi)).toBe('yok');
+    expect(CN.istekDurumu({ durum: 'bekliyor', zaman: '2026-11-11T07:50:00Z' }, simdi)).toBe('bekliyor');
+    expect(CN.istekDurumu({ durum: 'yapiliyor', zaman: '2026-11-11T07:20:00Z' }, simdi)).toBe('eski');
+    expect(CN.istekDurumu({ durum: 'bekliyor' }, simdi)).toBe('eski');
+    expect(CN.istekDurumu({ durum: 'tamam', zaman: '2026-11-01T00:00:00Z' }, simdi)).toBe('tamam');
+    expect(CN.istekMetni({ surum: 'abcdef1', pr: 1335 })).toBe('Program güncelleme isteği · açık sürüm abcdef1 · #1335');
+    expect(CN.istekMetni({}).startsWith(CN.ISTEK_BASLIK)).toBe(true);
+  });
+
+  test('PROGRAMI GÜNCELLE: kayda istek + Claude\'a yorum; çalışırken kapalı; yeni yayın SORMADAN yüklenir', async () => {
+    const gonderilen = [];
+    const yorum = { canSendToClaude: () => Promise.resolve('available'), anchorFor: (el) => Promise.resolve({ el: el.id }),
+      sendToClaude: (t) => { gonderilen.push(t); return Promise.resolve({ threadId: 'konu-1' }); } };
+    const a = sayfa({ yorum });
+    await bekle();
+    a.yayinGonder(null);
+    await bekle();
+    const b = a.d.getElementById('cn-istek');
+    expect([b.disabled, b.textContent]).toEqual([false, 'Programı güncelle']);
+    b.click();
+    await bekle(30);
+    expect(a.yazilan.filter((w) => w[1] === 'istek/guncelle').map((w) => [w[0], w[2].durum || '', w[2].konu || '', w[2].sayfaSurum || '']))
+      .toEqual([['set', 'bekliyor', '', 'aaaaaaa'], ['update', '', 'konu-1', '']]);
+    expect(gonderilen).toEqual([{ anchor: { el: 'cn-istek' }, text: 'Program güncelleme isteği · açık sürüm aaaaaaa · #1290' }]);
+    expect([b.disabled, b.textContent]).toEqual([true, 'Güncelleniyor…']);
+    a.istekGonder({ durum: 'yapiliyor', zaman: new Date().toISOString() });
+    await bekle();
+    expect(b.disabled).toBe(true);
+    // oturum yayınladı: pencere sormaz, program yüklenir (proje taşınır)
+    a.yayinGonder(yayinB('eeeeeee', ID('e'), []));
+    await bekle();
+    expect(a.getirilen).toEqual(['/_blob/' + ID('e')]);
+    expect(a.gizli('cn-guncel')).toBe(true);
+    expect(a.d.getElementById('cn-surum').textContent).toBe('eeeeeee · #1300');
+    a.istekGonder({ durum: 'tamam', zaman: new Date().toISOString(), surum: 'eeeeeee' });
+    await bekle();
+    expect([b.disabled, b.textContent]).toEqual([false, 'Programı güncelle']);
+    // istek düğmeden gelmediyse yeni yayın yine sorar
+    a.yayinGonder(yayinB('fffffff', ID('f'), []));
+    await bekle(25);
+    expect(a.gizli('cn-guncel')).toBe(false);
+  });
+
+  test('yayın zaten ana dalsa "güncel" bildirilir; oturum yoksa istek kayıtta kalır', async () => {
+    const a = sayfa();                                          // yorum katmanı yok
+    await bekle();
+    a.yayinGonder(null);
+    await bekle();
+    a.d.getElementById('cn-istek').click();
+    await bekle(30);
+    expect(a.yazilan.filter((w) => w[1] === 'istek/guncelle').map((w) => w[0])).toEqual(['set']);
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Claude oturumu bağlı değil; istek kayıtta.');
+    a.istekGonder({ durum: 'guncel', zaman: new Date().toISOString(), surum: 'aaaaaaa' });
+    await bekle();
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Program güncel · aaaaaaa');
+    expect(a.d.getElementById('cn-istek').disabled).toBe(false);
+  });
   afterAll(() => { delete window.claude; delete window.fetch; delete window.CanliNot; document.body.innerHTML = ''; });
 
   test('şablon: çerçeve KAYNAKSIZ başlar; sayfa yeniden yüklenmez; gizli kural ezilmez', () => {

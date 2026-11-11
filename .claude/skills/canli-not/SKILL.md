@@ -120,6 +120,36 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
   açılış dosyayı yükler.
 - Adres: **https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91** (gizli; yalnız kullanıcı).
 
+- **Program 16 MB'ı aşınca sayfanın yayını:** gömülü kopya yerinde kalır —
+  `Artifact read url:<adres> path:index.html out_dir:.canli-not/dokum/sayfa`, sonra
+  `node tools/canli-not.js sayfa .canli-not/dokum/sayfa/index.html` (ayar yayındaki
+  sayfadan: gömülü programın künyesi) → `Artifact` publish `url:<adres>`
+  `file_path: .canli-not/yayin/canli-not.html`, **`files` YOK** (verilmeyen dosya yerinde
+  kalır), `capabilities` yazılmaz. Yeni program yine kayıttaki yayından (`yayin/son`) gelir.
+
+### Programı güncelle düğmesi — ana dalın son hâli
+
+Kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı güncelleyen bir buton
+koyalım. Yani şu an güncelle dediğimiz zaman sanırım canlı not üzerinden yaptığımız
+değişiklikleri güncelliyor."* Güncelleme penceresi yalnız bir oturumun YAYINLADIĞINI yükler;
+başka oturumların birleşmeleri yayınlanmadıkça gelmez. Şeritteki **Programı güncelle** kayda
+`istek/guncelle` (`{durum:'bekliyor', zaman, sayfaSurum}`) yazar ve Claude'a
+`Program güncelleme isteği · açık sürüm <sha>` yorumunu gönderir. Bu yorumla uyanan oturum
+(sahiplik §2'nin başı), sırayla:
+
+1. `ArtifactData get collection:istek doc_id:guncelle` → `durum:'yapiliyor'` (`if_version`).
+2. `git fetch origin main`; `yayin/son`'un `sha`'sı `origin/main` ise → `durum:'guncel'`,
+   `surum` (kısa sha); konuya tek satır cevap, `resolve`. Bitti.
+3. Değilse programın güncellemesi (yukarıdaki dört adım; `--notlar` yok): `hazirla` → duman
+   (açılış · 0 hata · 0 ağ) → varlık → `yayin` → `yayin/son` → eski varlığı sil.
+4. `yayin/son` yazıldıktan SONRA → `istek/guncelle`: `durum:'tamam'`, `surum`, `pr`. Sayfa
+   yeni yayını sormadan yükler (istek düğmeden geldi), proje taşınır.
+5. Konuya tek satır cevap (yüklenen sürüm), `resolve`. Yapılamazsa `durum:'hata'`,
+   `cevap:<kısa sebep>` — sayfa bildirimde gösterir.
+
+Sayfa 30 dakikadan eski `bekliyor`/`yapiliyor`u eski sayar ve düğmeyi yeniden açar. Kapı:
+`canli-not.test.js` → *PROGRAMI GÜNCELLE* · *SAYFA*.
+
 ## 2 · Uyanış ve sıra
 
 Sayfanın **Notlar** listesi YENİDEN ESKİYE (kullanıcı 2026-11-05: *"en son güncellemeler en
