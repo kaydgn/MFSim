@@ -547,7 +547,8 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     };
     document.body.innerHTML = tam.replace(/<script>[\s\S]*?<\/script>/g, '');
     window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : (ad === 'comments' ? (opt.yorum || null) : null)) };
-    window.fetch = (u) => { getirilen.push(u); return Promise.resolve({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>' + u + '</body></html>') }); };
+    const yanit = (u) => ({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>' + u + '</body></html>') });
+    window.fetch = (u) => { getirilen.push(u); return opt.getir ? opt.getir(u).then(() => yanit(u)) : Promise.resolve(yanit(u)); };
     [...tam.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((m) => (0, eval)(m[1]));
     const d = document;
     const yayinGonder = (y) => dinle['yayin/son']({ exists: !!y, data: () => y, metadata: { fromCache: false } });
@@ -619,6 +620,116 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     await bekle();
     expect(a.d.getElementById('cn-bildirim').textContent).toBe('Program güncel · aaaaaaa');
     expect(a.d.getElementById('cn-istek').disabled).toBe(false);
+  });
+
+  // KİLİT (kullanıcı 2026-11-11: *"Programı güncelle dediğim zaman … 'güncelleniyor' yazısı
+  // çıkıyor butonda. Böyle olduğu zaman programı kilitlemesini istiyorum. Şu anda güncel
+  // olarak program kilitlenmiyor, hala kullanılabiliyor."*)
+  const yorumVar = () => ({ canSendToClaude: () => Promise.resolve('available'), anchorFor: (el) => Promise.resolve({ el: el.id }),
+    sendToClaude: () => Promise.resolve({ threadId: 'konu-1' }) });
+  const kilit = (a) => [a.gizli('cn-kilit'), a.cerceve.hasAttribute('inert'), a.d.getElementById('cn-yenile').disabled,
+    a.d.getElementById('cn-kilit-asama').textContent];
+  const basladi = (a) => window.dispatchEvent(new MessageEvent('message',
+    { data: { cn: 1, tur: 'olay', ad: 'basladi', veri: {} }, source: a.cerceve.contentWindow }));
+
+  test('KİLİT: istek sürerken ve yeni program yüklenirken kilitli; eskiyen istek kilitlemez', () => {
+    const simdi = Date.parse('2026-11-11T08:00:00Z');
+    expect(CN.kilitDurumu(null, simdi)).toEqual({ kilitli: false, asama: 'yok', metin: '', kalan: 0 });
+    expect(CN.kilitDurumu({ durum: 'bekliyor', zaman: '2026-11-11T07:50:00Z' }, simdi))
+      .toEqual({ kilitli: true, asama: 'bekliyor', metin: 'İstek gönderildi', kalan: 20 * 60 * 1000 });
+    expect(CN.kilitDurumu({ durum: 'yapiliyor', zaman: '2026-11-11T07:59:00Z' }, simdi).metin).toBe('Derleniyor');
+    expect(CN.kilitDurumu({ durum: 'yapiliyor', zaman: '2026-11-11T07:20:00Z' }, simdi).kilitli).toBe(false);
+    ['tamam', 'guncel', 'hata', 'iptal'].forEach((durum) =>
+      expect(CN.kilitDurumu({ durum, zaman: '2026-11-11T07:59:00Z' }, simdi).kilitli).toBe(false));
+    expect(CN.istekDurumu({ durum: 'iptal', zaman: '2026-11-11T07:59:00Z' }, simdi)).toBe('iptal');
+    expect(CN.kilitDurumu({ durum: 'tamam' }, simdi, 'eeeeeee'))
+      .toEqual({ kilitli: true, asama: 'yukleme', metin: 'Yükleniyor · eeeeeee', kalan: 0 });
+  });
+
+  // Varlık yüklenirken görülsün diye indirme elle bırakılır (jsdom'da köprü yok: açılan
+  // çerçeve "basladi" demeden yüklenir, yani "Program açılmadı" yolu).
+  const tutulan = () => { const t = { bekleyen: [] }; t.getir = () => new Promise((r) => t.bekleyen.push(r)); t.birak = () => t.bekleyen.splice(0).forEach((r) => r()); return t; };
+
+  test('KİLİT: "Güncelleniyor…" iken program perdeli ve inert, Yenile kapalı; yeni program açılınca açılır', async () => {
+    const indirme = tutulan();
+    const a = sayfa({ yorum: yorumVar(), getir: indirme.getir });
+    await bekle();
+    a.yayinGonder(null);
+    await bekle();
+    expect(kilit(a)).toEqual([true, false, false, '']);
+    a.d.getElementById('cn-istek').click();
+    await bekle(30);
+    expect(kilit(a)).toEqual([false, true, true, 'İstek gönderildi']);
+    expect(a.gizli('cn-kilit-vazgec')).toBe(false);
+    a.istekGonder({ durum: 'yapiliyor', zaman: new Date().toISOString(), konu: 'konu-1' });
+    await bekle();
+    expect(kilit(a)).toEqual([false, true, true, 'Derleniyor']);
+    a.yayinGonder(yayinB('eeeeeee', ID('e'), []));          // yüklenirken de kilitli, Vazgeç yok
+    await bekle();
+    expect(kilit(a)).toEqual([false, true, true, 'Yükleniyor · eeeeeee']);
+    expect(a.gizli('cn-kilit-vazgec')).toBe(true);
+    a.istekGonder({ durum: 'tamam', zaman: new Date().toISOString(), surum: 'eeeeeee' });
+    await bekle();
+    expect(kilit(a)[0]).toBe(false);                       // yeni program henüz açılmadı
+    basladi(a);
+    await bekle();
+    expect(kilit(a)).toEqual([true, false, false, '']);
+    indirme.birak();
+    await bekle();
+    // başka görünümün isteği de kilitler (durum ortak)
+    a.istekGonder({ durum: 'bekliyor', zaman: new Date().toISOString() });
+    await bekle();
+    expect(kilit(a)).toEqual([false, true, true, 'İstek gönderildi']);
+    a.istekGonder({ durum: 'hata', zaman: new Date().toISOString(), cevap: 'x' });
+    await bekle();
+    expect(kilit(a)[0]).toBe(true);
+  });
+
+  test('KİLİT: Vazgeç isteği bırakır ve kilidi açar; açık program yayından eskiyse "güncel" de yükler', async () => {
+    const indirme = tutulan();
+    const a = sayfa({ yorum: yorumVar(), getir: indirme.getir });
+    await bekle();
+    a.yayinGonder(null);                                     // açılış: gömülü program (aaaaaaa)
+    await bekle();
+    a.d.getElementById('cn-istek').click();
+    await bekle(30);
+    expect(kilit(a)[0]).toBe(false);
+    a.d.getElementById('cn-kilit-vazgec').click();
+    await bekle();
+    expect(a.yazilan.filter((w) => w[1] === 'istek/guncelle' && w[2].durum === 'iptal').length).toBe(1);
+    expect(kilit(a)).toEqual([true, false, false, '']);
+    expect([a.d.getElementById('cn-istek').disabled, a.d.getElementById('cn-bildirim').textContent]).toEqual([false, 'İstek bırakıldı.']);
+    a.istekGonder({ durum: 'iptal', zaman: new Date().toISOString() });
+    await bekle();
+    expect(kilit(a)[0]).toBe(true);
+    // yayın açık programdan yeni (pencere sorar), istek "güncel" döner: yayın yüklenir
+    a.yayinGonder(yayinB('bbbbbbb', ID('b'), []));
+    await bekle(25);
+    expect(a.gizli('cn-guncel')).toBe(false);
+    a.d.getElementById('cn-istek').click();
+    await bekle(30);
+    a.istekGonder({ durum: 'guncel', zaman: new Date().toISOString(), surum: 'bbbbbbb' });
+    await bekle();
+    expect(a.getirilen).toEqual(['/_blob/' + ID('b')]);
+    expect(kilit(a)).toEqual([false, true, true, 'Yükleniyor · bbbbbbb']);
+    indirme.birak();                                         // program açılmadı: kilit kalkar
+    await bekle(30);
+    expect(kilit(a)[0]).toBe(true);
+    expect(a.d.getElementById('cn-acilis').textContent).toBe('Program açılmadı.');
+  });
+
+  test('KİLİT: perde programın ve kalemin üstünde, notların altında; düğmesiz kalmaz', () => {
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    const sira = ['id="cn-program"', 'id="cn-cizim"', 'id="cn-kilit"', 'id="cn-kart"', 'id="cn-liste"'].map((s) => sablon.indexOf(s));
+    expect(sira.every((v, i) => v > 0 && (i === 0 || v > sira[i - 1]))).toBe(true);
+    expect(sablon).toMatch(/\.cn-kilit \{[^}]*z-index: 2;/);
+    expect(sablon).toMatch(/\.cn-liste \{[^}]*z-index: 2;/);
+    expect(sablon).toMatch(/\.cn-kart \{[^}]*z-index: 3;/);
+    expect(sablon).toContain("cerceve.toggleAttribute('inert', k.kilitli)");
+    expect(sablon).toContain("$('cn-kilit-vazgec').addEventListener('click', istekBirak)");
+    // inert programın kendi focus() çağrısını durdurmuyor (Chromium'da ölçüldü): odak karta döner
+    expect(sablon).toMatch(/function kilitOdak\(\) \{\s*if \(!\$\('cn-kilit'\)\.hidden && document\.activeElement === cerceve\)/);
+    expect(sablon).toContain("window.addEventListener('blur', function () { setTimeout(kilitOdak, 0); });");
   });
   afterAll(() => { delete window.claude; delete window.fetch; delete window.CanliNot; document.body.innerHTML = ''; });
 

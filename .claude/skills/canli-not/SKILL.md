@@ -138,19 +138,29 @@ başka oturumların birleşmeleri yayınlanmadıkça gelmez. Şeritteki **Progra
 (sahiplik §2'nin başı), sırayla:
 
 1. `ArtifactData get collection:istek doc_id:guncelle` → `durum:'yapiliyor'` (`if_version`).
+   Durum `iptal`se (sayfada Vazgeç) iş yapılmaz: konuya tek satır, `resolve`.
 2. `git fetch origin main`; `ArtifactData get collection:yayin doc_id:son out_dir:…` →
    `node tools/canli-not.js denetle <döküm>`: *Güncel* ya da *yalnız künye eski* (programın
    girdileri aynı — belge/araç birleşmesi) → `durum:'guncel'`, `surum` (yayındaki kısa sha);
    konuya tek satır cevap, `resolve`. Bitti.
 3. Değilse programın güncellemesi (yukarıdaki dört adım; `--notlar` yok): `hazirla` → duman
-   (açılış · 0 hata · 0 ağ) → varlık → `yayin` → `yayin/son` → eski varlığı sil.
+   (`.canli-not/yayin/mfsim.html`'in KENDİSİ — `MFSim_Code.html` başka commit'ten olabilir;
+   açılış · 0 sayfa hatası · 0 ağ; karşılama karesinin dosya yolu bulunamaz, beklenen) →
+   varlık → `yayin` → `yayin/son` → eski varlığı sil.
 4. `yayin/son` yazıldıktan SONRA → `istek/guncelle`: `durum:'tamam'`, `surum`, `pr`. Sayfa
-   yeni yayını sormadan yükler (istek düğmeden geldi), proje taşınır.
+   yeni yayını sormadan yükler (istek düğmeden geldi), proje taşınır. Yazı sürüm çakışmasıyla
+   düşerse istek bırakılmıştır (`iptal`): üzerine yazılmaz, yayın penceresi sorar.
 5. Konuya tek satır cevap (yüklenen sürüm), `resolve`. Yapılamazsa `durum:'hata'`,
    `cevap:<kısa sebep>` — sayfa bildirimde gösterir.
 
-Sayfa 30 dakikadan eski `bekliyor`/`yapiliyor`u eski sayar ve düğmeyi yeniden açar. Kapı:
-`canli-not.test.js` → *PROGRAMI GÜNCELLE* · *SAYFA*.
+**Kilit** (kullanıcı 2026-11-11: *"'güncelleniyor' yazısı çıkıyor butonda. Böyle olduğu zaman
+programı kilitlemesini istiyorum"*): istek `bekliyor`/`yapiliyor` iken ve yeni program açılana
+dek program perdenin altında ve `inert` (fare, klavye; programın kendi `focus()`'u karta döner),
+Yenile kapalı; notlar ve not kartı açık. Kartta aşama (İstek gönderildi · Derleniyor ·
+Yükleniyor · sürüm) ve **Vazgeç** (istek → `iptal`, kilit açılır). Durum ortak: başka görünümün
+isteği de kilitler. `guncel` dönerken açık program kayıttaki yayından eskiyse o yüklenir.
+Sayfa 30 dakikadan eski `bekliyor`/`yapiliyor`u eski sayar: düğme açılır, kilit kalkar. Kapı:
+`canli-not.test.js` → *PROGRAMI GÜNCELLE* · *KİLİT* · *SAYFA*.
 
 ## 2 · Uyanış ve sıra
 
