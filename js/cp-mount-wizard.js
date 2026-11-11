@@ -478,6 +478,15 @@ function veMntWizAc(){
   ov.style.display = 'flex';
   document.addEventListener('keydown', veMntWizKey);
   veMntWizRender();
+  // Yükleme ekranı (Canlı Not 146): sihirbaz kartın arkasında kurulu, kart söner
+  if(typeof veMntSihirbazYukleme === 'function'){
+    var to2 = _mwState.tuvalOrnek ? ((typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [])
+      .filter(function(e){ return String(e.id) === String(_mwState.tuvalOrnek); })[0] : null;
+    var kunye = (_mwState.govdeler.length || _mwState.takozlar.length)
+      ? (to2 ? (to2.vehicle || to2.name) + ' · ' : '') + _mwState.govdeler.length + ' gövde · ' + _mwState.takozlar.length + ' takoz'
+      : VE_MW_STEPS.length + ' adım';
+    veMntSihirbazYukleme(kunye);
+  }
   return true;
 }
 // STEP KAPISI: sihirbaz 1. adımda açılır ve dosya seçici AYNI tıklamanın

@@ -12,6 +12,8 @@
 //   TIKLA    — Tarama'nın HER satırının No'su ve tipleri kendi bloğunun şeridine (başlığı o No ve
 //              tipler); Özet'in K'sı kendi bloğuna; Sonuç'un başı boş (sekmeden açılınca)
 //   KOŞUCU   — dilim dilim, ilerleme eylem satırında; eskimiş taramadan Excel üretilmez
+//   HTML     — HTML raporu (js/mount-param-html.js) Excel'in PLANINDAN: K'lar, Tarama'nın
+//              satırları ve Veri kodunun her değeri birebir; dilim dilim, çubukta "HTML"
 const H = require('../helpers/takoz-dogrulama.js');
 const { cp, rp } = H.kur();
 // KATALOG ONAY ANINDAKİ 24 TİP: tarama testleri kütüphanenin ilk 24 girdisiyle (2026-11-10'a
@@ -32,6 +34,7 @@ global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
 global.veMntParamCiz = require('../../js/mount-param-ciz.js');
 global.veXlsxYaz = require('../../js/xlsx-yaz.js');
 global.veMntParamExcel = require('../../js/mount-param-excel.js');
+global.veMntParamHtml = require('../../js/mount-param-html.js');
 const PS = require('../../js/cp-mount-param-sonuc.js');
 Object.keys(PS).forEach((k) => { if (global[k] === undefined) global[k] = PS[k]; });
 global.veIkon = global.veIkon || require('../../js/ikon.js').veIkon;
@@ -267,6 +270,66 @@ describe('KOŞUCU', () => {
     tk.data.x = Number(eski) + 50;
     try {
       expect(await PS.veMntParamExcelIndir('pa')).toBeNull();
+      expect(document.getElementById('ve-mnt-param-st-pa').textContent).toBe('Taramadan sonra girdi değişti');
+    } finally { tk.data.x = eski; }
+  });
+});
+
+describe('HTML — Excel\'in planı', () => {
+  beforeEach(() => { global.nodes = NODES; global.connections = TOPO.connections || []; });
+  const veri = (html) => JSON.parse(/<script type="application\/json" id="ve-veri">([\s\S]*?)<\/script>/.exec(html)[1]);
+  const coz = (x) => {
+    const t = atob(x.b), u = new Uint8Array(t.length);
+    for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i);
+    return x.t === 'i16' ? new Int16Array(u.buffer) : new Int32Array(u.buffer);
+  };
+  test('K\'lar, Tarama\'nın satırları ve Veri kodunun her değeri Excel\'in planıyla birebir; Özet Excel\'in Özet\'i', async () => {
+    const html = await PS.veMntParamHtmlIndir('pa');
+    expect(typeof html).toBe('string');
+    const D = veri(html);
+    const Pl = PS._mntParamExcelPlan(ent, Hz);
+    Pl.adim.forEach((f) => f());
+    const E = Pl.E();
+    expect(D.konfig.map((k) => k.K)).toEqual(E.konfig.map((k) => k.K));
+    expect(D.konfig.map((k) => k.u)).toEqual(E.konfig.map((k) => k.uygunluk));
+    D.konfig.forEach((k, n) => expect(k.d).toBeCloseTo(E.konfig[n].d, 3));
+    // Excel'in Özet'i: K ve Uygunluk sütunu aynı sırada
+    const oz = wb.readSheet(0).rows.slice(6).filter((r) => r && /^K\d+$/.test(r[1]));
+    expect(oz.map((r) => r[1])).toEqual(D.konfig.map((k) => 'K' + k.K));
+    expect(D.tarama.n).toBe(E.tarama.satirlar.length);
+    expect(D.tarama.N).toBe(E.tarama.N);
+    D.tarama.d.forEach((v, i) => expect(v).toBeCloseTo(E.tarama.satirlar[i].d, 3));
+    const kod = coz(D.tarama.kod), ref = E.tarama.veri.kod, bos = D.tarama.kod.t === 'i16' ? -32768 : -2147483648;
+    expect(kod.length).toBe(ref.length);
+    let fark = 0;
+    for (let j = 0; j < ref.length; j++) if ((kod[j] === bos ? -2147483648 : kod[j]) !== ref[j]) fark++;
+    expect(fark).toBe(0);
+  });
+
+  test('dilim dilim: çubukta HTML (Satır i / n, sonra Dosya); sürerken Excel de HTML de yok sayılır; eskimiş taramadan üretilmez', async () => {
+    const PK = require('../../js/pencere-kabuk.js');
+    global.vePencereEylem = PK.vePencereEylem;
+    const iz = [];
+    global.vePencereIlerleme = (id, il) => { if (il) iz.push([il.ad, il.metin, il.oran]); return PK.vePencereIlerleme(id, il); };
+    global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
+    const n = global.nodes.find((x) => x.id === 'pa');
+    document.body.innerHTML = '<div class="ve-properties-content">' + P._mntParamEskiPencereHTML(n) + '</div>';
+    expect(document.querySelector('.ve-fp-kat[data-k="sonuc"] button[data-html]').textContent).toMatch(/HTML’i indir/);
+    const p1 = PS.veMntParamHtmlIndir('pa');
+    expect(await PS.veMntParamHtmlIndir('pa')).toBeNull();
+    expect(await PS.veMntParamExcelIndir('pa')).toBeNull();
+    expect(P._mntParamIlerleme('pa').ad).toBe('HTML');
+    expect((await p1).length).toBeGreaterThan(1000);
+    expect(iz.every((x) => x[0] === 'HTML')).toBe(true);
+    expect(iz[iz.length - 1].slice(1)).toEqual(['Dosya', 1]);
+    for (let i = 1; i < iz.length; i++) expect(iz[i][2]).toBeGreaterThanOrEqual(iz[i - 1][2]);
+    expect(P._mntParamIlerleme('pa')).toBeNull();
+    expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^İndirildi \([\d.]+ KB\)$/);
+    const tk = global.nodes.find((x) => x.type === 'mnt-mount');
+    const eski = tk.data.x;
+    tk.data.x = Number(eski) + 50;
+    try {
+      expect(await PS.veMntParamHtmlIndir('pa')).toBeNull();
       expect(document.getElementById('ve-mnt-param-st-pa').textContent).toBe('Taramadan sonra girdi değişti');
     } finally { tk.data.x = eski; }
   });

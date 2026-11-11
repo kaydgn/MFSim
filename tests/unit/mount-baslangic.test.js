@@ -935,6 +935,28 @@ describe('YÜKLEME EKRANI — örnek kartın arkasında kurulur', () => {
     expect(BS.VE_MNT_YUKLEME_MS).toBeLessThanOrEqual(3500);
   });
 
+  // SİHİRBAZIN YÜKLEME EKRANI (kullanıcı 2026-11-11, Canlı Not 146: *"Başlangıç sihirbazı açılırken
+  // yine bir yükleme ekranı olsun, daha profesyonel görünür."*): sihirbazın penceresinin üstünde
+  // örneğin kartının aynısı (sihirli asa, ad, künye, çubuk); süre örneğinki; jsdom'da kart yok.
+  test('SİHİRBAZIN YÜKLEME EKRANI: pencerenin üstünde kart, çubuk dolar, kart söner; gecikmesiz ortamda yok', () => {
+    document.body.innerHTML += '<div id="ve-mntwiz-overlay"><div class="ve-settings-modal ve-fw-modal"></div></div>';
+    expect(BS.veMntSihirbazYukleme('Tulga · 8 gövde · 5 takoz')).toBeNull();          // jsdom: kart yok
+    const k = BS.veMntSihirbazYukleme('Tulga · 8 gövde · 5 takoz', { zorla: true, ms: 1000 });
+    expect(k.parentNode.classList.contains('ve-fw-modal')).toBe(true);
+    expect(k.id).toBe(BS.VE_MW_YUKLEME_ID);
+    expect(k.querySelector('.ve-mnt-yukleme-bas b').textContent).toBe('Takoz Başlangıç Sihirbazı');
+    expect(k.querySelector('.ve-mnt-yukleme-ico').classList.contains('mf-ico-wand')).toBe(true);
+    expect(k.querySelector('.ve-mnt-yukleme-kunye').textContent).toBe('Tulga · 8 gövde · 5 takoz');
+    const cubuk = k.querySelector('[role="progressbar"]');
+    jest.advanceTimersByTime(700);
+    expect(cubuk.getAttribute('aria-valuenow')).toBe('100');
+    jest.advanceTimersByTime(500);
+    expect(document.getElementById(BS.VE_MW_YUKLEME_ID)).toBeNull();
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-yukleme\{ z-index:60; \}/);
+    expect(css).toMatch(/\.ve-mw-yukleme \.ve-mnt-yukleme-ico\{ animation:none; \}/);
+  });
+
   test('çubuk bekleyişin tamamında dolar: geçişi süreden, kurulumda son adım kısa', () => {
     casus('veMntOrnekYukle', () => true, () => {
       BS.veMntOrnekYuklemeli('tulga', { zorla: true, ms: 2600 });

@@ -89,7 +89,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Yükle'si önce YÜKLEME EKRANINI açar** (kullanıcı 2026-11-11, Canlı Not 128: *"Tık diye
   açılıyor"*): kart (ad · künye · kademeli çubuk), model kartın arkasında kurulur, kart söner
   (`veMntOrnekYuklemeli`, `VE_MNT_YUKLEME_MS` 2,6 sn — Canlı Not 131: *"Kısa olmuş"*; çubuk
-  bekleyiş boyunca ilerler, sıçrayıp durmaz); otomasyonda ve jsdom'da gecikmesiz. Kapı:
+  bekleyiş boyunca ilerler, sıçrayıp durmaz); otomasyonda ve jsdom'da gecikmesiz. **Başlangıç Sihirbazı da
+  açılırken aynı kartı gösterir** (Canlı Not 146: pencerenin üstünde, künye tuvalin modeli; `veMntSihirbazYukleme`). Kapı:
   `mount-baslangic.test.js` → *YÜKLEME EKRANI* + `mount-baslangic.spec.js` → *YÜKLEME EKRANI*. Kapı:
   `mount-baslangic.test.js` → *TAKOZ'A GİRİŞ* + `mount-baslangic.spec.js` → *BOŞ KANVAS*. **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
   AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
@@ -407,6 +408,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, aday olmaz; öteki ailelerde X · Y yok → eksik.
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
+- **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
+  kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
+  kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer
+  yük kitabının Kerb Strike satırında. Örneğin kaydı okunur (Siper: Adams'ın 3,5 g virajla aynı). Kapı:
+  `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
@@ -481,6 +487,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   DİLİMLİ (`kitapIs` · `veXlsxYaz.is`, aşağıda *UZUN İŞ*). Kapı: `mount-param-excel.test.js` (→ *TIKLA* ·
   *SONUÇ* · *ADIM ADIM*) + `mount-param-excel-tta.test.js` (→ *SEÇİM ve ONAY* · *TEK YOL* · *TARAMA* ·
   *TIKLA*) + `xlsx-yaz.test.js` (→ *biçimli akış*) + `mount-param-sonuc.spec.js` → *EXCEL* · *EXCEL DİLİMLİ*.
+- `js/mount-param-html.js` — Parametrik Analiz'in **HTML çıktısı, TEMEL** (kullanıcı 2026-11-11: *"HTML
+  raporunun temelini kur … sadece temel yapıyı oluştur yeter"* — parametrik analizde büyük değişiklik
+  gelecek, ayrıntı onunla): eski pencerenin (PARKTA, Canlı Not 1001) Sonuç eylem satırındaki **HTML’i
+  indir** — yeni pencere kuruldukça oraya bağlanır; kurucu pencereden bağımsız → tek dosya, çevrimdışı; Özet
+  (K0…Kn) · Tarama (sayı sütunu sıralar, 100'lük sayfa) · Sonuç (tıklanan konfigürasyon: yük durumu × takoz
+  × X/Y/Z, modlar; adres #K1 · #T25, geri tuşu). **Excel'in PLANINDAN** (`_mntParamExcelPlan`): iki çıktı
+  aynı satırı ve sayıyı yazar. **Belge OKUR, hesaplamaz**: sonuç gömülü veriden (Veri kodu ikili — Int16'ya
+  sığarsa Int16 — base64); sayı programın yazıcısıyla (`js/sayi.js`'in kaynağı gömülü), yüz
+  `veThemeFontFaceCss`. Kurulum dilimli (`is(E).adim()` → `parcalar()`), dosya parça parça Blob (tek görevde
+  birleşik belge ve Blob donduruyordu). Kapı: `mount-param-html.test.js` (→ *VERİ* · *DİLİMLİ* · *SAYFA* ·
+  *OKUR*) + `mount-param-excel-tta.test.js` → *HTML — Excel'in planı* + `mount-param-sonuc.spec.js` → *HTML*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık
@@ -934,6 +951,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kalalım. Tek tıkla açılınca garip duruyor."*): Takoz'un araç şeridinin tek tıkta pencere açan
   beyanı (`tekTik`, kullanım notu T20) kalktı; hiçbir tip tek tıkta açmaz. Kapı:
   `tek-tik-arac.test.js` → *ÇİFT TIK*.
+- **BİLEŞENE SAĞ TIK = BİLEŞEN MENÜSÜ** (kullanıcı 2026-11-11, Canlı Not 143): Aç · Yeniden adlandır
+  (tuvalde, adın yerinde) · Çoğalt · Kopyala · Boyut (küçük · varsayılan · büyük) · Ad (üst · alt · sol ·
+  sağ) · port düzeni (portlu bileşende) · Sil (silinmez tipte kapalı, sebebi ipucunda); işlem SEÇİMİN
+  tamamına, kısayolun işlevinden (`veSeciliCogalt` · `veSeciliKopyala` · `deleteSelectedNodes`). Sağ tık
+  TEK bağlayıcıdan (`veNodeSagTik`): createNode ve restoreState — örnekten ve geri-al'dan gelen bileşende
+  sağ tık hiçbir şey açmıyordu. Kapı: `bilesen-menusu.test.js` + `bilesen-menusu.spec.js`.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
   olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler

@@ -537,8 +537,8 @@ var MNT_AUTO_CASES = [
   { name:'Brake in Turn L',   n:[-0.4,  0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sol)
   { name:'Brake in Turn R',   n:[-0.4, -0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sağ)
   { name:'Pothole Braking',   n:[-3,    0,   -3.5], T:[0,0,0] }, // çukur+fren → klips
-  { name:'Kerb Strike L',     n:[ 0,   -1.55,-1  ], T:[0,0,0] }, // 1.55g yanal bordür (sol) — işaret cornering'in TERSİ
-  { name:'Kerb Strike R',     n:[ 0,    1.55,-1  ], T:[0,0,0] }, // 1.55g yanal bordür (sağ)
+  { name:'Kerb Strike L',     n:[ 0,   -2.5, -1  ], T:[0,0,0] }, // 2,5 g yanal bordür (sol) — işaret cornering'in TERSİ; standart (Canlı Not 144)
+  { name:'Kerb Strike R',     n:[ 0,    2.5, -1  ], T:[0,0,0] }, // 2,5 g yanal bordür (sağ)
   { name:'Max Rebound',       n:[ 0,    0,    1  ], T:[0,0,0] }  // droop / negatif-g (ekstansiyon)
 ];
 
@@ -546,16 +546,18 @@ var MNT_AUTO_CASES = [
 // (2026-11-02). MNT_AUTO_CASES gövdeye etkiyen yükün yönüdür ve aracın İLERİSİ
 // −X, SAĞI +Y olan eksende yazılı (Tulga'nın CAD ekseni). İleri +X olan modelde
 // (TTAR) n_x ve n_y çevrilir (Z etrafında 180°); yoksa fren ve viraj yükü ters
-// uygulanır. Kaldırım darbesi analize göre: varsayılan 1,55 g virajın tersi
-// yönde; Tulga'nın Adams'ı 2,5 g (sonuçlarından, kitabı doğrulanmadı) virajın
-// tersi; TTAR'ın Adams'ı 3,5 g virajla aynı yönde.
+// uygulanır. KALDIRIM DARBESİ STANDART (kullanıcı 2026-11-11, Canlı Not 144: *"Bunu kullanıcıya
+// girdirmeyelim. Örneklerden bunun kaç alındığına bakalım (özellikle Tulga örneği) bunu standart
+// olarak verelim."*): 2,5 g virajın tersi — Tulga'nın Adams'ı (sonuçlarından, kitabı doğrulanmadı);
+// önce 1,55 g'ydi. Çözücü penceresinde girdi YOK (yük kitabı değeri gösterir); örneğin kaydı okunur:
+// TTAR'ın (Siper) Adams'ı 3,5 g virajla aynı yönde. Girdi ileride Yük Durumları bileşeninde.
 // TORK YÖNÜ İLERİ YÖNDEN TÜRETİLMEZ: reaksiyon krankın modeldeki dönüş
 // yönünden ve aktarmanın dönüşü çevirip çevirmediğinden gelir. Krank önden
 // saat yönünde, motorun önü −X'te, çıkış krankla aynı yönde → Tx = −T_shaft
 // (varsayılan: SPEC T5, analitik B1, TTAR'ın Adams'ı). Tulga'nın Adams'ı +X
 // (güç grubundaki transfer kutusu dönüşü çeviriyorsa fiziksel karşılığı bu).
 // Kapı: mount-arac-ekseni.test.js · mount-adams-tulga.test.js · mount-adams-ttar.test.js.
-var MNT_ILERI = '-x', MNT_KALDIRIM_G = 1.55, MNT_KALDIRIM_YON = 'ters', MNT_TORK_YON = '-x';
+var MNT_ILERI = '-x', MNT_KALDIRIM_G = 2.5, MNT_KALDIRIM_YON = 'ters', MNT_TORK_YON = '-x';
 // İLERİ YÖNÜN ÖNERİSİ — güç grubunun dizilişinden (F048, 2026-11-10). Motorun
 // önü (kasnak tarafı) şanzımanın (yoksa transfer kutusunun) karşı yanındadır;
 // öneri motorun önü aracın önüne bakar varsayımıyla: motor şanzımandan −X
@@ -5400,7 +5402,8 @@ function _mntCozucuDurumGovde(node){
   var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
   var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok')
     + ' · ileri '+eks(Y.ileri)+' · tork '+eks(Y.torkYon);
-  return _mntCozucuApGovde(node) + _mntCozucuYonGovde(node)
+  // Kaldırım darbesinin bölümü YOK (Canlı Not 144): değeri yük kitabının Kerb Strike satırları
+  return _mntCozucuApGovde(node)
     + '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
 }
 // ARAÇ PERFORMANS'TAN DOLDUR (F002, 2026-11-11) — Takoz kendi başına kurulur;
@@ -5539,25 +5542,6 @@ function _mntCozucuApGovde(node){
   return _mntBolum('Tork zinciri', _mntEsc(Z.ad), f+_MNT_FOY_KAPA+not+'<div class="ve-fp-eylem">'+btn+'</div>',
                    { id:'ve-mnt-cap-'+node.id, tazele:true });
 }
-// KALDIRIM DARBESİ — yük kitabının girdisi (_mntYonAyari); kitap hemen altında
-// değeri izler. Varsayılan seçim alan yazmaz. İleri yön ve tork yönü kendiliğinden
-// (Canlı Not 121 — yukarıda F048): Araç ekseni bölümü yok, künyesi yük kitabında.
-function _mntCozucuYonGovde(node){
-  var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi());
-  var secici=function(alan, etiket, deger, secenekler, degis){
-    var h='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">'+etiket+'</span>'
-      + '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" data-mnt-izle onchange="'+degis+'">';
-    secenekler.forEach(function(o){ h+='<option value="'+o[0]+'"'+(deger===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; });
-    return h+'</select></label>';
-  };
-  return _mntBolum('Kaldırım darbesi', 'yanal',
-      _mntIzgara(2,
-        _mntVarsayilanAlan(node, 'kaldirimG', 'İvme <u>[g]</u>', MNT_KALDIRIM_G, 'genel araç yük kitabı',
-          'veMntSetYon(\''+node.id+'\',\'kaldirimG\',this.value)')
-      + secici('kaldirimYon', 'Yön', Y.kaldirimYon, [['ters','Virajın tersi'], ['ayni','Virajla aynı']],
-          'veMntSetYon(\''+node.id+'\',\'kaldirimYon\',this.value)')));
-}
-
 function _mntCozucuAyarGovde(node){
   var d=node.data||{}, sm=d.solveMode||'auto';
   var sel='<select class="ve-fp-sel" id="ve-mnt-solveMode-'+node.id+'" onchange="veMntSetSolveMode(\''+node.id+'\',this.value)">';
@@ -5573,12 +5557,8 @@ function _mntCozucuAyarGovde(node){
     + '</div>'
     + _mntIzgara(1, _mntVarsayilanAlan(node, 'zeta', 'Sönüm oranı '+_mntSym('ζ')+' · tüm montaj', _mntZetaDefault(),
         'şirket kabulü', 'veMntSetZeta(\''+node.id+'\',this.value)')));
-  h+=_mntBolum('Şok darbesi', 'yarım sinüs',
-      _mntIzgara(2,
-        _mntVarsayilanAlan(node, 'shockG', 'Tepe ivme <u>[g]</u>', MNT_SHOCK_G, 'AMC tedarikçi raporlarının darbesi',
-          'veMntSetShock(\''+node.id+'\',\'shockG\',this.value)')
-      + _mntVarsayilanAlan(node, 'shockMs', 'Süre <u>[ms]</u>', MNT_SHOCK_MS, 'AMC tedarikçi raporlarının darbesi',
-          'veMntSetShock(\''+node.id+'\',\'shockMs\',this.value)')));
+  // Şok darbesinin bölümü YOK (Canlı Not 145: *"Aynı şekilde bunu da kaldıralım."*): standart
+  // 3 g · 20 ms yarım sinüs (AMC raporlarının darbesi; örneklerin hepsi bununla).
   return h;
 }
 
@@ -5593,7 +5573,7 @@ function _mntCozucuDurumlari(node){
     out.dur=_mntDurum('ok', ((C && C.mmToM) ? _mntToSI(_mntGatherForSolver(node), 9.81).loadCases.length : 0)+' durum');
   }
   out.ayar=_mntEgriYok(node) ? _mntDurum('eksik', 'eğri yok', 'Nonlineer seçili, eğri yok: lineer çözülür.')
-    : _mntDurum('ok', (!_mntBos(d.zeta) || !_mntBos(d.shockG) || !_mntBos(d.shockMs) || (d.solveMode && d.solveMode!=='auto')) ? 'elle' : 'varsayılan');
+    : _mntDurum('ok', (!_mntBos(d.zeta) || (d.solveMode && d.solveMode!=='auto')) ? 'elle' : 'varsayılan');
   return out;
 }
 
@@ -6207,7 +6187,7 @@ if(typeof module!=='undefined' && module.exports){
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
     _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, _mntTransferKatalog: _mntTransferKatalog, _mntTransferPresetValues: _mntTransferPresetValues, veMntApplyTransferPreset: veMntApplyTransferPreset, veMntApModeli: veMntApModeli, _mntApZinciri: _mntApZinciri, veMntApDoldur: veMntApDoldur, _mntCozucuApGovde: _mntCozucuApGovde, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
     _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
-    _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
+    _mntYukDurumlari: _mntYukDurumlari,
     veMntSetYon: veMntSetYon,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,

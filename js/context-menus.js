@@ -1,70 +1,218 @@
 // ============================================================================
-// NODE CONTEXT MENU — PORT DÜZEN İŞLEMLERİ
+// BİLEŞEN MENÜSÜ — SAĞ TIK (kullanıcı 2026-11-11, Canlı Not 143: *"Bileşenlere sağ tık olayını
+// getirelim. Sağ tıklayınca işte silme, yeniden boyutlandırma falan filan neler olabilirse olsun.
+// Güzel kullanışlı olsun."*). Önce sağ tık yalnız port düzenini (yatay ↔ dikey, aynala) açıyordu.
+// Şimdi: Aç · Yeniden adlandır · Çoğalt · Kopyala · Boyut (küçük · varsayılan · büyük) · Ad (üst ·
+// alt · sol · sağ) · port düzeni (portlu bileşende) · Sil. Seçili değilse bileşen seçilir; Çoğalt,
+// Kopyala, Boyut, Ad ve Sil SEÇİMİN TAMAMINA uygulanır (kısayollarla aynı işlev). Menü her açılışta
+// durumdan kurulur (seçili boyut ve ad konumu basılı; silinmez tipte Sil kapalı, sebebi ipucunda).
+// Kapı: bilesen-menusu.test.js.
 // ============================================================================
 var nodeContextMenu = null;
 var nodeContextTarget = null;
+var VE_BILESEN_BOYUT = { kucuk:0.75, varsayilan:1, buyuk:1.5 };
+
+function _veBmEsc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function _veBmIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : '<span class="mf-ico mf-ico-' + ad + '" aria-hidden="true"></span>'; }
+function _veBmMod(){ return (typeof _VE_MOD !== 'undefined') ? _VE_MOD : 'Ctrl'; }
+// Bileşenin şimdiki boyutu hangi kademeye oturuyor (yoksa '')
+function veBilesenBoyutu(node){
+  if(!node || typeof veNodeDefaultSize !== 'function') return '';
+  var d = veNodeDefaultSize(node.type), k = Object.keys(VE_BILESEN_BOYUT);
+  for(var i = 0; i < k.length; i++){
+    var f = VE_BILESEN_BOYUT[k[i]];
+    if(Math.abs((node.width || d.w) - Math.round(d.w * f)) < 1 && Math.abs((node.height || d.h) - Math.round(d.h * f)) < 1) return k[i];
+  }
+  return '';
+}
+function _veBmPortlu(node){
+  var el = (typeof document !== 'undefined') ? document.getElementById(node.id) : null;
+  return !!(el && el.querySelector('.ve-node-port'));
+}
+function _veBmSecim(node){
+  var sec = (typeof selectedNodes !== 'undefined' && Array.isArray(selectedNodes)) ? selectedNodes : [];
+  return sec.indexOf(node) >= 0 ? sec.slice() : [node];
+}
+// Menünün içi — durumdan (DOM'suz da kurulur: test)
+function veBilesenMenuHTML(node, secim){
+  secim = secim || [node];
+  var n = secim.length, def = node.def || ((typeof componentDefs !== 'undefined') ? componentDefs[node.type] : null) || {};
+  var oge = function(eylem, ikon, ad, kisayol, sinif, kapali){
+    return '<div class="ve-context-item' + (sinif ? ' ' + sinif : '') + '" role="menuitem" tabindex="-1" data-action="' + eylem + '"'
+      + (kapali ? ' aria-disabled="true" title="' + _veBmEsc(kapali) + '"' : '') + '>'
+      + _veBmIkon(ikon) + '<span class="ve-context-ad">' + ad + '</span>'
+      + (kisayol ? '<kbd class="ve-context-kbd">' + kisayol + '</kbd>' : '') + '</div>';
+  };
+  var seg = function(ad, eylem, secenek, secili){
+    return '<div class="ve-context-seg" role="group" aria-label="' + ad + '"><span class="ve-context-seg-ad">' + ad + '</span>'
+      + secenek.map(function(s){
+          return '<button type="button" class="ve-context-seg-b" role="menuitemradio" data-action="' + eylem + ':' + s[0] + '"'
+            + ' aria-checked="' + (secili === s[0]) + '">' + s[1] + '</button>';
+        }).join('') + '</div>';
+  };
+  var adPos = (node.data && node.data.labelPos) || 'bottom';
+  var h = (n > 1 ? '<div class="ve-context-bas">' + n + ' bileşen</div>' : '')
+    + (n === 1 ? oge('ac', 'external-link', 'Aç', 'Çift tık') + oge('adlandir', 'edit', 'Yeniden adlandır') + '<div class="ve-context-divider"></div>' : '')
+    + oge('cogalt', 'copy', 'Çoğalt', _veBmMod() + '+D')
+    + oge('kopyala', 'clipboard', 'Kopyala', _veBmMod() + '+C')
+    + '<div class="ve-context-divider"></div>'
+    + seg('Boyut', 'boyut', [['kucuk', 'Küçük'], ['varsayilan', 'Varsayılan'], ['buyuk', 'Büyük']], n === 1 ? veBilesenBoyutu(node) : '')
+    + seg('Ad', 'ad', [['top', 'Üst'], ['bottom', 'Alt'], ['left', 'Sol'], ['right', 'Sağ']], n === 1 ? adPos : '');
+  if(n === 1 && _veBmPortlu(node)){
+    var pp = (node.data && node.data.portPositions) || {};
+    var dikey = [pp.input && pp.input.side, pp.output && pp.output.side].some(function(x){ return x === 'top' || x === 'bottom'; });
+    h += '<div class="ve-context-divider"></div>'
+      + oge('toggle-axis', 'refresh', dikey ? 'Portları yataya çevir' : 'Portları dikeye çevir')
+      + oge('mirror-h', 'arrow-left-right', 'Yatay aynala')
+      + oge('mirror-v', 'arrow-up-down', 'Dikey aynala')
+      + oge('reset-ports', 'rotate-ccw', 'Portları varsayılana döndür');
+  }
+  var silinmez = secim.filter(function(x){ var d = x.def || ((typeof componentDefs !== 'undefined') ? componentDefs[x.type] : null) || {}; return !!d.noDelete; });
+  h += '<div class="ve-context-divider"></div>'
+    + oge('sil', 'trash', n > 1 ? n + ' bileşeni sil' : 'Sil', 'Delete', 've-context-danger',
+        silinmez.length === n ? ((silinmez[0].def || componentDefs[silinmez[0].type] || {}).noDelete || 'Silinemez') : '');
+  return h;
+}
 
 function createNodeContextMenu() {
   var menu = document.createElement('div');
   menu.id = 've-node-context-menu';
-  menu.className = 've-context-menu';
-  menu.style.cssText = 'display:none; z-index:10001; min-width:200px;';   // yüzey `.ve-context-menu`den
-  
-  menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yatay ↔ dikey</div>' +
-    '<div class="ve-context-divider"></div>' +
-    '<div class="ve-context-item" data-action="mirror-h"><span>' + veIkon('arrow-left-right') + '</span> Yatay aynala (sol ↔ sağ)</div>' +
-    '<div class="ve-context-item" data-action="mirror-v"><span>' + veIkon('arrow-up-down') + '</span> Dikey aynala (üst ↔ alt)</div>' +
-    '<div class="ve-context-divider"></div>' +
-    '<div class="ve-context-item" data-action="reset-ports"><span>' + veIkon('rotate-ccw') + '</span> Varsayılana dön</div>';
-  
+  menu.className = 've-context-menu ve-bilesen-menu';
+  menu.setAttribute('role', 'menu');
+  menu.style.display = 'none';
   document.body.appendChild(menu);
   nodeContextMenu = menu;
-  
-  menu.querySelectorAll('.ve-context-item').forEach(function(item) {
-    item.addEventListener('click', function() {
-      var action = this.getAttribute('data-action');
-      handleNodeContextAction(action);
-      hideNodeContextMenu();
-    });
+  menu.addEventListener('click', function(e) {
+    var o = e.target.closest ? e.target.closest('[data-action]') : null;
+    if(!o || o.getAttribute('aria-disabled') === 'true') return;
+    var hedef = nodeContextTarget;
+    hideNodeContextMenu();
+    veBilesenMenuEylem(o.getAttribute('data-action'), hedef);
   });
-  
   document.addEventListener('click', function(e) {
-    if(nodeContextMenu && !nodeContextMenu.contains(e.target)) {
-      hideNodeContextMenu();
-    }
+    if(nodeContextMenu && !nodeContextMenu.contains(e.target)) hideNodeContextMenu();
   });
+  document.addEventListener('keydown', function(e) {
+    if(e.key === 'Escape' && nodeContextMenu && nodeContextMenu.style.display !== 'none'){ e.stopPropagation(); hideNodeContextMenu(); }
+  }, true);
 }
 
 function showNodeContextMenu(e, node) {
   e.preventDefault();
   e.stopPropagation();
   hidePortContextMenu();
-  
-  if(!nodeContextMenu) createNodeContextMenu();
+  if(typeof hideLabelContextMenu === 'function') hideLabelContextMenu();
+  if(!nodeContextMenu || !nodeContextMenu.isConnected) createNodeContextMenu();
+  // Seçili değilse bileşen seçilir; seçimin içindeyse seçim korunur (işlem seçime uygulanır)
+  if(typeof selectedNodes !== 'undefined' && selectedNodes.indexOf(node) < 0 && typeof clearSelection === 'function'){
+    clearSelection();
+    if(typeof addToSelection === 'function') addToSelection(node);
+  }
   nodeContextTarget = node;
-  
-  // Menü etiketlerini güncelle — mevcut duruma göre
-  var pp = (node.data && node.data.portPositions) || {};
-  var inSide = pp.input ? pp.input.side : 'left';
-  var outSide = pp.output ? pp.output.side : 'right';
-  var isVertical = (inSide === 'top' || inSide === 'bottom' || outSide === 'top' || outSide === 'bottom');
-  
-  var items = nodeContextMenu.querySelectorAll('.ve-context-item');
-  items[0].innerHTML = isVertical ? '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yataya çevir (← →)' : '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Dikeye çevir (↑ ↓)';
-  
+  nodeContextMenu.innerHTML = veBilesenMenuHTML(node, _veBmSecim(node));
   nodeContextMenu.style.display = 'block';
   nodeContextMenu.style.left = e.clientX + 'px';
   nodeContextMenu.style.top = e.clientY + 'px';
-  
   // Ekran dışına taşmayı önle
   var rect = nodeContextMenu.getBoundingClientRect();
-  if(rect.right > window.innerWidth) nodeContextMenu.style.left = (e.clientX - rect.width) + 'px';
-  if(rect.bottom > window.innerHeight) nodeContextMenu.style.top = (e.clientY - rect.height) + 'px';
+  if(rect.right > window.innerWidth) nodeContextMenu.style.left = Math.max(4, e.clientX - rect.width) + 'px';
+  if(rect.bottom > window.innerHeight) nodeContextMenu.style.top = Math.max(4, e.clientY - rect.height) + 'px';
 }
 
 function hideNodeContextMenu() {
   if(nodeContextMenu) nodeContextMenu.style.display = 'none';
   nodeContextTarget = null;
+}
+
+// Bileşenin boyutunu ve ad konumunu DOM'a yaz (tutamakla aynı yol: kutu, tutamaklar, teller, çerçeve)
+function _veBmBoyutYaz(node){
+  var el = (typeof document !== 'undefined') ? document.getElementById(node.id) : null;
+  if(el){
+    el.style.width = node.width + 'px';
+    var box = el.querySelector('.ve-node-box');
+    if(box){ box.style.width = node.width + 'px'; box.style.height = node.height + 'px'; }
+    if(typeof updateNodeHandles === 'function') updateNodeHandles(el, node.width, node.height);
+    el.querySelectorAll('.ve-node-port').forEach(function(p){ updatePortPosition(p, node, p.getAttribute('data-port')); });
+  }
+}
+function veBilesenMenuEylem(eylem, node){
+  if(!node || !eylem) return false;
+  var secim = _veBmSecim(node), p = String(eylem).split(':');
+  switch(p[0]){
+    case 'ac':
+      if(node.type === 'arac-performans' && typeof veAracOpenEditor === 'function'){ veAracOpenEditor(node.id); return true; }
+      if(node.type === 'mount-analysis' && typeof veMntOpenEditor === 'function'){ veMntOpenEditor(node.id); return true; }
+      if(node.type === 'fead-analysis' && typeof veFeadOpenEditor === 'function'){ veFeadOpenEditor(node.id); return true; }
+      if(typeof veTekTikEylem === 'function' && veTekTikEylem(node)) return true;
+      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+      if(typeof showNodeProperties === 'function') showNodeProperties(node);
+      return true;
+    case 'adlandir': return veBilesenAdDuzenle(node);
+    case 'cogalt': return (typeof veSeciliCogalt === 'function') ? veSeciliCogalt() : false;
+    case 'kopyala': return (typeof veSeciliKopyala === 'function') ? veSeciliKopyala() : false;
+    case 'boyut':
+      if(!VE_BILESEN_BOYUT[p[1]] || typeof veNodeDefaultSize !== 'function') return false;
+      if(typeof saveState === 'function') saveState();
+      secim.forEach(function(x){
+        var d = veNodeDefaultSize(x.type), m = (typeof veNodeMinSize === 'function') ? veNodeMinSize(x) : { w:0, h:0 };
+        x.width = Math.max(m.w, Math.round(d.w * VE_BILESEN_BOYUT[p[1]]));
+        x.height = Math.max(m.h, Math.round(d.h * VE_BILESEN_BOYUT[p[1]]));
+        _veBmBoyutYaz(x);
+      });
+      if(typeof updateAllConnections === 'function') updateAllConnections();
+      if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
+      if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+      return true;
+    case 'ad':
+      if(['top', 'bottom', 'left', 'right'].indexOf(p[1]) < 0) return false;
+      if(typeof saveState === 'function') saveState();
+      secim.forEach(function(x){
+        if(!x.data) x.data = {};
+        if(p[1] === 'bottom') delete x.data.labelPos; else x.data.labelPos = p[1];
+        applyNodeLabelPos(x);
+      });
+      if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+      return true;
+    case 'sil':
+      if(typeof deleteSelectedNodes === 'function') deleteSelectedNodes();
+      return true;
+    case 'toggle-axis': case 'mirror-h': case 'mirror-v': case 'reset-ports':
+      nodeContextTarget = node;
+      handleNodeContextAction(p[0]);
+      nodeContextTarget = null;
+      return true;
+  }
+  return false;
+}
+// YENİDEN ADLANDIR — tuvalde, adın yerinde: Enter uygular, Esc vazgeçer; boş ad tipin adına döner.
+function veBilesenAdDuzenle(node){
+  var el = (typeof document !== 'undefined') ? document.getElementById(node.id) : null;
+  var lbl = el && el.querySelector('.ve-node-label');
+  if(!lbl || lbl.querySelector('input')) return false;
+  var def = node.def || componentDefs[node.type] || {}, eski = node.customName || def.name || '';
+  var inp = document.createElement('input');
+  inp.type = 'text'; inp.value = eski; inp.className = 've-node-ad-inp'; inp.setAttribute('aria-label', 'Ad');
+  lbl.textContent = ''; lbl.appendChild(inp);
+  inp.focus(); inp.select();
+  var bitti = false;
+  var bitir = function(uygula){
+    if(bitti) return; bitti = true;
+    var yeni = uygula ? inp.value.trim() : eski;
+    if(!yeni) yeni = def.name || eski;
+    if(uygula && yeni !== eski){ if(typeof saveState === 'function') saveState(); node.customName = yeni; }
+    lbl.textContent = node.customName || def.name || '';
+    var gor = document.getElementById('ve-node-name-display-' + node.id);
+    if(gor) gor.textContent = lbl.textContent;
+    if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+  };
+  inp.addEventListener('keydown', function(e){
+    e.stopPropagation();
+    if(e.key === 'Enter'){ e.preventDefault(); bitir(true); }
+    if(e.key === 'Escape'){ e.preventDefault(); bitir(false); }
+  });
+  inp.addEventListener('blur', function(){ bitir(true); });
+  ['mousedown', 'dblclick', 'click'].forEach(function(t){ inp.addEventListener(t, function(e){ e.stopPropagation(); }); });
+  return true;
 }
 
 function handleNodeContextAction(action) {
@@ -576,6 +724,8 @@ function addControlPointToConnection(conn) {
 
 // Jest/Node: saf port-remap yardımcılarını test edilebilir kıl (tarayıcıda no-op).
 if(typeof module !== 'undefined' && module.exports){
-  module.exports = { _computePortRemap: _computePortRemap, _portIdOf: _portIdOf };
+  module.exports = { _computePortRemap: _computePortRemap, _portIdOf: _portIdOf,
+    veBilesenMenuHTML: veBilesenMenuHTML, veBilesenMenuEylem: veBilesenMenuEylem, veBilesenBoyutu: veBilesenBoyutu,
+    veBilesenAdDuzenle: veBilesenAdDuzenle, showNodeContextMenu: showNodeContextMenu, VE_BILESEN_BOYUT: VE_BILESEN_BOYUT };
 }
 

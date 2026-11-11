@@ -731,7 +731,9 @@ function _mntParamSeciliHTML(node, ent, Z, c, L, sec){
     + '<button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
     + veIkon('download')+' Raporu indir</button>'
     + '<button type="button" class="ve-fp-dugme" data-excel onclick="veMntParamExcelIndir(\''+node.id+'\')">'
-    + veIkon('download')+' Excel’i indir</button></div>';
+    + veIkon('download')+' Excel’i indir</button>'
+    + '<button type="button" class="ve-fp-dugme" data-html onclick="veMntParamHtmlIndir(\''+node.id+'\')">'
+    + veIkon('download')+' HTML’i indir</button></div>';
   return _mntBolum('K'+k.K+(k.mevcut ? ' · Mevcut' : ''), k.uygunluk, h, { id:'ve-mnt-prm-secili-'+node.id });
 }
 // MODLAR — K0 ve seçilenin modları; sınırı bozan mod (Kriter 1 · 1a · 1b) kırmızı.
@@ -1130,6 +1132,7 @@ var VE_MNT_PRM_XLS_KONFIG = 9;
 var VE_MNT_PRM_XLS_BAYT = 1 << 18;          // bir dilimde sıkıştırıcıya yazılan en çok ham bayt
 var _MNT_PRM_KESIN = ['k1', 'k1a', 'k1b', 'k2'];
 var _MNT_PRM_BOS = -2147483648;          // Veri'de "sonuç yok" (Int32 tabanı)
+var VE_MNT_PRM_HTML_PARCA = 1 << 20;     // HTML belgesinin bir dilimde dosyaya katılan en çok karakteri
 
 function _mntPrmBit(k){
   var b=0;
@@ -1213,9 +1216,9 @@ function _mntParamExcelPlan(ent, H){
   });
   return { adim:adim, E:function(){ return E; } };
 }
-function _mntParamDosyaIndir(b, ad){
+function _mntParamDosyaIndir(b, ad, tip){
   if(typeof document==='undefined' || typeof Blob!=='function' || typeof URL==='undefined' || typeof URL.createObjectURL!=='function') return;
-  var url=URL.createObjectURL(new Blob([b], { type:veXlsxYaz.MIME }));
+  var url=URL.createObjectURL(new Blob([b], { type:tip || veXlsxYaz.MIME }));
   var a=document.createElement('a'); a.href=url; a.download=ad;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
@@ -1271,6 +1274,65 @@ function veMntParamExcelIndir(nodeId){
   });
 }
 
+// HTML RAPORU (js/mount-param-html.js; kullanıcı 2026-11-11: "HTML raporunun temelini
+// kur"): Excel'in PLANINDAN — aynı satırlar, aynı sayılar; belge okur, hesaplamaz. İki evre
+// aynı dilimden geçer: satırların çözümü (P.adim), belgenin kurulumu (veri · base64).
+// Excel'le aynı anda tek iş (_MNT_PARAM_XLS). Dönüş: Promise<string | null> (belge).
+function veMntParamHtmlIndir(nodeId){
+  if(_MNT_PARAM_XLS.is) return Promise.resolve(null);
+  var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
+  if(!node || !ent) return Promise.resolve(null);
+  var H=_mntParamHazirlik(node);
+  if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return Promise.resolve(null); }
+  var P;
+  try { P=_mntParamExcelPlan(ent, H); } catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); return Promise.resolve(null); }
+  var is=_MNT_PARAM_XLS.is={ nodeId:nodeId, ad:'HTML', i:0, n:P.adim.length, dosya:null }, yazildi=-Infinity;
+  var cubuk=function(){ if(typeof _mntParamIlerlemeYaz==='function') _mntParamIlerlemeYaz(nodeId); };
+  return new Promise(function(coz){
+    var bitir=function(metin, d, h){
+      if(_MNT_PARAM_XLS.is===is) _MNT_PARAM_XLS.is=null;
+      cubuk(); _mntParamYaz(nodeId, metin, d); coz(h || null);
+    };
+    _mntParamYaz(nodeId, '');
+    cubuk();
+    // Belgenin parçaları dosyaya dilim dilim katılır (UTF-8 kodlaması parça başına):
+    // birleşik belge ve tek Blob 8 MB'ta 88 ms'lik tek görevdi.
+    var B=null, Pz=null, j=0, bl=[], TIP='text/html;charset=utf-8';
+    var adim=function(){
+      if(is.i<is.n){ P.adim[is.i++](); return true; }
+      if(!B) B=veMntParamHtml.is(P.E());
+      if(!Pz){
+        if(B.adim()){ is.dosya=0.9*B.oran(); return true; }
+        Pz=B.parcalar(); return true;
+      }
+      if(j<Pz.length && typeof Blob==='function'){
+        var a=j, n=0;
+        while(j<Pz.length && n<VE_MNT_PRM_HTML_PARCA){ n+=Pz[j].length; j++; }
+        bl.push(new Blob(Pz.slice(a, j), { type:TIP })); is.dosya=0.9+0.1*j/Pz.length;
+        return true;
+      }
+      return false;
+    };
+    var dilim=function(){
+      var bas=_mntParamSimdi(), surer=true;
+      try { do { surer=adim(); } while(surer && _mntParamSimdi()-bas<_MNT_PARAM_DILIM); }
+      catch(e){ bitir('Hata: '+e.message, 'no'); return; }
+      var t=_mntParamSimdi();
+      if(!surer || t-yazildi>=100){ yazildi=t; cubuk(); }
+      if(surer){ _mntParamSonraki(dilim); return; }
+      var dosya=null, html;
+      try {
+        dosya=(typeof Blob==='function') ? new Blob(bl, { type:TIP }) : null;
+        if(dosya) _mntParamDosyaIndir(dosya, 'takoz_konfigurasyonlari.html', TIP);
+        html=Pz.join('');
+      }
+      catch(e){ bitir('Hata: '+e.message, 'no'); return; }
+      bitir('İndirildi ('+_mntS((dosya ? dosya.size : html.length)/1024, 0)+' KB)', 'ok', html);
+    };
+    _mntParamSonraki(dilim);
+  });
+}
+
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
     _MNT_PARAM_SONUC: _MNT_PARAM_SONUC, _MNT_PARAM_GEN: _MNT_PARAM_GEN,
@@ -1292,6 +1354,7 @@ if(typeof module!=='undefined' && module.exports){
     _MNT_PARAM_SECIM: _MNT_PARAM_SECIM,
     _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz,
     _mntParamExcelPlan: _mntParamExcelPlan, veMntParamExcelIndir: veMntParamExcelIndir, _mntPrmUygunluk: _mntPrmUygunluk,
+    veMntParamHtmlIndir: veMntParamHtmlIndir, _mntParamDosyaIndir: _mntParamDosyaIndir,
     VE_MNT_PRM_XLS_TAVAN: VE_MNT_PRM_XLS_TAVAN
   };
 }

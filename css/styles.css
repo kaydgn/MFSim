@@ -3905,6 +3905,35 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   background:var(--border-color);
   margin:4px 8px;
 }
+/* BİLEŞEN MENÜSÜ (Canlı Not 143): ad solda, kısayol sağda soluk; boyut ve ad konumu bölmeli
+   sıra (basılı = şimdiki); kapalı satır soluk ve tıklanmaz (sebebi ipucunda). */
+.ve-bilesen-menu{ min-width:272px; font-size:var(--fs-body); }
+.ve-bilesen-menu .ve-context-item{ padding:5px 10px; }
+.ve-bilesen-menu .ve-context-item .mf-ico{ width:14px; height:14px; flex:none; color:var(--text-secondary); }
+.ve-bilesen-menu .ve-context-danger .mf-ico{ color:var(--ink-danger); }
+.ve-context-ad{ flex:1; min-width:0; white-space:nowrap; }
+.ve-context-kbd{
+  font:inherit; font-size:var(--fs-micro); color:var(--text-muted); background:none; border:none; padding:0;
+  white-space:nowrap;
+}
+.ve-context-item[aria-disabled="true"]{ color:var(--text-muted); cursor:default; }
+.ve-context-item[aria-disabled="true"]:hover{ background:none; }
+.ve-context-item[aria-disabled="true"] .mf-ico{ color:var(--text-muted); }
+.ve-context-bas{ padding:2px 14px 4px; font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); }
+.ve-context-seg{ display:flex; align-items:center; gap:2px; padding:3px 10px 3px 14px; }
+.ve-context-seg-ad{ width:44px; flex:none; color:var(--text-secondary); }
+.ve-context-seg-b{
+  flex:1 1 auto; min-width:0; height:24px; padding:0 6px; border:1px solid var(--border-color); border-radius:var(--radius-xs);
+  white-space:nowrap;
+  background:var(--bg-primary); color:var(--text-primary); font:inherit; font-size:var(--fs-micro); cursor:pointer;
+}
+.ve-context-seg-b:hover{ background:var(--bg-tertiary); }
+.ve-context-seg-b[aria-checked="true"]{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
+/* Tuvalde yeniden adlandırma: adın yerinde alan */
+.ve-node-ad-inp{
+  width:140px; padding:1px 5px; font:inherit; text-align:center; color:var(--text-primary);
+  background:var(--bg-input); border:1px solid var(--accent-primary); border-radius:var(--radius-xs); outline:none;
+}
 
 /* Seçili bağlantı */
 .ve-connection.selected{
@@ -11147,6 +11176,9 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   opacity:0; transition:opacity var(--dur-fast,0.14s) var(--ease-out,ease);
 }
 .ve-mnt-yukleme.acik{ opacity:1; }
+/* Sihirbazın yükleme ekranı (Canlı Not 146): pencerenin üstünde, başlık dâhil; asa dönmez */
+.ve-mw-yukleme{ z-index:60; }
+.ve-mw-yukleme .ve-mnt-yukleme-ico{ animation:none; }
 .ve-mnt-yukleme-kart{
   width:300px; box-sizing:border-box; padding:18px 20px 20px;
   background:var(--bg-secondary); border:1px solid var(--border-color);

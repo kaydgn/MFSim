@@ -384,6 +384,7 @@ oluşturmanı istiyorum."*
 |-------|------|-------|
 | MFSim Canlı Not | — | https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91 |
 | Canlı Not · Parametrik Analiz | `parametrik` | https://claude.ai/artifact/MP2etxUfqMpw2nTmcE3GXT |
+| Canlı Not · HTML raporu (belge odağı) | `param-html` | https://claude.ai/artifact/3APYVTsSGtfvSiKQEc89Bu |
 
 - **Ayrı Artifact:** kendi kaydı (`notlar` · `yayin/son` · `oturum/aktif` · `istek/guncelle`),
   varlık deposu ve sahibi; §0–§3 aynen geçerli, adres o sayfanınki. Araç komutları
@@ -409,3 +410,13 @@ oluşturmanı istiyorum."*
   `url` ile (§1).
 - **Yeni odak:** çekirdeğe (`ODAKLAR`: `ad` · `baslik` · `tip` · `taban` — öbür aralıkların
   dışında) ve köprüye (aynı adla tarif) birer kayıt. Kapı: `canli-not.test.js` → *ODAK*.
+- **Belge odağı** (`belge: true`, `tip` yok; kullanıcı 2026-11-11: *"Bu HTML belgesini 'canlı not'
+  tarzına alsana. Üzerinde göstererek değişiklikler yaparız."*): çerçevede program değil programın
+  ÜRETTİĞİ belge. `hazirla --odak <ad>` programı derler, belgeyi gerçek tarayıcıda programın kendi
+  yolundan üretir (`canli-not.js` → `BELGE_URET`; `param-html`: Tulga, varsayılan adaylar, tarama,
+  HTML'in indirme yolu), künyeyi ve köprüyü belgeye koyar — denetim, yayın, TEK YAZAR ve SIRA
+  programınkiyle aynı. Köprü işaretli belgeyi yüklenince hazır sayar, tarif belgenin görüntüleyicisini
+  bekler. Notun kaynağı belgenin kurucusu (`param-html` → `js/mount-param-html.js`); sonucun görüntüsü
+  dalın belgesinden: `hazirla --dal --odak <ad>` → `sonuc N --odak <ad> [--hazirlik …] [--secici …]`
+  (hazırlık belgenin içinde koşar: `veRapor.goster()`, `location.hash`). Kapı: `canli-not.test.js` →
+  *BELGE ODAĞI*.
