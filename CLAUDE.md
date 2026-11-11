@@ -602,7 +602,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91; yeni Artifact AÇILMAZ, her yayın
   `url` ile), sahiplik kaydı (`oturum/aktif`: iki oturum aynı notu işlemez), yorum izleme,
   program ve sayfanın güncelliği (`denetle`), kuyruk. Sonucun görüntüsü
-  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz).
+  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz). **Her not kendi ajanında, paralel**
+  (kullanıcı 2026-11-11: *"Ajanlar eğer birbirinden etkileniyorsa, diğeri diğerini beklesinler"*):
+  ajan kendi çalışma kopyasında uygular ve commit eder, aynı yüzeye dokunan notlar zincirlenir;
+  birleştirme, tam test ve yayın sahibi oturumda — skill `canli-not` §2 · *Paralel ajanlar*.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
