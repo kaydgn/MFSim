@@ -4561,6 +4561,12 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .mntlib-opt.sel .mntlib-opt-name{ font-weight:700;color:var(--text-heading); }
+/* ÖNERİ (Canlı Not 126): satır tipi seçer — fare ve odakta zemin, seçili tip kalın. */
+.ve-properties-content .ve-mnt-oneri .ve-mnt-oneri-sat{ cursor:pointer; }
+.ve-properties-content .ve-mnt-oneri .ve-mnt-oneri-sat:hover td,
+.ve-properties-content .ve-mnt-oneri .ve-mnt-oneri-sat:focus-visible td{ background:var(--bg-tertiary); }
+.ve-properties-content .ve-mnt-oneri .ve-mnt-oneri-sat:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+.ve-properties-content .ve-mnt-oneri .ve-mnt-oneri-sat.sel td{ font-weight:700; color:var(--text-heading); }
 .mntlib-empty{
   padding:8px 10px;font-size:var(--fs-tiny);color:var(--text-muted);
   line-height:1.4;text-align:center;
