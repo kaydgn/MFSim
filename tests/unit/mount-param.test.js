@@ -292,7 +292,8 @@ describe('PENCERE — yalnız girdi', () => {
     const n = node(), d = dom(P.getMntParamPropertiesHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler']);
     expect(d.querySelector('.ve-fp-tab')).toBeNull();                       // tek gövde (2026-10-16)
-    expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Katalogdan seçim');
+    expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Analiz');
+    expect(d.querySelector('.ve-fp-side select').selectedOptions[0].textContent).toBe('Katalogdan seçim');
     expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '24', '576']);
     expect(d.querySelector('.ve-fp-side .ve-fp-durum').textContent).toBe('Taramaya hazır');
     expect(d.querySelectorAll('.ve-fp-solve').length).toBe(1);

@@ -43,8 +43,19 @@ function _mntPrmMinAralik(f){
 }
 function _mntPrmTipAdi(E, key){
   if(!key) return '—';
+  var k=veMntKatalog.konumOku(key);
+  if(k) return 'Δx '+_mntPrmKayma(k.dx)+' · Δz '+_mntPrmKayma(k.dz)+' mm';
   var e=E.M.lib[key];
   return e ? e.name : key;
+}
+function _mntPrmKayma(v){ return (v>0 ? '+' : '')+_rF(v, Math.abs(v-Math.round(v))>1e-9 ? 1 : 0); }
+function _mntPrmKonumMu(E){ return E.analiz==='konum'; }
+// Konum taramasının eksenleri — adayların kaymalarından (artan).
+function _mntPrmKonumEksen(E){
+  var x={}, z={};
+  (E.A || []).forEach(function(a){ if(a.konum){ x[a.dx]=true; z[a.dz]=true; } });
+  var s=function(o){ return Object.keys(o).map(Number).sort(function(a, b){ return a-b; }); };
+  return { ax:s(x), az:s(z) };
 }
 // Tip adı tablo hücresinde: sertlik ("55 ShA") ve katalog kodu ("(AMC 137981)") bölünmez.
 function _mntPrmTipYaz(ad){
@@ -94,12 +105,12 @@ function _mntPrmAntet(E){
   try { tarih=E.tarih.toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric' }); } catch(e){}
   var m=E.konfig[0] && E.konfig[0].o1 ? E.konfig[0].o1.m : NaN;
   return '<div class="antet"><div class="band">'
-    + '<div class="eyebrow">Parametrik analiz · Katalogdan seçim</div>'
-    + '<h1>Güç grubu takoz sistemi: Katalogdan takoz seçimi</h1></div>'
+    + '<div class="eyebrow">Parametrik analiz · '+(_mntPrmKonumMu(E) ? 'Konum taraması' : 'Katalogdan seçim')+'</div>'
+    + '<h1>'+(_mntPrmKonumMu(E) ? 'Güç grubu takoz sistemi: Takoz konumu taraması' : 'Güç grubu takoz sistemi: Katalogdan takoz seçimi')+'</h1></div>'
     + '<div class="fields">'
     + '<div class="f"><div class="k">Model</div><div class="v">'+E.M.gather.components.length+' gövde · '+E.M.tak.length+' takoz · '+E.M.G.length+' grup</div></div>'
     + '<div class="f"><div class="k">Toplam kütle</div><div class="v">'+_rF(m, 1)+' kg</div></div>'
-    + '<div class="f"><div class="k">Aday tip</div><div class="v">'+E.A.length+'</div></div>'
+    + '<div class="f"><div class="k">'+(_mntPrmKonumMu(E) ? 'Aday konum' : 'Aday tip')+'</div><div class="v">'+E.A.length+'</div></div>'
     + '<div class="f"><div class="k">Kombinasyon</div><div class="v">'+_rF(E.S.N, 0)+'</div></div>'
     + '<div class="f"><div class="k">Tarih</div><div class="v">'+_rEsc(tarih)+'</div></div>'
     + '</div></div>';
@@ -114,6 +125,7 @@ function _mntPrmToc(){
 function _mntPrmKapsam(E){
   var M=E.M, c=E.ctx, o=(E.konfig[0] && E.konfig[0].o1) || {};
   var h='<h2 id="p1"><span class="no">1</span>Kapsam</h2>';
+  if(_mntPrmKonumMu(E)) return h+_mntPrmKapsamKonum(E)+_mntPrmGirdi(E, o);
   h+='<table><caption>Tablo '+(++_prmTbl)+' — Takoz grupları</caption>'
    + '<tr><th>No</th><th>Grup</th><th>Takozlar</th><th>x [mm]</th><th>Mevcut tip</th><th>Tarama</th></tr>';
   M.G.forEach(function(g){
@@ -132,6 +144,30 @@ function _mntPrmKapsam(E){
      + '<td class="c">'+((e.fitX||e.fitY||e.fitZ||e.curveX||e.curveY||e.curveZ) ? 'eğri' : 'doğrusal')+'</td></tr>';
   });
   h+='</table>';
+  return h+_mntPrmGirdi(E, o);
+}
+// Konum taramasının grupları ve konum aralığı.
+function _mntPrmKapsamKonum(E){
+  var M=E.M, K=_mntPrmKonumEksen(E);
+  var h='<table><caption>Tablo '+(++_prmTbl)+' — Takoz grupları</caption>'
+   + '<tr><th>No</th><th>Grup</th><th>Takozlar</th><th>x [mm]</th><th>z [mm]</th><th>Tip</th><th>Tarama</th></tr>';
+  M.G.forEach(function(g){
+    h+='<tr><td class="c">'+g.no+'</td><td class="l">'+_rEsc(g.ad)+'</td><td class="c">'+g.uyeler.length+'</td>'
+     + '<td>'+_rF(g.x, 0)+'</td><td>'+_rF(g.z, 0)+'</td><td class="l">'+_mntPrmTipYaz(_mntPrmTipAdi(E, g.tip))+'</td>'
+     + '<td class="c">'+(E.sabit[g.anahtar] ? 'sabit' : 'taranır')+'</td></tr>';
+  });
+  h+='</table>';
+  var sat=function(ad, v){
+    return '<tr><td class="l">'+ad+'</td><td>'+_rF(v[0], 0)+'</td><td>'+_rF(v[v.length-1], 0)+'</td><td class="c">'+v.length+'</td>'
+      + '<td class="l">'+v.map(_mntPrmKayma).join('; ')+'</td></tr>';
+  };
+  h+='<table><caption>Tablo '+(++_prmTbl)+' — Konum aralığı (grubun bütün takozları aynı kayar, mm)</caption>'
+   + '<tr><th>Yön</th><th>En az</th><th>En çok</th><th>Değer</th><th>Kaymalar</th></tr>'
+   + sat('Boyuna Δx', K.ax)+sat('Düşey Δz', K.az)+'</table>';
+  return h;
+}
+function _mntPrmGirdi(E, o){
+  var M=E.M, c=E.ctx, h='';
   var mod={ auto:'otomatik', linear:'doğrusal', nonlinear:'nonlineer' }[o.mod] || '—';
   h+='<table><caption>Tablo '+(++_prmTbl)+' — Tarama girdileri</caption><tr><th>Büyüklük</th><th>Değer</th></tr>'
    + '<tr><td class="l">Rölanti devri · silindir sayısı</td><td>'+_rF(M.eng.idleRpm, 0)+' d/dk · '+_rF(M.eng.cylinders, 0)+'</td></tr>'
@@ -139,7 +175,7 @@ function _mntPrmKapsam(E){
    + '<tr><td class="l">Sönüm oranı ζ</td><td>'+_rF(o.zeta, 3)+'</td></tr>'
    + '<tr><td class="l">Çözüm modu</td><td>'+_rEsc(mod)+'</td></tr>'
    + '<tr><td class="l">Rijitlik toleransı</td><td>'+(c.acik.tolerans ? '±%'+_rF(c.s.tolerans*100, 0) : 'kapalı')+'</td></tr>'
-   + '<tr><td class="l">Taranan grup · aday tip</td><td>'+E.S.taranan.length+' · '+E.A.length+'</td></tr>'
+   + '<tr><td class="l">Taranan grup · '+(_mntPrmKonumMu(E) ? 'aday konum' : 'aday tip')+'</td><td>'+E.S.taranan.length+' · '+E.A.length+'</td></tr>'
    + '<tr><td class="l">Kombinasyon</td><td>'+_rF(E.S.N, 0)+'</td></tr>'
    + '<tr><td class="l">Tarama süresi</td><td>'+_rF(E.S.sure/1000, 1)+' s</td></tr></table>';
   return h;
@@ -149,7 +185,9 @@ function _mntPrmKapsam(E){
 function _mntPrmYontem(E){
   var c=E.ctx, n=E.kSay;
   var h='<h2 id="p2"><span class="no">2</span>Yöntem</h2>';
-  h+='<p>Her kombinasyonda bir grubun bütün takozlarına aynı kütüphane tipi atanır: sağ ve sol takoz aynı tiptir, takoz konumları değişmez. '
+  h+='<p>'+(_mntPrmKonumMu(E)
+      ? 'Her kombinasyonda bir grubun bütün takozları aynı boyuna (Δx) ve düşey (Δz) kaymayı alır: sağ ve sol takoz y’de ayna kalır, takoz tipleri ve eksenleri değişmez. '
+      : 'Her kombinasyonda bir grubun bütün takozlarına aynı kütüphane tipi atanır: sağ ve sol takoz aynı tiptir, takoz konumları değişmez. ')
    + 'Model ana raporun Bölüm 8’indeki çözüm yolundan geçer — statik denge (nonlineer yasalı takozda Newton–Raphson, ±15 mm metal–metal durdurucu) '
    + 've statik dengedeki dinamik tanjant rijitlikle modal analiz (Bölüm 7). Sabit gruplar modeldeki takoz verisini korur.</p>';
   h+='<p>Her kombinasyonda 1 g statik denge ve modal analiz çözülür; dört kesin kriter (Bölüm 3) bu çözümden değerlendirilir. '
@@ -251,6 +289,16 @@ function _mntPrmSonuc(E){
     h+='<div class="note warn"><span class="t">Uygun kombinasyon yok</span>'
      + _rF(S.N, 0)+' kombinasyonun hiçbiri dört kesin kriteri sağlamıyor.</div>';
   }
+  if(_mntPrmKonumMu(E)){
+    h+='<table><caption>Tablo '+(++_prmTbl)+' — K1 · '+K1.uygunluk+': grup başına konum</caption>'
+     + '<tr><th>Grup</th><th>Δx [mm]</th><th>Δz [mm]</th><th>x [mm]</th><th>z [mm]</th><th>K0 · Mevcut x · z [mm]</th></tr>';
+    E.M.G.forEach(function(g, i){
+      var k=K1.tipler[i] ? veMntKatalog.konumOku(K1.tipler[i]) : null;
+      h+='<tr><td class="l">'+_rEsc(g.ad)+'</td><td>'+(k ? _mntPrmKayma(k.dx) : 'sabit')+'</td><td>'+(k ? _mntPrmKayma(k.dz) : 'sabit')+'</td>'
+       + '<td>'+_rF(g.x+(k ? k.dx : 0), 0)+'</td><td>'+_rF(g.z+(k ? k.dz : 0), 0)+'</td><td>'+_rF(g.x, 0)+' · '+_rF(g.z, 0)+'</td></tr>';
+    });
+    return h+'</table>'+_mntPrmKarsilastir(E, K1)+_mntPrmSekil(E);
+  }
   h+='<table><caption>Tablo '+(++_prmTbl)+' — K1 · '+K1.uygunluk+': grup başına tip</caption>'
    + '<tr><th>Grup</th><th>K1</th><th>k<sub>z</sub> stat. [N/mm]</th><th>k<sub>z</sub> din. [N/mm]</th><th>K0 · Mevcut</th></tr>';
   E.M.G.forEach(function(g, i){
@@ -344,8 +392,9 @@ function _mntPrmKonfigler(E){
   });
   h+='</table>';
   if(S.uygunN>0){
-    h+='<table><caption>Tablo '+(++_prmTbl)+' — Dört kesin kriteri sağlayan kombinasyonlarda grup başına tip sıklığı (ilk beş)</caption>'
-     + '<tr><th>Grup</th><th>Tip</th><th>Kombinasyon</th><th>Pay</th></tr>';
+    var kn=_mntPrmKonumMu(E);
+    h+='<table><caption>Tablo '+(++_prmTbl)+' — Dört kesin kriteri sağlayan kombinasyonlarda grup başına '+(kn ? 'konum' : 'tip')+' sıklığı (ilk beş)</caption>'
+     + '<tr><th>Grup</th><th>'+(kn ? 'Konum' : 'Tip')+'</th><th>Kombinasyon</th><th>Pay</th></tr>';
     tar.forEach(function(gi){
       var s=S.siklik[gi], k=Object.keys(s).sort(function(a, b){ return s[b]-s[a] || (a<b ? -1 : 1); }).slice(0, 5);
       k.forEach(function(key, j){
@@ -359,11 +408,15 @@ function _mntPrmKonfigler(E){
 }
 
 // ── 7 Varsayımlar · Kaynaklar ───────────────────────────────────────────────
-function _mntPrmVarsayim(){
+function _mntPrmVarsayim(E){
+  var kn=E && _mntPrmKonumMu(E);
   var h='<h2 id="p7"><span class="no">7</span>Varsayımlar ve sınırlar</h2><ul>'
     + '<li>Güç grubu 6 serbestlik dereceli rijit gövdedir; takoz, konumunda üç eksenli yaydır ve eksenleri genel eksenlere paraleldir (ana rapor, Bölüm 2).</li>'
-    + '<li>Tip verisi kütüphanedeki değerlerdir: statik ve dinamik rijitlik, tanımlıysa nonlineer yasa. Üretim toleransı ve sıcaklık etkisi taramaya girmez.</li>'
-    + '<li>Takoz konumları ve braketler değişmez; yalnız tip değişir. Bir grubun takozları aynı tiptir.</li>'
+    + (kn
+      ? '<li>Takoz verisi modeldekidir: tip, rijitlik ve tanımlıysa nonlineer yasa değişmez; yalnız konum değişir. Üretim toleransı ve sıcaklık etkisi taramaya girmez.</li>'
+        + '<li>Bir grubun takozları aynı kaymayı alır; yanal (y) konum ve takozun eğim açısı değişmez. Braketin kaymaya uyduğu, kütlesinin ve rijitliğinin değişmediği kabul edilir.</li>'
+      : '<li>Tip verisi kütüphanedeki değerlerdir: statik ve dinamik rijitlik, tanımlıysa nonlineer yasa. Üretim toleransı ve sıcaklık etkisi taramaya girmez.</li>'
+        + '<li>Takoz konumları ve braketler değişmez; yalnız tip değişir. Bir grubun takozları aynı tiptir.</li>')
     + '<li>TR, Kriter 2’nin tek serbestlikli düşey kestirimidir; 6 serbestlikli yön başına iletilebilirlik ana raporun Bölüm 8’indedir.</li>'
     + '<li>Nonlineer yasalı takozda modlar statik dengedeki dinamik tanjantla hesaplanır (küçük genlik).</li>'
     + '<li>Sönüm oranı ζ bütün takozlar için tek değerdir.</li>'
@@ -383,13 +436,13 @@ function veMntParamRaporHTML(E){
   var bas=tpl.indexOf('@@ANTET@@'), kat=tpl.lastIndexOf('<script>@@KATEX_JS@@');
   var kapa=tpl.lastIndexOf('</div>', kat);
   if(bas<0 || kat<0 || kapa<0) throw new Error('Rapor şablonu tanınmadı');
-  var ust=tpl.slice(0, bas).replace(/<title>[^<]*<\/title>/, '<title>Katalogdan takoz seçimi</title>');
+  var ust=tpl.slice(0, bas).replace(/<title>[^<]*<\/title>/, '<title>'+(_mntPrmKonumMu(E) ? 'Takoz konumu taraması' : 'Katalogdan takoz seçimi')+'</title>');
   var alt=tpl.slice(kapa);
   var css=((typeof veThemeFontFaceCss==='function') ? veThemeFontFaceCss() : '')+'\n'+A.katexCss;
   var js=A.katexJs.replace(/<\/script/gi, '<\\/script');
   var govde=_mntPrmAntet(E)+_mntPrmToc()
     + _rBolunmez(_mntPrmKapsam(E)+_mntPrmYontem(E)+_mntPrmKriterBolum(E)+_mntPrmSaglayan(E)
-                 +_mntPrmSonuc(E)+_mntPrmKonfigler(E)+_mntPrmVarsayim());
+                 +_mntPrmSonuc(E)+_mntPrmKonfigler(E)+_mntPrmVarsayim(E));
   return ust.replace('@@ASSETS_CSS@@', function(){ return css; })
        + govde
        + alt.replace('@@KATEX_JS@@', function(){ return js; });
