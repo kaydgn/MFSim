@@ -60,6 +60,7 @@ const TAKOZ_TIPLERI = Object.keys(componentDefs)
 function pencere(n) {
   if (n.type === 'mount-analysis') return cp.getMntModulePropertiesHTML(n);
   if (n.type === 'mnt-mount') return cp.getMntMountPropertiesHTML(n);
+  if (n.type === 'mnt-aski') return cp.getMntAskiPropertiesHTML(n);
   if (n.type === 'mnt-solver') return cp.getMntSolverPropertiesHTML(n);
   if (n.type === 'mnt-library') return cp.getMntLibraryPropertiesHTML(n);
   if (n.type === 'mnt-viewer') return cad.getMntViewerPropertiesHTML(n);
@@ -77,8 +78,9 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     return (new Function('return ' + m[1]))();
   };
 
-  test('tarama gerçekten tarıyor: on dokuz pencereli Takoz tipi (dördü motorun aksesuarı; Koordinat Düzlemi yok — Canlı Not 63; Başlangıç ve Örnekler yok, Başlangıç Sihirbazı eylem aracı — Canlı Not 110)', () => {
-    expect(TAKOZ_TIPLERI.length).toBe(19);
+  test('tarama gerçekten tarıyor: yirmi pencereli Takoz tipi (dördü motorun aksesuarı, biri Askı Yayı; Koordinat Düzlemi yok — Canlı Not 63; Başlangıç ve Örnekler yok, Başlangıç Sihirbazı eylem aracı — Canlı Not 110)', () => {
+    expect(TAKOZ_TIPLERI.length).toBe(20);
+    expect(TAKOZ_TIPLERI.filter((t) => componentDefs[t].isMountAski)).toEqual(['mnt-aski']);
     expect(Object.keys(componentDefs).filter((t) => /^mnt-/.test(t) && !componentDefs[t].isSubsystem && componentDefs[t].eylem))
       .toEqual(['mnt-wizard']);
     expect(TAKOZ_TIPLERI.filter((t) => componentDefs[t].isMountAksesuar))

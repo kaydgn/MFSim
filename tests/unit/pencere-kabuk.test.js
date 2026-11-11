@@ -223,7 +223,7 @@ function coz() {
 describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
   test('dağıtım iki modülün her tipini bir kurucuya bağlıyor (tarama gerçekten tarıyor)', () => {
     expect(FEAD_TIP.length).toBeGreaterThanOrEqual(15);
-    expect(TAKOZ_TIP.length).toBe(20);                                     // dördü motorun aksesuarı; Koordinat Düzlemi yok (Canlı Not 63); Başlangıç ve Örnekler yok, Başlangıç Sihirbazı penceresiz (Canlı Not 110)
+    expect(TAKOZ_TIP.length).toBe(21);                                     // dördü motorun aksesuarı, biri Askı Yayı; Koordinat Düzlemi yok (Canlı Not 63); Başlangıç ve Örnekler yok, Başlangıç Sihirbazı penceresiz (Canlı Not 110)
     expect(FEAD_TIP.concat(TAKOZ_TIP).filter((t) => typeof global[KURUCU[t]] !== 'function')).toEqual([]);
   });
 
@@ -422,7 +422,9 @@ describe('ÇÖZÜMDEN BAĞIMSIZ — Takoz penceresi sonuç göstermez', () => {
     TAKOZ_TIP.forEach((t) => {
       if (t === 'mount-analysis' || global.nodes.some((n) => n.type === t)) return;
       const d = componentDefs[t] || {};
-      global.nodes.push({ id: t + '-t', type: t, def: d, data: d.isMountBody ? { mass: 10, cgx: 100, cgy: 0, cgz: 300, pointMass: true } : {} });
+      // Gövde ve askı yayı girdisiz çözülmez (kütle · yay sabiti): çözülebilir en küçük girdi
+      global.nodes.push({ id: t + '-t', type: t, def: d, data: d.isMountBody ? { mass: 10, cgx: 100, cgy: 0, cgz: 300, pointMass: true }
+        : d.isMountAski ? { x: 900, y: 0, z: 400, k: 50, L0: 90, Lc: 63, montajF: 20 } : {} });
     });
   }
 

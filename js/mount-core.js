@@ -529,7 +529,7 @@ var veMountCore = (function() {
       let changed=false;
       for(let i=0;i<mounts.length;i++){
         const dz = az[i].reduce((s,a,j)=>s+a*q[j],0);
-        const want = (dz < -gap) ? -1 : (dz > gap) ? +1 : 0;
+        const want = mounts[i].aski ? 0 : (dz < -gap) ? -1 : (dz > gap) ? +1 : 0;   // askı yayı: durdurucusuz (sınırı blok boyu)
         if(want !== active[i]){ active[i]=want; changed=true; }
         if(gY[i]){
           const wy = stopWant(ay[i].reduce((s,a,j)=>s+a*q[j],0), gY[i]);
@@ -674,7 +674,7 @@ var veMountCore = (function() {
       let changed=false;
       for(let i=0;i<N;i++){
         const dz=az[i].reduce((s,a,j)=>s+a*q[j],0);
-        const want=(dz<-gap)?-1:(dz>gap)?+1:0;
+        const want=mounts[i].aski?0:(dz<-gap)?-1:(dz>gap)?+1:0;   // askı yayı: durdurucusuz
         if(want!==active[i]){ active[i]=want; changed=true; }
         if(gY[i]){
           const wy=stopWant(ay[i].reduce((s,a,j)=>s+a*q[j],0), gY[i]);
@@ -708,6 +708,136 @@ var veMountCore = (function() {
       stopConverged, converged, newtonIters
     };
     return {q, F, perMount, sumF, checks};
+  }
+
+  // ═══════════════════ Askı yayı — ön yüklü, sınırlı (2026-11-11) ═══════════════════
+  // Şanzımanın kuyruğunu şasiye asan helisel basma yayı (kullanıcı 2026-11-11,
+  // BMC 2K60377): yalnız DÜŞEY kuvvet taşır, gövdeyi +z iter. Kuvvet boydan:
+  //   F = k·(L0 − L),  L = Ld + δz
+  // δz yay noktasının düşey yer değiştirmesi, Ld tasarım konumundaki (takozlar
+  // yüksüzken) boy. L ≥ L0 → AÇIK (F = 0); L ≤ Lc → BLOK, yay rijit dayanağa
+  // döner: F = k·(L0 − Lc) + kB·(Lc − L), kB = ASKI_BLOK_KAT·k.
+  // Çözüme takoz gibi girer (askiTakozlari): yalnız z rijitliği (durumun k'si) ve
+  // q = 0'daki kuvveti (F0) eşdeğer yük durumuna katılır (yukeKuvvetEkle). Durum
+  // aktif küme ile bulunur (solveWithHangers). Metal-metal durdurucu bu elemana
+  // UYGULANMAZ (`aski: true`): sınırı blok boyudur.
+  // Askının rijitliği takozlara göre küçük ama ihmal edilemez: Adams'ın ISG 430
+  // modelinde yay modal tabandan çıkarılırsa ilk mod %4 düşüyor (Adams'la fark
+  // %0,17 → %1,9). Bu yüzden modal ve frekans yanıtı da askıyı taşır.
+  // Kapı: tests/unit/mount-aski.test.js.
+  const ASKI_BLOK_KAT = 1000;
+  const ASKI_MAXITER = 12;
+  // h = { name, pos:[m], k:N/m, L0:m, Lc:m, Ld:m }
+  function askiDurum(h, dz){
+    const L = h.Ld + dz;
+    return (L >= h.L0) ? 'acik' : (L <= h.Lc) ? 'blok' : 'normal';
+  }
+  // Gövdeye etkiyen kuvvet [N, +z]
+  function askiKuvvet(h, dz){
+    const L = h.Ld + dz;
+    if(L >= h.L0) return 0;
+    if(L <= h.Lc) return h.k*(h.L0 - h.Lc) + ASKI_BLOK_KAT*h.k*(h.Lc - L);
+    return h.k*(h.L0 - L);
+  }
+  // Durumun doğrusal elemanı: z rijitliği [N/m] ve q = 0'daki kuvvet [N]
+  function askiEleman(h, durum){
+    if(durum === 'acik') return { k:0, F0:0 };
+    if(durum === 'blok'){
+      const kB = ASKI_BLOK_KAT*h.k;
+      return { k:kB, F0:h.k*(h.L0 - h.Lc) + kB*(h.Lc - h.Ld) };
+    }
+    return { k:h.k, F0:h.k*(h.L0 - h.Ld) };
+  }
+  // Askı yaylarının takoz karşılığı: yalnız z rijitliği, durdurucusuz, sönümsüz.
+  // Dinamik analizlerde (modal, frekans yanıtı, şok) takoz listesinin ARDINA
+  // eklenir; takoz başına çıktılar listenin ilk N elemanından okunur. askiH şokun
+  // Newton yolunda yayın TAM yasasıdır (açılma · blok, askiYasalari).
+  function askiTakozlari(hangers, durumlar){
+    return (hangers || []).map(function(h, i){
+      const e = askiEleman(h, durumlar ? durumlar[i] : 'normal');
+      return { name:h.name, pos:h.pos, kstat:[0,0,e.k], kdyn:[0,0,e.k], aski:true,
+               askiH:{ k:h.k, L0:h.L0, Lc:h.Lc, Ld:h.Ld } };
+    });
+  }
+  // Askının eksen yasaları (takozun kuvvet sözleşmesiyle: f takoza, gövdeye −f):
+  // x · y boş, z = −askiKuvvet. Sabit pay statik dengeye göre farkta düşer.
+  function askiYasalari(h){
+    const bos = { force:function(){ return 0; }, tangent:function(){ return 0; }, k0:0 };
+    const kz = {
+      force:function(dz){ return -askiKuvvet(h, dz); },
+      tangent:function(dz){ const d = askiDurum(h, dz); return d === 'acik' ? 0 : d === 'blok' ? ASKI_BLOK_KAT*h.k : h.k; },
+      k0:h.k
+    };
+    return [bos, bos, kz];
+  }
+  // Noktalara etkiyen dış kuvvetleri yük durumuna katar: birleşik ağırlık
+  // merkezinde eşdeğer ivme ve tork, n' = n + Σf/(m·g), T' = T + Σ(p − G) × f.
+  // kuvvetler: [{ pos:[m], f:[N] }] — gövdeye etkiyen.
+  function yukeKuvvetEkle(lc, kuvvetler, cg, m, g){
+    const n = (lc.n || [0,0,0]).slice(), T = (lc.T || [0,0,0]).slice();
+    (kuvvetler || []).forEach(function(k){
+      for(let i=0;i<3;i++) n[i] += k.f[i]/(m*g);
+      const r = [k.pos[0]-cg[0], k.pos[1]-cg[1], k.pos[2]-cg[2]];
+      T[0] += r[1]*k.f[2] - r[2]*k.f[1];
+      T[1] += r[2]*k.f[0] - r[0]*k.f[2];
+      T[2] += r[0]*k.f[1] - r[1]*k.f[0];
+    });
+    return Object.assign({}, lc, { n:n, T:T });
+  }
+  // Gövdenin p noktasındaki yer değiştirmesi (q birleşik ağırlık merkezinde)
+  function noktaYerDegisimi(q, p, cg){
+    const r = [p[0]-cg[0], p[1]-cg[1], p[2]-cg[2]];
+    return [q[0] + q[4]*r[2] - q[5]*r[1], q[1] + q[5]*r[0] - q[3]*r[2], q[2] + q[3]*r[1] - q[4]*r[0]];
+  }
+  // Statik montaj: yay STATİK DENGEDE Fs kuvvetinde (Ls boyunda). Bilinen
+  // kuvvetle statik denge çözülür (yay rijitliksiz), tasarım konumundaki boy
+  // Ld = Ls − δz_s. coz(takozlar, lc) çözücünün kendi yolu; lcStatik saf
+  // yerçekimi (n = (0, 0, −1)). hangers: [{ pos, Fs [N], Ls [m] }]. Dönüş: [Ld] | null.
+  function askiTasarimBoylari(coz, mounts, cg, m, g, lcStatik, hangers){
+    if(!hangers || !hangers.length) return [];
+    const res = coz(mounts, yukeKuvvetEkle(lcStatik, hangers.map(function(h){ return { pos:h.pos, f:[0,0,h.Fs] }; }), cg, m, g));
+    if(!res || !res.q) return null;
+    return hangers.map(function(h){ return h.Ls - noktaYerDegisimi(res.q, h.pos, cg)[2]; });
+  }
+  // Askılı tek yük durumu. coz(takozlar, lc) çözücünün kendi yolu (solveCaseStop ·
+  // solveCaseNL); askı yayları takozların ardına eklenir, durum aktif küme ile
+  // bulunur. Dönüş biçimi çözücününki: perMount YALNIZ takozlar; perHanger
+  // [{ name, dz, L, F (N, gövdeye +z), durum }]; F özgün dış yük; checks takozlar
+  // üzerinden, ΣFz askının payıyla (askiFz) dengelenir; checks.askiYakinsadi.
+  function solveWithHangers(coz, mounts, cg, m, g, lc, hangers){
+    if(!hangers || !hangers.length) return coz(mounts, lc);
+    const N = mounts.length;
+    let durum = hangers.map(function(h){ return 'normal'; });
+    let res = null, yakinsadi = false;
+    for(let tur=0; tur<ASKI_MAXITER; tur++){
+      const el = hangers.map(function(h, i){ return askiEleman(h, durum[i]); });
+      const lc2 = yukeKuvvetEkle(lc, hangers.map(function(h, i){ return { pos:h.pos, f:[0,0,el[i].F0] }; }), cg, m, g);
+      res = coz(mounts.concat(askiTakozlari(hangers, durum)), lc2);
+      if(!res) return null;
+      const yeni = hangers.map(function(h, i){ return askiDurum(h, res.perMount[N+i].delta[2]); });
+      if(yeni.every(function(d, i){ return d === durum[i]; })){ yakinsadi = true; break; }
+      durum = yeni;
+    }
+    const perHanger = hangers.map(function(h, i){
+      const dz = res.perMount[N+i].delta[2];
+      return { name:h.name, dz:dz, L:h.Ld + dz, F:askiKuvvet(h, dz), durum:askiDurum(h, dz) };
+    });
+    const perMount = res.perMount.slice(0, N);
+    const F = [m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], (lc.T||[0,0,0])[0], (lc.T||[0,0,0])[1], (lc.T||[0,0,0])[2]];
+    const sumF = [0,0,0];
+    perMount.forEach(function(pm){ for(let k=0;k<3;k++) sumF[k] += pm.f[k]; });
+    const askiFz = perHanger.reduce(function(t, a){ return t + a.F; }, 0);
+    const ck = res.checks || {};
+    const checks = Object.assign({}, ck, {
+      sumFzOk: Math.abs(sumF[2] - askiFz - F[2]) < 1e-3*Math.max(1, Math.abs(F[2])),
+      sumFzResidual: sumF[2] - askiFz - F[2],
+      tensionCount: perMount.filter(function(pm){ return pm.tension; }).length,
+      overLinearCount: perMount.filter(function(pm){ return pm.overLinear; }).length,
+      clampCount: perMount.filter(function(pm){ return pm.clamped; }).length,
+      clampYCount: perMount.filter(function(pm){ return pm.clampedY; }).length,
+      askiFz: askiFz, askiYakinsadi: yakinsadi
+    });
+    return Object.assign({}, res, { F:F, perMount:perMount, perHanger:perHanger, sumF:sumF, checks:checks });
   }
 
   // Takozda en az bir eksende nonlineer eğri (≥2 nokta) tanımlı mı?
@@ -1117,7 +1247,7 @@ var veMountCore = (function() {
     const z = (zeta >= 0 && zeta < 1) ? zeta : 0;
     const taban = dynStiffBasis(mounts, kBasis);
     return (factors || [1]).map(function(fac){
-      const kb = taban.map(function(k){ return k.map(function(v){ return v*fac; }); });
+      const kb = taban.map(function(k, i){ return mounts[i].aski ? k : k.map(function(v){ return v*fac; }); });   // askı yayı çelik: ölçeklenmez
       const md = solveModal(buildKfromBasis(mounts, cg, kb), M6, mounts, cg);
       const fB = bounceFrequency(mounts, mTotal, kb);
       return {
@@ -1164,9 +1294,11 @@ var veMountCore = (function() {
   // eğilme a'ya dik bileşen, burulma a boyunca. Uygulanan tork (lc.T) GİRMEZ —
   // tahrik torkunun kesitteki payı bu modelde yok; çağıran torksuz durumları verir.
   // components · mounts: SI (cg · pos [m], mass [kg]); n: ivme yönü [g].
+  // hangers (ops.): askı yayları ({ pos }); kuvvetleri res.perHanger'dan (F, gövdeye
+  // +z) — askı da serbest cisme etkiyen bir dış kuvvettir (2026-11-11).
   // Döner: { M:[3] N·m, egilme, burulma, m (taraftaki kütle), takoz (taraftaki
-  // takoz sayısı) } | null
-  function sectionMoment(components, mounts, res, g, n, S, a){
+  // takoz sayısı), aski (taraftaki askı yayı), askiF (onların kuvveti, N) } | null
+  function sectionMoment(components, mounts, res, g, n, S, a, hangers){
     if(!res || !res.perMount || !Array.isArray(S) || !Array.isArray(a) || !Array.isArray(n)) return null;
     const la=Math.hypot(a[0], a[1], a[2]);
     if(!(la > 0)) return null;
@@ -1188,9 +1320,17 @@ var veMountCore = (function() {
       const t=capraz([mt.pos[0]-S[0], mt.pos[1]-S[1], mt.pos[2]-S[2]], pm.f);
       for(let i=0;i<3;i++) M[i]-=t[i];
     });
+    let aski=0, askiF=0;
+    (hangers || []).forEach((h, j) => {
+      const ph=res.perHanger && res.perHanger[j];
+      if(!ph || !h.pos || !arkada(h.pos)) return;
+      aski++; askiF+=ph.F;
+      const t=capraz([h.pos[0]-S[0], h.pos[1]-S[1], h.pos[2]-S[2]], [0, 0, ph.F]);
+      for(let i=0;i<3;i++) M[i]+=t[i];
+    });
     const tor=M[0]*u[0] + M[1]*u[1] + M[2]*u[2];
     const Mb=[M[0]-tor*u[0], M[1]-tor*u[1], M[2]-tor*u[2]];
-    return { M, egilme:Math.hypot(Mb[0], Mb[1], Mb[2]), burulma:Math.abs(tor), m, takoz };
+    return { M, egilme:Math.hypot(Mb[0], Mb[1], Mb[2]), burulma:Math.abs(tor), m, takoz, aski, askiF };
   }
 
   // ═══════════════════ Hareket zarfı (2026-11-09) ═══════════════════
@@ -1591,7 +1731,7 @@ var veMountCore = (function() {
     });
     const cList = mounts.map(function(_, i){
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
-    const laws = nl ? mounts.map(mountDynamicLaws) : null;
+    const laws = nl ? mounts.map(function(mnt){ return mnt.askiH ? askiYasalari(mnt.askiH) : mountDynamicLaws(mnt); }) : null;
 
     // Statik dengedeki takoz sehimi (m) — nonlineer yasa ve durdurucu TOPLAM
     // sehimden okunmak zorunda; ayrıca kuvvet artışının referansı budur.
@@ -1604,14 +1744,14 @@ var veMountCore = (function() {
     // Statik çözücüyle AYNI tanım: k_stop = STOP_STIFF_RATIO · k_stat,z
     // (temas çeliktir — dinamik/statik oranı uygulanmaz).
     function stopForce(i, dz){
-      if(!useStop) return 0;
+      if(!useStop || mounts[i].aski) return 0;                    // askı yayı: durdurucusuz
       const kS = ((mounts[i].kstat ? mounts[i].kstat[2] : 0) || 0) * ratio;
       if(dz >  gap) return kS*(dz - gap);
       if(dz < -gap) return kS*(dz + gap);
       return 0;
     }
     function stopTangent(i, dz){
-      if(!useStop || Math.abs(dz) <= gap) return 0;
+      if(!useStop || mounts[i].aski || Math.abs(dz) <= gap) return 0;
       return ((mounts[i].kstat ? mounts[i].kstat[2] : 0) || 0) * ratio;
     }
 
@@ -1712,6 +1852,7 @@ var veMountCore = (function() {
         out.per[i].fz.push(fv[2]);
         const dm = Math.sqrt(dR[0]*dR[0]+dR[1]*dR[1]+dR[2]*dR[2])*1000;
         out.per[i].d.push(dm);
+        if(mounts[i].aski) continue;              // en büyük TAKOZ sehimi: askı yayı sayılmaz
         if(dm > worst) worst = dm;
         // TOPLAM sehim (statik + darbe) — ±15 mm durdurucu boşluğu YÜKSÜZ
         // konumdan ölçülür, dolayısıyla sınırla karşılaştırılacak büyüklük budur.
@@ -2356,6 +2497,21 @@ var veMountCore = (function() {
     loadCases: _torkDurumlari(TTA10_TORQUE)
   };
 
+  // ── 10 Ton TTA — ŞANZIMAN ASKILI (kullanıcı 2026-11-11): "6X6 YENİ KABİN - ISM TAKOZ
+  // KONUMLARI - ŞANZIMAN ASKILI" föyü (tests/fixtures/excel-tta-askili.js). Askısızdan
+  // farkı arka takozların Y'si (±335) ve iki askı yayı: Spring-1 · 2 föyün noktaları,
+  // yay BMC 2K60377 (5,85 kgf/mm · L0 90 · Lc 63 mm), statik montaj kuvveti föyün
+  // 50 kg'ı. Gövdeler, tork ve rijitlik askısız örneğin aynısı.
+  const TTA10_ASKILI_EXAMPLE = Object.assign({}, TTA10_EXAMPLE, {
+    mounts: TTA10_EXAMPLE.mounts.map(function(m){
+      return Math.abs(m.pos[1]) === 365 ? Object.assign({}, m, { pos:[m.pos[0], m.pos[1] < 0 ? -335 : 335, m.pos[2]] }) : m;
+    }),
+    askilar: [
+      {name:'Sol askı yayı · 2K60377', pos:[1365, -350, 672.503], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:50},
+      {name:'Sağ askı yayı · 2K60377', pos:[1365,  350, 672.501], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:50}
+    ]
+  });
+
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
   // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
   // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
@@ -2646,6 +2802,34 @@ var veMountCore = (function() {
       ],
       topology: 'assets/examples/tta10_topoloji.json',
       model: TTA10_EXAMPLE
+    },
+    tta10askili: {
+      id: 'tta10askili',
+      name: '10 Ton TTA Takoz Analizi — şanzıman askılı',
+      vehicle: '10 Ton TTA askılı',
+      subtitle: '11 kütle · 6 takoz · 2 askı yayı',
+      description: 'Cummins ISM 385 · Allison 4500 SP + PTO · şanzıman askılı',
+      specs: [
+        ['Kütle gövdesi', String(TTA10_ASKILI_EXAMPLE.components.length)],
+        ['Takoz', String(TTA10_ASKILI_EXAMPLE.mounts.length) + ' · ön 2 · arka 4'],
+        ['Askı yayı', String(TTA10_ASKILI_EXAMPLE.askilar.length) + ' · ' + _sayi(TTA10_ASKILI_EXAMPLE.askilar[0].k, 2) + ' N/mm · statik '
+          + _sayi(TTA10_ASKILI_EXAMPLE.askilar[0].montajF) + ' kgf'],
+        ['Toplam kütle', _toplamKg(TTA10_ASKILI_EXAMPLE)],
+        ['Motor torku', _sayi(TTA10_TORQUE.Te) + ' N·m @ ' + _sayi(TTA10_ASKILI_EXAMPLE.components[0].veri.TeRpm) + ' d/dk'],
+        ['Bağlantı yüzü', 'bloğun arka yüzü · X ' + _sayi(TTA10_RFOB, 1) + ' mm · sınır '
+          + _sayi(TTA10_ASKILI_EXAMPLE.components[7].egSinir) + ' N·m'],
+        ['Sönüm oranı ζ', _sayi(TTA10_ASKILI_EXAMPLE.cozucu.zeta, 2)]
+      ],
+      tools: [
+        {type:'mnt-library',    at:[1005, 90]},
+        {type:'mnt-solver',     at:[1110, 90]},
+        {type:'mnt-wizard',     at:[1215, 90]},
+        {type:'mnt-report',     at:[1320, 90]},
+        {type:'mnt-2dview',     at:[1005,250]},
+        {type:'mnt-viewer',     at:[1110,250]}
+      ],
+      topology: 'assets/examples/tta10askili_topoloji.json',
+      model: TTA10_ASKILI_EXAMPLE
     },
     kutu: {
       id: 'kutu', kurgu: true,
@@ -2963,6 +3147,7 @@ var veMountCore = (function() {
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency, frfGrid,
     mountLoadShares, mountDamping, sectionMoment, motionEnvelope,
+    ASKI_BLOK_KAT, askiDurum, askiKuvvet, askiEleman, askiTakozlari, askiYasalari, yukeKuvvetEkle, noktaYerDegisimi, askiTasarimBoylari, solveWithHangers,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,

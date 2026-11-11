@@ -30,7 +30,10 @@ function ozdegerKok(K, M, l0) {
   }
   return b;
 }
-const taban = (Rx) => core.dynStiffBasis(Rx.mounts, Rx.kBasis);
+// Modal sistemin yayları: takozlar + askı yayları (askılı modelde R.dinMounts, yalnız k_z)
+const yaylar = (Rx) => Rx.dinMounts || Rx.mounts;
+const eksenler = (y) => (y.aski ? [2] : [0, 1, 2]);
+const taban = (Rx) => core.dynStiffBasis(yaylar(Rx), Rx.kBasis);
 const M6 = (Rx) => H.M6of(Rx.mp.m, Rx.mp.I_G);
 const toplam = (s) => s.e.flat().reduce((a, b) => a + b, 0);
 
@@ -52,10 +55,10 @@ describe('sonlu fark hakemi: analitik e = merkezî fark (özdeğer det köklerin
   test.each(ORNEKLER)('%s — bütün takoz · eksen · mod', (id) => {
     const Rx = R[id], kb = taban(Rx), M = M6(Rx), h = 1e-5;
     let enKotu = 0, enKotuF = 0;
-    Rx.mounts.forEach((_, i) => [0, 1, 2].forEach((ax) => {
+    yaylar(Rx).forEach((y, i) => eksenler(y).forEach((ax) => {
       const kp = kb.map((r) => r.slice()); kp[i][ax] *= 1 + h;
       const km = kb.map((r) => r.slice()); km[i][ax] *= 1 - h;
-      const Kp = H.topla6(Rx.mounts, Rx.mp.cg, kp), Km = H.topla6(Rx.mounts, Rx.mp.cg, km);
+      const Kp = H.topla6(yaylar(Rx), Rx.mp.cg, kp), Km = H.topla6(yaylar(Rx), Rx.mp.cg, km);
       Rx.modes.forEach((md, r) => {
         const l0 = Math.pow(2 * Math.PI * md.f_Hz, 2), lp = ozdegerKok(Kp, M, l0), lm = ozdegerKok(Km, M, l0);
         const eFD = (lp - lm) / (4 * h * l0);
@@ -128,15 +131,15 @@ describe('Rayleigh: sertleşen yay hiçbir frekansı düşürmez (kaldıraç ara
   test.each(ORNEKLER)('%s — her yay ×1,1 yeniden çözülür', (id) => {
     const Rx = R[id];
     Rx.sensitivity.forEach((s) => s.e.flat().forEach((v) => expect(v).toBeGreaterThanOrEqual(0)));
-    Rx.mounts.forEach((_, i) => [0, 1, 2].forEach((ax) => {
-      const md = core.modesWithSpringScale(Rx.mounts, Rx.mp.cg, M6(Rx), Rx.kBasis, i, ax, 1.1);
+    yaylar(Rx).forEach((y, i) => eksenler(y).forEach((ax) => {
+      const md = core.modesWithSpringScale(yaylar(Rx), Rx.mp.cg, M6(Rx), Rx.kBasis, i, ax, 1.1);
       md.forEach((m, r) => expect(m.f_Hz).toBeGreaterThanOrEqual(Rx.modes[r].f_Hz * (1 - 1e-12)));
     }));
   });
   test('ölçek 1: yeniden çözüm çözümün kendi modlarını verir (aynı taban)', () => {
     ORNEKLER.forEach((id) => {
       const Rx = R[id];
-      const md = core.modesWithSpringScale(Rx.mounts, Rx.mp.cg, M6(Rx), Rx.kBasis, 0, 2, 1);
+      const md = core.modesWithSpringScale(yaylar(Rx), Rx.mp.cg, M6(Rx), Rx.kBasis, 0, 2, 1);
       md.forEach((m, r) => expect(H.bagil(m.f_Hz, Rx.modes[r].f_Hz)).toBeLessThan(1e-12));
     });
   });
@@ -188,21 +191,24 @@ describe('springScaleFor: ölçüt sınıra hangi ölçekte ulaşır', () => {
 const { rp, cp } = H.kur();
 const dom = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
 const yuzde = (s) => ((s < 1) ? '−' : '+') + '%' + veSayi(+Math.abs((s - 1) * 100).toFixed(1), null);   // makine: raporun yuvarlamasının aynısı
+// Tablonun satır sırası: yay başına eksenleri (askıda yalnız k_z); `ilk` satır adı taşır
+const tabloSirasi = (Rx) => yaylar(Rx).flatMap((y, i) => eksenler(y).map((ax, j) => ({ i, ax, ilk: j === 0 })));
 
 describe('rapor §8.17 — matris çözümün sayısını basıyor', () => {
   test.each(ORNEKLER)('%s — hücreler R.sensitivity (iki ondalık · nokta < 0,005), toplam satırı 0,50', (id) => {
     const Rx = R[id], html = rp._mntRepSensitivity(Rx, {});
     expect(html).toContain('<h3>8.17 ');
     const satir = [...dom(html).querySelector('table').querySelectorAll('tr')];
-    expect(satir).toHaveLength(1 + 3 * Rx.mounts.length + 1);
-    Rx.mounts.forEach((_, i) => [0, 1, 2].forEach((ax) => {
-      const tds = [...satir[1 + 3 * i + ax].querySelectorAll('td')].slice(ax === 0 ? 2 : 1);
+    const sira = tabloSirasi(Rx);
+    expect(satir).toHaveLength(1 + sira.length + 1);
+    sira.forEach(({ i, ax, ilk }, n) => {
+      const tds = [...satir[1 + n].querySelectorAll('td')].slice(ilk ? 2 : 1);
       expect(tds).toHaveLength(6);
       tds.forEach((td, r) => {
         const v = Rx.sensitivity[r].e[i][ax];
         expect(td.textContent).toBe(v >= 0.005 ? veSayi(v, 2, { eksi: '−' }) : '·');
       });
-    }));
+    });
     expect([...satir[satir.length - 1].querySelectorAll('td')].slice(1).map((td) => td.textContent)).toEqual(Array(6).fill('0,50'));
   });
   test('her mod sütununda TAM bir kalın hücre ve o, çekirdeğin `en` kaldıracı', () => {
@@ -210,10 +216,10 @@ describe('rapor §8.17 — matris çözümün sayısını basıyor', () => {
       const Rx = R[id], satir = [...dom(rp._mntRepSensitivity(Rx, {})).querySelector('table').querySelectorAll('tr')];
       Rx.sensitivity.forEach((s, r) => {
         const kalin = [];
-        Rx.mounts.forEach((_, i) => [0, 1, 2].forEach((ax) => {
-          const td = [...satir[1 + 3 * i + ax].querySelectorAll('td')].slice(ax === 0 ? 2 : 1)[r];
+        tabloSirasi(Rx).forEach(({ i, ax, ilk }, n) => {
+          const td = [...satir[1 + n].querySelectorAll('td')].slice(ilk ? 2 : 1)[r];
           if (/font-weight:700/.test(td.getAttribute('style') || '')) kalin.push([i, ax]);
-        }));
+        });
         expect(kalin).toEqual([[s.en.i, s.en.ax]]);
       });
     });
