@@ -529,7 +529,7 @@ var _GM_SIHIRBAZ = [
   { k: 'adimlar', ad: 'Adımlar', not: 'Adın altında adımda girilenler; rozet eksik sayısı, yeşil onay tamam.', yer: 'alt' },
   { k: 'masa', ad: 'Önizleme', not: 'Modelin aksonometrik çizimi, adım adım dolar.', cerceve: false, yer: 'alt' },
   { k: 'durum', ad: 'Çözülebilirlik', not: 'Çözülüyor ya da Çözülemiyor; toplam kütle, takoz sayısı.' },
-  { k: 'gorunus', ad: '3B · Üstten · Yandan · Önden', not: 'Önizlemenin bakışı.', yer: 'sag' },
+  { k: 'gorunus', ad: '3B · 2B', not: 'Önizlemenin bakışı.', yer: 'sag' },
   { k: 'step', ad: 'STEP’ten başla', not: 'Modeli STEP dosyasından doldurur.', yer: 'sag' },
   { k: 'ornek', ad: 'Örnekten doldur', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
   { k: 'ileri', ad: 'İleri', not: 'Sonraki adım; son adımda Modeli kur.', yer: 'sol-orta' },
@@ -1358,9 +1358,10 @@ function _gmSec15(){
       + 'Ctrl+Z kurulumu tek adımda geri alır.'
   ]);
   h += _gmNot('Önizlemenin bakışı',
-      _gmN(_GM_SIHIRBAZ, 'gorunus') + ' <strong>3B · Üstten · Yandan · Önden</strong> önizlemenin bakışını '
-    + 'değiştirir; sürüklemek döndürür, sağdaki düğmeler yakınlaştırır. Çipler parçaların adını ve '
-    + 'kütlesini taşır; G birleşik ağırlık merkezidir.');
+      _gmN(_GM_SIHIRBAZ, 'gorunus') + ' <strong>3B · 2B</strong> önizlemenin bakışını değiştirir. 3B’de '
+    + 'sürüklemek döndürür; çipler parçaların adını ve kütlesini taşır. 2B’de Yandan, Önden ve Üstten '
+    + 'tek sayfada, ortak eksenlerle durur; tekerlek yakınlaştırır, sürüklemek kaydırır, eksen '
+    + 'değerleri görünen aralıktan yazılır. G birleşik ağırlık merkezidir.');
   return h;
 }
 

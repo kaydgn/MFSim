@@ -99,8 +99,8 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   // Özet SONUÇ GÖSTERMEZ (2026-10-16): statik denge ve doğal frekans kartları yok
   expect.soft(oz.bas.map((x) => x.toLocaleLowerCase('tr'))).toEqual(['kurulacaklar', 'model']);
   // Görünüş düğmesi gerçekten çalışıyor (örtülmüş düğmenin tıklaması panele gidiyordu)
-  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' }).click();
-  await expect(page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' }).click();
+  await expect(page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' })).toHaveAttribute('aria-pressed', 'true');
   // 3B'ye dönüş: sürükleme döndürür (çizim değişir), kımıldamadan tık takozun satırını seçer
   await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '3B' }).click();
   await expect(page.locator('#ve-mw-akso svg.ve-mnt2d-akso')).toBeVisible();
@@ -165,6 +165,69 @@ test('ÜÇLÜ YANDA: x · y · z etiketin yanında, tekli satırların kutusuyla
     }
   }
   expect(sorun).toEqual([]);
+});
+
+// 2B SAYFASI (kullanıcı 2026-11-11, Canlı Not 137: *"Üstten Yandan Önden görünümler sanki resim
+// alınmış gibi olmuş. Koordinat düzlemi falan resimler ile beraber hareket ediyor. Ayrıca bu
+// görünümlerin tek sayfada olmasını istiyorum. 2B olarak isimlendirilebilir. Arkadaki grid yapısını
+// da istemiyorum."*). Önce: tekerlek SVG'nin viewBox'ını büyütüyordu — eksen değerleri ve yazılar
+// resimle birlikte büyüyor, çerçeve kayıyordu; masanın kâğıdı ızgaralıydı. Node'da koşmayan halkalar:
+// gerçek tekerlek ve sürükleme, ekranda ölçülen yazı boyu ve çerçevenin yeri, imlecin altındaki
+// noktanın yerinde kalması, masanın hesaplanmış zemini. Birim tarafı: mount-sihirbaz-doku.test.js
+// → 2B SAYFASI.
+test('2B SAYFASI: üç görünüş tek sayfada; tekerlek ve sürükleme yeniden çizer — yazı ve çerçeve yerinde, ızgara yok', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => veMntOrnekYukle('siper'));
+  await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 20000 });
+  await page.evaluate(() => { veMntWizAc(); veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'govde')); });
+  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' }).click();
+  await page.waitForSelector('#ve-mw-masa-cizim > svg.ve-mnt2b');
+  const olc = () => page.evaluate(() => {
+    const svg = document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2b');
+    const pan = (g) => svg.querySelector('[data-mnt2b="' + g + '"]');
+    const cer = [...svg.querySelectorAll('rect.ve-mnt2b-cerceve')].map((r) => { const b = r.getBoundingClientRect(); return [b.left, b.top, b.width, b.height].map(Math.round).join(','); });
+    const sayi = (g) => [...pan(g).querySelectorAll('text')].filter((t) => /^[−-]?[\d.]+$/.test(t.textContent));
+    // ortak X: Yandan'ın ve Üstten'in alt değerleri aynı sayı aynı ekran x'inde
+    const alt = (g) => { const p = pan(g).querySelector('rect.ve-mnt2b-cerceve').getBoundingClientRect();
+      return sayi(g).filter((t) => t.getBoundingClientRect().top > p.bottom).map((t) => { const b = t.getBoundingClientRect(); return [t.textContent, Math.round(b.left + b.width / 2)]; }); };
+    const motor = svg.querySelector('[data-mnt2b="yan"] [data-mnt-sec="govde:0"]:not(.ve-mnt2d-kutu) circle').getBoundingClientRect();
+    return { cer, boy: [...new Set([...svg.querySelectorAll('text')].map((t) => Math.round(t.getBoundingClientRect().height)))].sort(),
+      degerYan: sayi('yan').map((t) => t.textContent).join(' '), altYan: alt('yan'), altUst: alt('ust'),
+      motor: { x: motor.left + motor.width / 2, y: motor.top + motor.height / 2 },
+      zemin: getComputedStyle(document.getElementById('ve-mw-masa')).backgroundImage };
+  });
+  const A = await olc();
+  expect(A.cer).toHaveLength(3);
+  expect(A.zemin).toBe('none');
+  expect(A.altYan).toEqual(A.altUst);
+  // tekerlek Yandan'da Motor'un üstünde: Motor imlecin altında kalır
+  await page.mouse.move(A.motor.x, A.motor.y);
+  for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, -120); await page.waitForTimeout(80); }
+  await page.waitForTimeout(250);
+  const B = await olc();
+  expect(B.cer).toEqual(A.cer);                                                        // çerçeve yerinde
+  expect(B.boy).toEqual(A.boy);                                                        // yazı büyümedi
+  expect(B.degerYan).not.toBe(A.degerYan);                                             // değerler yeni aralıktan
+  expect(Math.abs(B.motor.x - A.motor.x)).toBeLessThan(2);
+  expect(Math.abs(B.motor.y - A.motor.y)).toBeLessThan(2);
+  expect(B.altYan).toEqual(B.altUst);                                                  // ortak X hâlâ hizalı
+  // sürükleme kaydırır: Motor imleçle birlikte gider, çerçeve yerinde
+  await page.mouse.move(B.motor.x, B.motor.y);
+  await page.mouse.down();
+  await page.mouse.move(B.motor.x + 80, B.motor.y + 30, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const C = await olc();
+  expect(C.cer).toEqual(A.cer);
+  expect(Math.abs(C.motor.x - (B.motor.x + 80))).toBeLessThan(2);
+  expect(Math.abs(C.motor.y - (B.motor.y + 30))).toBeLessThan(2);
+  // Sığdır ilk hâle döner
+  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-gezin button[aria-label="Sığdır"]').click();
+  await page.waitForTimeout(250);
+  expect((await olc()).degerYan).toBe(A.degerYan);
+  expect(hatalar).toEqual([]);
 });
 
 // 3B DÜZENİ (kullanıcı 2026-11-05, Canlı Not 40: *"Yazılar falan kayıyor,

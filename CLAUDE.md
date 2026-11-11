@@ -109,7 +109,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
   Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
   `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); üçlü (x · y · z) etiketin YANINDA, kutular tekli satırların
-  sütununda, gövde ve takoz adımında sütun 380 px (Canlı Not 136; kapı `mount-sihirbaz.spec.js` → *ÜÇLÜ YANDA*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  sütununda, gövde ve takoz adımında sütun 380 px (Canlı Not 136; kapı `mount-sihirbaz.spec.js` → *ÜÇLÜ YANDA*);
+  masanın görünüşü 3B · **2B**: Yandan · Önden · Üstten TEK sayfada, ortak ölçek ve merkezle (X sütunu,
+  Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
+  görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
+  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
   Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
   `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
@@ -385,8 +389,20 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   NR yasası), CR H-takozda AMC-EO'nun 9 NR kodunun medyanı (`DIN_MEDYAN`); işaretli, çözülür,
   taramaya aday olmaz; statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
   ölçülmüş benzeri yok → eksik. Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --ap`).
-  LMT-1433-00 (LASPAR kodu) ↔ konik 026 S 1 flanşla eşleşir (`ESLES`, künyede katalog eşi). Kapı:
-  `mount-ap.test.js`.
+  Programdaki LMT-1433-00 ve "Mount 1" LASPAR'ın (aşağıda); 1433'ün A+P eşi (026 S 1, flanş) LASPAR'ın
+  künyesinde. Kapı: `mount-ap.test.js`.
+- `js/mount-laspar.js` + `assets/takoz/lp/` — **LASPAR takoz veritabanı** (kullanıcı 2026-11-11:
+  *"Bu takozların marka-model vs bulup, bu markadan başka ne takoz bulabiliyorsan ekleyebilir misin?"*):
+  programın TK035 · TK040 · TK050'si LASPAR MLMT-0216-33'ün üç sertliği (müşteriye özel, katalogda
+  yok — değerleri raporlardan, değişmez), LMT-1433-00 katalogdaki konik 1433; kodda TKnn = Shore A.
+  Genel katalogdan (2018) 5 aile · 17 tip · 43 kod: endüstriyel konik · üniversal mobil (LMT ayar
+  saplamalı = MLMT, aynı gövde) · kabin · ağır hizmet şok · temel. kz tablonun F/S'si; mobilde tabloda
+  sehim yok → grafiğin eğimi (`EGIM`). **İki ayrışma**: kabin tablosunda "F (N)" sütunu kg, "W (kg)"
+  sütunu kN (grafik doğruluyor); temelde F "31" kN → W 3.130 kg. Kapasite W. **Radyal ve dinamik
+  yayımlanmıyor**: konikte radyal LMT-1433-00'ın FEA oranıyla (`FEA_ORAN`, sertlikte doğrusal),
+  dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, aday olmaz; öteki ailelerde X · Y yok → eksik.
+  Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
+  istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

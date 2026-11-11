@@ -280,8 +280,10 @@ async function takozTuru(page, olc) {
   // Canlı Not 111) ve Tip satırının (i) düğmesinin penceresi (teknik resim); tam tip (Cone 38
   // 60 ShA), resimli tip (Cone 38 40 ShA: sönüm, Z eğrisi) ve radyali tahmini tip (Cone 38
   // 50 ShA). Varsayılan seçim (LMT-1433-37) künyesiz. A+P (2026-11-10): konik yatak ve
-  // H-takoz (dinamik tahmini, tolerans satırı), LMT-1433-00'ın katalog eşi.
-  for (const k of ['amc137963', 'amc137961', 'amc137962', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh']) {
+  // H-takoz (dinamik tahmini, tolerans satırı). LASPAR (2026-11-11): programın LMT-1433-00'ı (tip
+  // künyesi, A+P eşi), katalog konik (radyal ve dinamik tahmini), mobil (X · Y boş), TK040 (model kodu).
+  for (const k of ['amc137963', 'amc137961', 'amc137962', 'ap1221402503', 'ap1221470202', 'lmt1433-00-55sh',
+    'lp-lmt-1433-00-tk60', 'lp-mlmt-0608-04-tk45', 'TK040']) {
     await page.evaluate((kk) => {
       const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
       n.data = n.data || {}; n.data._selKey = kk;

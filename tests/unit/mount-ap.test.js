@@ -15,7 +15,8 @@
  *   • kütüphane: anahtar, ad, kapasite; dinamik TAHMİNİ (Canlı Not 113'ün kuralı): NR'de
  *     (Sh+20)/50, CR H-takozda AMC-EO'nun NR medyanı — çözülür, taramaya aday değil;
  *     marine ve jeneratörde X · Y yayımlanmıyor → eksik, girilince dinamiği aynı oranla;
- *   • LMT-1433-00 ↔ konik yatak 026 S 1 (flanş ölçüsü) ve künyesi; "Mount 1"e eş yazılmaz;
+ *   • LMT-1433-00 (LASPAR kataloğunda, js/mount-laspar.js) ↔ konik yatak 026 S 1 (flanş ölçüsü) —
+ *     LASPAR künyesinde "A+P eşi"; "Mount 1"e eş yazılmaz;
  *   • görsel yalnız tipin teknik resmi, Tip satırının (i) düğmesinde (Canlı Not 111);
  *     Takoz Özellikleri'nde kapasite yazılmaz (Canlı Not 65).
  */
@@ -127,15 +128,13 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     expect([k.dz, k.tahmin]).toEqual([1200, ['dx', 'dy']]);
     expect(L.ap1221440455.sx).toBeNull();                                       // fabrika girdisi değişmez
   });
-  test('ilk 24 girdi yerinde; A+P kodları AMC\'nin ardında, ailenin · tipin · sertliğin sırasıyla', () => {
-    const k = Object.keys(L);
+  test('ilk 24 girdi yerinde; A+P kodları AMC\'nin ardında (LASPAR\'dan önce), ailenin · tipin · sertliğin sırasıyla', () => {
+    const k = Object.keys(L), nLp = Object.keys(require('../../js/mount-laspar.js').KOD).length;
     expect(k.slice(0, 2)).toEqual(['amc55sha', '57RS313773']);
-    expect(k.slice(-86)).toEqual(P.kodlar().map((x) => 'ap' + x));
+    expect(k.slice(-86 - nLp, -nLp)).toEqual(P.kodlar().map((x) => 'ap' + x));
     expect(P.kodlar().slice(0, 3)).toEqual(['1221402001', '1221402003', '1221402004']);   // 021 yumuşak · orta · sert
     const s = cp._mntLibSirali(cp.veMntGetLibraryList().filter((e) => e.builtin && e.marka === 'Angst+Pfister'));
-    expect(s.slice(0, 7).map((e) => e.key)).toEqual(['amc55sha', 'lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh',
-      'bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
-    expect(s.slice(7).map((e) => e.ap.kod)).toEqual(P.kodlar());
+    expect(s.map((e) => e.ap.kod)).toEqual(P.kodlar());                                    // markada yalnız katalog kodları
   });
   test('Takoz Özellikleri\'nde tamamlanan A+P tipi (dinamik) aday olur', () => {
     global.veMntKatalog = require('../../js/mount-katalog.js');
@@ -148,12 +147,14 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
   });
 });
 
-describe('LMT-1433 — programdaki BMC girdileri', () => {
-  test('LMT-1433-00\'ın flanşı (BMC FEA: 107 × 90, delik 80 × 65) konik yatak 026\'nın ölçüsü; radyal X = Y → 026 S 1', () => {
+describe('LMT-1433 — programdaki BMC girdileri (LASPAR)', () => {
+  test('LMT-1433-00\'ın flanşı (LASPAR kataloğu: 107 × 90, delik 80 × 65) konik yatak 026\'nın ölçüsü; radyal X = Y → 026 S 1', () => {
+    const LP = require('../../js/mount-laspar.js');
     expect(TIP['026-s1'][4]).toMatchObject({ boy: 107, en: 90, dBoy: 80, dEn: 65 });
     expect(TIP['026-s3'][4]).toMatchObject({ boy: 107, en: 90, dBoy: 80, dEn: 65 });
-    ['lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh'].forEach((k) => expect(P.ESLES[k]).toBe('026-s1'));
-    expect(P.ESLES['bmc-mount1-55sh']).toBeUndefined();                              // ölçüsü belgesiz
+    expect(LP.TIP['1433'][3]).toMatchObject({ boy: 107, en: 90, dBoy: 80, dEn: 65 });
+    expect(LP.AP_ESI['1433']).toBe('026-s1');
+    expect(['lmt1433-00-40sh', 'amc55sha', 'bmc-mount1-55sh'].map((k) => L[k].marka)).toEqual(['LASPAR', 'LASPAR', 'LASPAR']);
   });
   test('FEA tablosu ↔ katalog: Z orta ve sertte %3 içinde (kayıt — FEA\'nın X\'i %13–15 düşük)', () => {
     const z = (k) => KOD[k][3] / KOD[k][4];
@@ -203,15 +204,10 @@ describe('KÜNYE — Takoz Özellikleri', () => {
       ['Kaynak', 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026']]);
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|2\.550 N|259,9/i);
   });
-  test('H-takoz toleransı, marine ağırlığı; LMT-1433-00\'da katalog eşi, "Mount 1"de künye yok', () => {
+  test('H-takoz toleransı, marine ağırlığı; A+P künyesi yalnız A+P kodunda', () => {
     expect(satirlar(kunye('ap1221470202').querySelector('.ve-mnt-amc'))).toContainEqual(['Rijitlik toleransı', '±%20']);
     expect(satirlar(kunye('ap1221440440').querySelector('.ve-mnt-amc'))).toContainEqual(['Ağırlık', '337 g']);
-    const es = kunye('lmt1433-00-55sh').querySelector('.ve-mnt-amc');
-    expect(satirlar(es)).toEqual([['Üretici kodu', 'LMT-1433-00'], ['Katalog eşi', 'APSOvib® Conical bearing 026 S 1'],
-      ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'], ['Kaynak', 'BMC FEA raporu · 02.10.2018 · 12.02.2019']]);
-    expect(kunye('lmt1433-00-55sh').querySelector('.mntlib-bilgi').getAttribute('data-ap-es')).toBe('lmt1433-00-55sh');
-    expect(kunye('bmc-mount1-55sh').querySelector('.ve-mnt-amc')).toBeNull();
-    expect(kunye('bmc-mount1-55sh').querySelector('.mntlib-bilgi')).toBeNull();
+    expect(kunye('lmt1433-00-55sh').querySelector('.ve-mnt-amc[data-ap]')).toBeNull();   // LASPAR'ın künyesi (mount-laspar.test.js)
   });
   test('Rijitlik: tahminli dinamik hücreler işaretli, "Dinamik tahmini" satırı oranı ve kaynağını yazar', () => {
     const d = kunye('ap1221402503');
@@ -220,7 +216,7 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(kunye('ap1221470202').querySelector('#ve-mnt-lib-tah-lib1').textContent).toBe('Dinamik tahministatik × 1,52 · AMC-EO, 9 NR kodun medyanı');
     expect(d.querySelectorAll('td.zor')).toHaveLength(0);
   });
-  test('(i) A+P\'nin ve katalog eşinin teknik resmini açar; bilinmeyen kodda hiçbir şey', () => {
+  test('(i) A+P\'nin teknik resmini açar; bilinmeyen kodda hiçbir şey', () => {
     const BSK = require('../../js/baslangic-sayfa.js');
     global.veBasResimGoster = BSK.veBasResimGoster;
     try {
@@ -229,10 +225,6 @@ describe('KÜNYE — Takoz Özellikleri', () => {
       const pen = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere');
       expect([pen.querySelector('#ve-bas-buyuk-baslik').textContent, pen.querySelector('img').getAttribute('src')])
         .toEqual(['H-Mount II 135-335-120 · teknik resim', 'assets/takoz/ap/cizim-h-2.webp']);
-      BSK.veBasResimKapat();
-      const es = document.createElement('button'); es.setAttribute('data-ap-es', 'lmt1433-00-40sh');
-      expect(cp.veMntLibCizimAc(es)).toBe(true);
-      expect(document.querySelector('#ve-bas-buyuk-baslik').textContent).toBe('Conical bearing 026 S 1 · teknik resim');
       BSK.veBasResimKapat();
       const yok = document.createElement('button'); yok.setAttribute('data-ap', '1299999999');
       expect(cp.veMntLibCizimAc(yok)).toBe(false);
