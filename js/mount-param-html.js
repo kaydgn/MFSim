@@ -9,7 +9,7 @@
 // Belge OKUR, hesaplamaz: tıklanan konfigürasyonun sonucu gömülü veriden çizilir
 // (Excel makrosuz bir tıkla değer taşıyamadığı için her bloğu hazır yazar).
 //   Özet   — K0…Kn: grupların tipi, Uygunluk, statik sehim, dört kesin kriter,
-//            frekans payı, TR, en düşük mod
+//            TR, en düşük mod (frekans payı yok — Canlı not 2003)
 //   Tarama — çözülen kombinasyonlar, Excel'in sırası (sağlanan kriter sayısı, sonra
 //            statik sehim); sayı sütununun başlığı sıralar; 100'lük sayfa
 //   Sonuç  — seçilen konfigürasyon: yük durumu × takoz × X/Y/Z sehim, modlar; geri ·
@@ -63,7 +63,6 @@ var veMntParamHtml = (function(){
   function temiz(s){ return XL ? XL.temiz(s) : String(s == null ? '' : s); }
   function kok(s){ return XL ? XL.kok(s) : String(s == null ? '' : s); }
   function modAdi(s){ return XL ? XL.modAdi(s) : String(s == null ? '' : s); }
-  function pay(f, fAtes){ return XL ? XL.frekansPayi(f, fAtes) : NaN; }
   function bit(k){ var b = 0; (k || []).forEach(function(ok, j){ if(ok) b |= 1 << j; }); return b; }
   function enKucuk(f){ var s = (f || []).filter(Number.isFinite); return s.length ? Math.min.apply(null, s) : NaN; }
 
@@ -78,7 +77,7 @@ var veMntParamHtml = (function(){
       kriter:kriterler(E),
       konfig:(E.konfig || []).map(function(k){
         return { K:k.K, m:k.mevcut ? 1 : 0, tip:(k.tipler || []).map(temiz), u:k.uygunluk || '', k:bit(k.kriter),
-          d:yuv(k.d, 4), T:yuv(k.T, 6), pay:yuv(pay(k.f, E.fAtes), 4), fMin:yuv(enKucuk(k.f), 4),
+          d:yuv(k.d, 4), T:yuv(k.T, 6), fMin:yuv(enKucuk(k.f), 4),
           tt:(k.takozTip || []).map(temiz),
           vaka:(k.vakalar || []).map(function(v){ return { ad:v.ad, d:(v.d || []).map(function(x){ return (x || []).map(function(y){ return yuv(y, 3); }); }) }; }),
           mod:(k.modlar || []).slice().sort(function(a, b){ return a.f - b.f; }).map(function(m){ return [yuv(m.f, 4), modAdi(m.ad)]; }) };
@@ -88,7 +87,7 @@ var veMntParamHtml = (function(){
     if(L.length){
       var tg = T.gruplar || [];
       D.tarama = { N:T.N || L.length, n:L.length, gruplar:tg.slice(), adlar:tg.map(function(){ return []; }),
-        tip:tg.map(function(){ return []; }), d:[], T:[], fB:[], k:[], pay:[],
+        tip:tg.map(function(){ return []; }), d:[], T:[], fB:[], k:[],
         vaka:V ? V.vakaAdlari.slice() : [], nT:V ? V.nT : 0, nM:V ? V.nM : 0,
         modAdlar:V ? V.modAdlar.map(modAdi) : [], kod:null, modF:null, modAd:null };
     }
@@ -105,7 +104,7 @@ var veMntParamHtml = (function(){
         T.tip[j].push(i);
       });
       T.d.push(yuv(x.d, 4)); T.T.push(yuv(x.T, 6)); T.fB.push(yuv(x.fB, 4));
-      T.k.push(bit(x.k)); T.pay.push(yuv(pay(x.f, E.fAtes), 4));
+      T.k.push(bit(x.k));
     }
   }
   // Excel'in Veri kodu (Int32, mm/100) Int16'ya sığıyorsa Int16.
@@ -232,13 +231,13 @@ var veMntParamHtml = (function(){
       var h = '<table><thead><tr><th class="sol">K</th>'
         + V.gruplar.map(function(g){ return '<th class="sol">' + esc(g) + '</th>'; }).join('')
         + '<th class="sol">Uygunluk</th><th>Statik sehim [mm]</th>' + kBas()
-        + '<th>Frekans payı [Hz]</th><th>TR [%]</th><th>En düşük mod [Hz]</th></tr></thead><tbody>';
+        + '<th>TR [%]</th><th>En düşük mod [Hz]</th></tr></thead><tbody>';
       V.konfig.forEach(function(k, n){
         var u = k.u === 'En uygun' ? ' class="sol u-en"' : k.u === 'Uygun' ? ' class="sol u-uy"' : ' class="sol"';
         h += '<tr data-s="K' + n + '"><td class="sol"><a href="#K' + n + '">K' + k.K + '</a></td>'
           + V.gruplar.map(function(g, i){ return '<td class="sol">' + esc(k.tip[i] || '—') + '</td>'; }).join('')
           + '<td' + u + '>' + esc(k.u || '—') + '</td><td>' + s(k.d, 2) + '</td>' + kriterHucre(k.k)
-          + '<td>' + s(k.pay, 3) + '</td><td>' + yuzde(k.T) + '</td><td>' + s(k.fMin, 2) + '</td></tr>';
+          + '<td>' + yuzde(k.T) + '</td><td>' + s(k.fMin, 2) + '</td></tr>';
       });
       $('ve-ozet').innerHTML = h + '</tbody></table>';
     }
@@ -258,7 +257,6 @@ var veMntParamHtml = (function(){
       SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
       V.kriter.forEach(function(q, j){ SUT.push({ k:'k' + j, ad:esc(q.ad), baslik:q.s, tur:'liste', ok:true, deger:function(i){ return (T.k[i] & (1 << j)) ? '✓' : '✗'; } }); });
       SUT.push({ k:'sag', ad:'Sağlanan', tur:'liste', azalan:true, deger:function(i){ return sag(T.k[i]) + ' / 4'; } });
-      SUT.push({ k:'pay', ad:'Frekans payı [Hz]', tur:'sayi', azalan:true, deger:function(i){ return T.pay[i]; } });
       SUT.forEach(function(c){ SUTK[c.k] = c; });
       for(var i = 0; i < T.n; i++) sira.push(i);
     }
@@ -413,7 +411,7 @@ var veMntParamHtml = (function(){
         h += '<tr data-s="T' + (x + 1) + '"><td class="sol"><a href="#T' + (x + 1) + '">' + s(x + 1, 0) + '</a></td>'
           + T.gruplar.map(function(g, j){ return '<td class="sol">' + esc(tipAdi(j, x)) + '</td>'; }).join('')
           + '<td>' + s(T.d[x], 2) + '</td><td>' + yuzde(T.T[x]) + '</td><td>' + s(T.fB[x], 2) + '</td>' + kriterHucre(T.k[x])
-          + '<td>' + sag(T.k[x]) + ' / 4</td><td>' + s(T.pay[x], 3) + '</td></tr>';
+          + '<td>' + sag(T.k[x]) + ' / 4</td></tr>';
       }
       $('ve-tarama').innerHTML = h + '</tbody></table></div>';
     }
@@ -431,12 +429,12 @@ var veMntParamHtml = (function(){
     function sonuc(){
       var c = konu(secili), h = '';
       if(!c){ $('ve-sonuc').innerHTML = ''; return; }
-      var ad, tipG, tt, vaka, deger, modlar, ust, liste, yer, d, TR, fB, kb, pay_;
+      var ad, tipG, tt, vaka, deger, modlar, ust, liste, yer, d, TR, fB, kb;
       if(c.tur === 'K'){
         var k = V.konfig[c.n];
         ad = 'K' + k.K + (k.m ? ' · Mevcut' : ''); tipG = k.tip; tt = k.tt; vaka = k.vaka.map(function(v){ return v.ad; });
         deger = function(q, m, a){ var x = (k.vaka[q].d[m] || [])[a]; return x == null ? NaN : x; };
-        modlar = k.mod; d = k.d; TR = k.T; fB = null; kb = k.k; pay_ = k.pay;
+        modlar = k.mod; d = k.d; TR = k.T; fB = null; kb = k.k;
         ust = ['#ozet', '← Özet']; liste = V.konfig.map(function(x, n){ return 'K' + n; }); yer = c.n;
       } else {
         var i = c.n, nV = T.vaka.length, nT = T.nT, nM = T.nM;
@@ -449,7 +447,7 @@ var veMntParamHtml = (function(){
           var f = MODF[i * nM + j], e = MODAD[i * nM + j];
           if(isFinite(f)) modlar.push([f, e === 65535 ? '' : T.modAdlar[e]]);
         }
-        d = T.d[i]; TR = T.T[i]; fB = T.fB[i]; kb = T.k[i]; pay_ = T.pay[i];
+        d = T.d[i]; TR = T.T[i]; fB = T.fB[i]; kb = T.k[i];
         ust = ['#tarama', '← Tarama']; liste = sira.map(function(x){ return 'T' + (x + 1); }); yer = sira.indexOf(i);
       }
       var etiket = function(id){ var q = konu(id); return q.tur === 'K' ? 'K' + V.konfig[q.n].K : 'No ' + s(q.n + 1, 0); };
@@ -461,7 +459,6 @@ var veMntParamHtml = (function(){
         + V.gruplar.map(function(g, gi){ return esc(g) + ': ' + esc(tipG[gi] || '—'); }).join(' · ') + '</div>';
       var oz = [['Statik sehim [mm]', s(d, 2)], ['TR [%]', yuzde(TR)]];
       if(fB != null) oz.push(['Zıplama f<sub>b</sub> [Hz]', s(fB, 2)]);
-      oz.push(['Frekans payı [Hz]', s(pay_, 3)]);
       if(c.tur === 'K') oz.unshift(['Uygunluk', esc(V.konfig[c.n].u || '—')]);
       V.kriter.forEach(function(q, j){ oz.push(['<span title="' + esc(q.s) + '">' + esc(q.ad) + '</span>', tik(kb & (1 << j))]); });
       h += '<div class="izgara">' + oz.map(function(x){ return '<div><b>' + x[0] + '</b>' + x[1] + '</div>'; }).join('') + '</div>';

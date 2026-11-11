@@ -155,7 +155,7 @@ describe('SAYFA', () => {
     const c = [...tr[0].children].map(metin);
     expect(c.slice(1, 5)).toEqual(['57RS313774', '57RS313773', 'Uygun değil', '2,90']);
     expect(c.slice(5, 9)).toEqual(['✓', '✓', '✗', '✓']);
-    expect(c[10]).toBe('%10,3');
+    expect(c[9]).toBe('%10,3');
     expect(metin(d.querySelector('.kunye'))).toBe('Ateşleme frekansı 35,00 Hz · Rölanti 700 dev/dk · 6 silindir · ζ 0,020 · Kütle 1.739,1 kg · 4 kombinasyon · 11.11.2026');
   });
 
@@ -196,9 +196,10 @@ describe('SAYFA', () => {
     const a = [...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => [metin(x), x.getAttribute('href')]);
     expect(a).toEqual([['← Tarama', '#tarama'], ['← No 1', '#T1'], ['No 3 →', '#T3']]);
     const oz = [...d.querySelectorAll('#ve-sonuc .izgara div')].map((x) => metin(x));
-    expect(oz).toEqual(['Statik sehim [mm]15,00', 'TR [%]%20,0', 'Zıplama fb [Hz]8,20', 'Frekans payı [Hz]' + veSayi(
-      require('../../js/mount-param-excel.js').frekansPayi([3.58, 4.45, 6.0, 7.78, 10.11, 12.13], 35), 3),
-    'Kriter 1✓', 'Kriter 1a✗', 'Kriter 1b✓', 'Kriter 2✗']);
+    // Canlı not 2003 ("Frekans payı kısmını kaldıralım"): Özet'te, Tarama'da ve Sonuç'ta yok
+    expect(oz).toEqual(['Statik sehim [mm]15,00', 'TR [%]%20,0', 'Zıplama fb [Hz]8,20',
+      'Kriter 1✓', 'Kriter 1a✗', 'Kriter 1b✓', 'Kriter 2✗']);
+    expect(d.body.textContent).not.toMatch(/Frekans payı/);
   });
 
   test('K\'nın satırına tık: Sonuç K\'nın kendi yük durumları ve modları; geri Özet\'e', () => {
