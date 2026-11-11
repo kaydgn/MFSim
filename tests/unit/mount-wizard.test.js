@@ -236,7 +236,8 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     const eksenler = () => [...document.querySelectorAll('#ve-mw-yan .ve-mw-ed .ve-mw-ed-xyz')].map((r) => [...r.querySelectorAll('.ve-mw-eks > i')].map((i) => i.textContent));
     W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'govde'));
     W.veMntWizGovdeEkle('mnt-motor');
-    expect(bolumler()).toEqual(['Kimlik', 'Kütle ve ağırlık merkezi', 'Atalet']);
+    // birim bölümün başlığında: etiket kutuların yanında tek satır (Canlı Not 136)
+    expect(bolumler()).toEqual(['Kimlik', 'Kütle ve ağırlık merkezi', 'Atalet [kg·m²]']);
     expect(eksenler()).toEqual([['x', 'y', 'z'], ['xx', 'yy', 'zz'], ['xy', 'xz', 'yz']]);
     // her kutu kendi etiketinin içinde: ekran okuyucunun adı girdide
     [...document.querySelectorAll('#ve-mw-yan .ve-mw-eks')].forEach((l) => {
