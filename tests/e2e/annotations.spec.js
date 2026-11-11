@@ -189,3 +189,56 @@ test.describe('Gruplama çerçevesi kayıtta hayatta kalır', () => {
     await expect(page.locator('.ve-annotation-frame')).toHaveCount(1);
   });
 });
+
+// İÇERİĞİYLE TAŞINIR (kullanıcı 2026-11-11, Canlı Not 130: *"Bileşenleri böyle tutup
+// hareket ettirdiğim zaman hareket ediyorlar fakat kurduğum çerçeve hareket etmiyor"*).
+// Gerçek fare: içeriğin tamamı sürüklenince çerçeve aynı kaymayla gider; çerçeve
+// tutamağından sürüklenince içindekiler gider; tek bileşeni çıkarmak çerçeveyi oynatmaz.
+test.describe('Gruplama çerçevesi İÇERİĞİYLE TAŞINIR', () => {
+  test.setTimeout(180000);
+  test('bileşenlerle çerçeve, çerçeveyle bileşenler; tek bileşen çerçeveyi oynatmaz', async ({ page }) => {
+    await bootApp(page);
+    await page.evaluate(() => {
+      veSelectModuleFromOverlay('full-throttle');
+      window.__n1 = createNode('engine', 3100, 3100);
+      window.__n2 = createNode('gearbox', 3250, 3100);
+      window.__f = createAnnotation('frame', 3060, 3060, { text: 'GRUP', width: 360, height: 200 });
+      veFitViewToContent({ maxZoom: 1 });
+    });
+    await page.waitForTimeout(300);
+    const durum = () => page.evaluate(() => ({ f: [__f.x, __f.y], n1: [__n1.x, __n1.y], n2: [__n2.x, __n2.y] }));
+    const surukle = async (sec, dx, dy) => {
+      const b = await page.locator(sec).boundingBox();
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(b.x + b.width / 2 + dx, b.y + b.height / 2 + dy, { steps: 6 });
+      await page.mouse.up();
+      await page.waitForTimeout(150);
+    };
+    // 1) iki bileşen seçili, biri sürüklenir → çerçeve aynı kaymayla
+    await page.evaluate(() => { clearSelection(); addToSelection(__n1); addToSelection(__n2); });
+    let a = await durum();
+    await surukle('#' + (await page.evaluate(() => __n1.id)) + ' .ve-node-box', 60, 30);
+    let b = await durum();
+    const kay = [b.n1[0] - a.n1[0], b.n1[1] - a.n1[1]];
+    expect(kay[0]).toBeGreaterThan(10);
+    expect([b.f[0] - a.f[0], b.f[1] - a.f[1]].map((v) => Math.round(v * 1000))).toEqual(kay.map((v) => Math.round(v * 1000)));
+    // 2) çerçevenin tutamağı → içindeki iki bileşen aynı kaymayla
+    a = b;
+    await surukle('.ve-annotation-frame .ve-annotation-drag', -40, 20);
+    b = await durum();
+    const fk = [b.f[0] - a.f[0], b.f[1] - a.f[1]];
+    expect(Math.abs(fk[0])).toBeGreaterThan(10);
+    [b.n1, b.n2].forEach((n, i) => {
+      const n0 = i ? a.n2 : a.n1;
+      expect([n[0] - n0[0], n[1] - n0[1]].map((v) => Math.round(v * 1000))).toEqual(fk.map((v) => Math.round(v * 1000)));
+    });
+    // 3) yalnız bir bileşen seçili → çerçeve yerinde
+    await page.evaluate(() => { clearSelection(); addToSelection(__n2); });
+    a = await durum();
+    await surukle('#' + (await page.evaluate(() => __n2.id)) + ' .ve-node-box', 80, 0);
+    b = await durum();
+    expect(b.n2[0] - a.n2[0]).toBeGreaterThan(10);
+    expect(b.f).toEqual(a.f);
+  });
+});

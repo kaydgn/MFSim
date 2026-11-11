@@ -844,6 +844,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kaydırılamaz — olay oradan kabarıyor. Koşul ÇİFT: `overflow` izin veriyor
   **ve** içerik sığmıyor; yalnız birincisi taşması olmayan her kapta tekerleği
   yutar. Kapı: `kart-yuzey.spec.js` → *"TEKERLEK"* (sentetik kart).
+- **GRUPLAMA ÇERÇEVESİ İÇERİĞİYLE TAŞINIR** (kullanıcı 2026-11-11, Canlı Not 130: *"Bileşenleri
+  … hareket ettirdiğim zaman … kurduğum çerçeve hareket etmiyor"*): bileşenler sürüklenince seçili
+  açıklamalar ve içeriğinin TAMAMI sürüklenen çerçeveler aynı kaymayla gider; çerçeve sürüklenince
+  kutusu içindeki bileşenler ve yazılar gider; tek bileşeni çıkarmak çerçeveyi oynatmaz
+  (`js/annotations.js` → `veCerceveIcerigi` · `veDugumleTasinanAcik`). Kapı:
+  `annotations-tasima.test.js` + `annotations.spec.js` → *İÇERİĞİYLE TAŞINIR*.
 - **SİLİNMEZ TİP KENDİNİ BEYAN EDER** (`componentDefs.noDelete` = sebep
   metni): genel silme yolu (`map.js` → `deleteSelectedNodes`) onu ayıklayıp
   sebebi söyler, pencere çöp kutusunu çizmez (`cp-core.js`). Delete tuşu,

@@ -3454,7 +3454,8 @@ function _mnt2DIsaretFoy(P, kimlik){
              : deger.map(hucre).join('');
     return '<tr data-ak="'+k+'"><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hc+'</tr>';
   };
-  var h=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Ad', gen:'40%', sinif:'sol' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }],
+  // Konum sütunları girdi taşır: sütunda girdi ≥ 56 px (mufettis-sigma.spec.js) → %18'er.
+  var h=_mntFoyAc([{ b:'No', gen:'10%' }, { b:'Ad', gen:'36%', sinif:'sol' }, { b:'X', gen:'18%' }, { b:'Y', gen:'18%' }, { b:'Z', gen:'18%' }],
                   'İşaretler', 've-mnt-foy--sik');
   if(cg) h+='<tr class="top" data-ak="G" id="ve-mnt-isr-g-'+kim+'" data-tazele><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
   M.g.components.forEach(function(c, i){ h+=sat('g'+(i+1), String(i+1), c.name, _mntDugum(c.id), ['cgx','cgy','cgz'], [c.cgx, c.cgy, c.cgz]); });

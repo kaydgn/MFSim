@@ -218,7 +218,7 @@ async function apTuru(page, olc) {
   });
   await pencereler(page, olc, ['road']);
   ik += await ikincil(page, olc, 'yol profili büyük', (id) => veManualSegExpandProfile(id), '#ve-mseg-profile-overlay', yol);
-  expect(ik).toBeGreaterThan(100);
+  expect(ik).toBeGreaterThan(90);   // Uyarılar paneli kalktı (Canlı Not 129): 98 öğe ölçülüyor
 }
 
 // SİHİRBAZ RAYI FARE ALTINDA: dinlenme ölçüsü durumu görmez — etkin olmayan

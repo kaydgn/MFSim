@@ -101,28 +101,32 @@ function setupAnnotationInteractions(el, annot) {
       clearAnnotationSelection();
     }
     selectAnnotation(annot);
+    // Çerçeve İÇERİĞİYLE taşınır (Canlı Not 130): içindeki bileşenler ve yazılar.
+    tasinan = veCerceveTasinan(selectedAnnotations);
 
     e.stopPropagation();
     e.preventDefault();
   });
 
+  var tasinan = { dugum: [], acik: [] };
   var onMove = function(e) {
     if(!isDragging) return;
     var newX = (e.clientX - dragStart.x) / canvasZoom;
     var newY = (e.clientY - dragStart.y) / canvasZoom;
 
-    // Seçili tüm annotasyonları taşı
+    // Seçili tüm annotasyonları ve çerçevelerin içeriğini taşı
     var dx = newX - annot.x;
     var dy = newY - annot.y;
-    selectedAnnotations.forEach(function(a) {
-      a.x += dx;
-      a.y += dy;
-      var ael = document.getElementById(a.id);
-      if(ael) {
-        ael.style.left = a.x + 'px';
-        ael.style.top = a.y + 'px';
-      }
-    });
+    veAcikKaydir(selectedAnnotations.concat(tasinan.acik), dx, dy);
+    if(tasinan.dugum.length) {
+      tasinan.dugum.forEach(function(n) {
+        n.x += dx; n.y += dy;
+        var nel = document.getElementById(n.id);
+        if(nel) { nel.style.left = n.x + 'px'; nel.style.top = n.y + 'px'; }
+      });
+      if(typeof updateAllConnections === 'function') updateAllConnections();
+      if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
+    }
   };
 
   var onUp = function() {
@@ -224,6 +228,62 @@ function editAnnotationText(annot) {
     if(e.key === 'Enter') { e.preventDefault(); input.blur(); }
     if(e.key === 'Escape') { input.value = annot.text; input.blur(); }
     e.stopPropagation();
+  });
+}
+
+// ── ÇERÇEVE İÇERİĞİYLE TAŞINIR (kullanıcı 2026-11-11, Canlı Not 130: *"Bileşenleri
+// böyle tutup hareket ettirdiğim zaman hareket ediyorlar fakat kurduğum çerçeve
+// hareket etmiyor"*) ── Çerçevenin İÇERİĞİ: kutusu çerçevenin içinde kalan
+// bileşenler ve açıklamalar. Bileşenler sürüklenince seçili açıklamalar ve içeriğinin
+// TAMAMI sürüklenen çerçeveler onlarla gider (veDugumleTasinanAcik); çerçeve
+// sürüklenince içeriği onunla gider (veCerceveTasinan). Tek kayıt: bırakınca saveState.
+function _veAcikKutu(a) {
+  var el = (typeof document !== 'undefined') ? document.getElementById(a.id) : null;
+  return { x: a.x, y: a.y, w: (a.type === 'frame' ? a.width : 0) || (el && el.offsetWidth) || 0,
+           h: (a.type === 'frame' ? a.height : 0) || (el && el.offsetHeight) || 0 };
+}
+function veCerceveIcerigi(f) {
+  var ic = function(x, y, w, h) { return x >= f.x && y >= f.y && x + w <= f.x + f.width && y + h <= f.y + f.height; };
+  var dugum = ((typeof nodes !== 'undefined' && nodes) || []).filter(function(n) {
+    var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
+    return ic(n.x, n.y, n.width || (el && el.offsetWidth) || 65, n.height || (el && el.offsetHeight) || 60);
+  });
+  var acik = annotations.filter(function(a) {
+    if(a === f) return false;
+    var k = _veAcikKutu(a);
+    return ic(k.x, k.y, k.w, k.h);
+  });
+  return { dugum: dugum, acik: acik };
+}
+// Sürüklenen çerçevelerle birlikte taşınanlar (çerçevelerin kendisi hariç), tekrarsız.
+function veCerceveTasinan(cerceveler) {
+  var dugum = [], acik = [];
+  (cerceveler || []).forEach(function(f) {
+    if(f.type !== 'frame') return;
+    var c = veCerceveIcerigi(f);
+    c.dugum.forEach(function(n) { if(dugum.indexOf(n) < 0) dugum.push(n); });
+    c.acik.forEach(function(a) { if(cerceveler.indexOf(a) < 0 && acik.indexOf(a) < 0) acik.push(a); });
+  });
+  return { dugum: dugum, acik: acik };
+}
+// Seçili bileşenlerle birlikte taşınan açıklamalar: seçili olanlar + içeriğindeki
+// bileşenlerin HEPSİ sürüklenen çerçeveler (ve onların içindeki yazılar).
+function veDugumleTasinanAcik(secili) {
+  var out = (selectedAnnotations || []).slice();
+  annotations.forEach(function(f) {
+    if(f.type !== 'frame' || out.indexOf(f) >= 0) return;
+    var c = veCerceveIcerigi(f);
+    if(!c.dugum.length || !c.dugum.every(function(n) { return secili.indexOf(n) >= 0; })) return;
+    out.push(f);
+  });
+  veCerceveTasinan(out).acik.forEach(function(a) { if(out.indexOf(a) < 0) out.push(a); });
+  return out;
+}
+function veAcikKaydir(liste, dx, dy) {
+  (liste || []).forEach(function(a) {
+    a.x += dx; a.y += dy;
+    var el = (typeof document !== 'undefined') ? document.getElementById(a.id) : null;
+    if(el) { el.style.left = a.x + 'px'; el.style.top = a.y + 'px'; }
   });
 }
 
