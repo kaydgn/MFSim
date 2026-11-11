@@ -2994,9 +2994,8 @@ function _veMufettisSinifSifirla() {
   var w = (typeof document !== 'undefined') ? document.getElementById('ve-properties') : null;
   if(w) VE_MUFETTIS_TIP_SINIFLARI.forEach(function(c) { w.classList.remove(c); });
 }
-// KONU TUVALDE İŞARETLİ: seçim boşalınca pencerenin hangi bileşene ait olduğu
-// kutunun kesikli kenarından okunur (seçili kutunun çift çeperi ayrı kalır).
-// Kutusuz düğüm (FEAD kasnağı) aynı işareti tablosunda ve çiziminde taşır.
+// KONUNUN SINIFI: kutu ÇİZİLMEZ (Canlı Not 147: kesikli kenar kalktı, kutu öteki
+// bileşenler gibi); kutusuz düğüm (FEAD kasnağı) konuyu tablosunda ve çiziminde taşır.
 function veMufettisIsaretle() {
   if(typeof document === 'undefined') return;
   var k = veMufettisAcik() ? veMufettisKonusu() : null;

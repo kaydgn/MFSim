@@ -1099,7 +1099,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   tipi seçer, çözümden bağımsız. Kapı: `mount-oneri.test.js`.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
-  kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
+  kalır ve tuvalde İŞARETLENMEZ — kutu öteki bileşenler gibi (kullanıcı 2026-11-11, Canlı Not
+  147: *"Çerçevesi kesikli çizgi bunun, gerek yok"*; sınıf yalnız FEAD'in tablo ve çizim
+  işaretinde); başka bileşene tık içeriği
   YERİNDE değiştirir. Kapatan yalnız ✕ · Esc · bağlam değişimi
   (`veMufettisKapat`: proje yükleme, modüle giriş/çıkış, yeni proje). İçerik
   değişmeden önce odak bırakılır (yazılmış değer eski bileşene yazılsın).

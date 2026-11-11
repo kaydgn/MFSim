@@ -402,7 +402,7 @@ var componentDefs = {
   },
   'solver': {
     name: 'Çözücü',
-    svg: '<svg width="28" height="28" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="5"/><polygon points="40,30 40,70 70,50" fill="var(--accent-primary, #1f5fd6)"/></svg>',
+    svg: '<svg width="28" height="28" viewBox="0 0 100 100"><rect x="20" y="9" width="60" height="82" rx="7" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="5"/><rect x="29" y="18" width="42" height="16" rx="2" fill="var(--accent-primary, #1f5fd6)" opacity="0.85"/><g fill="var(--text-secondary, #535c67)"><rect x="29" y="43" width="11" height="10" rx="1.5"/><rect x="44.5" y="43" width="11" height="10" rx="1.5"/><rect x="60" y="43" width="11" height="10" rx="1.5"/><rect x="29" y="57" width="11" height="10" rx="1.5"/><rect x="44.5" y="57" width="11" height="10" rx="1.5"/><rect x="60" y="57" width="11" height="10" rx="1.5"/><rect x="29" y="71" width="11" height="10" rx="1.5"/><rect x="44.5" y="71" width="11" height="10" rx="1.5"/></g><rect x="60" y="71" width="11" height="10" rx="1.5" fill="var(--accent-primary, #1f5fd6)"/></svg>',
     inputs: 0,
     outputs: 0,
     defaultWidth: 90,
@@ -558,7 +558,7 @@ var componentDefs = {
   },
   'mnt-solver': {
     name: 'Çözücü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #cf222e)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #cf222e)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #9a6700)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="9" width="60" height="82" rx="7" fill="none" stroke="var(--accent-danger, #cf222e)" stroke-width="5"/><rect x="29" y="18" width="42" height="16" rx="2" fill="var(--accent-danger, #cf222e)" opacity="0.85"/><g fill="var(--text-secondary, #535c67)"><rect x="29" y="43" width="11" height="10" rx="1.5"/><rect x="44.5" y="43" width="11" height="10" rx="1.5"/><rect x="60" y="43" width="11" height="10" rx="1.5"/><rect x="29" y="57" width="11" height="10" rx="1.5"/><rect x="44.5" y="57" width="11" height="10" rx="1.5"/><rect x="60" y="57" width="11" height="10" rx="1.5"/><rect x="29" y="71" width="11" height="10" rx="1.5"/><rect x="44.5" y="71" width="11" height="10" rx="1.5"/></g><rect x="60" y="71" width="11" height="10" rx="1.5" fill="var(--accent-danger, #cf222e)"/></svg>',
     inputs: 0, outputs: 0, isMountSolver: true, defaultWidth: 60, defaultHeight: 56
   },
   // Araç Performans "Başlangıç ve Örnekler" — güç aktarma modülünün örnek yükleyicisi.
@@ -835,7 +835,7 @@ var componentDefs = {
   // kurucusunun devralma yolunu açar (açılışın düğümü örneğin verisini alır).
   'fead-solver': {
     name: 'Çözücü',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #9a6700)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #1f5fd6)"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="9" width="60" height="82" rx="7" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="5"/><rect x="29" y="18" width="42" height="16" rx="2" fill="var(--accent-warning, #9a6700)" opacity="0.85"/><g fill="var(--text-secondary, #535c67)"><rect x="29" y="43" width="11" height="10" rx="1.5"/><rect x="44.5" y="43" width="11" height="10" rx="1.5"/><rect x="60" y="43" width="11" height="10" rx="1.5"/><rect x="29" y="57" width="11" height="10" rx="1.5"/><rect x="44.5" y="57" width="11" height="10" rx="1.5"/><rect x="60" y="57" width="11" height="10" rx="1.5"/><rect x="29" y="71" width="11" height="10" rx="1.5"/><rect x="44.5" y="71" width="11" height="10" rx="1.5"/></g><rect x="60" y="71" width="11" height="10" rx="1.5" fill="var(--accent-warning, #9a6700)"/></svg>',
     inputs: 0, outputs: 0, isFeadSolver: true, noCanvasBox: true, maxInstances: 1,
     noDelete: 'Çözücü modelin parçası, silinmez.'
   },

@@ -82,7 +82,16 @@ describe('seçim boşalınca pencere KAPANMAZ', () => {
     expect(document.documentElement.classList.contains('ve-mufettis-acik')).toBe(true);
   });
 
-  test('konu tuvalde işaretli; pencere kapanınca işaret söner', () => {
+  test('KUTU İŞARETSİZ (Canlı Not 147): konunun sınıfı kutuya kenar çizmez', () => {
+    // "Çözücü bileşeni de diğerleri gibi olsun. Çerçevesi kesikli çizgi bunun, gerek yok."
+    // Önce: `.ve-node--mufettis .ve-node-box` kesikli kenar taşıyordu.
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const kurallar = css.split('}').filter((k) => /ve-node--mufettis/.test(k.split('{')[0]));
+    expect(kurallar).toEqual([]);
+  });
+
+  test('konunun sınıfı (FEAD işareti için); pencere kapanınca söner', () => {
     const [A, B] = kur();
     ciftTik(A);
     clearSelection();
