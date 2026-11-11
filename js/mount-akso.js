@@ -666,6 +666,12 @@ var veMntAkso = (function(){
     // boyu (ağırlıkla tepkiler aynı px/N), cetvel, eksen üçlüsü, yazı.
     // Varsayılan 1: rapor ve karolar birebir eski.
     var ik=(o.isaret>0 ? o.isaret : 1)*(o.kure ? Math.max(0.75, Math.min(1.75, Math.sqrt(o.yakin || 1))) : 1);
+    // TAKOZ KÜPÜ MODELLE BÜYÜR (kullanıcı 2026-11-11, Canlı Not 140: *"Takozlar (yeşil olanlar)
+    // yaklaştırdığımda ufalıyor. Diğer komponentler sabit kalıyor."*): serbest kamerada küp bir
+    // GÖVDE gibi yakınlıkla doğrusal büyür (√yakın ve 1,75 tavanı gövdelere göre küçültüyordu);
+    // uzaklaşırken 0,75'te durur. G, gövde CG'si ve nokta kütle işarettir, √yakın kalır.
+    // Kapı: mount-akso.test.js → *TAKOZ MODELLE BÜYÜR*.
+    var tk=(o.isaret>0 ? o.isaret : 1)*(o.kure ? Math.max(0.75, o.yakin || 1) : 1);
     var kut=m.govde.filter(function(g){ return g.kutu; }).map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:g.kutu.map(function(v){ return v/2; }) }; });
     var nok=m.govde.filter(function(g){ return !g.kutu; });
     var Kp=kapsam(m);
@@ -754,7 +760,7 @@ var veMntAkso = (function(){
     // içinden geçmesin (yazı kuralı): seçilinin kutusu ve halkasının çevresi
     // yazılara TAM engel (sec). Zemindeki izi perdenin altında kalır.
     var odak=(_secili!=null && !!o.perde), odakSvg='';
-    var engel=[], govdeSvg='', secSvg='', takozSvg='', hm=4.4*ik/sc;
+    var engel=[], govdeSvg='', secSvg='', takozSvg='', hm=4.4*tk/sc;
     // ÖRTÜ (o.ortu): çizimin üstünde yüzen yüzeyler (sihirbazın masasında
     // durum ve görünüş şeridi, yakınlaştırma düğmeleri) — yazıya tam engel.
     (o.ortu || []).forEach(function(r){ engel.push({ l:r.l, t:r.t, r:r.r, b:r.b }); });
@@ -890,9 +896,9 @@ var veMntAkso = (function(){
         it.br.filter(function(g){ return g.levha.vz*K.d[2]>0; }).forEach(braketCiz);
         koy(t.k, '<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
         it.br.filter(function(g){ return g.levha.vz*K.d[2]<=0; }).forEach(braketCiz);
-        var tq=P(tc), te=sec(t.k) ? 12*ik : 7*ik;
+        var tq=P(tc), te=sec(t.k) ? 12*tk : 7*tk;
         if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
-        if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*ik)+'"/>';
+        if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*tk)+'"/>';
         return;
       }
       var q=it.q, g=q.g, Y=yuzler(q.c, q.h);
@@ -961,7 +967,7 @@ var veMntAkso = (function(){
           + '<path d="M'+yol([[xD, c[1]-h[1], c[2]-h[2]], [xD, c[1]+h[1], c[2]-h[2]], [xD, c[1]+h[1], c[2]+h[2]], [xD, c[1]-h[1], c[2]+h[2]]])+' Z"/></g>';
       });
       m.takoz.forEach(function(t){
-        gol+='<g class="ve-ak-d-tg"'+ak(t.k, t.bilgi)+'>'+[[t.x, t.y, zD], [t.x, yD, t.z], [xD, t.y, t.z]].map(function(p){ var q=P(p); return '<rect x="'+R(q[0]-2.6*ik)+'" y="'+R(q[1]-2.6*ik)+'" width="'+R(5.2*ik)+'" height="'+R(5.2*ik)+'" rx="1"/>'; }).join('')+'</g>';
+        gol+='<g class="ve-ak-d-tg"'+ak(t.k, t.bilgi)+'>'+[[t.x, t.y, zD], [t.x, yD, t.z], [xD, t.y, t.z]].map(function(p){ var q=P(p); return '<rect x="'+R(q[0]-2.6*tk)+'" y="'+R(q[1]-2.6*tk)+'" width="'+R(5.2*tk)+'" height="'+R(5.2*tk)+'" rx="1"/>'; }).join('')+'</g>';
       });
       if(m.G){
         var G3=[m.G.x, m.G.y, m.G.z], Ga=P(G3);
@@ -1185,7 +1191,7 @@ var veMntAkso = (function(){
         if(!sec && gizliK[t.k]) return;
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
         var m1=etk==='genis' ? t.no+' '+t.ad : (sec ? t.no+' '+kisalt(t.ad) : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no));
-        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(sec ? 10 : 6)*ik, m1:m1, fs:FK, kalin:true, cip:true,
+        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(sec ? 10 : 6)*tk, m1:m1, fs:FK, kalin:true, cip:true,
           sinif:sec ? 't-cip sec-cip' : 't-cip', pri:sec ? 10 : 5, balon:balon }, olc));
       });
       if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true,

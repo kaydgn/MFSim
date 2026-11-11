@@ -695,6 +695,28 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
     expect(G({ iz: 'dim', b: { x: -1, y: -1, z: 1 }, yakin: 4 })).toBe(9.8);
   });
 
+  // TAKOZ MODELLE BÜYÜR (kullanıcı 2026-11-11, Canlı Not 140: *"Takozlar (yeşil olanlar)
+  // yaklaştırdığımda ufalıyor. Diğer komponentler sabit kalıyor."*). Önce: küp √yakın ile ve 1,75
+  // tavanla büyüyordu — 8 kat yakında gövde 8 kat, küp 1,75 kat; gövdeye oranı 0,22'ye iniyordu.
+  // Şimdi küp gövde gibi yakınlıkla büyür (oranı sabit); uzaklaşırken 0,75'te durur; G √yakın kalır.
+  test('TAKOZ MODELLE BÜYÜR: serbest kamerada küpün gövdeye oranı yakınlıkla değişmez; G √yakın', () => {
+    yukle('siper');
+    const m = cp._mntAksoModel();
+    const ciz = (yakin) => AK.ciz(m, { W: 354, H: 326, kat: { golge: true }, fs: FS, isaret: 1.5, kam: { az: 249.3, el: 19.5 }, kure: true, yakin }).svg;
+    const gen = (svg, sec) => {
+      const d = document.createElement('div'); d.innerHTML = svg;
+      const g = d.querySelector(sec);
+      const xs = [...g.querySelectorAll('path')].flatMap((p) => [...p.getAttribute('d').matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((q) => +q[1]));
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    const oran = (y) => { const s = ciz(y); return gen(s, 'g.ve-ak-t') / gen(s, 'g.ve-ak-g'); };
+    const o1 = oran(1);
+    [2, 4, 8].forEach((y) => expect({ y, oran: +(oran(y) / o1).toFixed(2) }).toEqual({ y, oran: 1 }));
+    expect(+(gen(ciz(8), 'g.ve-ak-t') / gen(ciz(1), 'g.ve-ak-t')).toFixed(1)).toBe(8);   // küp 8 kat
+    expect(olc(ciz(8)).G).toBe(17.1);                                                   // G işaret: tavan 1,75
+    expect(+(gen(ciz(0.4), 'g.ve-ak-t') / gen(ciz(1), 'g.ve-ak-t')).toFixed(2)).toBe(0.75); // uzakta taban
+  });
+
   test('ölçü büyümez: ağırlık ve tepki oklarının ekrandaki boyu katla aynı (aynı px/N)', () => {
     yukle('tulga');
     const m = cp.veMntAksoCozumModel(coz());
