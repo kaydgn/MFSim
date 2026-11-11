@@ -197,7 +197,8 @@ describe('SAYFA', () => {
     expect(d.querySelector('#ve-tarama th[data-sira="d"]').getAttribute('aria-sort')).toBe('ascending');
     d.querySelector('#ve-tarama th[data-sira="d"]').click();
     expect(no()).toEqual(['3', '2', '1']);
-    d.querySelector('#ve-tarama th[data-sira="sag"]').click();               // sağlanan: çoktan aza
+    d.querySelector('#ve-tarama button[data-suz="kr"]').click();             // kriterler: panelden çoktan aza
+    d.querySelector('#ve-suz [data-suz-is="azalan"]').click();
     expect(no()).toEqual(['1', '2', '3']);
     d.querySelector('#ve-tarama th[data-sira="no"]').click();                // No süzgeçsiz, başlığı sıralar
     d.querySelector('#ve-tarama th[data-sira="no"]').click();
@@ -306,15 +307,27 @@ describe('SAYFA', () => {
       expect(no(d)).toEqual(['1', '2', '3']);
     });
 
-    test('kriter: Sağlanıyor · Sağlanmıyor; süzülmüş listede geri · ileri; panelden Z’den A’ya; hiçbiri seçilmeden Tamam kapalı; Esc kapatır', () => {
+    // Kriterler tek sütun (Canlı not 2007): panelde sağlanan sayısı ve kriter kriter ✓ · ✗ — sayılar
+    // öteki sütunların süzgecinden geçen satırlardan, panelin kendi seçiminden bağımsız.
+    test('kriterler: sağlanan sayısı ve kriter kriter ✓ · ✗ (satır sayısıyla); süzülmüş listede geri · ileri; panelden Z’den A’ya; boş seçimde Tamam kapalı; Filtreyi temizle hepsini; Esc kapatır', () => {
       const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
-      ac_(d, 'k1');
-      expect([...p.querySelectorAll('label[data-deger]')].map((l) => metin(l))).toEqual(['✓ Sağlanıyor1', '✗ Sağlanmıyor2']);
-      isaret(w, p.querySelector('[data-suz-hep]'), false);
-      expect(p.querySelector('[data-suz-is="tamam"]').disabled).toBe(true);
-      isaret(w, p.querySelector('input[data-suz-deger="✗"]'), true);
-      p.querySelector('[data-suz-is="tamam"]').click();
+      const kutu = (j, m) => p.querySelector('input[data-suz-kr="' + j + '"][value="' + m + '"]');
+      const tamam = () => p.querySelector('[data-suz-is="tamam"]');
+      ac_(d, 'kr');
+      expect([...p.querySelectorAll('label[data-deger]')].map((l) => [l.getAttribute('data-deger'), metin(l.querySelector('.say'))]))
+        .toEqual([['4 / 4', '1'], ['2 / 4', '1'], ['1 / 4', '1']]);
+      expect([...p.querySelectorAll('.suz-kr .ad')].map((x) => [metin(x), x.getAttribute('title')])).toEqual([
+        ['Kriter 1', 'Modal bant < 17,50 Hz'], ['Kriter 1a', 'Mod ayrıklığı > 0,5 Hz'],
+        ['Kriter 1b', '8–10 Hz bandında mod yok'], ['Kriter 2', 'TR < %15']]);
+      expect([...p.querySelectorAll('.suz-kr label')].map(metin)).toEqual(['✓3', '✗0', '✓1', '✗2', '✓2', '✗1', '✓1', '✗2']);
+      isaret(w, kutu(1, '✓'), false);
+      isaret(w, kutu(1, '✗'), false);
+      expect(tamam().disabled).toBe(true);                                // kriterin iki kutusu da boş
+      isaret(w, kutu(1, '✗'), true);
+      expect(tamam().disabled).toBe(false);
+      tamam().click();                                                    // Kriter 1a ✗: No 2 · 3
       expect(no(d)).toEqual(['2', '3']);
+      expect(d.querySelector('#ve-tarama button[data-suz="kr"]').getAttribute('aria-pressed')).toBe('true');
       d.querySelectorAll('#ve-tarama tbody tr')[0].children[2].click();
       expect([...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => x.getAttribute('href'))).toEqual(['#tarama', '#T3']);
       w.location.hash = '#tarama'; w.veRapor.goster();
@@ -324,6 +337,19 @@ describe('SAYFA', () => {
       ac_(d, 'g0');
       d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(p.hidden).toBe(true);
+      ac_(d, 'kr');                                                       // panel seçimi hatırlar; sayı listesi tam
+      expect([kutu(1, '✓').checked, kutu(1, '✗').checked]).toEqual([false, true]);
+      expect([...p.querySelectorAll('label[data-deger]')].map((l) => l.getAttribute('data-deger'))).toEqual(['4 / 4', '2 / 4', '1 / 4']);
+      isaret(w, p.querySelector('input[data-suz-deger="1 / 4"]'), false);
+      tamam().click();
+      expect(no(d)).toEqual(['2']);
+      ac_(d, 'kr');
+      isaret(w, p.querySelector('[data-suz-hep]'), false);
+      expect(tamam().disabled).toBe(true);                                // hiçbir sayı seçili değil
+      p.querySelector('[data-suz-is="temizle"]').click();                 // sayı da kriter de
+      expect(no(d)).toEqual(['3', '1', '2']);
+      expect(d.querySelector('#ve-tarama button[data-suz="kr"]').hasAttribute('aria-pressed')).toBe(false);
+      expect(d.querySelector('#ve-tarama .suz-ozet')).toBeNull();
     });
 
     // Canlı not 2006: "Takozların üstüne tıklayınca sıralıyor, onu da istemiyorum. Filtreleyince çıkan
@@ -351,6 +377,44 @@ describe('SAYFA', () => {
       expect(no(d)).toEqual(['2', '1', '3']);
       expect(takoz().getAttribute('aria-sort')).toBe('ascending');
       expect(takoz().querySelector('button[data-suz]')).not.toBeNull();   // Filtrele yerinde
+    });
+
+    // Canlı not 2007: "Şunları tek sütuna alalım. Kullanıcı merak ederse faresini üstüne getirsin ve
+    // kriterlerin ne olduğunu görsün." — Tarama'da Kriter 1 · 1a · 1b · 2 ve Sağlanan TEK sütun
+    // (Kriterler): hücre dört ✓ · ✗ (sırayla) ve sağlanan sayısı; başlığın ipucu dört kriterin adı ve
+    // tanımı, hücreninki satırın kriter kriter sonucu. Başlık sıralamaz (Canlı not 2006), panel
+    // sıralar ve ok başlıkta. Özet ve Sonuç kriterleri ayrı tutar.
+    test('kriterler tek sütun: dört ✓ · ✗ ve sağlanan sayısı; tanımlar başlığın ve hücrenin ipucunda; başlık sıralamaz, panel sıralar', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      const bas = [...d.querySelectorAll('#ve-tarama thead th')];
+      expect(bas.map((x) => metin(x.querySelector('.bas')))).toEqual(['No', 'Sağ/Sol arka takoz', 'Statik sehim [mm]', 'TR [%]', 'Zıplama fb [Hz]', 'Kriterler']);
+      const kr = bas[5];
+      expect(kr.getAttribute('title')).toBe('Kriter 1: Modal bant < 17,50 Hz\nKriter 1a: Mod ayrıklığı > 0,5 Hz\n'
+        + 'Kriter 1b: 8–10 Hz bandında mod yok\nKriter 2: TR < %15');
+      const hucre = [...d.querySelectorAll('#ve-tarama tbody tr')].map((r) => r.lastElementChild);
+      expect(hucre.map((x) => x.parentNode.children.length)).toEqual([6, 6, 6]);
+      expect(hucre.map(metin)).toEqual(['✓✓✓✓4 / 4', '✓✗✓✗2 / 4', '✓✗✗✗1 / 4']);
+      expect([...hucre[1].querySelectorAll('.kr-i span')].map((x) => x.className)).toEqual(['ok', 'no', 'ok', 'no']);
+      expect(hucre[1].getAttribute('title')).toBe('✓ Kriter 1: Modal bant < 17,50 Hz\n✗ Kriter 1a: Mod ayrıklığı > 0,5 Hz\n'
+        + '✓ Kriter 1b: 8–10 Hz bandında mod yok\n✗ Kriter 2: TR < %15');
+      expect(kr.hasAttribute('data-sira')).toBe(false);
+      expect(w.getComputedStyle(kr).cursor).not.toBe('pointer');
+      d.querySelector('#ve-tarama th[data-sira="d"]').click();
+      d.querySelector('#ve-tarama th[data-sira="d"]').click();             // statik sehim: büyükten küçüğe
+      expect(no(d)).toEqual(['3', '2', '1']);
+      kr.querySelector('.bas').click();
+      expect(no(d)).toEqual(['3', '2', '1']);
+      ac_(d, 'kr');
+      expect([...p.querySelectorAll('.suz-is button')].map(metin)).toEqual(['Azdan çoğa sırala', 'Çoktan aza sırala', 'Filtreyi temizle']);
+      p.querySelector('[data-suz-is="azalan"]').click();
+      expect(no(d)).toEqual(['1', '2', '3']);
+      expect(d.querySelector('#ve-tarama button[data-suz="kr"]').closest('th').getAttribute('aria-sort')).toBe('descending');
+      ac_(d, 'kr');
+      p.querySelector('[data-suz-is="artan"]').click();
+      expect(no(d)).toEqual(['3', '2', '1']);
+      // Özet ve Sonuç: kriterler ayrı
+      expect([...d.querySelectorAll('#ve-ozet thead th')].map(metin).filter((x) => /^Kriter/.test(x))).toEqual(['Kriter 1', 'Kriter 1a', 'Kriter 1b', 'Kriter 2']);
+      expect(d.body.textContent).not.toMatch(/Sağlanan|Sağlanıyor/);
     });
   });
 
