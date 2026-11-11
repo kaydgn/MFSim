@@ -285,7 +285,7 @@ button, textarea, input { font: inherit; color: inherit; }
     <button class="cn-dugme cn-guncel-ac" type="button" id="cn-guncel-ac" aria-controls="cn-guncel" hidden>Güncelleme</button>
     <button class="cn-dugme" type="button" id="cn-istek" title="Ana dalın son programını iste">Programı güncelle</button>
     <button class="cn-dugme" type="button" id="cn-yenile" title="Programı yeniden yükle">Yenile</button>
-    <button class="cn-dugme" type="button" id="cn-yokla" title="Sayfadan açılabilen oturum komutlarını yokla">Bağlantıyı yokla</button>
+    <button class="cn-dugme" type="button" id="cn-cagir" title="Çağrılacak oturum kayıtlı değil." disabled>Oturumu çağır</button>
     <button class="cn-dugme" type="button" id="cn-liste-ac" aria-expanded="false" aria-controls="cn-liste">Notlar <span class="cn-sayac" id="cn-sayac" data-bekleyen="0">0</span></button>
   </header>
 
@@ -460,6 +460,11 @@ button, textarea, input { font: inherit; color: inherit; }
       if (!program.kaynak) programBaslat(); else guncellemeDenetle();
     }, function () { clearTimeout(yzaman); programBaslat(); });
     yetki.db.doc('istek/guncelle').onSnapshot(istekGeldi, function () {});
+    // Oturumu çağır: çağrılacak görev, son çağrı ve oturumun geldiğini söyleyen sahiplik kaydı.
+    var belge = function (snap) { return snap && snap.exists ? (snap.data() || null) : null; };
+    yetki.db.doc('ayar/oturum').onSnapshot(function (snap) { ayarOturum = belge(snap); cagriCiz(); }, function () {});
+    yetki.db.doc('oturum/cagri').onSnapshot(function (snap) { cagri = belge(snap); cagriCiz(); }, function () {});
+    yetki.db.doc('oturum/aktif').onSnapshot(aktifGeldi, function () {});
   }
 
   // ── program: kaynağı ve güncellemesi ────────────────────────────────────
@@ -1195,44 +1200,60 @@ button, textarea, input { font: inherit; color: inherit; }
     });
   }
 
-  // ── oturum bağlantısı: yoklama ──────────────────────────────────────────
-  // Kullanıcı 2026-11-11: değişiklik için her seferinde yeni oturum açmak pratik
-  // değil; sayfanın oturumu KENDİSİNİN başlatması isteniyor. Önce ölçülür: bu hesapta
-  // sayfaya Claude Code'un hangi komutları açık. Sonuç kayda yazılır
-  // (yoklama/baglanti); oturum oradan okur. Yoklama yalnız OKUR, oturum açmaz.
+  // ── oturumu çağır ───────────────────────────────────────────────────────
+  // Kullanıcı 2026-11-11: değişiklik için her seferinde yeni oturum açmak pratik değil
+  // (*"HTML üzerinden Claude'a komutlar göndersin"* · *"bu iş olabildiğince kolay olsun"*).
+  // Ölçüldü (yoklama/baglanti): bu hesapta sayfaya oturum AÇAN komut kapalı, kayıtlı bir
+  // görevi ÇALIŞTIRAN açık. Düğme, Canlı Not'un oturumunu uyandıran görevi çalıştırır
+  // (ayar/oturum → gorev) ve çağrıyı kayda yazar (oturum/cagri); oturum geldiğini
+  // oturum/aktif'i yeniden yazarak söyler (çekirdek: cagriDurumu). Çağrı kullanıcının
+  // tıkıyla gider; sayfa kendiliğinden çağırmaz.
   var SUNUCU = 'Claude Code Remote';
-  function yokla() {
-    var b = $('cn-yokla');
-    if (!window.claude || typeof window.claude.use !== 'function') { bildir('Bağlantı bu görünümde kapalı.'); return; }
-    b.disabled = true;
-    var s = { zaman: new Date().toISOString(), sunucu: SUNUCU, durum: 'yok' };
-    var kod = function (e) { return String((e && (e.code || e.message)) || e || 'hata').slice(0, 200); };
-    Promise.all([window.claude.use('mcp'), window.claude.use('permissions')]).then(function (r) {
-      var mcp = r[0], izin = r[1], ad = 'mcp:' + SUNUCU;
-      if (!mcp) return null;
-      var sor = izin && typeof izin.request === 'function'
-        ? izin.request([ad]).then(function (d) { s.izin = (d && d[ad]) || ''; }, function (e) { s.izin = 'hata:' + kod(e); })
-        : Promise.resolve();
-      return sor.then(function () { return mcp.listTools(SUNUCU); }).then(function (l) {
-        var sunucu = ((l && l.servers) || [])[0];
-        if (!sunucu) { s.durum = 'bagli-degil'; return null; }
-        s.durum = 'var'; s.kimlik = sunucu.authStatus || '';
-        s.araclar = (sunucu.tools || []).map(function (t) {
-          return { ad: t.name, tanim: !!t.description, salt: !!(t.annotations && t.annotations.readOnlyHint) };
-        });
-        if (!s.araclar.some(function (t) { return t.ad === 'list_environments' && t.tanim; })) return null;
-        return mcp.callTool(SUNUCU, 'list_environments', {}).then(function (c) {
-          s.ortamlar = JSON.stringify(c && c.payload !== undefined ? c.payload : c).slice(0, 20000);
-        }, function (e) { s.ortamHata = kod(e); });
-      });
-    }).catch(function (e) { s.durum = 'hata'; s.hata = kod(e); }).then(function () {
-      var acik = (s.araclar || []).filter(function (t) { return t.tanim; }).length;
-      var yaz = yetki.db ? yetki.db.doc('yoklama/baglanti').set(s) : Promise.reject(new Error('kayıt yok'));
-      return yaz.then(function () { bildir('Bağlantı yoklandı · ' + acik + ' komut açık.'); },
-        function () { bildir('Yoklama kayda yazılamadı.'); });
-    }).then(function () { b.disabled = false; });
+  var ayarOturum = null, cagri = null, aktif = null, aktifOkundu = false, cagriZaman = null, cagriSuruyor = false;
+  function cagriCiz() {
+    var b = $('cn-cagir'), c = CN.cagriDurumu(ayarOturum, cagri, aktif, Date.now());
+    var surer = cagriSuruyor || c.durum === 'cagrildi';
+    b.disabled = surer || c.durum === 'yok';
+    b.setAttribute('aria-busy', surer ? 'true' : 'false');
+    b.textContent = surer ? 'Çağrılıyor…' : 'Oturumu çağır';
+    b.title = c.durum === 'yok' ? 'Çağrılacak oturum kayıtlı değil.' : 'Canlı Not oturumunu uyandır';
+    clearTimeout(cagriZaman);
+    if (c.kalan > 0) cagriZaman = setTimeout(cagriCiz, c.kalan + 100);
+    return c.durum;
   }
-  $('cn-yokla').addEventListener('click', yokla);
+  function aktifGeldi(snap) {
+    var once = CN.cagriDurumu(ayarOturum, cagri, aktif, Date.now()).durum;
+    aktif = snap && snap.exists ? (snap.data() || null) : null;
+    var d = cagriCiz();
+    if (aktifOkundu && once === 'cagrildi' && d === 'geldi') {
+      bildir('Oturum geldi.');
+      claudeYokla(); setTimeout(claudeYokla, 8000);   // oturum izlemeyi sahiplikten SONRA kurar
+    }
+    aktifOkundu = true;
+  }
+  function oturumCagir() {
+    if (cagriSuruyor) return;
+    var d = CN.cagriDurumu(ayarOturum, cagri, aktif, Date.now()).durum;
+    if (d === 'yok' || d === 'cagrildi') return;
+    if (!yetki.db || !window.claude || typeof window.claude.use !== 'function') { bildir('Kayıt bağlı değil.'); return; }
+    var gorev = ayarOturum.gorev, belge = yetki.db.doc('oturum/cagri');
+    cagriSuruyor = true; cagriCiz();
+    window.claude.use('mcp').then(function (mcp) {
+      if (!mcp) throw { code: 'capability_disabled' };
+      return mcp.callTool(SUNUCU, 'fire_trigger', { trigger_id: gorev });
+    }).then(function () {
+      cagri = { zaman: new Date().toISOString(), onceki: String((aktif && aktif.zaman) || ''), gorev: gorev };
+      bildir('Oturum çağrıldı.');
+      return belge.set(cagri);
+    }, function (e) {
+      var kod = String((e && e.code) || 'hata');
+      bildir(CN.cagriHata(kod));
+      return belge.set({ zaman: new Date().toISOString(), durum: 'hata', gorev: gorev,
+        hata: (kod + ' ' + String((e && e.message) || '')).trim().slice(0, 300) });
+    }).catch(function () { /* kayıt yazılamadı: çağrının durumu bu görünümde kalır */ })
+      .then(function () { cagriSuruyor = false; cagriCiz(); });
+  }
+  $('cn-cagir').addEventListener('click', oturumCagir);
 
   // ── klavye ──────────────────────────────────────────────────────────────
   document.addEventListener('keydown', function (e) {
