@@ -115,9 +115,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
   görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
   `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
-  Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
+  Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
-  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
+  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
+  *"Zaten aşağıda yazıyor"*; kapı `mount-wizard.test.js` → *TUVALDEKİ MODEL KARTI YOK*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.

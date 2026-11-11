@@ -908,17 +908,12 @@ function _mwStepKaynak(c){
   var st = _mwState, h = '';
   // "YÜKLENDİ" SATIRI YOK (kullanıcı 2026-11-09, Canlı Not 69: *"Şu 'yüklendi' açıklamasına
   // gerek var mı? … altta olmasına gerek var mı?"*): örneğin adını listenin seçilisi, sırasını
-  // gezinme ("3 / 7") zaten söylüyor; tuvalin kartında başlık modeli adlandırır, satır yalnız
-  // sayılar. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
+  // gezinme ("3 / 7") zaten söylüyor. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
+  // TUVALDEKİ MODEL KARTI YOK (kullanıcı 2026-11-11, Canlı Not 151: *"Bunu da kaldıralım, gerek
+  // yok. Zaten aşağıda yazıyor."*): tuvalden açılan sihirbazda örneğin adı ve sayıları listenin
+  // seçilisinde (Canlı Not 135). Kapı: mount-wizard.test.js → *TUVALDEKİ MODEL KARTI YOK*.
   var liste = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [];
   var yuklu = _mwOrnekGosterilen(st);
-  if(st.seededFrom === 'tuval'){
-    // Tuvalin örneği adıyla (Canlı Not 135): "sıfırdan açılmış gibi" görünmesin
-    var to = st.tuvalOrnek ? liste.filter(function(e){ return String(e.id) === String(st.tuvalOrnek); })[0] : null;
-    h += _mwCard('Tuvaldeki model', '<div class="ve-fw-seeded">' + _mwIkon('check') + ' '
-      + (to ? '<b>' + _mwEsc(to.vehicle || to.name) + '</b> · ' : '')
-      + st.govdeler.length + ' gövde · ' + st.takozlar.length + ' takoz</div>');
-  }
   h += _mwCard('STEP\'ten başla', _mwStpKartHTML());
   var sec = '<select class="ve-fw-inp" onchange="veMntWizOrnekSec(this.value)" aria-label="Örnek">'
     + '<option value="__">' + (yuklu === null ? '— örnek seç —' : '— değiştir —') + '</option>';
