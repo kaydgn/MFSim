@@ -108,7 +108,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
   Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
-  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). **İlk hâl** —
+  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
+  anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
+  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
@@ -368,7 +371,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
   (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122). **BMC teknik
+  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
@@ -393,7 +396,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Excel'in Tarama'sı ayrı: kriter sayısı → sehim). Pencerede ek kısıt (E1–E9), sürünme payı, amaç ağırlığı,
   uzlaşı ve yakın seçenek YOK — motor ölçer, pencere sıralamaya katmaz (`_mntParamCtx`; eski
   projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
-  gruplarda. Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
+  gruplarda; 57RS'nin dört tipi (A26 · ASR-SR-116) aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
+  listesinde ve örneklerde durur; kapı `mount-param.test.js` → *ADAY OLMAYAN TİP*). Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
   Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
   yalnız kesin kriterleri sağlayanlarda). **Kriter 2'nin sınırı TR < %15** (kullanıcı 2026-11-11:
   *"bizim bir TR<15 kriterimizin olması gerekiyor"*; MSB belgesinin %50'sinin yerine): taramanın
@@ -534,9 +538,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Analiz; program her açılışta o bileşenin penceresinde açılır, notları kendi aralığında
   (1001'den), araç komutları `--odak parametrik`; adres ve protokol skill `canli-not` §5. Kapı:
   `canli-not.test.js` → *ODAK*. Şeridin **Oturumu çağır**'ı (kullanıcı
-  2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*) Canlı Not'un oturumunu uyandıran
-  görevi çalıştırır; sayfa oturum AÇMAZ (o komut sayfaya kapalı), oturum geldiğini sahiplik
-  kaydını yeniden yazarak söyler (skill `canli-not` §1 · *Oturumu çağır*). **Yayını YALNIZ sahibi oturum yapar ve yayın
+  2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*) sayfaya BAĞLI oturumu Claude'a
+  giden bir yorumla uyandırır; sayfa oturum AÇAMAZ (ölçüldü: o komutlar sayfaya kapalı, elle
+  çalıştırılan görev deposuz yeni oturum açıyor — skill `canli-not` §1 · *Oturumu çağır*). **Yayını YALNIZ sahibi oturum yapar ve yayın
   geri gitmez** (kullanıcı 2026-11-11: başka oturumların güncellemeleri karışıyordu; `yayin`
   komutu sahibi olmayanı ve eski sürümü reddeder); yayından önce `duman` (sayfa + parçalar
   gerçek tarayıcıda). Protokol:
@@ -654,7 +658,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 | Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
-| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Kullanıcı "Canlı Not'u getir" deyince (yeni oturum: §0 *Açılış*), Canlı Not sayfasından gelen "Not N · …" yorumuyla ya da "Oturumu çağır" göreviyle uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
+| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Kullanıcı "Canlı Not'u getir" deyince (yeni oturum: §0 *Açılış*), Canlı Not sayfasından gelen "Not N · …" ya da "Oturum çağrısı" yorumuyla uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
@@ -1591,12 +1595,9 @@ senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçti
 2026-09-10'da dört rutin kuruldu (gece tam E2E · günlük boyut nöbeti · haftalık
 mutasyon nöbeti · haftalık açık ayrışma işçisi) ve **2026-09-28'de kullanıcı
 isteğiyle hepsi kaldırıldı**: haftalık kullanım limitini tüketiyorlardı. Hesapta
-takvimle çalışan hiçbir Routine yok.
-
-**TEK İSTİSNA — "Canlı Not oturumu" görevi** (kullanıcı 2026-11-11: *"Verelim izinleri?
-Yani bu iş olabildiğince kolay olsun artık."*): TAKVİMSİZ; yalnız Canlı Not sayfasındaki
-**Oturumu çağır** çalıştırır ve Canlı Not'un oturumunu uyandırır. Takvim verilmez,
-ikinci bir görev kurulmaz; başka oturuma bağlamak skill `canli-not` §1 · *Oturumu çağır*.
+artık hiçbir Routine yok. (2026-11-11'de Canlı Not için takvimsiz bir görev denendi ve
+aynı gün silindi: var olan oturumu uyandırmıyor, deposuz yeni oturum açıyordu — skill
+`canli-not` → `references/emekli-oturum-gorevi.md`.)
 
 **Kullanıcı açıkça istemedikçe yeni bir zamanlanmış rutin KURULMAZ.** Bir
 oturumun "boşta koşsun" diye kurduğu her rutin, kullanıcının o hafta kendi
