@@ -287,11 +287,22 @@ function _mntParamOlcucu(M, ctx){
 }
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
-// Kategoriler, gövdede alt alta: GRUPLAR (model taraması, sabit tutulan
-// grup) · ADAYLAR (kütüphane, marka marka) · KRİTERLER (dört kesin kriter,
-// sıralama, tolerans) · SONUÇ (yalnız taramadan sonra). Sağ sütun: analizin adı
-// ve büyüklüğü → cevap → eylem.
+// PENCERE BOŞ (kullanıcı 2026-11-11, Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ
+// temizleyelim. İçerikleri, onu bunu. Her şeyi kaldıralım. Adım adım kurgulayacağız
+// sistemimizi."*): pencere yalnız kimlik (başlık · ad · sil) — bölüm, sağ sütun ve eylem
+// yok. Eski pencere (_mntParamEskiPencereHTML) ve arkasındaki tarama, Sonuç, Excel ve
+// rapor kodda ve testli, pencereye BAĞLI DEĞİL: yeniden kurulumda parça parça bağlanır
+// ya da emekli edilir (e2e onu bu işlevin yerine koyar — mount-param-sonuc.spec.js).
 function getMntParamPropertiesHTML(node){
+  if(!node.data) node.data={};
+  return _mntPencereKabuk(node, [], '');
+}
+
+// ESKİ PENCERE (Canlı Not 1001'e dek) — kategoriler, gövdede alt alta: GRUPLAR (model
+// taraması, sabit tutulan grup) · ADAYLAR (kütüphane, marka marka) · KRİTERLER (dört
+// kesin kriter, sıralama, tolerans) · SONUÇ (yalnız taramadan sonra). Sağ sütun:
+// analizin adı ve büyüklüğü → cevap → eylem.
+function _mntParamEskiPencereHTML(node){
   if(!node.data) node.data={};
   var H=_mntParamHazirlik(node);
   var kategoriler=[
@@ -698,7 +709,7 @@ function veMntParamTara(nodeId){
 
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
-    getMntParamPropertiesHTML: getMntParamPropertiesHTML,
+    getMntParamPropertiesHTML: getMntParamPropertiesHTML, _mntParamEskiPencereHTML: _mntParamEskiPencereHTML,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
     _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,

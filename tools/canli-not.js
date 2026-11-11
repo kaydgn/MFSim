@@ -932,7 +932,7 @@ async function duman(o) {
       odakDurum = await sayfa.evaluate(() => document.getElementById('cn').getAttribute('data-odak'));
       const acik = await cerceve.evaluate((tip) => {
         const k = typeof veMufettisKonusu === 'function' ? veMufettisKonusu() : null;
-        return !!(k && k.type === tip && document.getElementById('ve-mnt-param-btn-' + k.id));
+        return !!(k && k.type === tip && document.querySelector('.ve-properties-content [data-mnt-pencere="' + k.id + '"]'));
       }, odak.tip);
       if (odakDurum !== 'tamam' || !acik) hatalar.push('odak: ' + odak.ad + ' penceresi açılmadı (' + odakDurum + ')');
     }

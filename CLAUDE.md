@@ -407,7 +407,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
-  **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
+  **Parametrik Analiz** (`mnt-parametric`). **PENCERE BOŞ** (kullanıcı 2026-11-11, Canlı Not 1001:
+  *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*): pencere yalnız
+  kimlik; aşağıdaki pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI
+  DEĞİL (`_mntParamEskiPencereHTML`, e2e onu yerine koyar) — yeniden kurulumda parça parça bağlanır
+  ya da emekli edilir. Kapı: `mount-param.test.js` → *PENCERE BOŞ* + `pencere-kabuk.test.js` →
+  `BOS_PENCERE`. İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
@@ -1021,8 +1026,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kullanıcı kararı 2026-10-16: *"Tek bir pencerede hepsi sığar … Kullanışlı ve
   kompakt bir tasarım olsun."*). FEAD ve Takoz'un her penceresi kimlik → eksik
   bandı → kategoriler TEK GÖVDEDE alt alta; hiçbir kategori gizli değil. Bölümü
-  kartın başlığı adlandırır: her kategori başlıklı bir bölüm taşır (başlıksızı
-  yalnız tipin beyanı bağışlar: `componentDefs.yerTutucu`). Kategorinin durumu
+  kartın başlığı adlandırır: her kategori başlıklı bir bölüm taşır (bölümsüz pencereyi
+  yalnız kullanıcının kararı bağışlar: `pencere-kabuk.test.js` → `BOS_PENCERE`). Kategorinin durumu
   kabında (`data-d`); eksiğin sonucunu bant yazar, eksik kategori kenarında
   çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
   EYLEM SATIRI (`vePencereEylem`: solda durum notu ya da süren işin çubuğu,

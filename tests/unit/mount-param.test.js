@@ -284,7 +284,35 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
   });
 });
 
-describe('PENCERE — yalnız girdi', () => {
+// PENCERE BOŞ (kullanıcı 2026-11-11, Canlı Not 1001: "TÜM BİLEŞEN PENCERESİNİ temizleyelim
+// … Her şeyi kaldıralım. Adım adım kurgulayacağız sistemimizi"): pencere yalnız kimlik.
+// Eski pencere aşağıda PARKTA (_mntParamEskiPencereHTML) — tarama, Sonuç, Excel ve rapor
+// testleri onunla koşar; pencereye bağlı değil.
+describe('PENCERE BOŞ — Canlı Not 1001', () => {
+  const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+  test('bölüm, sağ sütun, eylem ve yazı yok; kök işareti yerinde; taranmış modelde de boş', () => {
+    modelKur('kamyon');
+    const n = { id: 'pb', type: 'mnt-parametric', data: { haric: [] } };
+    global.nodes.push(n);
+    const bos = (d) => {
+      expect(d.querySelector('[data-mnt-pencere="pb"]')).not.toBeNull();   // Canlı Not'un odağı ve yerinde tazeleme bunu arar
+      expect(d.querySelectorAll('.ve-fp-kat').length).toBe(0);
+      expect(d.querySelector('.ve-fp-side')).toBeNull();
+      expect(d.querySelector('.ve-fp-split--tek')).not.toBeNull();
+      expect(d.querySelector('button, input, select, svg')).toBeNull();
+      expect(d.textContent.trim()).toBe('');
+    };
+    bos(dom(P.getMntParamPropertiesHTML(n)));
+    const Hz = P._mntParamHazirlik(n), O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday.slice(0, 3), sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2 });
+    it.adim(Infinity);
+    PS._mntParamSonucKaydet(n.id, Hz, O, it.depo());
+    bos(dom(P.getMntParamPropertiesHTML(n)));                               // Sonuç da pencerede yok
+    expect(dom(P._mntParamEskiPencereHTML(n)).querySelector('.ve-fp-kat[data-k="sonuc"]')).not.toBeNull();   // parkta duruyor
+  });
+});
+
+describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   const node = () => { const n = { id: 'pa', type: 'mnt-parametric', data: {} }; global.nodes.push(n); return n; };
 
@@ -293,7 +321,7 @@ describe('PENCERE — yalnız girdi', () => {
   // rijitlik toleransı.
   test('üç kategori: Gruplar · Adaylar · Kriterler; Kriterler dört kesin kriter, sıralama ölçütü ve tolerans; sağ sütunda tek eylem', () => {
     modelKur('kamyon');
-    const n = node(), d = dom(P.getMntParamPropertiesHTML(n));
+    const n = node(), d = dom(P._mntParamEskiPencereHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler']);
     expect(d.querySelector('.ve-fp-tab')).toBeNull();                       // tek gövde (2026-10-16)
     expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Analiz');
@@ -360,19 +388,23 @@ describe('PENCERE — yalnız girdi', () => {
   test('yerinde tazeleme: aday kalmayınca kombinasyon, cevap ve düğme pencere kurulmadan değişir', () => {
     modelKur('kamyon');
     const n = node();
-    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
-    const dugme = () => document.getElementById('ve-mnt-param-btn-pa');
-    expect(dugme().disabled).toBe(false);
-    const govde = document.querySelector('#ve-fp-panes-pa');                // pencere kurulmuyor: aynı öğe kalmalı
-    n.data.haric = Object.keys(cp.veMntGetLibraryMap());
-    expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(dugme().disabled).toBe(true);
-    expect(document.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Aday tip yok');
-    expect([...document.querySelectorAll('#ve-mnt-param-ozet-pa input')].map((i) => i.value)).toEqual(['2', '0', '0']);
-    expect(document.querySelector('#ve-fp-panes-pa')).toBe(govde);
-    delete n.data.haric;
-    cp.veMntPencereTazele();
-    expect(dugme().disabled).toBe(false);
+    const canli = global.getMntParamPropertiesHTML;
+    global.getMntParamPropertiesHTML = P._mntParamEskiPencereHTML;          // parkta: tazeleme eski pencereyi kurar
+    try {
+      document.body.innerHTML = '<div class="ve-properties-content">' + P._mntParamEskiPencereHTML(n) + '</div>';
+      const dugme = () => document.getElementById('ve-mnt-param-btn-pa');
+      expect(dugme().disabled).toBe(false);
+      const govde = document.querySelector('#ve-fp-panes-pa');              // pencere kurulmuyor: aynı öğe kalmalı
+      n.data.haric = Object.keys(cp.veMntGetLibraryMap());
+      expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
+      expect(dugme().disabled).toBe(true);
+      expect(document.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Aday tip yok');
+      expect([...document.querySelectorAll('#ve-mnt-param-ozet-pa input')].map((i) => i.value)).toEqual(['2', '0', '0']);
+      expect(document.querySelector('#ve-fp-panes-pa')).toBe(govde);
+      delete n.data.haric;
+      cp.veMntPencereTazele();
+      expect(dugme().disabled).toBe(false);
+    } finally { global.getMntParamPropertiesHTML = canli; }
   });
 
   // AD SARAR (kullanıcı turu 2026-10-19: "Cone 67 50Sh (AMC 1…" iki ayrı tipte
@@ -384,7 +416,7 @@ describe('PENCERE — yalnız girdi', () => {
   // Adaylar markaya göre gruplu (açılır kapanır), sıra kütüphanenin marka sırası.
   test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod, önek + numara ve sertlik bölünmez', () => {
     modelKur('asfat');
-    const n = node(), d = dom(P.getMntParamPropertiesHTML(n));
+    const n = node(), d = dom(P._mntParamEskiPencereHTML(n));
     // Aday yalnız TAM ve TAHMİNSİZ tip: radyali tahmini AMC kodları (Canlı Not 113) listede yok.
     const lib = cp.veMntGetLibraryMap(), Hz = P._mntParamHazirlik(n);
     const keys = P._mntParamMarkalar(Hz.A).flatMap((M) => M.A.map((a) => a.key));
@@ -420,7 +452,7 @@ describe('PENCERE — yalnız girdi', () => {
     const n = node();
     P.veMntParamSabit('pa', 1, true); P.veMntParamSabit('pa', 2, true);
     expect(P._mntParamHazirlik(n).eksik).toBe('Taranacak grup yok');
-    const dom1 = dom(P.getMntParamPropertiesHTML(n));
+    const dom1 = dom(P._mntParamEskiPencereHTML(n));
     expect(dom1.querySelector('.ve-fp-solve').disabled).toBe(true);
     // dört grup → 24⁴ = 331.776 > sınır
     modelKur('kamyon');
@@ -531,7 +563,7 @@ describe('KOŞUCU', () => {
     global.vePencereEylem = PK.vePencereEylem;
     global.vePencereIlerleme = PK.vePencereIlerleme;
     global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
-    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    document.body.innerHTML = '<div class="ve-properties-content">' + P._mntParamEskiPencereHTML(n) + '</div>';
     delete PS._MNT_PARAM_SONUC.pa;
     return n;
   };
@@ -553,7 +585,7 @@ describe('KOŞUCU', () => {
     expect(p0).toBeGreaterThan(0);
     expect(p0).toBeLessThan(100);
     // pencere tarama sürerken yeniden kurulsa da ilerleme ve Durdur yerinde
-    document.querySelector('.ve-properties-content').innerHTML = P.getMntParamPropertiesHTML(n);
+    document.querySelector('.ve-properties-content').innerHTML = P._mntParamEskiPencereHTML(n);
     expect(+cubuk().getAttribute('aria-valuenow')).toBe(p0);
     expect(btn().textContent).toMatch(/Durdur/);
     jest.runAllTimers();
@@ -565,7 +597,7 @@ describe('KOŞUCU', () => {
     expect(btn().textContent.trim()).toBe('Tara');
     expect(btn().hasAttribute('data-durdur')).toBe(false);
     expect(document.querySelector('.ve-fp-ilerleme, .ve-fp-yurut[data-is]')).toBeNull();
-    const d = document.createElement('div'); d.innerHTML = P.getMntParamPropertiesHTML(n);
+    const d = document.createElement('div'); d.innerHTML = P._mntParamEskiPencereHTML(n);
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler', 'Sonuç']);
     // rapor Sonuç'taki düğmeyle, bir kez
     PS.veMntParamRapor('pa');
@@ -670,7 +702,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     });
     ent.O.olc1 = function () { olcSay++; return olc1.apply(this, arguments); };
     try {
-      const d = dom(P.getMntParamPropertiesHTML(n));
+      const d = dom(P._mntParamEskiPencereHTML(n));
       expect(d.querySelectorAll('.ve-fp-kat[data-k="sonuc"] svg.ve-pd').length).toBe(2);
     } finally { Object.keys(asil).forEach((k) => { C[k] = asil[k]; }); ent.O.olc1 = olc1; }
     expect(say).toEqual([]);
@@ -684,7 +716,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     const n = kur(), { S } = taraSakla(n);
     expect(S.N).toBe(216);
     expect(S.uygunN).toBeGreaterThan(1);
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     expect(basliklar(d)).toEqual(['Konfigürasyonlar', 'K1', 'Modlar', 'Statik sehim ve iletilebilirlik', 'Kriterleri sağlayan', 'Diyagramlar']);
     const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('ok');
@@ -722,7 +754,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     expect(L[0].kriter).toEqual(KR.map((q) => R[q].ok));
     expect(L[0].uygunluk).toBe(L[0].kriter.every(Boolean) ? 'Uygun' : 'Uygun değil');
     // pencere: on satır, seçili K1; işaretler kriterin hükmü; adlar ayırt edici kısa tiplerle
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     const sat = [...d.querySelectorAll('.ve-prm-k')];
     expect(sat.map((b) => b.getAttribute('data-k'))).toEqual(L.map((k) => String(k.K)));
     expect(sat.map((b) => b.getAttribute('aria-selected'))).toEqual(L.map((k) => String(k.K === 1)));
@@ -763,7 +795,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     expect(ks).toBeGreaterThan(1);
     PS.veMntParamKSec('pa', ks);
     expect(global.showNodeProperties).toHaveBeenCalledWith(n);
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     expect(basliklar(d)[1]).toBe('K' + ks);
     expect(d.querySelector('.ve-prm-k[aria-selected="true"]').getAttribute('data-k')).toBe(String(ks));
     expect(d.querySelector('table.ve-prm-kriter thead th:last-child').textContent).toBe('K' + ks);
@@ -776,7 +808,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     });
     expect(degisen).toBeGreaterThan(0);
     PS.veMntParamKSec('pa', 0);                                             // K0: uygulanacak bir şey yok, tek sütun
-    const d0 = dom(P.getMntParamPropertiesHTML(n));
+    const d0 = dom(P._mntParamEskiPencereHTML(n));
     expect(basliklar(d0)[1]).toBe('K0 · Mevcut');
     expect(d0.querySelector('.ve-prm-eylem [data-uygula]')).toBeNull();
     expect([...d0.querySelectorAll('table.ve-prm-kriter thead th')].map((t) => t.textContent)).toEqual(['Kriter', 'Sınır', 'K0']);
@@ -791,7 +823,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     const oku = require('../../js/sayi.js').veSayiOku;
     const n = kur(); taraSakla(n);
     const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c), idx = L[1].idx, D = ent.D;
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     const hm = K.hepsi(ent.mevcut.o1, ent.mevcut.o2, c).sonuc, ho = {};
     KR.forEach((q) => { ho[q] = K.hukum(q, D.X[q][idx], c); });
     const isaret = (td) => (td.querySelector('.ve-durum-ok') ? true : td.querySelector('.ve-durum-err') ? false : null);
@@ -863,7 +895,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
   test('KRİTERLERİ SAĞLAYAN: çözülen, kriter başına tek başına sağlayan ve dördünü birden sağlayan — özetin sayıları', () => {
     const oku = require('../../js/sayi.js').veSayiOku;
     const n = kur(), { S } = taraSakla(n);
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     const sat = [...d.querySelectorAll('table.ve-prm-eleme tbody tr')].map((r) => [r.children[0].textContent, oku(r.children[1].textContent)]);
     const coz = S.N - S.hata;
     expect(sat).toEqual([['Çözülen', coz]].concat(KR.map((q) => ['Kriter ' + K.KISITLAR.find((Q) => Q.k === q).no + ' · ' + P._MNT_PARAM_KRITER_AD[q], coz - S.red[q]]),
@@ -884,7 +916,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     expect(S.uygunN).toBe(0);
     const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c);
     L.slice(1).forEach((k) => expect(k.uygunluk).toBe('Uygun değil'));
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     expect(basliklar(d)[1]).toBe('K1');
     expect([...d.querySelectorAll('.ve-fp-sect')].find((s) => s.querySelector('b').textContent === 'K1').querySelector('em').textContent).toBe('Uygun değil');
     expect(d.querySelectorAll('table.ve-prm-kriter td:last-child.kr').length).toBeGreaterThan(0);
@@ -910,7 +942,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     sonuc.forEach((x, i) => expect([i, x[1]]).toEqual([i, x[0]]));
     // eskimiş tarama: Sonuç yalnız durumu yazar, eksik bandında
     const n = kur(); taraSakla(n); P.veMntParamToleransAc('pa', true);
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('eksik');
     expect(kat.querySelector('svg')).toBeNull();
@@ -1028,7 +1060,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
     expect(PS._MNT_PARAM_SONUC.pa).toBe(ent);
     expect(JSON.stringify(ent.mevcut.o1.f)).toBe(JSON.stringify(ent.O.olc1(t).f));   // K0 = uygulananın ölçümü
-    const d = dom(P.getMntParamPropertiesHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    const d = dom(P._mntParamEskiPencereHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('ok');
     expect(basliklar(d)[1]).toBe('K1');
     expect([...kat.querySelectorAll('.ve-prm-og-s em')].map((e) => e.textContent)).toEqual(['Aynı', 'Aynı', 'Sabit']);
@@ -1040,7 +1072,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
     expect(global.saveState).toHaveBeenCalledTimes(1);
     // sıranın ikincisi: kendi kombinasyonu; K1'in düğmesi yeniden açık
     expect(PS.veMntParamUygula('pa', Z.S.sira[1].idx)).toBeGreaterThan(0);
-    const d2 = dom(P.getMntParamPropertiesHTML(n));
+    const d2 = dom(P._mntParamEskiPencereHTML(n));
     expect(d2.querySelector('.ve-prm-eylem button[data-uygula="' + idx + '"]').getAttribute('aria-disabled')).toBeNull();
     // geri-al: model eski hâline dönünce K0 da döner
     const eski = JSON.parse(once);
