@@ -999,7 +999,13 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   *"Önerilerini uygulayalım … Bileşen penceresinin içine entegre edersin"*):
   Parametrik Analiz'in **Sonuç** kategorisi — yalnız TARAMANIN sonucu (öneri,
   kriterler, iki grafik; on diyagram galeride), Çözücü'nün çözümü değil; başka
-  pencereye genişletilmez. Kapı: `mount-param.test.js` → *SONUÇ*.
+  pencereye genişletilmez. Kapı: `mount-param.test.js` → *SONUÇ*. **İKİNCİ İSTİSNA**
+  (kullanıcı 2026-11-11, Canlı Not 126: *"Takoz tipleri arasından, kabaca, bizim
+  konfigürasyona göre, tavsiye verebilecek bir hale getirebilir miyiz?"*): Takoz
+  Özellikleri'nin **Öneri**'si — çözücü değil KABA ön seçim (rijit gövde, bütün takozlar
+  aynı tip; eşit rijitlikte yük dağılımı, dikey frekans), Parametrik Analiz'in
+  varsayılan sınırlarıyla (E4 · E1–E2 · E3 · Kriter 1), seçili markanın ilk beşi; satır
+  tipi seçer, çözümden bağımsız. Kapı: `mount-oneri.test.js`.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
   kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
