@@ -343,6 +343,18 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     expect(css).toMatch(/\.ve-fp-not, \.ve-fead-not\{/);           // FEAD'in satırıyla TEK kural
     expect(css).not.toMatch(/\.ve-mnt-not\s*[{,]/);
   });
+
+  // KİMLİK ÇİZGİSİ (kullanıcı 2026-11-11, Canlı Not 123: *"Şu çizgiyi bir miktar
+  // yukarıya taşıyalım"*): kimlik satırının alt çizgisi simgenin dibine yakın; geniş
+  // ve kompakt pencere AYNI kuralı taşır (biri değişip öteki eski kalmasın).
+  test('KİMLİK ÇİZGİSİ: geniş ve kompakt pencerede aynı kural, alt dolgu ≤ 4 px', () => {
+    const css = oku('css/styles.css');
+    const kural = (k) => (css.match(new RegExp('\\.ve-properties--' + k + ' \\.ve-prop-identity\\{([^}]*)\\}')) || [])[1];
+    const g = kural('wide'), c = kural('compact');
+    expect(g).toEqual(expect.stringContaining('border-bottom'));
+    expect(c).toBe(g);
+    expect(+/padding-bottom:(\d+)px/.exec(g)[1]).toBeLessThanOrEqual(4);
+  });
 });
 
 // PENCERE SONUÇ GÖSTERMEZ (kullanıcı kararı 2026-10-16) — KURAL, liste değil:

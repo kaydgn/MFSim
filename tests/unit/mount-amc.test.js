@@ -238,7 +238,7 @@ describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)'
     expect([e.sx, e.dx, e.tahmin]).toEqual([1500, 2100, ['sy', 'dx', 'dy']]);         // dinamik girilen statikten: 1.500 × 1,4
     lib.data.overrides.amc137962 = { sx: 1500, sy: 1000, dx: 2100, dy: 1400 };
     e = cp.veMntGetLibraryMap().amc137962;
-    expect([e.tahmin, cp._mntLibTur(e), cp.veMntGetLibraryMap().amc137005.tahmin]).toEqual([null, 'degisti', ['sx', 'sy', 'dx', 'dy']]);
+    expect([e.tahmin, !!e.overridden, cp.veMntGetLibraryMap().amc137005.tahmin]).toEqual([null, true, ['sx', 'sy', 'dx', 'dy']]);
     expect(L.amc137962.sx).toBe(1480);                                                // fabrika girdisi değişmez
   });
   test('tahminli tip uygulanınca takoz dolu ve "rijitlik eksik" yok; tür ve takozun tahminli alanları', () => {
@@ -251,7 +251,8 @@ describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)'
     n.data.kxs = 1500;                                                                // elle girilen değer tahmin değil
     expect(cp._mntTakozTahmin(n)).toEqual(['kys', 'kxd', 'kyd']);
     const M = cp.veMntGetLibraryMap();
-    expect(['amc137962', 'amc137961', 'amc137963', 'amc137461'].map((k) => cp._mntLibTur(M[k]))).toEqual(['tahmin', 'egri', 'gomulu', 'eksik']);
+    expect(['amc137962', 'amc137961', 'amc137963', 'amc137461'].map((k) => [cp._mntLibTahmin(M[k]).length > 0, cp._mntEntryHasLaw(M[k]), cp._mntLibTam(M[k])]))
+      .toEqual([[true, false, true], [false, true, true], [false, false, true], [false, false, false]]);   // tahminli · eğrili · tam · eksik
   });
   test('Takoz Özellikleri: tahminli hücreler işaretli, durum "tahmini", eksik bandı yok; kaynağı Rijitlik\'te', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137005' } };

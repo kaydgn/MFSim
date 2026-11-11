@@ -3994,13 +3994,6 @@ function _mntLinInterp(pts, x){
   }
   return pts[n-1][1];
 }
-// Girdinin türü — tetikleyici, liste satırı ve rozet AYNI koddan okur:
-// eğrili · değiştirilmiş gömülü · gömülü · özel. Renk CSS'te (`data-t`).
-function _mntLibTur(e){
-  if(e.builtin && !_mntLibTam(e)) return 'eksik';           // rijitliği yayımlanmayan tip (DSM)
-  if(_mntLibTahmin(e).length) return 'tahmin';              // radyal tahmini (Canlı Not 113)
-  return _mntEntryHasLaw(e) ? 'egri' : (e.overridden ? 'degisti' : (e.builtin ? 'gomulu' : 'ozel'));
-}
 // Satırın kz özeti: değer yoksa tire (DSM gibi eğrisi doğrusal olmayan tipte kz yok).
 function _mntLibKz(e){ var v=_mntNum(e.sz, 0); return 'kz '+(v>0 ? veSayi(v, 0) : '—'); }
 // Bir girdi herhangi bir eksende nonlineer yasa (analitik fit VEYA nokta eğrisi) taşıyor mu?
@@ -4018,32 +4011,29 @@ function _mntLibNorm(s){
     .replace(/ı/g,'i').replace(/ş/g,'s').replace(/ğ/g,'g')
     .replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c');
 }
-// Açılır listede tek tıklanabilir takoz satırı (seçili → koyu zemin + ✓).
-// data-search: filtrelemenin okuduğu normalleştirilmiş "ad + anahtar" metni.
+// Açılır listede tek tıklanabilir takoz satırı: ad + kz; seçili satır zeminle ve
+// kalın adla. Satırın başında tür noktası, sonunda eğri ve seçim işareti YOK
+// (Canlı Not 122: *"Baştaki mavi butonlara … sağ kısımdaki kırmızı ve mavi
+// tike de ne gerek var"*). data-search: filtrelemenin okuduğu normalleştirilmiş
+// "ad + anahtar" metni.
 function _mntLibOptionRow(node, e, sel){
   var isSel=!!sel && e.key===sel.key;
   var h='<div class="mntlib-opt'+(isSel?' sel':'')+'" role="option" aria-selected="'+(isSel?'true':'false')+'"'
     +' data-search="'+_mntEsc(_mntLibNorm(e.name+' '+e.key))+'"'
     +' onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">';
-  h+='<span class="mntlib-dot" data-t="'+_mntLibTur(e)+'"></span>';
   h+='<span class="mntlib-opt-name" title="'+_mntEsc(e.name)+'">'+_mntEsc(e.name)+'</span>';
   h+='<span class="mntlib-kz">'+_mntLibKz(e)+'</span>';
-  // ∿ / ✓ yuvaları HER satırda basılır (gerekmiyorsa boş) → kz sütunu hizalı kalır
-  h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">'+veIkon('activity'):'>')+'</span>';
-  h+='<span class="mntlib-check">'+(isSel?veIkon('check'):'')+'</span>';
   h+='</div>';
   return h;
 }
-// Kapalı hâldeki seçici: seçili takozun nokta/ad/kz/∿ özeti + ▾.
+// Kapalı hâldeki seçici: seçili takozun adı ve kz'si + ▾ (Canlı Not 122: işaretsiz).
 function _mntLibTrigger(node, sel){
   var h='<button type="button" class="mntlib-trigger" id="mntlib-tr-'+node.id+'"'
     +' aria-haspopup="listbox" aria-expanded="false" title="Takoz listesini aç"'
     +' onclick="veMntLibDropdownToggle(\''+node.id+'\',event)">';
   if(sel){
-    h+='<span class="mntlib-dot" data-t="'+_mntLibTur(sel)+'"></span>';
     h+='<span class="mntlib-trigger-name" title="'+_mntEsc(sel.name)+'">'+_mntEsc(sel.name)+'</span>';
     h+='<span class="mntlib-kz">'+_mntLibKz(sel)+'</span>';
-    if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">'+veIkon('activity')+'</span>';
   } else {
     h+='<span class="mntlib-trigger-name empty">Takoz seçilmedi</span>';
   }
@@ -5670,7 +5660,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryList: veMntGetLibraryList,
     _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye, _mntLibTahminAdi: _mntLibTahminAdi,
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
-    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, veMntLibCizimAc: veMntLibCizimAc, _mntLibTur: _mntLibTur,
+    _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, veMntLibCizimAc: veMntLibCizimAc,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,
