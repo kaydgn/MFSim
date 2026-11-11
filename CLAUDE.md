@@ -530,9 +530,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (`istek/guncelle` + Claude'a yorum; oturum yayınlar, sayfa sormadan yükler — skill
   `canli-not` §1); istek sürerken ve yeni program açılana dek program KİLİTLİ (perde + `inert`,
   Vazgeç isteği bırakır — kullanıcı 2026-11-11). Şeridin **Oturumu çağır**'ı (kullanıcı
-  2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*) Canlı Not'un oturumunu uyandıran
-  görevi çalıştırır; sayfa oturum AÇMAZ (o komut sayfaya kapalı), oturum geldiğini sahiplik
-  kaydını yeniden yazarak söyler (skill `canli-not` §1 · *Oturumu çağır*). **Yayını YALNIZ sahibi oturum yapar ve yayın
+  2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*) sayfaya BAĞLI oturumu Claude'a
+  giden bir yorumla uyandırır; sayfa oturum AÇAMAZ (ölçüldü: o komutlar sayfaya kapalı, elle
+  çalıştırılan görev deposuz yeni oturum açıyor — skill `canli-not` §1 · *Oturumu çağır*). **Yayını YALNIZ sahibi oturum yapar ve yayın
   geri gitmez** (kullanıcı 2026-11-11: başka oturumların güncellemeleri karışıyordu; `yayin`
   komutu sahibi olmayanı ve eski sürümü reddeder); yayından önce `duman` (sayfa + parçalar
   gerçek tarayıcıda). Protokol:
@@ -650,7 +650,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 | Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
-| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Kullanıcı "Canlı Not'u getir" deyince (yeni oturum: §0 *Açılış*), Canlı Not sayfasından gelen "Not N · …" yorumuyla ya da "Oturumu çağır" göreviyle uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
+| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Kullanıcı "Canlı Not'u getir" deyince (yeni oturum: §0 *Açılış*), Canlı Not sayfasından gelen "Not N · …" ya da "Oturum çağrısı" yorumuyla uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
@@ -1587,12 +1587,9 @@ senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçti
 2026-09-10'da dört rutin kuruldu (gece tam E2E · günlük boyut nöbeti · haftalık
 mutasyon nöbeti · haftalık açık ayrışma işçisi) ve **2026-09-28'de kullanıcı
 isteğiyle hepsi kaldırıldı**: haftalık kullanım limitini tüketiyorlardı. Hesapta
-takvimle çalışan hiçbir Routine yok.
-
-**TEK İSTİSNA — "Canlı Not oturumu" görevi** (kullanıcı 2026-11-11: *"Verelim izinleri?
-Yani bu iş olabildiğince kolay olsun artık."*): TAKVİMSİZ; yalnız Canlı Not sayfasındaki
-**Oturumu çağır** çalıştırır ve Canlı Not'un oturumunu uyandırır. Takvim verilmez,
-ikinci bir görev kurulmaz; başka oturuma bağlamak skill `canli-not` §1 · *Oturumu çağır*.
+artık hiçbir Routine yok. (2026-11-11'de Canlı Not için takvimsiz bir görev denendi ve
+aynı gün silindi: var olan oturumu uyandırmıyor, deposuz yeni oturum açıyordu — skill
+`canli-not` → `references/emekli-oturum-gorevi.md`.)
 
 **Kullanıcı açıkça istemedikçe yeni bir zamanlanmış rutin KURULMAZ.** Bir
 oturumun "boşta koşsun" diye kurduğu her rutin, kullanıcının o hafta kendi
