@@ -307,7 +307,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
       ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA'],
       ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA']]);
     expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
-    // föyün numarası grubun renginde rozet
+    // föyün numarası grubun renginde (kare + düz yazı — NUMARA BALONSUZ)
     expect([...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')].map((e) => [e.textContent, e.dataset.renk]))
       .toEqual([['1', '1'], ['2', '2'], ['3', '3']]);
     // çizim: Görünümler'in bileşeni, bu pencerenin kaynağıyla; tam ekranı yok (Görünümler'in modelini kurardı)
@@ -330,6 +330,25 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     expect(ad(cizimModeli(kur('asfat')))).toBe('1:1 1:1 2:2 2:2 3:3 3:3');
     expect(ad(cizimModeli(kur('hafif')))).toBe('1:1 1:1 2:2');
     expect([1, 2, 3, 4, 5, 6, 9].map(P._mntParamRenk)).toEqual([1, 2, 3, 4, 1, 2, 1]);
+  });
+
+  // NUMARA BALONSUZ (kullanıcı 2026-11-11, Canlı Not 1007: "bunları baloncuk yapmana gerek yok.
+  // Çocukça duruyor"): grubun numarası düz yazı; renk önündeki keskin köşeli küçük karede.
+  test('NUMARA BALONSUZ: numara düz yazı, grubun rengi önündeki karede; zemin ve yuvarlak köşe yok', () => {
+    const d = dom(P.getMntParamPropertiesHTML(kur('tulga')));
+    const no = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')];
+    expect(no.length).toBe(3);
+    no.forEach((e) => {
+      expect([...e.children].map((c) => [c.className, c.getAttribute('aria-hidden'), c.textContent])).toEqual([['ve-prm-kare', 'true', '']]);
+      expect([e.lastChild.nodeType, e.lastChild.nodeValue]).toEqual([Node.TEXT_NODE, e.textContent]);
+    });
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const kural = (s) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((m) => m[1].split(',').some((x) => x.trim() === s)).map((m) => m[2]).join(';');
+    expect(kural('.ve-prm-no')).toMatch(/color:/);                            // kural bulundu
+    expect(kural('.ve-prm-no')).not.toMatch(/background|border|radius/);
+    expect(kural('.ve-prm-kare')).toMatch(/background:\s*var\(--grup-renk/);
+    expect(kural('.ve-prm-kare')).not.toMatch(/radius/);
   });
 
   test('ADAYLAR: satır aday tip (marka marka), sütun grup; mevcut tipin hücresi grubun sütununda', () => {

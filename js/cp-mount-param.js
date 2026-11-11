@@ -342,11 +342,15 @@ function _mntParamYeni(node){
 // YERLEŞİMİN ÇİZİMİ (Canlı Not 1003: *"daha güzel yapalım. Çok sade olmuş."*) — güç grubunun
 // aksonometrisi, Görünümler'in ve "Güç grubundaki yeri"nin AYNI bileşeni (serbest kamera, bakış
 // düğmeleri, gösterge); takozun çipi GRUBUN numarası, küpü ve çipin kenarı GRUBUN RENGİ — föyün
-// ve aday tablosunun numara rozetiyle aynı (Canlı Not 1006: *"numaralandırmayı da güzel yapalım"*;
-// renk diyagramların seri paletinden, --seri-1…4, dörtten sonra döner). Çizimin kaynağı bu pencere
-// (_mntAksoKaynak): sürüklemenin bitişi de aynı numara ve renklerle kurar. Eskiden kendi şemasıydı.
+// ve aday tablosunun numarası da (Canlı Not 1006: *"numaralandırmayı da güzel yapalım"*; renk
+// diyagramların seri paletinden, --seri-1…4, dörtten sonra döner). Numara DÜZ YAZI, renk önündeki
+// keskin köşeli küçük karede — balon yok (Canlı Not 1007: *"baloncuk yapmana gerek yok. Çocukça
+// duruyor"*). Çizimin kaynağı bu pencere (_mntAksoKaynak): sürüklemenin bitişi de aynı numara ve
+// renklerle kurar. Eskiden kendi şemasıydı.
 function _mntParamRenk(no){ return ((Math.max(1, no)-1)%4)+1; }
-function _mntParamNo(no){ return '<span class="ve-prm-no" data-renk="'+_mntParamRenk(no)+'">'+no+'</span>'; }
+function _mntParamNo(no){
+  return '<span class="ve-prm-no" data-renk="'+_mntParamRenk(no)+'"><span class="ve-prm-kare" aria-hidden="true"></span>'+no+'</span>';
+}
 function _mntParamAksoVeri(nodeId, Y){
   var P=_mnt2DPencereVeri();
   if(!Y){ var n=_mntParamDugum(nodeId); Y=n ? _mntParamYeni(n) : null; }
