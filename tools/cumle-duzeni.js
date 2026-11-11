@@ -66,7 +66,9 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   // CATIA'nın STEP ayarlarındaki seçenek adları (Takoz kılavuzu, Bölüm 16)
   'Validation', 'Properties', 'Geometric',
   // araç model adları (örneklerin `vehicle` alanı: "BMC Siper")
-  'Siper']);
+  'Siper',
+  // Shore sertliğinin simgesi (takoz raporunun dinamik oranı: "(Sh + 20)/50")
+  'Sh']);
 const KISALTMA = new Set(['Ort', 'Ağ', 'Ag', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',
   'Std', 'Yakl', 'bkz', 'Bkz', 'yak']);
 const COK = [...new Set([...BILESEN, ...YUZEY, ...YER, ...DEFTER, ...AD])].filter((a) => /\s/.test(a)).sort((a, b) => b.length - a.length);
