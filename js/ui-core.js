@@ -22,7 +22,7 @@ function veMasterRozet(tip) {
 // tek sefer baglanan dinleyiciler bu state uzerinden calisir. Undo/redo veya
 // yeni node olusturmanin dinleyici yigmasini engeller.
 // ═══════════════════════════════════════════════════════════════════════════
-var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
+var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 }, acik: [] };
 // TEK TIK SEÇER, ÇİFT TIK AÇAR — her bileşende (kullanıcı 2026-11-10, Canlı Not 116:
 // *"Başlangıç sihirbazı gibi pop-up olarak açılan bileşenlere iki kere tıklamak durumunda
 // kalalım. Tek tıkla açılınca garip duruyor."*). Takoz'un araç şeridi (componentDefs.tekTik,
@@ -74,6 +74,8 @@ function veAttachNodeDrag(nodeEl, node) {
 
     if(!e.ctrlKey && selectedNodes.indexOf(node) === -1) clearSelection();
     addToSelection(node);
+    // Seçili çerçeveler ve içeriği tamamen sürüklenen çerçeveler bileşenlerle gider (Canlı Not 130).
+    _veNodeDrag.acik = (typeof veDugumleTasinanAcik === 'function') ? veDugumleTasinanAcik(selectedNodes) : [];
     e.stopPropagation();
   });
 }
@@ -89,6 +91,7 @@ function veAttachNodeDrag(nodeEl, node) {
 
     var dx = (e.clientX - _veNodeDrag.dragStart.x) / canvasZoom - node.x;
     var dy = (e.clientY - _veNodeDrag.dragStart.y) / canvasZoom - node.y;
+    var x0 = node.x, y0 = node.y;
 
     selectedNodes.forEach(function(n) { n.x += dx; n.y += dy; });
 
@@ -125,6 +128,9 @@ function veAttachNodeDrag(nodeEl, node) {
       var el = document.getElementById(n.id);
       if(el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
     });
+    // Çerçeveler bileşenlerin AYNI kaymasıyla (kenetleme dâhil).
+    if(_veNodeDrag.acik && _veNodeDrag.acik.length && typeof veAcikKaydir === 'function')
+      veAcikKaydir(_veNodeDrag.acik, node.x - x0, node.y - y0);
 
     _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
     if(typeof updateAllConnections === 'function') updateAllConnections();
@@ -137,6 +143,7 @@ function veAttachNodeDrag(nodeEl, node) {
     if(typeof saveState === 'function') saveState();
     _veNodeDrag.active = false;
     _veNodeDrag.anchor = null;
+    _veNodeDrag.acik = [];
   });
 })();
 
