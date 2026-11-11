@@ -402,8 +402,38 @@ var veMntKatalog = (function() {
     return L;
   }
 
-  // ÖZET (S) — huni, bağımsız red, uygun küme, Pareto, uzlaşı sırası, tip
-  // sıklığı ve dağılım. Tarama sonunda ve sınır değişince AYNI işlevden.
+  // SIRALAMA (kullanıcı kararı 2026-11-10 — Excel'in kuralı): uygun kombinasyonlar (bütün
+  // açık kısıtları sağlayan, ikinci aşaması ölçülmüş) en küçük statik sehimden; ardından
+  // kalanlar EN AZ İHLALLİ — normalleştirilmiş ihlallerin toplamı (v1, ölçülmüşse + v2),
+  // eşitlikte sehim (ölçülemeyen en sonda), sonra numara. n verilirse ilk n. Pencerenin
+  // K'ları, raporun sırası ve Excel'in Özet'i bu sıradan: uygun varsa K'lar yalnız
+  // uygunlardan, yoksa en az ihlalli dokuz. (Excel'in Tarama'sı ayrı: kriter sayısı → sehim.)
+  function _bitSay(m){ var b = 0; m = m >>> 0; while(m){ b += m & 1; m >>>= 1; } return b; }
+  function siralama(D, H, n){
+    var L = [], U = {}, V = {};
+    for(var x = 0; x < D.N; x++){
+      if(D.d1[x] !== 1) continue;
+      var iki = D.d2[x] === 1;
+      U[x] = (iki && H.m[x] === 0) ? 1 : 0;
+      V[x] = H.v1[x] + (iki ? H.v2[x] : 0);
+      L.push(x);
+    }
+    var dd = function(x){ var v = D.d[x]; return Number.isFinite(v) ? v : Infinity; };
+    var once = function(a, b){ return U[b] - U[a] || (U[a] ? 0 : V[a] - V[b]) || dd(a) - dd(b) || a - b; };
+    if(!(n > 0) || n >= L.length) return L.sort(once);
+    var S = [];                                         // ilk n: sıralı ekleme (N · n)
+    for(var i = 0; i < L.length; i++){
+      var y = L[i];
+      if(S.length === n && once(y, S[n - 1]) >= 0) continue;
+      var j = S.length < n ? S.length : n - 1;
+      while(j > 0 && once(y, S[j - 1]) < 0){ S[j] = S[j - 1]; j--; }
+      S[j] = y;
+    }
+    return S;
+  }
+
+  // ÖZET (S) — huni, bağımsız red, uygun küme, sıra (yukarıda), Pareto ve uzlaşı
+  // (diyagramlar), tip sıklığı ve dağılım. Tarama sonunda ve sınır değişince AYNI işlevden.
   function ozet(D, c, H){
     H = H || hukumler(D, c);
     var N = D.N, B = _bitler(c), ikinci = _ikinci(D, H, B.b1), x;
@@ -430,14 +460,12 @@ var veMntKatalog = (function() {
     var par = pareto(P2), U = uzlasi(P2, c.s.agirlik);
     var cephe = uygun.filter(function(x, k){ return par[k]; });
     cephe.sort(function(a, b){ return D.T[a] - D.T[b] || D.d[a] - D.d[b] || a - b; });
-    var sira;
-    if(uygun.length){
-      sira = uygun.map(function(x, k){ return { idx:x, uz:U.uz[k], pareto:par[k] }; });
-      sira.sort(function(a, b){ return a.uz - b.uz || D.T[a.idx] - D.T[b.idx] || D.d[a.idx] - D.d[b.idx] || a.idx - b.idx; });
-    } else {
-      sira = ikinci.filter(iki).map(function(x){ return { idx:x, v:H.v1[x] + H.v2[x], uz:NaN, pareto:false }; });
-      sira.sort(function(a, b){ return a.v - b.v || D.T[a.idx] - D.T[b.idx] || a.idx - b.idx; });
-    }
+    var uzK = {};
+    uygun.forEach(function(x, k){ uzK[x] = k; });
+    var sira = siralama(D, H, D.enIyi).map(function(x){
+      var k = uzK[x], v = H.v1[x] + (iki(x) ? H.v2[x] : 0);
+      return { idx:x, uz:k === undefined ? NaN : U.uz[k], pareto:k === undefined ? false : par[k], v:v, bozuk:_bitSay(H.m[x]) };
+    });
     // Grup başına tip sıklığı (uygun kümede).
     var siklik = (D.G || []).map(function(){ return {}; });
     uygun.forEach(function(x){ D.tipler(x).forEach(function(t, g){ if(t) siklik[g][t] = (siklik[g][t] || 0) + 1; }); });
@@ -455,8 +483,8 @@ var veMntKatalog = (function() {
     for(x = 0; x < N; x++) if(D.d1[x] !== 1) hata++;
     return {
       N:N, nAday:D.nA, taranan:D.taranan, hata:hata, ikinciN:ikinci.length, uygunN:uygun.length,
-      huni:huni, red:red, sira:sira.slice(0, D.enIyi).map(function(s, k){
-        return { no:k + 1, idx:s.idx, tipler:D.tipler(s.idx), uz:s.uz, pareto:s.pareto, v:s.v }; }),
+      huni:huni, red:red, sira:sira.map(function(s, k){
+        return { no:k + 1, idx:s.idx, tipler:D.tipler(s.idx), uz:s.uz, pareto:s.pareto, v:s.v, bozuk:s.bozuk }; }),
       paretoN:cephe.length, cephe:cephe, nokta:nok, seyrek:adm, seyrekU:admU, siklik:siklik,
       araliT:U.araliT, araliD:U.araliD, olc:U.olc, ctx:c, sure:D.sure, tam:D.tam
     };
@@ -611,7 +639,7 @@ var veMntKatalog = (function() {
     K1_ORAN: K1_ORAN, K1A_HZ: K1A_HZ, K1B: K1B, K2_T: K2_T,
     yanAyir: yanAyir, gruplar: gruplar, kombinasyonSayisi: kombinasyonSayisi,
     baglam: baglam, degerlendir: degerlendir, hepsi: hepsi, isletmeMi: isletmeMi,
-    pareto: pareto, uzlasi: uzlasi, tarayici: tarayici, ked: ked,
+    pareto: pareto, uzlasi: uzlasi, tarayici: tarayici, ked: ked, siralama: siralama,
     olcu: olcu, hukum: hukum, hukumler: hukumler, ozet: ozet, baglayici: baglayici, duyarlilik: duyarlilik,
     uygunMu: _uygunMu
   };

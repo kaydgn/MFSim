@@ -1,24 +1,23 @@
 /**
  * mount-param.test.js — Parametrik Analiz · Katalogdan seçim, gerçek modellerle
  * ─────────────────────────────────────────────────────────────────────────
- * Kapılar (js/cp-mount-param.js · js/cp-mount-param-rapor.js):
+ * Kapılar (js/cp-mount-param.js · js/cp-mount-param-sonuc.js · js/cp-mount-param-rapor.js):
  *   TEK YOL   — taramanın seçtiği kombinasyon modele uygulanıp Çözücü'yle
  *               çözülünce frekanslar, statik sehimler, T ve işletme sehimleri
  *               taramanın ölçtüğünün AYNISI (ayrı bir "tarama için" çözüm yok)
  *   AYNI HÜKÜM — Kriter 1 · 1a · 1b · 2 için taramanın hükmü raporun uygunluk
  *               tablosunun (veMntUygunluk) hükmüyle aynı, örneklenen her kombinasyonda
- *   PENCERE   — girdiler, durumlar (eksik · sınır); taramadan önce sonuç yok
- *   RAPOR     — ayrı belge: bölümler, Türkçe sayı, sayısız alan yok
+ *   PENCERE   — girdiler: gruplar, markaya göre adaylar, dört kesin kriter, rijitlik
+ *               toleransı (ek kısıt, sürünme, ağırlık YOK); durumlar
  *   KOŞUCU    — dilim dilim koşar (≤ 10 ms; kullanıcı 2026-10-18: "program
  *               kasıyor"), ilerleme eylem satırında, durdurulur, bitince
  *               Sonuç kategorisi kurulur
- *   SONUÇ     — kullanıcı kararı 2026-10-18 (Takoz pencerelerinin "sonuç
- *               göstermez" kuralının bu pencereye özgü istisnası): öneri,
- *               kriterler, iki sade grafik, yakın seçenekler, eleme; kısıtlar
- *               ADIYLA; tablonun hükmü huninin hükmü; on diyagram yalnız tam
- *               ekranın galerisinde; sınır değişince tarama YİNELENMEDEN yeni
- *               sınırla taramanın aynısı; model/aday/sabit/tolerans/sürünme
- *               değişince ESKİR; görünüm seçimi modelde değil; rapor bugünkü sınırlarla
+ *   SONUÇ     — Excel'in kuralı (kullanıcı kararı 2026-11-10): dört kesin kriter, sonra
+ *               en küçük statik sehim; K0 (mevcut) ve K1…K9 pencerede, Excel'in Özet'inde
+ *               ve raporda AYNI liste (kaba kuvvet hakemiyle); seçilen K'nın kriterleri ve
+ *               modları; dokuz diyagram galeride; model/aday/sabit/tolerans değişince
+ *               ESKİR; seçim görünüm durumu
+ *   RAPOR     — ayrı belge: bölümler, aynı K listesi, Türkçe sayı, sayısız alan yok
  */
 const H = require('../helpers/takoz-dogrulama.js');
 
@@ -38,6 +37,7 @@ global.veMntParamRaporHTML = RP.veMntParamRaporHTML;
 global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
 global.veMntAkso = global.veMntAkso || require('../../js/mount-akso.js');
 global.veMntParamCiz = require('../../js/mount-param-ciz.js');
+global.veMntParamExcel = require('../../js/mount-param-excel.js');
 const PS = require('../../js/cp-mount-param-sonuc.js');
 Object.keys(PS).forEach((k) => { if (global[k] === undefined) global[k] = PS[k]; });
 global.veIkon = global.veIkon || require('../../js/ikon.js').veIkon;
@@ -70,6 +70,17 @@ function uygulaCoz(topo, Hz, tipler) {
   return H.coz(t);
 }
 const bagil = (a, b) => Math.abs(a - b) / Math.max(1e-12, Math.abs(b));
+// K1…K9 hakemi (Excel'in onaylanan kuralı, kaba kuvvet): dört kesin kriteri sağlayanlar
+// (ikinci aşaması ölçülmüş) statik sehimden, en çok dokuz; yoksa en az ihlalli dokuz —
+// normalleştirilmiş ihlallerin toplamı, eşitlikte statik sehim.
+function hakemK(D, Hk) {
+  const coz = [];
+  for (let x = 0; x < D.N; x++) if (D.d1[x] === 1) coz.push(x);
+  const u = coz.filter((x) => D.d2[x] === 1 && Hk.m[x] === 0).sort((a, b) => D.d[a] - D.d[b] || a - b);
+  if (u.length) return u.slice(0, 9);
+  const v = (x) => Hk.v1[x] + (D.d2[x] === 1 ? Hk.v2[x] : 0);
+  return coz.sort((a, b) => v(a) - v(b) || D.d[a] - D.d[b] || a - b).slice(0, 9);
+}
 
 describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () => {
   const topo = modelKur('kamyon');
@@ -262,7 +273,7 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
     R.allCases.concat(R.gearCases, R.designCases).filter((rc) => rc.res && !K.isletmeMi(rc.loadCase)).forEach((rc) =>
       rc.res.perMount.forEach((pm) => { oran = Math.max(oran, Math.abs(pm.f[2]) / (250 * g)); }));
     expect(Math.abs(o2.darbeOran - oran)).toBeLessThan(1e-12);
-    const k = K.hepsi(o1, o2, K.baglam(Hz.ctx)).sonuc;
+    const k = K.hepsi(o1, o2, K.baglam({ fAtes: Hz.M.fAtes })).sonuc;   // ek kısıt motorda (pencere sıralamaya katmaz)
     expect(k.kapasite.na).toBeUndefined();
     expect(k.kapasite.deger).toBeCloseTo(Math.max(...pay) / 250, 12);
     expect(k.darbe.deger).toBeCloseTo(oran, 12);
@@ -273,19 +284,32 @@ describe('PENCERE — yalnız girdi', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   const node = () => { const n = { id: 'pa', type: 'mnt-parametric', data: {} }; global.nodes.push(n); return n; };
 
-  test('üç kategori; sağ sütunda analiz adı, büyüklüğü, cevap ve tek eylem', () => {
+  // Kullanıcı kararı (2026-11-10, Excel): dört kesin kriter, sonra en küçük statik sehim.
+  // Ek kısıtlar, sınırları, sürünme payı ve amaç ağırlığı pencerede YOK — tek ayar
+  // rijitlik toleransı.
+  test('üç kategori: Gruplar · Adaylar · Kriterler; Kriterler dört kesin kriter, sıralama ölçütü ve tolerans; sağ sütunda tek eylem', () => {
     modelKur('kamyon');
-    const d = dom(P.getMntParamPropertiesHTML(node()));
-    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar']);
+    const n = node(), d = dom(P.getMntParamPropertiesHTML(n));
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler']);
     expect(d.querySelector('.ve-fp-tab')).toBeNull();                       // tek gövde (2026-10-16)
     expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Katalogdan seçim');
     expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '24', '576']);
     expect(d.querySelector('.ve-fp-side .ve-fp-durum').textContent).toBe('Taramaya hazır');
     expect(d.querySelectorAll('.ve-fp-solve').length).toBe(1);
     expect(d.querySelector('[data-cozum-durumu]')).toBeNull();
+    const kat = d.querySelector('.ve-fp-kat[data-k="kriter"]'), fA = P._mntParamHazirlik(n).M.fAtes;
+    expect([...kat.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent)).toEqual(['Kesin kriterler', 'Sıralama']);
+    expect([...kat.querySelectorAll('tbody tr')].map((r) => [...r.children].map((td) => td.textContent)))
+      .toEqual(['k1', 'k1a', 'k1b', 'k2'].map((k) => [K.KISITLAR.find((Q) => Q.k === k).no, P._MNT_PARAM_KRITER_AD[k],
+        dom(P._mntParamKriterSinir(k, fA)).textContent]));
+    const alan = [...kat.querySelectorAll('input')];                      // ölçüt (salt okunur), toleransın kutusu ve değeri
+    expect(alan.map((i) => [i.type, i.readOnly])).toEqual([['text', true], ['checkbox', false], ['text', false]]);
+    expect(alan[0].value).toBe('Statik sehim');
+    expect(kat.querySelector('#ve-mnt-param-tolerans-pa').disabled).toBe(true);
+    ['Sürünme', 'ağırlığı', 'Ek kısıt', 'Kapasite', 'Darbe'].forEach((w) => expect([w, kat.textContent.includes(w)]).toEqual([w, false]));
   });
 
-  test('ayarlar: sabit grup, dışarıda bırakılan tip, sınır ve açık/kapalı → kombinasyon ve bağlam', () => {
+  test('ayarlar: sabit grup, dışarıda bırakılan tip ve marka, rijitlik toleransı → kombinasyon ve bağlam; eski projenin ek kısıtı okunmaz', () => {
     modelKur('kamyon');
     const n = node();
     P.veMntParamSabit('pa', 1, true);
@@ -297,30 +321,35 @@ describe('PENCERE — yalnız girdi', () => {
     expect(P._mntParamHazirlik(n).N).toBe(484);
     P.veMntParamAdayHepsi('pa', true);
     expect(n.data.haric).toBeUndefined();
+    // marka: grubun bütün tipleri birlikte girer, birlikte çıkar
+    const H0 = P._mntParamHazirlik(n), mk = P._mntParamMarkalar(H0.A).find((x) => x.A.length > 1);
+    P.veMntParamMarka('pa', mk.ad, false);
+    expect(P._mntParamHazirlik(n).aday.length).toBe(H0.aday.length - mk.A.length);
+    expect(n.data.haric.slice().sort()).toEqual(mk.A.map((a) => a.key).sort());
+    P.veMntParamMarka('pa', mk.ad, true);
+    expect(n.data.haric).toBeUndefined();
     P.veMntParamAdayHepsi('pa', false);
     expect(P._mntParamHazirlik(n).eksik).toBe('Aday tip yok');
     P.veMntParamAdayHepsi('pa', true);
-    P.veMntParamSinir('pa', 'sehimUst', '6,5');
-    P.veMntParamSinir('pa', 'kapasite', '90');
-    P.veMntParamSinir('pa', 'agirlik', '0');
-    const c = K.baglam(P._mntParamHazirlik(n).ctx);
-    expect([c.s.sehimUst, c.s.kapasite, c.s.agirlik]).toEqual([6.5, 0.9, 0]);
-    P.veMntParamSinir('pa', 'sehimUst', '-2');
-    P.veMntParamSinir('pa', 'agirlik', '1,5');
-    expect(n.data.sinir).toEqual({ kapasite: 90 });
-    P.veMntParamSinir('pa', 'tolerans', '20');
-    expect(K.baglam(P._mntParamHazirlik(n).ctx).s.tolerans).toBe(0.2);
-    P.veMntParamSinir('pa', 'tolerans', '60');                             // %60 > %50 sınırı
-    expect(n.data.sinir.tolerans).toBeUndefined();
-    P.veMntParamSinir('pa', 'surunme', '0');                               // sürünmesiz geçerli
-    expect(K.baglam(P._mntParamHazirlik(n).ctx).s.surunme).toBe(0);
-    P.veMntParamSinir('pa', 'surunme', '');
-    P.veMntParamAcik('pa', 'ayrisma', true);
-    P.veMntParamAcik('pa', 'sehim', false);
-    expect(n.data.acik).toEqual({ ayrisma: true, sehim: false });
-    P.veMntParamAcik('pa', 'ayrisma', false);
-    P.veMntParamAcik('pa', 'sehim', true);
+    // rijitlik toleransı: değer % (aralık çekirdeğin), açıklık ayrı
+    let c = K.baglam(P._mntParamHazirlik(n).ctx);
+    expect([c.acik.tolerans, c.s.tolerans]).toEqual([false, 0.15]);
+    P.veMntParamTolerans('pa', '20');
+    P.veMntParamToleransAc('pa', true);
+    c = K.baglam(P._mntParamHazirlik(n).ctx);
+    expect([c.acik.tolerans, c.s.tolerans]).toEqual([true, 0.2]);
+    expect(P._mntParamTolerans(n)).toBe(20);
+    P.veMntParamTolerans('pa', '60');                                       // %60 > %50 sınırı
+    expect(n.data.sinir).toBeUndefined();
+    expect(P._mntParamTolerans(n)).toBe(15);
+    P.veMntParamToleransAc('pa', false);
     expect(n.data.acik).toBeUndefined();
+    // eski projenin ek kısıtları ve sınırları okunmaz: bağlam dört kesin kriter
+    n.data.acik = { darbe: true, ayrisma: true, sehim: true };
+    n.data.sinir = { sehimUst: 2, agirlik: 0, surunme: 50 };
+    c = K.baglam(P._mntParamHazirlik(n).ctx);
+    expect(K.KISITLAR.filter((Q) => c.acik[Q.k]).map((Q) => Q.k)).toEqual(['k1', 'k1a', 'k1b', 'k2']);
+    expect([c.acik.tolerans, c.s.surunme]).toEqual([false, 0.3]);
   });
 
   test('yerinde tazeleme: aday kalmayınca kombinasyon, cevap ve düğme pencere kurulmadan değişir', () => {
@@ -347,11 +376,15 @@ describe('PENCERE — yalnız girdi', () => {
   // parantezli künye tek blok, kod bölünmez. Satır kırılımı tarayıcıda
   // ölçülür (mount-param-sonuc.spec.js → MODELE UYGULA · yerleşim turu).
   // Sertlik de bölünmez (2026-10-19, resmi adlar: "Cone 38 60 ShA (AMC 137963)").
+  // Adaylar markaya göre gruplu (açılır kapanır), sıra kütüphanenin marka sırası.
   test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod, önek + numara ve sertlik bölünmez', () => {
     modelKur('asfat');
-    const d = dom(P.getMntParamPropertiesHTML(node()));
+    const n = node(), d = dom(P.getMntParamPropertiesHTML(n));
     // Aday yalnız TAM ve TAHMİNSİZ tip: radyali tahmini AMC kodları (Canlı Not 113) listede yok.
-    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib).filter((k) => cp._mntLibTam(lib[k]) && !cp._mntLibTahmin(lib[k]).length);
+    const lib = cp.veMntGetLibraryMap(), Hz = P._mntParamHazirlik(n);
+    const keys = P._mntParamMarkalar(Hz.A).flatMap((M) => M.A.map((a) => a.key));
+    expect(keys.slice().sort()).toEqual(Object.keys(lib).filter((k) => cp._mntLibTam(lib[k]) && !cp._mntLibTahmin(lib[k]).length).sort());
+    expect([...d.querySelectorAll('.ve-prm-marka')].map((x) => x.getAttribute('data-marka'))).toEqual(P._mntParamMarkalar(Hz.A).map((M) => M.ad));
     const aday = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] tbody tr')].map((r) => r.children[1]);
     const grup = [...d.querySelectorAll('.ve-fp-kat[data-k="grup"] tbody tr')].flatMap((r) => [r.children[1], r.children[3]]);
     expect(aday.map((td) => td.textContent)).toEqual(keys.map((k) => lib[k].name));
@@ -398,33 +431,56 @@ describe('PENCERE — yalnız girdi', () => {
   });
 });
 
-describe('RAPOR — ayrı belge', () => {
-  test('bölümler, uzlaşı tablosu ve şekil; Türkçe sayı; NaN · undefined · {,} gövdede yok', () => {
-    modelKur('asfat');
-    const node = { id: 'pa', type: 'mnt-parametric', data: { sabit: {} } };
+describe('RAPOR — ayrı belge, pencerenin K listesi', () => {
+  // Tarar ve saklar (pencerenin yolu): ent ve bugünkü özet.
+  const kurR = (ad, hazirla) => {
+    modelKur(ad);
+    const n = { id: 'pr', type: 'mnt-parametric', data: {} };
+    global.nodes.push(n);
+    if (hazirla) hazirla(n, P._mntParamHazirlik(n));
+    const Hz = P._mntParamHazirlik(n), c = K.baglam(Hz.ctx), O = P._mntParamOlcucu(Hz.M, c);
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25 });
+    it.adim(Infinity);
+    PS._mntParamSonucKaydet(n.id, Hz, O, it.depo());
+    const ent = PS._MNT_PARAM_SONUC[n.id];
+    return { n, Hz, c, ent, Z: PS._mntParamOzet(ent, c) };
+  };
+  const govdeOf = (html) => html.slice(html.indexOf('<body>'), html.indexOf('<script>', html.indexOf('<body>')));
+
+  test('bölümler; K0…K9 pencerenin listesi, kriterin hükmü taramanınki; Türkçe sayı; NaN · undefined · {,} gövdede yok', () => {
     // Hızlı: ön grup sabit (2 grup × 24 = 576).
-    const Hz0 = P._mntParamHazirlik(node);
-    node.data.sabit[Hz0.M.G[0].anahtar] = true;
-    const { Hz, O, S } = tara(node, 5);
-    const E = P._mntParamZenginlestir(S, Hz, O);
-    const html = RP.veMntParamRaporHTML(E);
-    const govde = html.slice(html.indexOf('<body>'), html.indexOf('<script>', html.indexOf('<body>')));
-    ['Kapsam', 'Yöntem', 'Kısıtlar', 'Eleme', 'Sonuç', 'Sıralama', 'Varsayımlar ve sınırlar', 'Kaynaklar']
+    const { Hz, c, ent, Z } = kurR('asfat', (n, H0) => { n.data.sabit = { [H0.M.G[0].anahtar]: true }; });
+    const E = PS._mntParamZenginlestir(ent, Z, Hz), L = PS._mntParamKonfig(ent, Z, c);
+    expect(E.konfig.map((k) => [k.K, k.idx, k.uygunluk, k.kriter])).toEqual(L.map((k) => [k.K, k.idx, k.uygunluk, k.kriter]));
+    expect(E.kSay).toBe(9);
+    // AYNI HÜKÜM: tam ölçümün hükmü (hepsi) deponun bitleriyle aynı
+    E.konfig.forEach((k) => expect(['k1', 'k1a', 'k1b', 'k2'].map((q) => k.h[q].ok)).toEqual(k.kriter));
+    const html = RP.veMntParamRaporHTML(E), govde = govdeOf(html);
+    ['Kapsam', 'Yöntem', 'Kriterler', 'Kriterleri sağlayan', 'Sonuç', 'Konfigürasyonlar', 'Varsayımlar ve sınırlar', 'Kaynaklar']
       .forEach((b) => expect(govde).toContain('</span>' + b + '</h2>'));
     expect(html).toContain('<title>Katalogdan takoz seçimi</title>');
     expect(govde).not.toMatch(/NaN|undefined|Infinity/);
     expect(govde).not.toContain('[0]');                                   // her dayanak listede
     expect(govde.replace(/\$\$[\s\S]*?\$\$/g, '')).not.toContain('{,}');
     expect(govde).not.toMatch(/\d\.\d{1,2}(?!\d)\s*(Hz|mm|kg)/);        // ondalık nokta yok
-    if (S.uygunN) {
-      expect(govde).toContain('Uzlaşı çözümü: grup başına tip');
-      expect(govde).toContain('<figure><svg');
-      const ilk = E.satir[0];
-      Hz.M.G.forEach((g, gi) => { if (ilk.tipler[gi]) expect(govde).toContain(Hz.M.lib[ilk.tipler[gi]].name.replace(/&/g, '&amp;')); });
-    } else {
-      expect(govde).toContain('<span class="t">Uygun kombinasyon yok</span>');
-    }
+    ['Uzlaşı', 'Pareto cephesi', 'Sürünme', 'ağırlığı', 'En az ihlalli', 'E1', 'E9'].forEach((w) => expect([w, govde.includes(w)]).toEqual([w, false]));
+    // Konfigürasyonlar tablosu: K0…K9 sırayla, uygunluk pencerenin
+    const t6 = dom6(govde);
+    expect(t6.map((r) => r[0])).toEqual(L.map((k) => 'K' + k.K));
+    const ui = t6[0].length - 6;                                          // Uygunluk sütunu: grupların ardından
+    expect(t6.map((r) => r[ui])).toEqual(L.map((k) => k.uygunluk));
+    expect(govde).toContain('K1 · ' + L[1].uygunluk + ': grup başına tip');
+    expect(govde).toContain('<figure><svg');
+    const duz = govde.replace(/<[^>]+>/g, '');                            // tip adının sertliği ve kodu bölünmez (span)
+    L[1].tipler.forEach((t) => { if (t) expect(duz).toContain(Hz.M.lib[t].name.replace(/&/g, '&amp;')); });
+    expect(govde).toContain('<span style="white-space:nowrap">55 ShA</span>');
   });
+  // §6'nın tablosu → hücre metinleri
+  function dom6(govde) {
+    const d = document.createElement('div');
+    d.innerHTML = govde.slice(govde.indexOf('<h2 id="p6"'), govde.indexOf('<h2 id="p7"'));
+    return [...d.querySelector('table').querySelectorAll('tr')].slice(1).map((r) => [...r.children].map((td) => td.textContent));
+  }
 
   test('dayanaklar: anılan her anahtar listede, listedeki her kaynak anılıyor; bilinmeyen anahtar [0] değil hata', () => {
     const fs = require('fs');
@@ -434,10 +490,10 @@ describe('RAPOR — ayrı belge', () => {
     // Doğrudan atıflar: _mntPrmRef('a', 'b') — işlenmeyen dallar dâhil, kaynaktan.
     (kaynak.match(/_mntPrmRef\(([^)]*)\)/g) || []).forEach((c) =>
       (c.match(/'([^']+)'/g) || []).forEach((q) => anilan.add(q.slice(1, -1))));
-    // Kısıt tablosunun dayanak sütunu.
-    const ctx = K.baglam({ fAtes: 30, s: Object.assign({}, K.SINIR_VARSAYILAN), acik: {} });
-    Object.values(RP._mntPrmKisitTanim(ctx)).forEach((d) => d[2].forEach((k) => anilan.add(k)));
-    expect(anilan.size).toBeGreaterThan(5);
+    // Kriter tablosunun dayanak sütunu.
+    const ctx = K.baglam({ fAtes: 30 });
+    Object.values(RP._mntPrmKriterTanim(ctx)).forEach((d) => d[2].forEach((k) => anilan.add(k)));
+    expect(anilan.size).toBe(liste.length);
     anilan.forEach((k) => expect(liste).toContain(k));
     liste.forEach((k) => expect(anilan.has(k)).toBe(true));
     expect(RP._mntPrmRef('sirket', 'bmc')).toBe('[1] [' + liste.length + ']');
@@ -445,14 +501,16 @@ describe('RAPOR — ayrı belge', () => {
     expect(() => RP._mntPrmRef('shen', 'yok')).toThrow();
   });
 
-  test('uygun kombinasyonu olmayan model: "Uygun kombinasyon yok" ve en az ihlalli sıra', () => {
-    modelKur('hafif');
-    const { Hz, O, S } = tara({ id: 'pa', type: 'mnt-parametric', data: {} }, 5);
-    expect(S.uygunN).toBe(0);
-    const html = RP.veMntParamRaporHTML(P._mntParamZenginlestir(S, Hz, O));
+  test('uygun kombinasyonu olmayan model: "Uygun kombinasyon yok"; K1…K9 en az ihlalli dokuz (kaba kuvvet hakemi)', () => {
+    const { Hz, ent, Z } = kurR('hafif');
+    expect(Z.S.uygunN).toBe(0);
+    const E = PS._mntParamZenginlestir(ent, Z, Hz);
+    expect(E.konfig.slice(1).map((k) => k.idx)).toEqual(hakemK(ent.D, Z.Hk));
+    E.konfig.slice(1).forEach((k) => expect(k.uygunluk).toBe('Uygun değil'));
+    const html = RP.veMntParamRaporHTML(E);
     expect(html).toContain('<span class="t">Uygun kombinasyon yok</span>');
-    expect(html).toContain('En az ihlalli kombinasyonlar');
-    expect(html).not.toContain('Uzlaşı çözümü: grup başına tip');
+    expect(html).toContain('K1 · Uygun değil: grup başına tip');
+    expect(govdeOf(html)).not.toMatch(/NaN|undefined|Infinity/);
   });
 });
 
@@ -496,14 +554,14 @@ describe('KOŞUCU', () => {
     jest.runAllTimers();
     expect(indir).not.toHaveBeenCalled();
     const ent = PS._MNT_PARAM_SONUC.pa;
-    expect(ent && ent.D.tam).toBe(true);
+    expect(ent && ent.D.tam).toBe(false);                    // ek kısıt yok: ikinci aşama yalnız kesin kriterleri sağlayanlarda
     expect(ent.D.N).toBe(576);
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Tarandı \([\d.,]+ s\)$/);
     expect(btn().textContent.trim()).toBe('Tara');
     expect(btn().hasAttribute('data-durdur')).toBe(false);
     expect(document.querySelector('.ve-fp-ilerleme, .ve-fp-yurut[data-is]')).toBeNull();
     const d = document.createElement('div'); d.innerHTML = P.getMntParamPropertiesHTML(n);
-    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar', 'Sonuç']);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler', 'Sonuç']);
     // rapor Sonuç'taki düğmeyle, bir kez
     PS.veMntParamRapor('pa');
     expect(indir).toHaveBeenCalledTimes(1);
@@ -522,8 +580,8 @@ describe('KOŞUCU', () => {
   // DİLİM BÜTÇESİ (kullanıcı 2026-10-18: "program kasıyor"): eski parça 50 ms ve
   // 200 kombinasyona kadar koşuyordu. Saat her okumada 1 ms ilerler — dilim
   // bütçesini (10 ms) aşan hiçbir dilim yok, iş olay döngüsüne dönerek ilerler.
-  test('dilim bütçesi: bir dilim ~10 ms (saat okuması başına 1 ms) — 576 kombinasyon ≥ 55 dilimde', () => {
-    kurPencere();
+  test('dilim bütçesi: bir dilim ~10 ms (saat okuması başına 1 ms) — 576 kombinasyon ve ikinci aşaması ≥ 55 dilimde', () => {
+    const nd = kurPencere();
     let t = 0;
     jest.spyOn(performance, 'now').mockImplementation(() => (t += 1));
     const T0 = global.veMntKatalog.tarayici;
@@ -541,10 +599,11 @@ describe('KOŞUCU', () => {
     }
     jest.runAllTimers();
     expect(sar).toHaveBeenCalledTimes(1);
-    expect(dilim.reduce((a, x) => a + x, 0)).toBe(576);
+    const ent = PS._MNT_PARAM_SONUC.pa, Sz = PS._mntParamOzet(ent, K.baglam(P._mntParamHazirlik(nd).ctx)).S;
+    expect(dilim.reduce((a, x) => a + x, 0)).toBe(576 + Sz.ikinciN);   // birinci aşama + kesin kriterleri sağlayanların ikincisi
     expect(Math.max(...dilim)).toBeLessThanOrEqual(10);
     expect(dilim.length).toBeGreaterThanOrEqual(55);
-    expect(PS._MNT_PARAM_SONUC.pa.D.N).toBe(576);
+    expect(ent.D.N).toBe(576);
   });
 
   test('proje değişince süren tarama durur ve sonucu saklanmaz', () => {
@@ -558,36 +617,40 @@ describe('KOŞUCU', () => {
   });
 });
 
-describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullanıcı kararları 2026-10-18)', () => {
-  // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon (uzlaşı tipleri aday).
-  // E9 (darbe yükü) KAPALI: AMC tipleri 2026-11-10'dan beri katalog kapasitesini taşıyor ve
-  // tek uygun kombinasyon (Cone 67 50 ShA'lı) darbede 2 × 900 kg'ı aşıyor — bu bölüm Sonuç'un
-  // yapısını sınar, uygun bir kombinasyon ister. E9'un kendisi aşağıda: *AMC KAPASİTESİ*.
+describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki grafik; diyagramlar galeride', () => {
+  // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon; dört kesin kriteri sağlayan var.
   const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const KR = ['k1', 'k1a', 'k1b', 'k2'];
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
-  function kur() {
+  function kur(data) {
+    PS.veMntParamUnut();
     modelKur('asfat');
-    const n = { id: 'pa', type: 'mnt-parametric', data: { acik: { darbe: false },
-      haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
+    const n = { id: 'pa', type: 'mnt-parametric', data: Object.assign({
+      haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) }, data || {}) };
     global.nodes.push(n);
     return n;
   }
+  // Pencerenin taraması (veMntParamTara'nın seçenekleri) ve saklanması.
   function taraSakla(n, say) {
     const Hz = P._mntParamHazirlik(n);
     const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
     const olc1 = say ? (t) => { say.n++; return O.olc1(t); } : O.olc1;
-    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1, olc2: O.olc2, enIyi: 25, tam: false });
     it.adim(Infinity);
     PS._mntParamSonucKaydet(n.id, Hz, O, it.depo());
     return { Hz, S: it.sonuc() };
   }
+  const ozet = (n) => {
+    const Hz = P._mntParamHazirlik(n), c = K.baglam(Hz.ctx), ent = PS._MNT_PARAM_SONUC[n.id];
+    return { Hz, c, ent, Z: PS._mntParamOzet(ent, c) };
+  };
+  const bitler = () => KR.map((q) => 1 << K.KISITLAR.findIndex((Q) => Q.k === q));
   const basliklar = (d) => [...d.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b')].map((b) => b.textContent);
 
   // ISITICI (2026-10-18): tarama bitince Sonuç ayrı dilimlerde belleğe alınır
-  // (koşucu), pencere kurulumu yalnız birleştirir. Galerinin on diyagramı
+  // (koşucu), pencere kurulumu yalnız birleştirir. Galerinin diyagramları
   // pencerede HİÇ çizilmez — yalnız tam ekranda açılınca.
-  test('ISITICI: üç adım (özet · önerinin ölçümü · bölüm); pencere kurulumu ne çizer ne ölçer; anahtar önce ve sonra aynı', () => {
-    PS.veMntParamUnut();
+  test('ISITICI: üç adım (özet · K1’in ölçümü · bölüm); pencere kurulumu ne çizer ne ölçer; anahtar önce ve sonra aynı', () => {
     const n = kur(), { Hz } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa;
     const once = PS._mntParamSonucBaglam(n, Hz, ent).anahtar;
     const L = PS._mntParamSonucIsitici(n, Hz, ent);
@@ -609,88 +672,145 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(olcSay).toBe(0);
   });
 
-  // SADE (kullanıcı kararı 2026-10-18: "Tablo + iki sade grafik, diğer
-  // diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"). Önce: on bir
-  // bölüm, on çizim, kısıtlar KODLA (K1, E3 …) — girdideki Kısıtlar adlarla.
-  test('SADE: yedi bölüm, iki grafik; on diyagram yalnız listede; kısıt kodu yok; öneri sıranın birincisi', () => {
+  // Kullanıcı (2026-11-10): "Bu bileşen çok eski kalmış … güncel ve modern bir hale
+  // getirelim." Önce: Öneri · Kriterler (ek kısıtlarla) · Modlar · Statik sehim ·
+  // Yakın seçenekler · Eleme · on diyagram; uzlaşıyla sıralı, Excel'den ayrı.
+  test('YAPI: altı bölüm, iki grafik; dokuz diyagram yalnız listede; uzlaşı, yakın seçenek, ek kısıt yok', () => {
     const n = kur(), { S } = taraSakla(n);
     expect(S.N).toBe(216);
-    expect(S.uygunN).toBeGreaterThan(0);
+    expect(S.uygunN).toBeGreaterThan(1);
     const d = dom(P.getMntParamPropertiesHTML(n));
-    expect(basliklar(d)).toEqual(['Öneri', 'Kriterler', 'Modlar', 'Statik sehim ve iletilebilirlik', 'Yakın seçenekler', 'Eleme', 'Diyagramlar']);
+    expect(basliklar(d)).toEqual(['Konfigürasyonlar', 'K1', 'Modlar', 'Statik sehim ve iletilebilirlik', 'Kriterleri sağlayan', 'Diyagramlar']);
     const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('ok');
     expect([...kat.querySelectorAll('.ve-pd-kap svg.ve-pd')].map((s) => s.parentElement.getAttribute('data-pd'))).toEqual(['mod', 'dag']);
     expect(kat.querySelector('[data-3b], .ve-pd-kesit, .ve-pd-tam')).toBeNull();
+    expect(PS._MNT_PRM_DIYAGRAM.map((x) => x[1])).toEqual(['Pareto cephesi', 'Mod yerleşimi', 'Bağlayıcı kriterler', 'Ana etkiler',
+      'Kriter haritaları', 'İletilebilirlik haritası', 'Kriter penceresi', 'Tepki yüzeyi', 'Tasarım uzayı']);
     expect([...kat.querySelectorAll('.ve-prm-dg')].map((b) => b.textContent)).toEqual(PS._MNT_PRM_DIYAGRAM.map((x) => x[1]));
-    // kod yok — tipin adı (parça numarası) hariç Sonuç'un bütün yazısında; metin
-    // düğümleri ayraçla (textContent hücreleri yapıştırır: "216K174")
-    const yazi = kat.cloneNode(true);
-    yazi.querySelectorAll('.ve-prm-og-t, .ve-prm-y ul').forEach((e) => e.remove());
-    const tw = document.createTreeWalker(yazi, NodeFilter.SHOW_TEXT), parca = [];
-    while (tw.nextNode()) parca.push(tw.currentNode.nodeValue);
-    expect(parca.length).toBeGreaterThan(100);
-    expect(parca.join(' ')).not.toMatch(/(^|[^\p{L}\p{N}])(K1[ab]?|K2|E[1-9])(?![\p{L}\p{N}])/u);
-    // öneri: sıranın birincisinin tipleri; değişen grupta mevcut tip üstü çizili
-    const ent = PS._MNT_PARAM_SONUC.pa, ilk = ent.D.tipler(S.sira[0].idx);
-    const sat = [...kat.querySelectorAll('.ve-prm-og-s')];
-    expect(sat.length).toBe(ent.M.G.length);
-    let degisen = 0;
-    sat.forEach((r, i) => {
-      const g = ent.M.G[i], ad = ent.M.lib[ilk[i]].name;
-      expect(r.querySelector('.ve-prm-og-g').textContent).toBe(g.ad);
-      if (ilk[i] === g.tip) expect(r.querySelector('.ayni').textContent).toBe(ad);
-      else { degisen++; expect(r.querySelector('b').textContent).toBe(ad); expect(r.querySelector('s').textContent).toBe(ent.M.lib[g.tip].name); }
-    });
-    expect(degisen).toBeGreaterThan(0);
+    ['Uzlaşı', 'Öneri', 'Yakın seçenekler', 'Eleme', 'En az ihlalli', 'Sürünme', 'Kısıt', 'kısıt'].forEach((w) =>
+      expect([w, kat.textContent.includes(w)]).toEqual([w, false]));
+    expect(kat.textContent).not.toMatch(/(^|[^\p{L}\p{N}])E[1-9](?![\p{L}\p{N}])/u);
+    const em = [...d.querySelectorAll('.ve-fp-sect')].find((s) => s.querySelector('b').textContent === 'K1').querySelector('em');
+    expect(em.textContent).toBe('En uygun');
     expect(d.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun ' + S.uygunN + ' / 216');
     expect(kat.innerHTML).not.toMatch(/NaN|undefined|Infinity/);
   });
 
-  // KRİTERLER = HÜKÜM: satırın işareti huninin ve sıranın kullandığı hüküm —
-  // öneride DEPONUN ölçüsü, mevcutta taramanın ölçücüsüyle hepsi(); yazılan
-  // sayı ölçünün kendisi (gösterilen ondalığın yarım adımı içinde). Statik
-  // sehimin iki sınırı tek satır: ikisi de sağlanınca ✓.
-  test('KRİTERLER: her satırın hükmü ve sayısı ölçünün kendisi — öneri depodan, mevcut hepsi() ile', () => {
-    const oku = require('../../js/sayi.js').veSayiOku;
-    const n = kur(), { Hz, S } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa, c = K.baglam(Hz.ctx), idx = S.sira[0].idx, D = ent.D;
+  test('KONFİGÜRASYONLAR: K0 mevcut, K1… dört kesin kriteri sağlayanlar en küçük statik sehimden (kaba kuvvet hakemi); uygunluk ve işaretler hükmün kendisi', () => {
+    const n = kur(); taraSakla(n);
+    const { c, ent, Z } = ozet(n), D = ent.D, Hk = Z.Hk, B = bitler();
+    const L = PS._mntParamKonfig(ent, Z, c), bek = hakemK(D, Hk);
+    const boz = (x) => B.filter((b) => Hk.m[x] & b).length;
+    expect(L.map((k) => k.K)).toEqual([0].concat(bek.map((x, i) => i + 1)));
+    expect(L.slice(1).map((k) => k.idx)).toEqual(bek);
+    expect(bek.length).toBe(Math.min(9, Z.S.uygunN));                      // uygun varsa yalnız uygunlar
+    let en = true;
+    L.slice(1).forEach((k) => {
+      const ok = boz(k.idx) === 0;
+      expect(k.kriter).toEqual(B.map((b) => !(Hk.m[k.idx] & b)));
+      expect(k.uygunluk).toBe(ok ? (en ? 'En uygun' : 'Uygun') : 'Uygun değil');
+      expect([k.d, k.T]).toEqual([D.d[k.idx], D.T[k.idx]]);
+      if (ok) en = false;
+    });
+    const R = K.hepsi(ent.mevcut.o1, ent.mevcut.o2, c).sonuc;
+    expect(L[0].kriter).toEqual(KR.map((q) => R[q].ok));
+    expect(L[0].uygunluk).toBe(L[0].kriter.every(Boolean) ? 'Uygun' : 'Uygun değil');
+    // pencere: on satır, seçili K1; işaretler kriterin hükmü; adlar ayırt edici kısa tiplerle
     const d = dom(P.getMntParamPropertiesHTML(n));
-    const hm = K.hepsi(ent.mevcut.o1, ent.mevcut.o2, Hz.ctx).sonuc, ho = {};
-    K.KISITLAR.forEach((Q) => { if (c.acik[Q.k]) ho[Q.k] = K.hukum(Q.k, D.X[Q.k][idx], c); });
+    const sat = [...d.querySelectorAll('.ve-prm-k')];
+    expect(sat.map((b) => b.getAttribute('data-k'))).toEqual(L.map((k) => String(k.K)));
+    expect(sat.map((b) => b.getAttribute('aria-selected'))).toEqual(L.map((k) => String(k.K === 1)));
+    const ks = PS._mntPrmKisaF(ent);
+    sat.forEach((b, i) => {
+      expect(b.querySelector('.ve-prm-k-uy').textContent).toBe(L[i].uygunluk);
+      expect([...b.querySelectorAll('.ve-prm-k-kr > span')].map((s) => s.getAttribute('data-ok'))).toEqual(L[i].kriter.map(String));
+      expect([...b.querySelectorAll('.ve-prm-k-ad .t')].map((s) => s.textContent)).toEqual(PS._mntPrmKAdi(ent, L[i]).map(ks));
+    });
+    expect(new Set(sat.map((b) => b.querySelector('.ve-prm-k-ad').textContent)).size).toBe(sat.length);
+  });
+
+  // EXCEL = PENCERE: Excel'in Özet'i ve Sonuç'u pencerenin listesinden (aynı işlev);
+  // K adı (Özet'in bağlantısı) pencerenin satırındaki kısa tiplerle.
+  test('EXCEL = PENCERE: Özet’in konfigürasyonları pencerenin listesi — K, uygunluk, kriter, statik sehim ve ad', () => {
+    const n = kur(); taraSakla(n);
+    const { Hz, c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c);
+    const plan = PS._mntParamExcelPlan(ent, Hz);
+    plan.adim.slice(0, L.length).forEach((f) => f());
+    const E = plan.E(), X = global.veMntParamExcel;
+    expect(E.konfig.map((k) => [k.K, k.uygunluk, k.kriter, k.d])).toEqual(L.map((k) => [k.K, k.uygunluk, k.kriter, k.d]));
+    const evren = [];
+    E.konfig.forEach((k) => evren.push(...k.tipler));
+    E.tarama.adaylar.forEach((A) => evren.push(...A));
+    const xk = X.ayirici(evren), pk = PS._mntPrmKisaF(ent);
+    L.forEach((k, i) => {
+      if (k.mevcut) return;
+      expect(X.sayfaAdi(E.konfig[i], E.konfig[i].tipler, xk)).toBe('K' + k.K + ' ' + PS._mntPrmKAdi(ent, k).map(pk).join(' + '));
+    });
+  });
+
+  test('SEÇİM: K’ya tık seçilen bölümü o K’nın yapar; seçim görünüm durumu (modele ve geri-al yığınına yazılmaz)', () => {
+    const n = kur(); taraSakla(n);
+    const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c);
+    global.saveState = jest.fn(); global.showNodeProperties = jest.fn();
+    const veri = JSON.stringify(global.nodes.map((x) => x.data));
+    const ks = Math.min(3, L.length - 1);
+    expect(ks).toBeGreaterThan(1);
+    PS.veMntParamKSec('pa', ks);
+    expect(global.showNodeProperties).toHaveBeenCalledWith(n);
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    expect(basliklar(d)[1]).toBe('K' + ks);
+    expect(d.querySelector('.ve-prm-k[aria-selected="true"]').getAttribute('data-k')).toBe(String(ks));
+    expect(d.querySelector('table.ve-prm-kriter thead th:last-child').textContent).toBe('K' + ks);
+    const ad = PS._mntPrmKAdi(ent, L[ks]), ad0 = PS._mntPrmKAdi(ent, L[0]);
+    let degisen = 0;
+    [...d.querySelectorAll('.ve-prm-og-s')].forEach((r, i) => {
+      expect(r.querySelector('.ve-prm-og-g').textContent).toBe(ent.M.G[i].ad);
+      if (ad[i] === ad0[i]) expect(r.querySelector('.ayni').textContent).toBe(ad[i]);
+      else { degisen++; expect(r.querySelector('b').textContent).toBe(ad[i]); expect(r.querySelector('s').textContent).toBe(ad0[i]); }
+    });
+    expect(degisen).toBeGreaterThan(0);
+    PS.veMntParamKSec('pa', 0);                                             // K0: uygulanacak bir şey yok, tek sütun
+    const d0 = dom(P.getMntParamPropertiesHTML(n));
+    expect(basliklar(d0)[1]).toBe('K0 · Mevcut');
+    expect(d0.querySelector('.ve-prm-eylem [data-uygula]')).toBeNull();
+    expect([...d0.querySelectorAll('table.ve-prm-kriter thead th')].map((t) => t.textContent)).toEqual(['Kriter', 'Sınır', 'K0']);
+    expect(global.saveState).not.toHaveBeenCalled();
+    expect(JSON.stringify(global.nodes.map((x) => x.data))).toBe(veri);
+  });
+
+  // KRİTERLER = HÜKÜM: satırın işareti sıranın kullandığı hüküm — seçilende DEPONUN
+  // ölçüsü, K0'da taramanın ölçücüsüyle hepsi(); yazılan sayı ölçünün kendisi
+  // (gösterilen ondalığın yarım adımı içinde).
+  test('KRİTERLER: dört satır; işaret ve sayı hükmün kendisi — seçilen depodan, K0 hepsi() ile', () => {
+    const oku = require('../../js/sayi.js').veSayiOku;
+    const n = kur(); taraSakla(n);
+    const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c), idx = L[1].idx, D = ent.D;
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    const hm = K.hepsi(ent.mevcut.o1, ent.mevcut.o2, c).sonuc, ho = {};
+    KR.forEach((q) => { ho[q] = K.hukum(q, D.X[q][idx], c); });
     const isaret = (td) => (td.querySelector('.ve-durum-ok') ? true : td.querySelector('.ve-durum-err') ? false : null);
     const satir = [...d.querySelectorAll('table.ve-prm-kriter tbody tr')];
-    expect(satir.map((r) => r.getAttribute('data-k'))).toEqual(
-      K.KISITLAR.filter((Q) => c.acik[Q.k] && Q.k !== 'sehim').map((Q) => (Q.k === 'sehimAlt' ? 'sehim' : Q.k)));
-    const nominal = { m: Math.max(...ent.mevcut.o1.dz.map(Math.abs)), o: D.d[idx] };
+    expect(satir.map((r) => r.getAttribute('data-k'))).toEqual(KR);
     let sayili = 0;
     satir.forEach((r) => {
       const k = r.getAttribute('data-k'), td = r.querySelectorAll('td');
       [['m', hm, td[2]], ['o', ho, td[3]]].forEach(([yan, h, hucre]) => {
-        const bek = k === 'sehim' ? (h.sehimAlt.ok && h.sehim.ok) : (h[k].na ? null : h[k].ok);
-        expect([k, yan, isaret(hucre)]).toEqual([k, yan, bek]);
-        expect([k, yan, hucre.classList.contains('kr')]).toEqual([k, yan, bek === false]);
-        // sayı: ölçü (sehimde bozulan sınırın ölçüsü, yoksa anma δs; yüzdeli kısıtta ×100)
+        expect([k, yan, isaret(hucre)]).toEqual([k, yan, h[k].ok]);
+        expect([k, yan, hucre.classList.contains('kr')]).toEqual([k, yan, !h[k].ok]);
         const m = hucre.textContent.match(/−?[\d.]+(,\d+)?/);
         if (!m || k === 'k1b') return;
-        const bozuk = k === 'sehim' ? [h.sehimAlt, h.sehim].find((x) => !x.ok) : null;
-        let v = k === 'sehim' ? (bozuk ? bozuk.deger : nominal[yan]) : h[k].deger;
-        if (['k2', 'kapasite', 'ayrisma', 'darbe'].includes(k)) v *= 100;
-        const ond = m[1] ? m[1].length - 1 : 0;
+        const v = h[k].deger * (k === 'k2' ? 100 : 1), ond = m[1] ? m[1].length - 1 : 0;
         expect([k, yan, Math.abs(oku(m[0]) - v) <= 0.5 * Math.pow(10, -ond) + 1e-9]).toEqual([k, yan, true]);
         sayili++;
       });
     });
-    expect(sayili).toBeGreaterThanOrEqual(14);
-    // öneri uygun: hiçbir satırda ihlal yok; başlık iki sütunun ihlal sayısı
-    const nm = satir.filter((r) => r.querySelectorAll('td')[2].classList.contains('kr')).length;
-    expect(nm).toBeGreaterThan(0);                                            // ASFAT'ın mevcut tasarımı Kriter 1'i bozuyor
-    expect(satir.filter((r) => r.querySelectorAll('td')[3].classList.contains('kr')).length).toBe(0);
-    const em = [...d.querySelectorAll('.ve-fp-sect')].find((s) => s.querySelector('b').textContent === 'Kriterler').querySelector('em');
-    expect(em.textContent).toBe('Mevcut ' + nm + ' ihlal · Öneri 0 ihlal');
+    expect(sayili).toBeGreaterThanOrEqual(6);
+    expect(satir.filter((r) => r.querySelectorAll('td')[2].classList.contains('kr')).length).toBeGreaterThan(0);  // ASFAT'ın mevcut tasarımı Kriter 1'i bozuyor
+    expect(satir.filter((r) => r.querySelectorAll('td')[3].classList.contains('kr')).length).toBe(0);        // K1 En uygun
   });
 
-  // SINIRDA YAZIM: yuvarlanınca sınıra eşit çıkan değer ondalığını uzatır —
-  // "≤ 5 mm" satırında ihlal işaretinin yanında "5,0" yazmaz.
+  // SINIRDA YAZIM: yuvarlanınca sınıra eşit çıkan değer ondalığını uzatır.
   test('SINIRDA YAZIM: değer sınırla aynı görünmez; tam eşitlik ve sayı olmayan değer', () => {
     expect(PS._mntPrmYaz(4.996, 5, 1)).toBe('4,996');
     expect(PS._mntPrmYaz(5.004, 5, 2)).toBe('5,004');
@@ -699,129 +819,92 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(PS._mntPrmYaz(NaN, 5, 1)).toBe('—');
   });
 
-  // MODLAR: kırmızı çentik = sınırı bozan mod. Hakem modların KENDİSİNDEN dört
-  // kural: Kriter 1 (≥ 0,5·f_ateş), 1a (komşuya ≤ 0,5 Hz), 1b (8–10 Hz), en
-  // düşük mod. Satırda kırmızı çentik varsa tablonun modal satırlarından biri ✗.
-  test('MODLAR: kırmızı çentikler dört kuralın kendisi; tablonun modal satırlarıyla tutarlı; tolerans açıkken köşeler de', () => {
-    const kontrol = (ent, c) => {
-      const Z = PS._mntParamOzet(ent, c), V = PS._mntPrmModV(ent, Z, c), k1 = K.K1_ORAN * c.fAtes;
-      expect(V.satir.map((r) => r.ad)).toEqual(['Mevcut', Z.S.uygunN ? 'Öneri' : 'En az ihlalli']);
+  // MODLAR: kırmızı çentik = kesin kriteri bozan mod. Hakem modların KENDİSİNDEN üç
+  // kural: Kriter 1 (≥ 0,5·f_ateş), 1a (komşuya ≤ 0,5 Hz), 1b (8–10 Hz).
+  test('MODLAR: K0 ve seçilen; kırmızı çentikler üç kuralın kendisi ve kriter tablosuyla tutarlı; tolerans açıkken köşeler de', () => {
+    const kontrol = (ent, c, sec) => {
+      const Z = PS._mntParamOzet(ent, c), L = PS._mntParamKonfig(ent, Z, c), k = L[sec], k1 = K.K1_ORAN * c.fAtes;
+      const V = PS._mntPrmModV(ent, Z, c, k.mevcut ? -1 : k.idx, 'K' + k.K);
+      expect(V.satir.map((r) => r.ad)).toEqual(k.mevcut ? ['K0'] : ['K0', 'K' + k.K]);
       V.satir.forEach((r) => {
         const kos = [r.f].concat(r.kose ? [r.kose.a, r.kose.b] : []);
-        const hakem = r.f.map((v, i) => kos.some((f) => f[i] >= k1 || (c.acik.altMod && f[i] < c.s.altMod) || (f[i] >= 8 && f[i] <= 10)
+        const hakem = r.f.map((v, i) => kos.some((f) => f[i] >= k1 || (f[i] >= 8 && f[i] <= 10)
           || f.some((w, j) => j !== i && Math.abs(w - f[i]) <= K.K1A_HZ)));
         expect(r.kotu).toEqual(hakem);
       });
-      const R = PS._mntPrmKriterler(ent, Z, c);
-      const modal = (yan) => R.filter((x) => ['k1', 'k1a', 'k1b', 'altMod'].includes(x.k)).some((x) => x[yan].ok === false);
-      expect(V.satir[0].kotu.some(Boolean)).toBe(modal('m'));
-      expect(V.satir[1].kotu.some(Boolean)).toBe(modal('o'));
+      const modal = (kk) => kk.kriter.slice(0, 3).some((x) => !x);         // Kriter 1 · 1a · 1b
+      expect(V.satir[0].kotu.some(Boolean)).toBe(modal(L[0]));
+      if (!k.mevcut) expect(V.satir[1].kotu.some(Boolean)).toBe(modal(k));
       return V;
     };
-    const n = kur(), { Hz } = taraSakla(n);
-    const V = kontrol(PS._MNT_PARAM_SONUC.pa, K.baglam(Hz.ctx));
+    const n = kur(); taraSakla(n);
+    const o = ozet(n);
+    const V = kontrol(o.ent, o.c, 1);
     expect(V.satir[0].kotu.some(Boolean)).toBe(true);                       // mevcut: 19,2 Hz ≥ 15 Hz
-    expect(V.satir[1].kotu.some(Boolean)).toBe(false);                      // öneri uygun
+    expect(V.satir[1].kotu.some(Boolean)).toBe(false);                      // K1 En uygun
     expect(V.satir.every((r) => r.kose === null)).toBe(true);
-    P.veMntParamAcik('pa', 'tolerans', true);
-    const Ht = taraSakla(n).Hz;
-    const Vt = kontrol(PS._MNT_PARAM_SONUC.pa, K.baglam(Ht.ctx));
+    kontrol(o.ent, o.c, 0);
+    const n2 = kur({ acik: { tolerans: true } }); taraSakla(n2);
+    const o2 = ozet(n2);
+    const Vt = kontrol(o2.ent, o2.c, 1);
     expect(Vt.satir.every((r) => r.kose && r.kose.a.length === r.f.length)).toBe(true);
     // yalnız köşesi bozan mod: anma 7,6 Hz bandın dışında, sert köşe 8,1 Hz içinde
     const c = K.baglam({ fAtes: 30 });
     const sentetik = { mevcut: { o1: { f: [5.5, 7.6, 12], sert: { f: [5.9, 8.1, 12.9] }, yumusak: { f: [5.1, 7.0, 11.1] } } }, olc: {} };
-    const Vs = PS._mntPrmModV(sentetik, { S: { sira: [], uygunN: 0 } }, c);
+    const Vs = PS._mntPrmModV(sentetik, { S: { sira: [], uygunN: 0 } }, c, -1);
     expect(Vs.satir[0].kotu).toEqual([false, true, false]);
   });
 
-  // YAKIN SEÇENEKLER: sıranın 2.–6.'sı; uygun beşten azsa en az ihlalli uygun
-  // olmayanlarla tamamlanır; bozulan kısıtlar ADIYLA (hükmün maskesi).
-  // ELEME: huninin kendisi — eleyen adımlar, sonu uygun sayısı.
-  test('YAKIN SEÇENEKLER ve ELEME: sıra + en az ihlalli, bozulan kısıtların adı; eleme huninin eleyen adımları, sonu uygun sayısı', () => {
+  test('KRİTERLERİ SAĞLAYAN: çözülen, kriter başına tek başına sağlayan ve dördünü birden sağlayan — özetin sayıları', () => {
     const oku = require('../../js/sayi.js').veSayiOku;
-    const n = kur(), { Hz, S } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa, Z = PS._mntParamOzet(ent, K.baglam(Hz.ctx));
-    const L = PS._mntPrmYakinL(ent, Z);
-    expect(L.length).toBe(5);
-    const uygunL = S.sira.slice(1, 6).map((r) => r.idx);
-    expect(L.slice(0, uygunL.length)).toEqual(uygunL);
-    L.slice(uygunL.length).forEach((x) => expect(K.uygunMu(ent.D, Z.Hk, x)).toBe(false));
+    const n = kur(), { S } = taraSakla(n);
     const d = dom(P.getMntParamPropertiesHTML(n));
-    const li = [...d.querySelectorAll('.ve-prm-yakin > li')];
-    expect(li.length).toBe(5);
-    li.forEach((x, k) => {
-      const idx = L[k], boz = K.KISITLAR.filter((Q, b) => Z.Hk.m[idx] & (1 << b)).map((Q) => Q.ad);
-      expect(x.querySelector('.ve-prm-no').textContent).toBe(String(k + 2));
-      expect(x.querySelector('.ve-prm-y-boz, .ve-prm-y-ok').textContent)
-        .toBe(boz.length ? boz.slice(0, 2).join(' · ') + (boz.length > 2 ? ' …' : '') : 'Uygun');
-      expect(x.querySelectorAll('li').length).toBe(ent.M.G.length);
-    });
-    const ad = {}; K.KISITLAR.forEach((Q) => { ad[Q.k] = Q.ad; });
     const sat = [...d.querySelectorAll('table.ve-prm-eleme tbody tr')].map((r) => [r.children[0].textContent, oku(r.children[1].textContent)]);
-    const bek = [['Taranan', S.N]];
-    S.huni.forEach((x) => { if (x.kalan !== bek[bek.length - 1][1]) bek.push([x.k === 'cozulen' ? 'Çözülen' : ad[x.k], x.kalan]); });
-    expect(sat).toEqual(bek);
-    expect(sat[sat.length - 1][1]).toBe(S.uygunN);
+    const coz = S.N - S.hata;
+    expect(sat).toEqual([['Çözülen', coz]].concat(KR.map((q) => ['Kriter ' + K.KISITLAR.find((Q) => Q.k === q).no + ' · ' + P._MNT_PARAM_KRITER_AD[q], coz - S.red[q]]),
+      [['Dört kriter', S.uygunN]]));
+    // dört kriter: hakem, depodan
+    const { ent, Z } = ozet(n), B = bitler();
+    let say = 0;
+    for (let x = 0; x < ent.D.N; x++) if (ent.D.d1[x] === 1 && !B.some((b) => Z.Hk.m[x] & b)) say++;
+    expect(say).toBe(S.uygunN);
   });
 
-  test('UYGUN YOK: "En az ihlalli" — bölüm, sütun, grafikler ve galeri aynı adla; ihlalli satırlar kırmızı', () => {
-    const n = kur(); taraSakla(n);
-    P.veMntParamSinir('pa', 'sehimUst', '1');                              // hiçbir kombinasyon sağlamaz
+  test('UYGUN YOK: bütün K’lar Uygun değil, ilki K1; kriter tablosunda K1 kırmızı; grafikler K adıyla', () => {
+    PS.veMntParamUnut();
+    modelKur('kamyon');
+    const n = { id: 'pa', type: 'mnt-parametric', data: {} };
+    global.nodes.push(n);
+    const { S } = taraSakla(n);
+    expect(S.uygunN).toBe(0);
+    const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c);
+    L.slice(1).forEach((k) => expect(k.uygunluk).toBe('Uygun değil'));
     const d = dom(P.getMntParamPropertiesHTML(n));
-    expect(basliklar(d)[0]).toBe('En az ihlalli');
-    expect(d.querySelector('table.ve-prm-kriter thead th:last-child').textContent).toBe('En az ihlalli');
-    expect(d.querySelector('.ve-pd-kap[data-pd="mod"]').textContent).toContain('En az ihlalli');
-    expect(d.querySelector('.ve-pd-kap[data-pd="dag"]').textContent).toContain('En az ihlalli');
+    expect(basliklar(d)[1]).toBe('K1');
+    expect([...d.querySelectorAll('.ve-fp-sect')].find((s) => s.querySelector('b').textContent === 'K1').querySelector('em').textContent).toBe('Uygun değil');
     expect(d.querySelectorAll('table.ve-prm-kriter td:last-child.kr').length).toBeGreaterThan(0);
-    const ent = PS._MNT_PARAM_SONUC.pa, c = K.baglam(P._mntParamHazirlik(n).ctx);
-    const v11 = PS._mntPrmV11(ent, PS._mntParamOzet(ent, c).S, PS._mntParamOzet(ent, c).Hk, c);
-    expect(v11.uzlasi.ad).toBe('En az ihlalli');
+    expect(d.querySelector('.ve-pd-kap[data-pd="mod"]').textContent).toContain('K1');
+    expect(d.querySelector('.ve-pd-kap[data-pd="dag"]').textContent).toContain('K1');
+    expect(d.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun 0 / ' + S.N);
   });
 
-  test('CANLI: sınır, açıklık ve ağırlık değişince tarama yinelenmez; Sonuç o sınırlarla YENİ taramanın aynısı', () => {
-    const n = kur(), say = { n: 0 };
-    taraSakla(n, say);
-    const once = say.n;
-    expect(once).toBe(216);
-    const ilk = dom(P.getMntParamPropertiesHTML(n));                       // bugünkü sınırlarla bir kez çizildi (bellekte)
-    expect(ilk.querySelector('#ve-mnt-param-durum-pa').textContent).toMatch(/^Uygun \d+ \/ 216$/);
-    P.veMntParamSinir('pa', 'sehimUst', '6');
-    P.veMntParamAcik('pa', 'ayrisma', true);
-    P.veMntParamSinir('pa', 'agirlik', '0,2');
-    const d = dom(P.getMntParamPropertiesHTML(n));
-    expect(say.n).toBe(once);                                              // tarama yinelenmedi
-    const canli = PS._mntParamOzet(PS._MNT_PARAM_SONUC.pa, K.baglam(P._mntParamHazirlik(n).ctx)).S;
-    const yeni = (() => { const Hz = P._mntParamHazirlik(n), O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
-      const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
-      it.adim(Infinity); return it.sonuc(); })();
-    const sade = (S) => JSON.stringify(Object.assign({}, S, { sure: 0, olc: null, ctx: null }));
-    expect(sade(canli)).toBe(sade(yeni));
-    expect(yeni.red.ayrisma).toBeGreaterThanOrEqual(0);                     // açılan kısıt özette
-    expect(d.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun ' + yeni.uygunN + ' / 216');
-    // sınır sıkılaşınca cevap da değişir (bellek sınırla anahtarlı)
-    P.veMntParamSinir('pa', 'sehimUst', '1');
-    const d2 = dom(P.getMntParamPropertiesHTML(n));
-    expect(d2.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun 0 / 216');
-  });
-
-  test('ESKİME: model · aday · sabit grup · tolerans · sürünme eskitir; sınır · açıklık · ağırlık · kapalı toleransın değeri · çözüm eskitmez', () => {
+  test('ESKİME: model · aday · sabit grup · toleransın açıklığı ve açıkken değeri eskitir; kapalı toleransın değeri · çözüm · eski projenin ek kısıtı eskitmez', () => {
     const taze = (n) => PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze;
-    const dene = (fn, beklenen) => { const n = kur(); taraSakla(n); fn(n); return [beklenen, taze(n)]; };
+    const dene = (fn, beklenen, data) => { const n = kur(data); taraSakla(n); fn(n); return [beklenen, taze(n)]; };
     const sonuc = [
       dene(() => { global.nodes.find((x) => x.type === 'mnt-mount').data.x += 5; }, false),
       dene(() => { global.nodes.find((x) => x.type === 'mnt-motor').data.mass += 1; }, false),
-      dene((n) => { P.veMntParamAday('pa', ADAY[5], false); }, false),
-      dene((n) => { P.veMntParamSabit('pa', 1, true); }, false),
-      dene(() => { P.veMntParamAcik('pa', 'tolerans', true); }, false),
-      dene(() => { P.veMntParamSinir('pa', 'surunme', '20'); }, false),
-      dene(() => { P.veMntParamSinir('pa', 'sehimUst', '7'); P.veMntParamSinir('pa', 'isletmeUst', '9'); }, true),
-      dene(() => { P.veMntParamAcik('pa', 'cekme', false); }, true),
-      dene(() => { P.veMntParamSinir('pa', 'agirlik', '0,9'); }, true),
-      dene(() => { P.veMntParamSinir('pa', 'tolerans', '25'); }, true),           // tolerans kapalıyken değeri taramaya girmez
+      dene(() => { P.veMntParamAday('pa', ADAY[5], false); }, false),
+      dene(() => { P.veMntParamSabit('pa', 1, true); }, false),
+      dene(() => { P.veMntParamToleransAc('pa', true); }, false),
+      dene(() => { P.veMntParamTolerans('pa', '25'); }, false, { acik: { tolerans: true } }),
+      dene(() => { P.veMntParamTolerans('pa', '25'); }, true),             // tolerans kapalıyken değeri taramaya girmez
+      dene((n) => { n.data.acik = { darbe: true, sehim: true }; n.data.sinir = { sehimUst: 1, surunme: 50, agirlik: 0 }; }, true),
       dene(() => { const s = global.nodes.find((x) => x.type === 'mnt-solver'); global._veMntLast = cp._mntComputeResults(s.id); }, true)
     ];
     sonuc.forEach((x, i) => expect([i, x[1]]).toEqual([i, x[0]]));
     // eskimiş tarama: Sonuç yalnız durumu yazar, eksik bandında
-    const n = kur(); taraSakla(n); P.veMntParamAcik('pa', 'tolerans', true);
+    const n = kur(); taraSakla(n); P.veMntParamToleransAc('pa', true);
     const d = dom(P.getMntParamPropertiesHTML(n));
     const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('eksik');
@@ -830,10 +913,10 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(d.querySelector('.ve-fp-eksik').textContent).toContain('Taramadan sonra girdi değişti');
   });
 
-  // GALERİ: on diyagram tam ekranda, yalnız açılınca çizilir; soldaki listeden
-  // geçiş AYNI katmanda; kesit, büyüklük, K1 ve kamera seçimi GÖRÜNÜM durumu —
+  // GALERİ: dokuz diyagram tam ekranda, yalnız açılınca çizilir; soldaki listeden
+  // geçiş AYNI katmanda; kesit, büyüklük ve kamera seçimi GÖRÜNÜM durumu —
   // modelde değil (geri-al yığınına ve düğüme yazılmaz).
-  test('GALERİ: ray geçişi aynı katmanda; seçimler galeriye yansır ve modele yazılmaz; açık kısıtların kodu ve adı', () => {
+  test('GALERİ: ray geçişi aynı katmanda; seçimler galeriye yansır ve modele yazılmaz; dört kriterin kodu ve adı', () => {
     const n = kur(); taraSakla(n);
     document.body.innerHTML = '';
     const boy = (ad, v) => { const e = Object.getOwnPropertyDescriptor(HTMLElement.prototype, ad); Object.defineProperty(HTMLElement.prototype, ad, { configurable: true, get: () => v }); return e; };
@@ -869,16 +952,14 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
       expect(PS._MNT_PARAM_KAM['pa|d2']).toBeUndefined();
       expect(global.saveState).not.toHaveBeenCalled();
       expect(JSON.stringify(global.nodes.map((x) => x.data))).toBe(veri);
-      const c = K.baglam(P._mntParamHazirlik(n).ctx);
-      expect([...document.querySelectorAll('.ve-pd-kod dt')].map((x) => x.textContent))
-        .toEqual(K.KISITLAR.filter((Q) => c.acik[Q.k]).map((Q) => (Q.zorunlu ? 'K' : '') + Q.no));
-      expect([...document.querySelectorAll('.ve-pd-kod dd')].map((x) => x.textContent))
-        .toEqual(K.KISITLAR.filter((Q) => c.acik[Q.k]).map((Q) => Q.ad));
+      expect([...document.querySelectorAll('.ve-pd-kod dt')].map((x) => x.textContent)).toEqual(['K1', 'K1a', 'K1b', 'K2']);
+      expect([...document.querySelectorAll('.ve-pd-kod dd')].map((x) => x.textContent)).toEqual(KR.map((q) => P._MNT_PARAM_KRITER_AD[q]));
       document.getElementById('ve-mnt-fs-x').click();
       expect(kat().length).toBe(0);
       PS.veMntParamTamEkran('pa', 'd2');                                    // kapandıktan sonra yeniden açılır
       expect(kat().length).toBe(1);
       expect(basili()).toEqual(['d2']);
+      expect(ciz().getAttribute('aria-label')).toBe('Kriter penceresi');
       document.getElementById('ve-mnt-fs-x').click();
     } finally {
       eski.forEach(([ad, e]) => { if (e) Object.defineProperty(HTMLElement.prototype, ad, e); else delete HTMLElement.prototype[ad]; });
@@ -888,40 +969,42 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
   test('proje değişince taramalar ve görünüm seçimleri unutulur (topology.js → veResetSubtopoNav)', () => {
     const n = kur(); taraSakla(n);
     PS.veMntParamKesit('pa', 'cift', '0,1');
+    global.showNodeProperties = jest.fn();
+    PS.veMntParamKSec('pa', 4);
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n))).not.toBeNull();
     PS.veMntParamUnut();
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n))).toBeNull();
     expect(PS._MNT_PARAM_KESIT.pa).toBeUndefined();
+    expect(PS._MNT_PARAM_SECIM.pa).toBeUndefined();
     const src = require('fs').readFileSync(require.resolve('../../js/topology.js'), 'utf8');
     const fn = src.slice(src.indexOf('function veResetSubtopoNav('), src.indexOf('\n}', src.indexOf('function veResetSubtopoNav(')));
     expect(fn).toContain('veMntParamUnut()');
   });
 
-  test('RAPOR: Sonuç düğmesi bugünkü sınırlarla indirir; eskimiş taramada indirmez', () => {
+  test('RAPOR: Sonuç düğmesi indirir — pencerenin K listesi; eskimiş taramada indirmez', () => {
     const n = kur(); taraSakla(n);
     const indir = jest.fn();
     global._mntReportDownload = indir;
     global._mntReportEnsureAssets = (cb) => cb(true);
-    expect(PS._mntParamOzet(PS._MNT_PARAM_SONUC.pa, K.baglam(P._mntParamHazirlik(n).ctx)).S.uygunN).toBeGreaterThan(0);
-    P.veMntParamSinir('pa', 'sehimUst', '1');                              // hiçbir kombinasyon sağlamaz
     PS.veMntParamRapor('pa');
     expect(indir).toHaveBeenCalledTimes(1);
-    expect(indir.mock.calls[0][0]).toContain(' · uygun 0 · ');
-    expect(indir.mock.calls[0][0]).toContain('<span class="t">Uygun kombinasyon yok</span>');
-    P.veMntParamAcik('pa', 'tolerans', true);
+    const html = indir.mock.calls[0][0];
+    expect(html).toContain('K1 · En uygun: grup başına tip');
+    expect(html).toContain(' · dört kesin kriteri sağlayan ');
+    P.veMntParamToleransAc('pa', true);
     PS.veMntParamRapor('pa');
     expect(indir).toHaveBeenCalledTimes(1);
   });
 
-  // MODELE UYGULA (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran bir
-  // düğme yok; altı takozun tipini tek tek değiştirdim"). Öneri ya da yakın
-  // seçenek tek tıkla taranan grupların takozlarına — Takoz penceresinin
-  // yazıcısıyla, TEK geri-al adımında; sabit grup yerinde. Tarama eskimez:
-  // uygulanan kombinasyon "Mevcut" olur.
-  test('UYGULA: Takoz penceresinin yazımı, tek geri-al adımı, sabit grup yerinde; tarama taze, Mevcut = öneri, düğme kapalı ve sebebi ipucunda', () => {
+  // MODELE UYGULA (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran bir düğme yok;
+  // altı takozun tipini tek tek değiştirdim"). Seçilen K tek tıkla taranan grupların
+  // takozlarına — Takoz penceresinin yazıcısıyla, TEK geri-al adımında; sabit grup
+  // yerinde. Tarama eskimez: uygulanan kombinasyon K0 olur.
+  test('UYGULA: seçilen K Takoz penceresinin yazımıyla, tek geri-al adımı, sabit grup yerinde; tarama taze, K0 = uygulanan, düğme kapalı ve sebebi ipucunda', () => {
     const n = kur();
     P.veMntParamSabit('pa', 3, true);
-    const { S } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa, idx = S.sira[0].idx, t = ent.D.tipler(idx), G = ent.M.G;
+    taraSakla(n);
+    const { c, ent, Z } = ozet(n), L = PS._mntParamKonfig(ent, Z, c), idx = L[1].idx, t = ent.D.tipler(idx), G = ent.M.G;
     expect(t[2]).toBeNull();
     const tk = () => global.nodes.filter((x) => x.type === 'mnt-mount');
     const veri = () => JSON.stringify(tk().map((x) => x.data));
@@ -939,30 +1022,28 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(global.showNodeProperties).toHaveBeenCalledWith(n);
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
     expect(PS._MNT_PARAM_SONUC.pa).toBe(ent);
-    expect(JSON.stringify(ent.mevcut.o1.f)).toBe(JSON.stringify(ent.O.olc1(t).f));   // mevcut = önerinin ölçümü
+    expect(JSON.stringify(ent.mevcut.o1.f)).toBe(JSON.stringify(ent.O.olc1(t).f));   // K0 = uygulananın ölçümü
     const d = dom(P.getMntParamPropertiesHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat.getAttribute('data-d')).toBe('ok');
+    expect(basliklar(d)[1]).toBe('K1');
     expect([...kat.querySelectorAll('.ve-prm-og-s em')].map((e) => e.textContent)).toEqual(['Aynı', 'Aynı', 'Sabit']);
     const hucre = (td) => [td.textContent, td.className];
     [...kat.querySelectorAll('table.ve-prm-kriter tbody tr')].forEach((r) => expect(hucre(r.children[2])).toEqual(hucre(r.children[3])));
     const b = kat.querySelector('.ve-prm-eylem button[data-uygula="' + idx + '"]');
-    expect(basliklar(d)[0]).toBe(S.uygunN ? 'Öneri' : 'En az ihlalli');      // sabit arka grupla uygun yok
-    expect([b.getAttribute('aria-disabled'), b.getAttribute('title'), b.getAttribute('onclick')]).toEqual(['true', basliklar(d)[0] + ' modelde.', null]);
+    expect([b.getAttribute('aria-disabled'), b.getAttribute('title'), b.getAttribute('onclick')]).toEqual(['true', 'K1 modelde.', null]);
     expect(PS.veMntParamUygula('pa', idx)).toBe(0);                         // modeldeki kombinasyon: değişen yok, adım yok
     expect(global.saveState).toHaveBeenCalledTimes(1);
-    // yakın seçenek: kendi kombinasyonu; öneri düğmesi yeniden açık
-    const x = PS._mntPrmYakinL(ent, PS._mntParamOzet(ent, K.baglam(P._mntParamHazirlik(n).ctx)))[0];
-    expect(PS.veMntParamUygula('pa', x)).toBeGreaterThan(0);
+    // sıranın ikincisi: kendi kombinasyonu; K1'in düğmesi yeniden açık
+    expect(PS.veMntParamUygula('pa', Z.S.sira[1].idx)).toBeGreaterThan(0);
     const d2 = dom(P.getMntParamPropertiesHTML(n));
     expect(d2.querySelector('.ve-prm-eylem button[data-uygula="' + idx + '"]').getAttribute('aria-disabled')).toBeNull();
-    expect(d2.querySelector('.ve-prm-yakin button[data-uygula="' + x + '"]').getAttribute('title')).toBe('Seçenek modelde.');
-    // geri-al: model eski hâline dönünce mevcut da döner
+    // geri-al: model eski hâline dönünce K0 da döner
     const eski = JSON.parse(once);
     tk().forEach((m, i) => { m.data = eski[i]; });
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
     expect(JSON.stringify(ent.mevcut)).toBe(mev0);
     // eskimiş taramada uygulanmaz
-    P.veMntParamAcik('pa', 'tolerans', true);
+    P.veMntParamToleransAc('pa', true);
     expect(PS.veMntParamUygula('pa', idx)).toBe(0);
     expect(veri()).toBe(once);
   });
@@ -982,7 +1063,7 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx)), nl = Hz.M.G.map(() => null);
     expect(JSON.stringify(ent.mevcut)).toBe(JSON.stringify({ o1: O.olc1(nl), o2: O.olc2(nl) }));
     expect(ent.M).toBe(Hz.M);
-    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: false });
     it.adim(Infinity);
     const imza = (D) => JSON.stringify(['T', 'd', 'fMin', 'fMax', 'd1', 'd2'].map((k) => Array.from(D[k]))
       .concat(K.KISITLAR.map((Q) => Array.from(D.X[Q.k]))));
@@ -1008,29 +1089,32 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
 
 // AMC KAPASİTESİ (2026-11-10): AMC tipleri üreticinin tablosundaki "Max. Load"u taşır
 // (js/mount-amc.js); E4 (taşıma kapasitesi) ve E9 (darbe yükü ≤ 2 × anma, Paulstra)
-// artık o tiplerde ÖLÇÜLÜR. ASFAT, altı aday: tek uygun kombinasyon Cone 67 50 ShA'lı
-// ve E9'a takılır (AMC'nin kendi kataloğu rondelalı konide 3 × aşırı yük der — sınır
-// kullanıcının; değiştirilmedi). E9 kapalıyken aynı kombinasyon uygun.
-describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür', () => {
+// motorda o tiplerde ÖLÇÜLÜR (varsayılan bağlam). Pencere ek kısıtları sıralamaya
+// katmaz (Excel'in kuralı): ASFAT'ın, altı adayla, Cone 67 50 ShA'lı kombinasyonu
+// dört kesin kriteri sağlar ve E9'a takılmaz; kapasite Excel'in Tarama'sında veridir.
+describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); pencere sıralamaya katmaz', () => {
   const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
-  const tara2 = (acik) => {
+  const tara2 = (ctx) => {
     modelKur('asfat');
     const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
-    if (acik) n.data.acik = acik;
     global.nodes.push(n);
-    const Hz = P._mntParamHazirlik(n);
-    const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
-    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    const Hz = P._mntParamHazirlik(n), cx = ctx ? Object.assign({ fAtes: Hz.M.fAtes }, ctx) : Hz.ctx;
+    const O = P._mntParamOlcucu(Hz.M, K.baglam(cx));
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: cx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
     it.adim(Infinity);
     return it.sonuc();
   };
-  test('Cone 67 50 ShA 900 kg taşır; ASFAT\'ın tek uygun kombinasyonu E9\'da elenir, E9 kapalıyken uygun', () => {
+  test('Cone 67 50 ShA 900 kg taşır; varsayılan bağlamda ASFAT\'ın tek uygun kombinasyonu E9\'da elenir, E9 kapalıyken uygun; pencerenin bağlamında sıradadır', () => {
     expect(cp.VE_MOUNT_LIBRARY.amc137731.maxLoad).toBe(900);
-    const S = tara2();
+    const S = tara2({});
     const kalan = (k) => S.huni.find((h) => h.k === k).kalan;
     expect([S.N, kalan('kapasite'), kalan('darbe'), S.uygunN]).toEqual([216, 1, 0, 0]);
-    const A = tara2({ darbe: false });
+    const A = tara2({ acik: { darbe: false } });
     expect(A.uygunN).toBe(1);
     expect(A.sira[0].tipler).toContain('amc137731');
+    const W = tara2();
+    expect(W.huni.map((h) => h.k)).toEqual(['cozulen', 'k1', 'k1a', 'k1b', 'k2']);
+    expect(W.uygunN).toBeGreaterThan(1);
+    expect(W.sira.slice(0, W.uygunN).some((r) => JSON.stringify(r.tipler) === JSON.stringify(A.sira[0].tipler))).toBe(true);
   });
 });

@@ -9,8 +9,6 @@
  *     (`.ve-pd-y`), boyu ≥ 9,5 px (alt simge hariç), tahmini kutularıyla iki
  *     yazı üst üste değil ve çizimin içinde; gövdede NaN · undefined ·
  *     Infinity yok. (Gerçek kutular: yerlesim.spec.js'in yüzey turu.)
- *   · BASAMAK — sınır duyarlılığının çizgisi her noktada sayımın kendisi
- *     (≤ üst sınır · ≥ alt sınır, eşitlik sağlıyor)
  *   · SINIR — kesit haritasının sınır çizgisi tam olarak hükmü ayrışan komşu
  *     hücrelerin arasında
  *   · 3B — dönerken ölçek değişmez (kübü çevreleyen küreden sığdırma): her
@@ -72,10 +70,6 @@ const V7 = () => ({ satir: [
 const V9 = () => ({ kisit: [['K1', 'Modal bant', 18718, 792], ['K1a', 'Modlar arası ayrıklık', 7331, 7], ['K1b', 'Yaylandırılmamış kütle bandı', 14494, 14],
   ['K2', 'Rölanti iletilebilirliği', 220, 0], ['E1', 'Statik sehim, alt sınır', 2688, 0], ['E2', 'Statik sehim, üst sınır', 6121, 1],
   ['E8', 'Çekme', 10212, 0]].map((q) => ({ no: q[0], ad: q[1], red: q[2], tek: q[3], ip: q[0] })) });
-const V10 = () => ({ panel: [
-  { no: 'E1', ad: 'Statik sehim, alt sınır [mm]', kisa: 'δ_s alt [mm]', yon: 'alt', deger: [2.2, 3.4, 4.905], na: 0, sinir: 3, xMin: 1.7, xMax: 8.2 },
-  { no: 'E2', ad: 'Statik sehim, üst sınır [mm]', kisa: 'δ_s üst [mm]', yon: 'ust', deger: [4.905, 5.06], na: 0, sinir: 5, xMin: 2.8, xMax: 8.2 },
-  { no: 'E4', ad: 'Taşıma kapasitesi [%]', kisa: 'Kapasite [%]', yon: 'ust', deger: [62, 81, 99.5], na: 3, sinir: 100, xMin: 58, xMax: 165 }] });
 const V8 = () => {
   const tip = [192, 300, 450, 640, 720, 800, 1150, 1150, 1280, 1350, 1530, 1900, 2300, 2500].map((kz) => ({ kz }));
   const seri = [1, 2, 3].map((no, j) => ({ no, ad: 'Grup ' + no, T: tip.map((t, i) => 8 + j * 5 + 30 * Math.exp(-i) + i * 0.6),
@@ -106,7 +100,7 @@ const VD = () => ({ mevcut: { x: 2, y: 21.9, ip: 'Mevcut' }, oneri: { x: 4.9, y:
 const V3B = (az, el) => {
   const nokta = [];
   for (let i = 0; i < 400; i++) nokta.push({ p: [1 + 12 * rnd(), 8 + 30 * rnd(), 60 * rnd()], s: 've-pd-n1', r: 2, i });
-  return { ad: 'Kısıt penceresi', kam: { az, el }, nokta,
+  return { ad: 'Kriter penceresi', kam: { az, el }, nokta,
     eks: [{ ad: 'δ_s [mm]', min: 0, max: 14, I: C.isaretler(0, 14, 4) }, { ad: 'f_maks [Hz]', min: 8, max: 38, I: C.isaretler(8, 38, 4) },
       { ad: 'T [%]', min: 0, max: 60, I: C.isaretler(0, 60, 4) }],
     kutu: { a: [3, 8, 0], b: [5, 15, 50] }, duzlem: { z: 50 },
@@ -117,9 +111,9 @@ describe('YAZI — her diyagram pencerede ve tam ekranda', () => {
   const W = [300, 357, 640, 1400];
   const ciz = {
     'Pareto cephesi': (o) => C.pareto(V11(), o), 'Mod yerleşimi': (o) => C.modlar(V7(), o),
-    'Bağlayıcı kısıtlar': (o) => C.baglayici(V9(), o), 'Sınır duyarlılığı': (o) => C.duyarlilik(V10(), o),
-    'Ana etkiler': (o) => C.anaEtki(V8(), o), 'Kısıt haritaları': (o) => C.haritalar(kesitV(27), o),
-    'İletilebilirlik haritası': (o) => C.tHaritasi(kesitV(27), o), 'Kısıt penceresi': (o) => C.uc(V3B(235, 24), o),
+    'Bağlayıcı kriterler': (o) => C.baglayici(V9(), o),
+    'Ana etkiler': (o) => C.anaEtki(V8(), o), 'Kriter haritaları': (o) => C.haritalar(kesitV(27), o),
+    'İletilebilirlik haritası': (o) => C.tHaritasi(kesitV(27), o), 'Kriter penceresi': (o) => C.uc(V3B(235, 24), o),
     'Sonuç · Modlar': (o) => C.modSerit(VM(), o), 'Sonuç · Statik sehim ve iletilebilirlik': (o) => C.sehimT(VD(), o)
   };
   Object.keys(ciz).forEach((ad) => {
@@ -151,7 +145,6 @@ describe('YAZI — her diyagram pencerede ve tam ekranda', () => {
       expect(yazi(C.modlar(V7(), o).svg)).toEqual(expect.arrayContaining(['f [Hz]', 'Mevcut', 'Uzlaşı', 'E3', '1b', 'K1']));
       expect(yazi(C.baglayici(V9(), o).svg)).toEqual(expect.arrayContaining(w < 340 ? ['İhlal', 'Yalnız bu'] : ['İhlal eden', 'Yalnız bunu ihlal eden']));
       expect(yazi(C.anaEtki(V8(), o).svg).filter((t) => t === 'kz [N/mm]').length).toBe(2);
-      expect(yazi(C.duyarlilik(V10(), o).svg).filter((t) => /^E\d · /.test(t)).length).toBe(3);
       expect(yazi(C.tHaritasi(kesitV(27), o).svg)).toEqual(expect.arrayContaining(['1 · kz [N/mm]', '3 · kz [N/mm]']));
       expect(yazi(C.uc(V3B(235, 24), o).svg)).toEqual(expect.arrayContaining(['δs [mm]', 'fmaks [Hz]', 'T [%]']));
       expect(yazi(C.modSerit(VM(), o).svg)).toEqual(expect.arrayContaining(['Frekans [Hz]', 'Mevcut', 'Öneri', '8–10']));
@@ -203,35 +196,6 @@ describe('SADE GRAFİKLER — Sonuç\'un modlar şeridi ile statik sehim–ileti
     // mevcut ile öneri üst üste: ok çizilmez
     const V = VD(); V.oneri.x = 2.02; V.oneri.y = 21.8;
     expect(svgDom(C.sehimT(V, { W: 357, fs: FS }).svg).querySelector('line.ve-pd-ok')).toBeNull();
-  });
-});
-
-describe('BASAMAK — sınır duyarlılığının çizgisi sayımın kendisi', () => {
-  const say = (P, L) => P.na + P.deger.filter((v) => (P.yon === 'ust' ? v <= L : v >= L)).length;
-  test('rastgele ölçülerde her köşe ve her ara noktada sayım; eşitlik sağlıyor', () => {
-    for (let k = 0; k < 40; k++) {
-      const n = 1 + Math.floor(rnd() * 30);
-      const deger = Array.from({ length: n }, () => Math.round(rnd() * 40) / 4).sort((a, b) => a - b);
-      ['ust', 'alt'].forEach((yon) => {
-        const P = { yon, deger, na: k % 3, xMin: -1, xMax: 11 };
-        const pts = C.basamak(P);
-        expect(pts[0]).toEqual([P.xMin, say(P, P.xMin)]);
-        expect(pts[pts.length - 1]).toEqual([P.xMax, say(P, P.xMax)]);
-        for (let i = 1; i < pts.length; i++) {
-          expect(pts[i][0]).toBeGreaterThanOrEqual(pts[i - 1][0]);
-          if (pts[i][0] > pts[i - 1][0]) {
-            const orta = (pts[i][0] + pts[i - 1][0]) / 2;
-            expect(pts[i - 1][1]).toBe(say(P, orta));                       // yatay parça sayımın kendisi
-            expect(pts[i][1]).toBe(pts[i - 1][1]);                          // ve gerçekten yatay (köşegen değil)
-          }
-        }
-        deger.forEach((v) => {                                             // ölçünün üstündeki sınır: eşitlik sağlıyor
-          const q = pts.filter((p) => p[0] === v);
-          if (v > P.xMin && v < P.xMax) expect(q[q.length - 1][1]).toBe(say(P, v + 1e-12) + (yon === 'alt' ? 0 : 0));
-          if (v > P.xMin && v < P.xMax) expect(q.some((p) => p[1] === say(P, v))).toBe(true);
-        });
-      });
-    }
   });
 });
 

@@ -381,33 +381,40 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
-  Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz; dört kesin kriter
-  (1 · 1a · 1b · 2) + kaynaklı ek kısıtlar (E1–E9), Pareto ve uzlaşı. Ayrıntılı rapor
-  AYRI belgede, ana rapora eklenmez. Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar
-  (tam tarama: ikinci aşama her kombinasyonda), sınır değişince yalnız hüküm yeniden
-  kurulur; tam tarama TEK GEÇİŞ (kombinasyonun iki aşaması ardışık, ölçücü
-  hazırlığı paylaşır). **Hazırlık Çözücü'nün toplayıcısının TAMAMI** — yön ayarı (ileri ·
+  Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
+  (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
+  kriteri (1 · 1a · 1b · 2) sağlayanlar en küçük statik sehimden, en çok dokuz; hiçbiri
+  sağlamıyorsa en az ihlalli dokuz — normalleştirilmiş ihlallerin toplamı (`veMntKatalog.siralama`;
+  Excel'in Tarama'sı ayrı: kriter sayısı → sehim). Pencerede ek kısıt (E1–E9), sürünme payı, amaç ağırlığı,
+  uzlaşı ve yakın seçenek YOK — motor ölçer, pencere sıralamaya katmaz (`_mntParamCtx`; eski
+  projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
+  gruplarda. Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
+  Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
+  yalnız kesin kriterleri sağlayanlarda). **Hazırlık Çözücü'nün toplayıcısının TAMAMI** — yön ayarı (ileri ·
   kaldırım · tork yönü) dâhil, yalnız takozlar değişir: yön düşünce yük durumları varsayılana
   iniyordu (Tulga'nın iki tork durumu ters, Adams'tan RMS 17,28 mm). Kapı: `mount-katalog.test.js`
-  (→ *DEPO* · *CANLI* · *TAM* · *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *TEK YOL — yön
-  ayarıyla* · *AYNI HÜKÜM* · *SONUÇ* · *KOŞUCU*).
+  (→ *SIRA* · *DEPO* · *CANLI* · *TAM* · *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *TEK YOL — yön
+  ayarıyla* · *AYNI HÜKÜM* · *PENCERE* · *SONUÇ* · *KOŞUCU* · *RAPOR*).
 - `js/mount-param-ciz.js` + `js/cp-mount-param-sonuc.js` — Parametrik Analiz'in
   **Sonuç** kategorisi (kullanıcı kararları 2026-10-18; *"Tablo + iki sade grafik,
-  diğer diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"*): Öneri ·
-  Kriterler (mevcut ↔ öneri; hükmü huninin hükmü) · Modlar · Statik sehim ve
-  iletilebilirlik · Yakın seçenekler · Eleme · Diyagramlar. Kısıtlar ADIYLA, kod
-  yok. On diyagram (2B · kesit · 3B) pencerede ÇİZİLMEZ: listeden tam ekranın
-  galerisinde açılır (soldaki liste, kısıt kodlarının anahtarı). DOM'suz SVG çizici,
+  diğer diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"*; 2026-11-11: Excel'in
+  kuralı): Konfigürasyonlar (K0 mevcut · K1…K9, `_mntParamKonfig` — Excel'in
+  Özet'i ve rapor AYNI listeden; satıra tık seçer, seçim görünüm durumu) · seçilen K (tipler,
+  statik sehim ve TR K0 → K, dört kriter) · Modlar · Statik sehim ve iletilebilirlik ·
+  Kriterleri sağlayan · Diyagramlar. Kriterler ADIYLA, kod yok; tip adı satırda bölünmez ve
+  AYIRT EDİCİ kısa adla (`veMntParamExcel.ayirici`: ailede birden çok kod varsa kodlu — Tulga'da
+  iki LMT 55 ShA "LMT-55"ti). Dokuz diyagram (2B · kesit · 3B) pencerede ÇİZİLMEZ: listeden tam
+  ekranın galerisinde açılır (soldaki liste, kriter kodlarının anahtarı). DOM'suz SVG çizici,
   sütunun gerçek genişliğinde. Tarama sonucu düğüm başına BELLEKTE (modelde değil);
-  girdi değişince imzayla eskir. **Modele uygula** (Öneri) ve yakın seçeneğin
-  **Uygula**sı kombinasyonu taranan grupların takozlarına Takoz penceresinin
-  yazıcısıyla (`_mntLibUygula`) yazar, TEK geri-al adımı; taranan grubun tipi
-  imzada YOK (her kombinasyon onu kütüphaneden takar): uygulamak taramayı
-  eskitmez, mevcut tasarım yeniden ölçülür. Kapı: `mount-param-ciz.test.js` (→ *SADE
-  GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
+  girdi değişince imzayla eskir. **Modele uygula** seçilen K'nın kombinasyonunu taranan
+  grupların takozlarına Takoz penceresinin yazıcısıyla (`_mntLibUygula`) yazar, TEK geri-al
+  adımı; taranan grubun tipi imzada YOK (her kombinasyon onu kütüphaneden takar): uygulamak
+  taramayı eskitmez, K0 yeniden ölçülür. Kapı: `mount-param-ciz.test.js` (→ *SADE
+  GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* (→ *KONFİGÜRASYONLAR* · *EXCEL = PENCERE* ·
+  *SEÇİM*) · *UYGULA* · *İMZA* + `mount-param-excel.test.js` → *AYIRT EDİCİ* + `mount-param-sonuc.spec.js`.
 - `js/mount-param-excel.js` + `js/xlsx-yaz.js` — Parametrik Analiz'in **Excel çıktısı**
   (kullanıcı kararı 2026-11-09: *"Kullanıcı bu Excel formatında çıktı alacak"*; düzen Canlı
-  Not'ta 19 notla kuruldu): Öneri'deki **Excel’i indir** → Özet · Tarama · Sonuç (sekmeler
+  Not'ta 19 notla kuruldu): seçilen K'nın bölümündeki **Excel’i indir** → Özet · Tarama · Sonuç (sekmeler
   görünür). Düzen o notların hükmü: tek renkli Uygunluk sütunu (satır boyanmaz), kriterin tanımı
   başlığın NOTUNDA, açıklama · girdi · bulgu · seçim kuralı satırı YOK, ızgara kapalı, kullanılmayan
   satır/sütun gizli, adlar sayfaya bağlı, "ASR…" eki yazılmaz. **Uygunluk STATİK SEHİMDEN**
@@ -991,8 +998,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   çözüm durumu). Kapı: `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ*; gerekçe
   `docs/decisions/ortak-yuzeyler.md`. **TEK İSTİSNA** (kullanıcı kararı 2026-10-18:
   *"Önerilerini uygulayalım … Bileşen penceresinin içine entegre edersin"*):
-  Parametrik Analiz'in **Sonuç** kategorisi — yalnız TARAMANIN sonucu (öneri,
-  kriterler, iki grafik; on diyagram galeride), Çözücü'nün çözümü değil; başka
+  Parametrik Analiz'in **Sonuç** kategorisi — yalnız TARAMANIN sonucu (konfigürasyonlar,
+  seçilenin kriterleri, iki grafik; dokuz diyagram galeride), Çözücü'nün çözümü değil; başka
   pencereye genişletilmez. Kapı: `mount-param.test.js` → *SONUÇ*.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
