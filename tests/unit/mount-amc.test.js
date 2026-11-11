@@ -478,6 +478,40 @@ describe('TEKNİK RESİM — Tip satırının (i) düğmesi (Canlı Not 111)', (
     expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
     expect(document.activeElement).toBe(b);
   });
+  // Canlı Not 154 (kullanıcı 2026-11-11: "Teknik resimler çok büyük geliyor. Ufak gelsin. Göz
+  // yoruyor."): resimler 640 px genişlikte, boyları 307–1336 px; pencere dosyanın ölçüsünde açılıp
+  // ekranın boyunu dolduruyordu (Conical mount 1436: 582 × 888). Teknik resmin penceresi ÜST SINIR
+  // taşır — uzun kenar en çok 480 px, genişlik ve boy auto (oran korunur), pencere resmin ölçüsünde;
+  // son değişikliklerin görseli (Canlı Not 53) sınırsız, dosyanın ölçüsünde.
+  test('KÜÇÜK (Canlı Not 154): teknik resmin uzun kenarı en çok 480 px, oranı korunur; son değişikliklerin görseli dosyanın ölçüsünde', () => {
+    expect(cp.VE_MNT_CIZIM_AZAMI).toBe(480);
+    // dört (i) türü: AMC · A+P · LASPAR · programın LASPAR girdisi
+    for (const [nit, kod] of [['data-amc', '137963'], ['data-ap', '1221470202'], ['data-lp', 'MLMT-0609-03-TK55'], ['data-lp-eski', 'lmt1433-00-40sh']]) {
+      const b = document.createElement('button'); b.setAttribute(nit, kod); document.body.appendChild(b);
+      expect(cp.veMntLibCizimAc(b)).toBe(true);
+      const pen = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere');
+      expect([nit, pen.getAttribute('data-azami'), pen.style.getPropertyValue('--ve-bas-azami').trim()]).toEqual([nit, '480', '480px']);
+      expect(pen.querySelector('.ve-bas-buyuk-govde img').hasAttribute('width')).toBe(false);   // ölçü dosyadan, sınır CSS'te
+      BSK.veBasResimKapat(); b.remove();
+    }
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('.ve-bas-buyuk-govde img')).toMatch(/width:auto; height:auto;/);
+    expect(kural('.ve-bas-buyuk-pencere[data-azami] .ve-bas-buyuk-govde img'))
+      .toMatch(/max-width:min\(var\(--ve-bas-azami, 100vw\), calc\(100vw - 74px\)\); max-height:min\(var\(--ve-bas-azami, 100vh\), calc\(100vh - 74px - var\(--bant-h\)\)\)/);
+    // son değişikliklerin görseli: sınır yok, dosyanın ölçüsünde (küçük görsel 560 × 350 → 1120 × 700)
+    const kap = document.createElement('div');
+    kap.innerHTML = BSK.veBasDegisiklikHTML({ kayitlar: [{ tarih: 't', baslik: 'b', ayrinti: [{ konu: 'k', govde: [],
+      resimler: [{ src: 'data:image/webp;base64,AAAA', g: 560, y: 350, no: 22 }] }] }] });
+    document.body.appendChild(kap);
+    try {
+      expect(BSK.veBasResimAc(kap.querySelector('.ve-bas-degisiklik-resim-b'))).toBe(true);
+      const pen = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere');
+      const im = pen.querySelector('.ve-bas-buyuk-govde img');
+      expect([pen.hasAttribute('data-azami'), pen.hasAttribute('style'), im.getAttribute('width'), im.getAttribute('height')])
+        .toEqual([false, false, '1120', '700']);
+    } finally { BSK.veBasResimKapat(); kap.remove(); }
+  });
   test('bilinmeyen kod ya da pencere kiti yoksa hiçbir şey açılmaz', () => {
     const b = document.createElement('button'); b.setAttribute('data-amc', '999999');
     expect(cp.veMntLibCizimAc(b)).toBe(false);

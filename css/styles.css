@@ -11476,6 +11476,12 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   max-width:calc(100vw - 74px); max-height:calc(100vh - 74px - var(--bant-h));
   box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary);
 }
+/* Üst sınırlı görsel (teknik resim, Canlı Not 154): uzun kenarı en çok `--ve-bas-azami` (js:
+   veBasResimGoster → azami), oranı korunur (genişlik ve boy auto); dar ekranda yine ekrana sığar */
+.ve-bas-buyuk-pencere[data-azami] .ve-bas-buyuk-govde img{
+  max-width:min(var(--ve-bas-azami, 100vw), calc(100vw - 74px));
+  max-height:min(var(--ve-bas-azami, 100vh), calc(100vh - 74px - var(--bant-h)));
+}
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }

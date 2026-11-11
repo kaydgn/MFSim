@@ -384,7 +384,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
-  (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  (i) düğmesiyle pencere ailesinin penceresinde, KÜÇÜK: uzun kenarı en çok 480 px, oranı korunur,
+  pencere resmin ölçüsünde (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+  Ufak gelsin."*; son değişikliklerin görseli dosyanın ölçüsünde kalır; kapı `mount-amc.test.js` →
+  *TEKNİK RESİM* · *KÜÇÜK*); `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
   (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
   satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil); Tip satırının SONUNDA Önceki tip · Sonraki tip okları listenin sırasıyla gezer — listeden seçmenin aynısı, uçta ok kapalı (sebebi ipucunda), (i) okların solunda: (i) gelip gidince oklar yerinde (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu"*). **BMC teknik

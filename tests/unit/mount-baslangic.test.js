@@ -644,6 +644,7 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
       expect([kapat.getAttribute('aria-label'), kapat.querySelector('.mf-ico-x') !== null]).toEqual(['Kapat', true]);
       const im = pen.querySelector('.ve-bas-buyuk-govde img');
       expect([im.getAttribute('src'), im.getAttribute('width'), im.getAttribute('height')]).toEqual(['data:image/webp;base64,AAAA', '1120', '700']);
+      expect(pen.hasAttribute('data-azami')).toBe(false);   // üst sınır yok (teknik resmin sınırı onun çağıranında — Canlı Not 154)
       expect(document.activeElement).toBe(kapat);
       // Esc yalnız pencereyi kapatır (yakalama evresinde, alttaki katman görmez)
       const alt = jest.fn();

@@ -135,13 +135,18 @@ test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili 
   }
   await page.click('#ve-properties .mntlib-bilgi');
   await page.waitForFunction(() => { const i = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 10000 });
+  // Canlı Not 154 ("Teknik resimler çok büyük geliyor. Ufak gelsin."): 640 × 1078'lik resim uzun
+  // kenarı 480 px'te, oranı korunarak (çerçeve dâhil 286 × 480); pencere resmin ölçüsünde, ortada.
   const pen = await page.evaluate(() => {
     const p = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere').getBoundingClientRect();
-    return { baslik: document.getElementById('ve-bas-buyuk-baslik').textContent, en: document.querySelector('#ve-bas-buyuk-perde img').naturalWidth,
+    const im = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'), r = im.getBoundingClientRect();
+    return { baslik: document.getElementById('ve-bas-buyuk-baslik').textContent, en: im.naturalWidth,
+      resim: [Math.round(r.width), Math.round(r.height)], pencereG: Math.round(p.width) <= Math.round(r.width) + 28,
+      ortada: Math.abs((p.left + p.right) / 2 - innerWidth / 2) < 1 && Math.abs((p.top + p.bottom) / 2 - innerHeight / 2) < 1,
       sigar: p.left >= 0 && p.top >= 0 && p.right <= innerWidth && p.bottom <= innerHeight,
       kapat: !!document.querySelector('#ve-bas-buyuk-perde .ve-settings-header .ve-settings-close .mf-ico-x') };
   });
-  expect(pen).toEqual({ baslik: 'Cone 39 · teknik resim', en: 640, sigar: true, kapat: true });
+  expect(pen).toEqual({ baslik: 'Cone 39 · teknik resim', en: 640, resim: [286, 480], pencereG: true, ortada: true, sigar: true, kapat: true });
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => [!!document.getElementById('ve-bas-buyuk-perde'),
     !!(document.activeElement && document.activeElement.classList.contains('mntlib-bilgi')),

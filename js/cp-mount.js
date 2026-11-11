@@ -4619,7 +4619,13 @@ function _mntLibCizimDugme(node, e){
     + ' aria-label="Teknik resim" title="Teknik resim" aria-haspopup="dialog"'
     + ' onclick="veMntLibCizimAc(this)">'+veIkon('info')+'</button>';
 }
-// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner.
+// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner. TEKNİK RESİM
+// KÜÇÜK AÇILIR (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+// Ufak gelsin. Göz yoruyor."*): uzun kenarı en çok VE_MNT_CIZIM_AZAMI CSS px, oranı korunur,
+// pencere resmin ölçüsünde (resimler 640 px genişlikte, boyları 307–1336 px; önce ekranın
+// boyunu dolduruyordu). Son değişikliklerin görseli dosyanın ölçüsünde kalır (Canlı Not 53).
+// Kapı: mount-amc.test.js → *TEKNİK RESİM* (→ *KÜÇÜK*).
+var VE_MNT_CIZIM_AZAMI = 480;
 function veMntLibCizimAc(dugme){
   if(!dugme) return false;
   var a=dugme.getAttribute('data-amc'), p=dugme.getAttribute('data-ap');
@@ -4629,7 +4635,7 @@ function veMntLibCizimAc(dugme){
       : l ? (_MNT_LP ? _MNT_LP.kunye(l) : null)
       : le ? (_MNT_LP ? _MNT_LP.kunyeEski(le) : null) : null;
   if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
-  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
+  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme, azami:VE_MNT_CIZIM_AZAMI });
 }
 // KAYNAK (i)'DE (kullanıcı 2026-11-11, Canlı Not 139: *"Kaynak kısmını kaldıralım. Kaynağı 'ürün
 // ailesi' satırına bir (i) butonu koyarak belirtelim. Kullanıcı fare ile bunun üstüne geldiğinde
@@ -6216,7 +6222,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
     _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, _mntLibLpKunyeHTML: _mntLibLpKunyeHTML,
-    veMntLibCizimAc: veMntLibCizimAc,
+    veMntLibCizimAc: veMntLibCizimAc, VE_MNT_CIZIM_AZAMI: VE_MNT_CIZIM_AZAMI,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,
