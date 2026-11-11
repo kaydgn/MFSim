@@ -412,7 +412,7 @@ function veMntGetLibraryMap(){
 // Girdileri markaya göre gruplar: [{ ad, girdiler:[…] }] — katalog markaları
 // sabit sırada, Özel takozlar sonda; girdisiz marka listede yok. Takoz
 // Özellikleri'nin Marka listesi ve Takoz penceresinin tip listesi AYNI
-// gruplamadan okur; marka içinde sıra _mntLibSirali'den (AMC: aile · tip · sertlik).
+// gruplamadan okur; marka içinde sıra _mntLibSirali'den (AMC: adın sayı sırası — Canlı Not 134).
 function veMntLibMarkalar(girdiler){
   var out=[], L=_mntLibSirali(girdiler||[]);
   VE_MNT_LIB_MARKALAR.concat([VE_MNT_LIB_MARKA_OZEL]).forEach(function(ad){
@@ -462,6 +462,17 @@ function _mntLibTahminKunye(e){
 // Listelerin sırası: üretici veritabanı dışı katalog kendi sırasıyla, sonra AMC ve
 // A+P kodları ailenin, tipin, sertliğin sırasıyla (kütüphanenin iç sırası taramanın
 // kombinasyon sırası).
+// AMC ADIN SAYI SIRASIYLA (kullanıcı 2026-11-11, Canlı Not 134: *"AMC takoz isimlerini Cone
+// sıralarına göre diz. Yani Cone 38, Cone 39 şeklinde sıralı gitsin"*): ailenin sırası Cone
+// numarasını her ailede baştan başlatıyordu (… Cone 141 · Cone 00 · Cone 10 …). Ad sayıya duyarlı
+// karşılaştırılır: Cone 00 · 01 · 02 · 10 … 141, sonra DSM, Hydraulic Cone; aynı numarada çeşit ve
+// sertlik artan. A+P kendi sırasında. Liste sırasıdır — taramanın kombinasyon sırası kütüphanenin
+// iç sırası, değişmez.
+var _MNT_AD_SIRA = (typeof Intl !== 'undefined' && Intl.Collator) ? new Intl.Collator('en', { numeric:true, sensitivity:'base' }) : null;
+function _mntAdKarsilastir(a, b){
+  var x=String(a||'').replace(/\s*\(AMC \d+\)\s*$/, ''), y=String(b||'').replace(/\s*\(AMC \d+\)\s*$/, '');
+  return _MNT_AD_SIRA ? _MNT_AD_SIRA.compare(x, y) : (x < y ? -1 : x > y ? 1 : 0);
+}
 function _mntLibSirali(list){
   var yer={};
   (_MNT_AMC ? _MNT_AMC.kodlar() : []).forEach(function(k, i){ yer['amc'+k]=i; });
@@ -469,7 +480,10 @@ function _mntLibSirali(list){
   var id=function(e){ return e.amc ? 'amc'+e.amc.kod : (e.ap ? 'ap'+e.ap.kod : null); };
   var ure=list.filter(function(e){ return yer[id(e)]!==undefined; });
   var obur=list.filter(function(e){ return yer[id(e)]===undefined; });
-  ure.sort(function(a, b){ return yer[id(a)]-yer[id(b)]; });
+  ure.sort(function(a, b){
+    if(a.amc && b.amc) return _mntAdKarsilastir(a.name, b.name) || (yer[id(a)]-yer[id(b)]);
+    return yer[id(a)]-yer[id(b)];
+  });
   return obur.concat(ure);
 }
 
