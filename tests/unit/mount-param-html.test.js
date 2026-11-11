@@ -156,7 +156,10 @@ describe('SAYFA', () => {
     expect(c.slice(1, 5)).toEqual(['57RS313774', '57RS313773', 'Uygun değil', '2,90']);
     expect(c.slice(5, 9)).toEqual(['✓', '✓', '✗', '✓']);
     expect(c[9]).toBe('%10,3');
-    expect(metin(d.querySelector('.kunye'))).toBe('Ateşleme frekansı 35,00 Hz · Rölanti 700 dev/dk · 6 silindir · ζ 0,020 · Kütle 1.739,1 kg · 4 kombinasyon · 11.11.2026');
+    // Canlı not 2004 ("Daha güzel bir şekilde … yayalım bu bilgileri"): künye ad · değer hücreleri
+    expect([...d.querySelectorAll('.kunye > div')].map((x) => [metin(x.querySelector('dt')), metin(x.querySelector('dd'))])).toEqual([
+      ['Ateşleme frekansı [Hz]', '35,00'], ['Rölanti [dev/dk]', '700'], ['Silindir', '6'], ['Sönüm oranı ζ', '0,020'],
+      ['Kütle [kg]', '1.739,1'], ['Kombinasyon', '4'], ['Tarih', '11.11.2026']]);
   });
 
   test('Tarama: sayaç, satırlar; statik sehim başlığı sıralar (iki yön), sayfa düğmeleri kapalı', () => {

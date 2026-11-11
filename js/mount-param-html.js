@@ -128,7 +128,11 @@ var veMntParamHtml = (function(){
     '  font-variant-numeric:tabular-nums}',
     'header{background:var(--kagit);border-bottom:1px solid var(--cizgi);padding:16px 24px 0}',
     'h1{margin:0;font-size:var(--fs-h1);font-weight:600}',
-    '.kunye{margin:4px 0 12px;color:var(--soluk)}',
+    '.kunye{display:flex;flex-wrap:wrap;margin:10px 0 14px;border:1px solid var(--cizgi);background:var(--zemin)}',
+    '.kunye div{display:flex;flex-direction:column;gap:2px;padding:8px 18px;border-right:1px solid var(--cizgi);min-width:120px}',
+    '.kunye div:last-child{border-right:0}',
+    '.kunye dt{color:var(--soluk);font-size:var(--fs-kucuk)}',
+    '.kunye dd{margin:0;color:var(--ink);font-size:var(--fs-h2);font-weight:600}',
     'nav{display:flex;gap:0}',
     'nav a{padding:8px 14px;color:var(--soluk);text-decoration:none;border-bottom:2px solid transparent;font-weight:500}',
     'nav a:hover{color:var(--ink)}',
@@ -598,19 +602,20 @@ var veMntParamHtml = (function(){
       var sayi = SAYI ? [SAYI.veSayi, SAYI.veSayiUstel, SAYI.veSayiMakine, SAYI.veSayiOku].map(String).join('\n')
         : 'function veSayi(v){ return String(v); }\nfunction veSayiOku(v){ return parseFloat(v); }';
       var T0 = D.tarama;
+      // Künye: ad ve değer hücreleri (Canlı not 2004: "Daha güzel bir şekilde … yayalım bu bilgileri")
       var kunye = [
-        'Ateşleme frekansı ' + tr(D.fAtes, 2) + ' Hz',
-        D.rolanti ? 'Rölanti ' + tr(D.rolanti, 0) + ' dev/dk' : '',
-        D.silindir ? tr(D.silindir, 0) + ' silindir' : '',
-        Number.isFinite(D.zeta) ? 'ζ ' + tr(D.zeta, 3) : '',
-        D.kutle > 0 ? 'Kütle ' + tr(D.kutle, 1) + ' kg' : '',
-        T0 ? tr(T0.N, 0) + ' kombinasyon' : '',
-        D.tarih
-      ].filter(Boolean).join(' · ');
+        ['Ateşleme frekansı [Hz]', tr(D.fAtes, 2)],
+        D.rolanti ? ['Rölanti [dev/dk]', tr(D.rolanti, 0)] : null,
+        D.silindir ? ['Silindir', tr(D.silindir, 0)] : null,
+        Number.isFinite(D.zeta) ? ['Sönüm oranı ζ', tr(D.zeta, 3)] : null,
+        D.kutle > 0 ? ['Kütle [kg]', tr(D.kutle, 1)] : null,
+        T0 ? ['Kombinasyon', tr(T0.N, 0)] : null,
+        ['Tarih', D.tarih]
+      ].filter(Boolean).map(function(x){ return '<div><dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('');
       var ust = '<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n'
         + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         + '<title>' + esc(D.baslik) + '</title>\n<style>\n' + yuz + '\n' + CSS + '\n</style>\n</head>\n<body>\n'
-        + '<header><h1>' + esc(D.baslik) + '</h1><div class="kunye">' + esc(kunye) + '</div>'
+        + '<header><h1>' + esc(D.baslik) + '</h1><dl class="kunye">' + kunye + '</dl>'
         + '<nav><a id="n-ozet" href="#ozet">Özet</a>' + (T0 ? '<a id="n-tarama" href="#tarama">Tarama</a>' : '<a id="n-tarama" href="#tarama" hidden>Tarama</a>')
         + '<a id="n-sonuc" href="#sonuc">Sonuç</a></nav></header>\n<main>\n'
         + '<section id="v-ozet"><div class="kap" id="ve-ozet"></div></section>\n'
