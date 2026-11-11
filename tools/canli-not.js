@@ -60,15 +60,22 @@
  *       kullanıcının çizimi kırmızı olarak üstüne konur. --kirp çizimin
  *       çevresini, --ogeler seçilen öğelerin kutularını (mavi kesikli) verir.
  *
- *   node tools/canli-not.js sonuc <N> [--modul takoz|fead|arac] [--ornek <anahtar>]
+ *   node tools/canli-not.js sonuc <N> [--modul takoz|fead|arac] [--ornek <anahtar>] [--odak <ad>]
  *                           [--hazirlik <betik.js>] [--secici <css> | --alan x,y,g,y] [--pay 12]
  *                           [--ekran 1440x900] [--dosya MFSim_Code.html] [--cikti <png>]
  *       Uygulanan notun SONUÇ görüntüsü (2×): tek dosya (npm run build), file://,
  *       ağsız. Giriş, karşılama ve modüle giriş kendiliğinden; --ornek Takoz
- *       örneğini kurar; --hazirlik sayfada koşan async gövde (yüzeyi açar,
+ *       örneğini kurar; --odak odaklı sayfanın açtığı yeri kurar (köprünün tarifi);
+ *       --hazirlik sayfada koşan async gövde (yüzeyi açar,
  *       `bekle(ms)` hazır); --secici o öğenin kutusu (+pay), --alan ekranın
  *       bir bölgesi (CSS px), ikisi de yoksa ekranın tamamı. Çıktı
  *       .canli-not/sonuc/not-N.png; CSS px ölçüsü `sonuc {g, y}` için.
+ *
+ *   --odak <ad>  (hazirla · sayfa · duman · yayin · sonuc)
+ *       ODAKLI SAYFA — bir bileşene ayrılmış Canlı Not (kullanıcı 2026-11-11; odaklar
+ *       çekirdekte: CN.ODAKLAR). Ayrı Artifact: kendi kaydı, varlık deposu ve sahibi;
+ *       yerel dizinleri .canli-not/<ad>/yayin · .canli-not/<ad>/dokum. Sayfa programı
+ *       her açılışta o bileşende açar; notları kendi aralığında numaralar.
  *
  * Protokol (açılış, yayın, sıra, durum, yanıt): skill `canli-not`.
  */
@@ -125,6 +132,7 @@ function ayristir(argv) {
     else if (a === '--pay') o.pay = Number(deger());
     else if (a === '--ekran') o.ekran = ekranAyristir(deger());
     else if (a === '--alan') o.alan = alanAyristir(deger());
+    else if (a === '--odak') o.odak = deger();
     else if (a === '--help' || a === '-h') o.yardim = true;
     else if (a.startsWith('--')) throw new Error('bilinmeyen bayrak: ' + a);
     else o.konum.push(a);
@@ -134,7 +142,19 @@ function ayristir(argv) {
   if (o.ornek !== undefined && o.modul !== 'takoz') throw new Error('--ornek yalnız --modul takoz ile (Takoz örneği)');
   if (o.pay !== undefined && !(o.pay >= 0 && o.pay <= 200)) throw new Error('--pay 0–200 px olmalı');
   if (o.alan && o.secici) throw new Error('--alan ile --secici birlikte olmaz');
+  if (o.odak !== undefined && !CN.odakBul(o.odak)) throw new Error('--odak: ' + Object.keys(CN.ODAKLAR).join(' · '));
+  if (o.odak && (o.modul || o.ornek)) throw new Error('--odak modülünü ve örneğini kendi kurar: --modul/--ornek ile birlikte olmaz');
   return o;
+}
+
+// ODAKLI SAYFA (kullanıcı 2026-11-11: bileşene ayrılmış Canlı Not — çekirdek → ODAKLAR):
+// ayrı bir Artifact, yani ayrı kayıt ve ayrı yayın. Yerel dizinleri de ayrı:
+// .canli-not/<odak>/yayin · .canli-not/<odak>/dokum — iki sayfanın dökümü karışmasın.
+function yayinDizini(o) {
+  return o && o.odak ? path.join(KOK, '.canli-not', o.odak, 'yayin') : VARSAYILAN_CIKTI;
+}
+function dokumDizini(o) {
+  return o && o.odak ? path.join(KOK, '.canli-not', o.odak, 'dokum') : VARSAYILAN_DOKUM;
 }
 
 // "--parca <özet[.n]>=<varlık kimliği>": yüklenen parçanın kimliği, parçanın anahtarıyla.
@@ -198,12 +218,18 @@ function kopruGom(html, kopru) {
   return html.slice(0, yer) + etiket + html.slice(yer);
 }
 
-function sayfaKur(sablon, cekirdek, ayar) {
+// Odaklı sayfanın adı kendi başlığı (galeride ve sekmede iki Canlı Not ayrılsın);
+// `odak` verilmezse ayarınki.
+const BASLIK_CAPA = '<title>MFSim Canlı Not</title>';
+function sayfaKur(sablon, cekirdek, ayar, odak) {
   if (sablon.indexOf(CEKIRDEK_CAPA) < 0) throw new Error('şablonda çekirdek çapası yok: ' + CEKIRDEK_CAPA);
   if (sablon.indexOf(AYAR_CAPA) < 0) throw new Error('şablonda ayar çapası yok: ' + AYAR_CAPA);
+  const o = CN.odakBul(odak !== undefined ? odak : ayar && ayar.odak);
+  if (o && sablon.indexOf(BASLIK_CAPA) < 0) throw new Error('şablonda başlık yok: ' + BASLIK_CAPA);
   const json = JSON.stringify(ayar).replace(/</g, '\\u003c');
   // Fonksiyon replacer: dizgedeki '$&' gibi diziler genişletilmesin (build.js ile aynı tuzak).
   return sablon
+    .replace(BASLIK_CAPA, () => (o ? '<title>' + o.baslik + '</title>' : BASLIK_CAPA))
     .replace(CEKIRDEK_CAPA, () => cekirdek.replace(/<\/script/gi, '<\\/script'))
     .replace(AYAR_CAPA, () => json);
 }
@@ -431,11 +457,11 @@ function yayin(o) {
     throw new Error('--program kalktı: program parçalı yayınlanır. `hazirla`nın YÜKLE dediği her dosyayı yükle, ' +
       'sonra: node tools/canli-not.js yayin --parca <özet>=<id> … (skill canli-not §1)');
   }
-  const planYol = o.kaynak || path.join(VARSAYILAN_CIKTI, 'yayin-plan.json');
-  if (!fs.existsSync(planYol)) throw new Error(goreli(planYol) + ' yok — önce: node tools/canli-not.js hazirla');
+  const planYol = o.kaynak || path.join(yayinDizini(o), 'yayin-plan.json');
+  if (!fs.existsSync(planYol)) throw new Error(goreli(planYol) + ' yok — önce: node tools/canli-not.js hazirla' + (o.odak ? ' --odak ' + o.odak : ''));
   const plan = JSON.parse(fs.readFileSync(planYol, 'utf8'));
   if (plan.dal) throw new Error('bu plan bir DAL KURULUMU (hazirla --dal): yayınlanmaz');
-  const dokum = o.dokum || VARSAYILAN_DOKUM;
+  const dokum = o.dokum || dokumDizini(o);
   const ben = oturumAdresi(o);
   const aktif = dokumOku(path.join(dokum, 'oturum', 'aktif.json'));
   const sahip = sahipHukmu(aktif && aktif.data, ben);
@@ -493,7 +519,7 @@ function sayfaHukmu(metin, sablon, cekirdek) {
   const m = /var AYAR = (\{[^\n]*?\}) \|\| \{\};/.exec(metin);
   let ayar = null;
   try { ayar = m ? JSON.parse(m[1]) : null; } catch (e) { ayar = null; }
-  const kur = sayfaKur(sablon, cekirdek, SAYFA_AYAR_YERI), j = kur.indexOf('"' + SAYFA_AYAR_YERI + '"');
+  const kur = sayfaKur(sablon, cekirdek, SAYFA_AYAR_YERI, (ayar && ayar.odak) || ''), j = kur.indexOf('"' + SAYFA_AYAR_YERI + '"');
   const on = kur.slice(0, j), arka = kur.slice(j + SAYFA_AYAR_YERI.length + 2);
   const a = metin.indexOf(on), b = a < 0 ? -1 : metin.indexOf(arka, a + on.length);
   let guncel = a >= 0 && b >= 0;
@@ -504,11 +530,13 @@ function sayfaHukmu(metin, sablon, cekirdek) {
 function denetle(o) {
   if (!o.konum[0]) throw new Error('yayin/son belgesi, yayındaki mfsim.html ya da yayındaki sayfa gerekli');
   const dosya = path.resolve(o.konum[0]), metin = fs.readFileSync(dosya, 'utf8');
-  if (/<title>MFSim Canlı Not<\/title>/.test(metin) && metin.indexOf('window.__MFSIM_BUILD') < 0) {
+  if (/<title>[^<]*Canlı Not[^<]*<\/title>/.test(metin) && metin.indexOf('window.__MFSIM_BUILD') < 0) {
     const h = sayfaHukmu(metin, fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'));
-    const kunye = h.ayar && h.ayar.surum ? h.ayar.surum + (h.ayar.pr ? ' · PR #' + h.ayar.pr : '') : '?';
+    const odak = CN.odakBul(h.ayar && h.ayar.odak);
+    const kunye = (h.ayar && h.ayar.surum ? h.ayar.surum + (h.ayar.pr ? ' · PR #' + h.ayar.pr : '') : '?') + (odak ? ' · odak ' + odak.ad : '');
     console.log(h.guncel ? 'Sayfa güncel · yayındaki sayfa bugünkü kaynakla aynı (yayın ' + kunye + ')'
-      : 'Sayfa ESKİ · yayındaki sayfa (' + kunye + ') bugünkü kaynaktan farklı → sayfayı yeniden yayınla (skill §1)');
+      : 'Sayfa ESKİ · yayındaki sayfa (' + kunye + ') bugünkü kaynaktan farklı → sayfayı yeniden yayınla (skill §1' +
+        (odak ? ', --odak ' + h.ayar.odak : '') + ')');
     return h;
   }
   const k = /\.json$/i.test(dosya) ? yayinOku(JSON.parse(metin)) : kunyeOku(metin);
@@ -547,10 +575,12 @@ function anaDalKapisi(env) {
   env.GITHUB_REF_NAME = 'main';   // künyenin dalı: HEAD origin/main'in kendisi
 }
 
-// Sayfa: şablon + çekirdek + ayar (sayfanın KENDİ künyesi). Program gömülmez.
-function sayfaYaz(cikti, env) {
+// Sayfa: şablon + çekirdek + ayar (sayfanın KENDİ künyesi; odaklı sayfada odağın adı).
+// Program gömülmez.
+function sayfaYaz(cikti, env, odak) {
   const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
   const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString() };
+  if (odak) ayar.odak = odak;
   const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
   const yol = path.join(cikti, 'canli-not.html');
   fs.mkdirSync(cikti, { recursive: true });
@@ -559,7 +589,7 @@ function sayfaYaz(cikti, env) {
 }
 
 function hazirla(o) {
-  const cikti = o.cikti || VARSAYILAN_CIKTI;
+  const cikti = o.cikti || yayinDizini(o);
   const env = Object.assign({}, process.env, { MFSIM_BUILD_OUT: path.join(cikti, 'mfsim.html'), MFSIM_KARSILAMA: 'yok' });
   if (!o.dal) anaDalKapisi(env);
   fs.mkdirSync(cikti, { recursive: true });
@@ -568,7 +598,7 @@ function hazirla(o) {
   if (r.status !== 0) throw new Error('build.js durdu:\n' + ((r.stdout || '') + (r.stderr || '')).slice(-3000));
   const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
   fs.writeFileSync(mfsim, html);
-  const s = sayfaYaz(cikti, env);
+  const s = sayfaYaz(cikti, env, o.odak);
 
   // Parçalar diske: parca/<ad>-<özet>[.n].txt — eskileri silinir.
   const plan = planKur(html, s.kunye);
@@ -594,24 +624,26 @@ function hazirla(o) {
   const planYol = path.join(cikti, 'yayin-plan.json');
   fs.writeFileSync(planYol, JSON.stringify(plan, null, 2) + '\n');
 
-  const onceki = dokumOku(path.join(o.dokum || VARSAYILAN_DOKUM, 'yayin', 'son.json'));
+  const dokum = o.dokum || dokumDizini(o);
+  const onceki = dokumOku(path.join(dokum, 'yayin', 'son.json'));
   const durum = planKarsilastir(plan, onceki && onceki.data);
   const yukle = durum.filter((y) => !y.yerinde), yerinde = durum.filter((y) => y.yerinde);
   const topla = (l) => l.reduce((t, y) => t + y.boyut, 0);
+  const odakEki = o.odak ? ' --odak ' + o.odak : '';
   console.log('Canlı Not yayını hazır · ' + (plan.surum || '(git yok)') + (plan.pr ? ' · PR #' + plan.pr : '') +
-    (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
+    (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal') + (o.odak ? ' · odak ' + CN.odakBul(o.odak).ad : ''));
   console.log('  program  ' + goreli(mfsim) + ' · ' + MiB(plan.boyut) + ' → ' + plan.yuvalar.length + ' yuva · saklanan ' + MiB(topla(durum)));
   console.log('  sayfa    ' + goreli(s.yol) + ' (' + (s.boyut / 1024).toFixed(1) + ' KB)');
-  if (!onceki) console.log('  ! önceki yayın okunmadı (ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum): bütün parçalar YÜKLE sayıldı');
+  if (!onceki) console.log('  ! önceki yayın okunmadı (ArtifactData get collection:yayin doc_id:son out_dir:' + goreli(dokum) + '): bütün parçalar YÜKLE sayıldı');
   if (yerinde.length) console.log('  yerinde  ' + yerinde.length + ' yuva · ' + MiB(topla(yerinde)) + ' — yüklenmez (' + yerinde.map((y) => y.ad).join(' · ') + ')');
   console.log('  YÜKLE    ' + yukle.reduce((t, y) => t + y.parcalar.length, 0) + ' parça · ' + MiB(topla(yukle)));
   yukle.forEach((y) => y.parcalar.forEach((p, i) => {
     console.log('    ' + parcaAnahtari(y, i).padEnd(19) + ' ' + y.ad.padEnd(10) + ' ' + MiB(p.boyut).padStart(10) + '  ' + goreli(path.join(cikti, p.dosya)));
   }));
   console.log('\nProgramın güncellemesi — YALNIZ Canlı Not\'un sahibi oturum (skill canli-not §1); sayfa yenilenmez:' +
-    '\n  1. node tools/canli-not.js duman' +
+    '\n  1. node tools/canli-not.js duman' + odakEki +
     '\n  2. Her YÜKLE dosyası ayrı çağrıda: Artifact publish url:<adres> asset:true file_path:<dosya>  → id' +
-    '\n  3. node tools/canli-not.js yayin --parca <özet>=<id> [--parca …] [--notlar <…>]  → yazımı ve silinecekleri söyler');
+    '\n  3. node tools/canli-not.js yayin' + odakEki + ' --parca <özet>=<id> [--parca …] [--notlar <…>]  → yazımı ve silinecekleri söyler');
   console.log('Sayfanın yayını (yalnız tools/canli-not* değiştiyse): Artifact publish url:<adres> file_path=' + goreli(s.yol) + '   (files YOK)');
   return { sayfa: s.yol, mfsim: mfsim, plan: plan, planYol: planYol, boyut: plan.boyut, ayar: s.ayar, durum: durum };
 }
@@ -621,7 +653,7 @@ function hazirla(o) {
 function sayfaYayini(o) {
   const env = Object.assign({}, process.env);
   if (!o.dal) anaDalKapisi(env);
-  const s = sayfaYaz(o.cikti || VARSAYILAN_CIKTI, env);
+  const s = sayfaYaz(o.cikti || yayinDizini(o), env, o.odak);
   console.log('Sayfa hazır · ' + (s.ayar.surum || '(git yok)') + (s.ayar.pr ? ' · PR #' + s.ayar.pr : '') + (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ''));
   console.log('  Artifact publish url:<adres> file_path=' + goreli(s.yol) + '   (files YOK; program kayıttaki yayından yüklenir)');
   return { sayfa: s.yol, ayar: s.ayar, boyut: s.boyut };
@@ -793,6 +825,11 @@ async function sonuc(o) {
       await sayfa.evaluate((k) => veMntOrnekYukle(k), o.ornek);
       await sayfa.waitForTimeout(900);
     }
+    // Odaklı sayfanın notu: sayfanın açtığı yerin AYNISI — köprünün tarifi metin olarak.
+    if (o.odak) {
+      await sayfa.evaluate('(' + require('./canli-not-kopru.js').ODAKLAR[o.odak].toString() + ')(window)');
+      await sayfa.waitForTimeout(400);
+    }
     if (hazirlik) await sayfa.evaluate('(async () => { const bekle = (ms) => new Promise((r) => setTimeout(r, ms));\n' + hazirlik + '\n})()');
     await sayfa.waitForTimeout(600);
     const secenek = { path: cikti };
@@ -835,16 +872,21 @@ function dumanKaydi(plan) {
 }
 
 async function duman(o) {
-  const cikti = o.cikti || VARSAYILAN_CIKTI;
+  const cikti = o.cikti || yayinDizini(o);
   const planYol = path.join(cikti, 'yayin-plan.json'), sayfaYol = path.join(cikti, 'canli-not.html');
-  if (!fs.existsSync(planYol) || !fs.existsSync(sayfaYol)) throw new Error('yayın hazır değil — önce: node tools/canli-not.js hazirla');
+  if (!fs.existsSync(planYol) || !fs.existsSync(sayfaYol)) throw new Error('yayın hazır değil — önce: node tools/canli-not.js hazirla' + (o.odak ? ' --odak ' + o.odak : ''));
   const plan = JSON.parse(fs.readFileSync(planYol, 'utf8'));
   const d = dumanKaydi(plan);
-  const belge = '<!doctype html><html><head><meta charset="utf-8"></head><body>' + fs.readFileSync(sayfaYol, 'utf8') + '</body></html>';
+  const sayfaMetni = fs.readFileSync(sayfaYol, 'utf8');
+  const belge = '<!doctype html><html><head><meta charset="utf-8"></head><body>' + sayfaMetni + '</body></html>';
+  // Odaklı sayfa: program açılınca bileşenin penceresi de açılmalı (sayfanın kendi ayarından).
+  const ayarM = /var AYAR = (\{[^\n]*?\}) \|\| \{\};/.exec(sayfaMetni);
+  const odak = CN.odakBul(ayarM ? JSON.parse(ayarM[1]).odak : '');
+  let odakDurum = '';
   const { chromium } = require('playwright');
   const tarayici = await chromium.launch(tarayiciYolu() ? { executablePath: tarayiciYolu() } : {});
   const hatalar = [], ag = [];
-  let sure = 0, surum = '', indirilen = 0, kare = 0;
+  let sure = 0, surum = '', indirilen = 0, kare = 0, yoklama = 0;
   try {
     const sayfa = await tarayici.newPage({ viewport: { width: 1440, height: 900 } });
     sayfa.on('pageerror', (e) => hatalar.push(String(e && e.message ? e.message : e)));
@@ -854,8 +896,11 @@ async function duman(o) {
       const m = /^https:\/\/canli-not\.test\/_blob\/([0-9a-f]{32})$/.exec(u);
       if (m && d.dosya[m[1]]) { indirilen++; return r.fulfill({ contentType: 'text/plain; charset=utf-8', body: fs.readFileSync(path.join(cikti, d.dosya[m[1]])) }); }
       if (/^(data|blob|about):/.test(u)) return r.continue();
-      // Sayılmayan iki istek: sayfanın yazı tipi; karesiz yayında programın aradığı karşılama karesi.
+      // Sayılmayan üç istek: sayfanın yazı tipi; karesiz yayında programın aradığı karşılama
+      // karesi; programın kendi sürüm yoklaması (js/deploy-status.js — file:// dışında açılıştan
+      // 2 sn sonra: version.json, olmazsa GitHub'ın koşu listesi; odaklı sayfanın dumanı o kadar sürer).
       if (/^https:\/\/canli-not\.test\/assets\/karsilama\//.test(u)) kare++;
+      else if (/^https:\/\/canli-not\.test\/version\.json\?t=\d+$|^https:\/\/api\.github\.com\/repos\/[\w.-]+\/[\w.-]+\/actions\/runs\?per_page=1$/.test(u)) yoklama++;
       else if (!/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(u)) ag.push(u);
       return r.abort();
     });
@@ -882,15 +927,26 @@ async function duman(o) {
     surum = await sayfa.evaluate(() => document.getElementById('cn-surum').textContent);
     const uzunluk = await sayfa.evaluate(() => (document.getElementById('cn-program').getAttribute('srcdoc') || '').length);
     if (uzunluk !== plan.uzunluk) hatalar.push('çerçevedeki program ' + uzunluk + ' karakter, plan ' + plan.uzunluk);
+    if (odak) {
+      await sayfa.waitForFunction(() => /^(tamam|hata)$/.test(document.getElementById('cn').getAttribute('data-odak') || ''), null, { timeout: 120000 });
+      odakDurum = await sayfa.evaluate(() => document.getElementById('cn').getAttribute('data-odak'));
+      const acik = await cerceve.evaluate((tip) => {
+        const k = typeof veMufettisKonusu === 'function' ? veMufettisKonusu() : null;
+        return !!(k && k.type === tip && document.getElementById('ve-mnt-param-btn-' + k.id));
+      }, odak.tip);
+      if (odakDurum !== 'tamam' || !acik) hatalar.push('odak: ' + odak.ad + ' penceresi açılmadı (' + odakDurum + ')');
+    }
   } finally {
     await tarayici.close();
   }
   console.log('Duman · ' + (surum || '?') + ' · ' + indirilen + ' parça indirildi · açılış ' + (sure / 1000).toFixed(1).replace('.', ',') + ' sn · ' +
-    hatalar.length + ' hata · ' + ag.length + ' ağ isteği' + (kare ? ' (karşılama karesi ' + kare + ': bu yayında kare yok)' : ''));
+    hatalar.length + ' hata · ' + ag.length + ' ağ isteği' + (kare ? ' (karşılama karesi ' + kare + ': bu yayında kare yok)' : '') +
+    (yoklama ? ' (sürüm yoklaması ' + yoklama + ': programın kendisi)' : '') +
+    (odak ? ' · odak ' + odak.ad + ': ' + (odakDurum === 'tamam' ? 'açıldı' : odakDurum || 'yok') : ''));
   hatalar.slice(0, 5).forEach((h) => console.log('  ! ' + h));
   ag.slice(0, 5).forEach((u) => console.log('  ağ: ' + u));
   if (hatalar.length) throw new Error('duman: sayfa hatası — yayınlama');
-  return { sure: sure, surum: surum, indirilen: indirilen, hatalar: hatalar, ag: ag };
+  return { sure: sure, surum: surum, indirilen: indirilen, hatalar: hatalar, ag: ag, odak: odakDurum };
 }
 
 // Yardım, dosyanın baş yorumunun kendisi (yorum büyüyünce kesilmesin).
@@ -920,4 +976,5 @@ if (require.main === module) {
 module.exports = { ayristir, notlarAyristir, parcaAyristir, kopruGom, sayfaKur, sayfaYayini, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
   yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA,
   ESIK, PARCA_SINIRI, VARLIK_SINIRI, ozetle, parcala, paketle, paketAc, bol, planKur, planBirlestir, parcaAnahtari, planKarsilastir, yayinKur,
-  yayinVarliklari, oturumKimligi, oturumAdresi, sahipHukmu, siraHukmu, dokumOku, dumanKaydi, yayin };
+  yayinVarliklari, oturumKimligi, oturumAdresi, sahipHukmu, siraHukmu, dokumOku, dumanKaydi, yayin, denetle,
+  BASLIK_CAPA, yayinDizini, dokumDizini };

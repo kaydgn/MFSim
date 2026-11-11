@@ -383,6 +383,99 @@
     return '<!doctype html>\n' + klon.outerHTML;
   }
 
+  // ── odak: programı bir bileşende açar ────────────────────────────────────
+  // Kullanıcı 2026-11-11: bir bileşene ayrılmış Canlı Not (çekirdek → ODAKLAR). Sayfa
+  // her açılışta — taşınan proje yüklendikten SONRA — tarifi adıyla ister. Tarif
+  // YERİNDEKİNİ KULLANIR: Takoz'daysa modüle yeniden girmez, model varsa örnek yüklemez,
+  // bileşen varsa yenisini kurmaz; Güncelle ve Yenile kullanıcıyı aynı pencereye getirir.
+  // Tarif KENDİ BAŞINA durur (yalnız `win`, yani programın globalleri):
+  // `tools/canli-not.js sonuc --odak` onu metin olarak sonucun sayfasına da koyar.
+  var ODAKLAR = {
+    parametrik: function (win) {
+      var ORNEK = 'tulga', TIP = 'mnt-parametric';
+      var kurulan = false;
+      function kosul(f, sure) {
+        return new Promise(function (coz, red) {
+          var t0 = Date.now();
+          (function yokla() {
+            var v = null;
+            try { v = f(); } catch (e) { v = null; }
+            if (v) { coz(v); return; }
+            if (Date.now() - t0 > sure) { red(new Error('odak: ' + TIP + ' açılamadı')); return; }
+            win.setTimeout(yokla, 100);
+          })();
+        });
+      }
+      function dugum(tip) {
+        return (win.nodes || []).filter(function (n) { return n && n.type === tip; })[0] || null;
+      }
+      function takozda() { return !!(win.veMntStack && win.veMntStack.length); }
+      function modelVar() {
+        var defs = win.componentDefs || {};
+        return (win.nodes || []).some(function (n) { var d = (n && defs[n.type]) || {}; return d.isMountBody || d.isMount; });
+      }
+      // Araç şeridinde boş yer: Rapor'un altı, solu, sağı — ne bir kutuya ne de bir gruplama
+      // çerçevesinin çizgisine değen ilk aday. Ad kutunun altında ve iki yana taşar: kutular
+      // arasında 22 px (şeridin 105 px adımı sığar), çerçeveye karşı bileşenin uzun adı (45 px).
+      function yer(def) {
+        var w = def.defaultWidth || 60, h = def.defaultHeight || 56, alt = 24;
+        var carpar = function (a, b) { return a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1]; };
+        var icinde = function (a, b) { return a[0] >= b[0] && a[1] >= b[1] && a[0] + a[2] <= b[0] + b[2] && a[1] + a[3] <= b[1] + b[3]; };
+        var cerceveler = (win.annotations || []).filter(function (a) { return a && a.type === 'frame'; })
+          .map(function (a) { return [a.x, a.y, a.width || 0, a.height || 0]; });
+        var bos = function (p) {
+          var k = [p[0] - 22, p[1], w + 44, h + alt], ad = [p[0] - 45, p[1], w + 90, h + alt];
+          return !(win.nodes || []).some(function (n) { return carpar(k, [n.x - 22, n.y, (n.width || 60) + 44, (n.height || 56) + alt]); }) &&
+            !cerceveler.some(function (c) { return carpar(ad, c) && !icinde(ad, c); });
+        };
+        var r = dugum('mnt-report');
+        var adaylar = r ? [[r.x, r.y + 160], [r.x - 105, r.y + 160], [r.x + 105, r.y]] : [];
+        for (var i = 0; i < adaylar.length; i++) if (bos(adaylar[i])) return adaylar[i];
+        // Hiçbiri boş değilse her şeyin sağı (kutular ve çerçeveler), en üst sırada.
+        var sag = -Infinity, ust = Infinity;
+        (win.nodes || []).forEach(function (n) { sag = Math.max(sag, n.x + (n.width || 60)); ust = Math.min(ust, n.y); });
+        cerceveler.forEach(function (c) { sag = Math.max(sag, c[0] + c[2]); });
+        return isFinite(sag) && isFinite(ust) ? [sag + 90, ust] : [3000, 3000];
+      }
+      var bekle = function (ms) { return new Promise(function (r) { win.setTimeout(r, ms); }); };
+      var n = null;
+      return Promise.resolve().then(function () {
+        if (takozda()) return true;
+        var kart = dugum('mount-analysis');
+        if (kart) {
+          // Taşınan proje: kart kökte. Karşılama açıksa kapanır, kartın içine girilir.
+          var kap = win.document.getElementById('ve-module-overlay');
+          if (kap && kap.style.display !== 'none' && typeof win.veSelectModuleFromOverlay === 'function') win.veSelectModuleFromOverlay('arac-performans');
+          win.veMntOpenEditor(kart.id);
+        } else {
+          kurulan = true;
+          win.veStartModule('mount-analysis');                 // karşılamanın Takoz satırının yolu
+        }
+        return kosul(takozda, 30000);
+      }).then(function () {
+        if (modelVar()) return true;
+        kurulan = true;
+        win.veMntOrnekYukle(ORNEK);
+        return kosul(modelVar, 30000);
+      }).then(function () {
+        n = dugum(TIP);
+        if (n) return true;
+        kurulan = true;
+        var p = yer((win.componentDefs || {})[TIP] || {});
+        n = win.createNode(TIP, p[0], p[1]);
+        if (!n) throw new Error('odak: ' + TIP + ' kurulamadı');
+        return bekle(80);                                      // createNode seçimini bir kare sonra yapıyor
+      }).then(function () {
+        // Açılış durumu geri alınamaz: Ctrl+Z kurulan odağı sökmesin.
+        if (kurulan && typeof win.veStateResetBaseline === 'function') win.veStateResetBaseline();
+        win.clearSelection();
+        win.addToSelection(n);
+        win.veTogglePropertiesPanel(true);
+        return kosul(function () { return win.document.getElementById('ve-mnt-param-btn-' + n.id); }, 15000);
+      }).then(function () { return { tip: TIP, id: n.id, kurulan: kurulan }; });
+    }
+  };
+
   // ═══ kurulum (yalnız tarayıcıda, bir üst pencerenin içinde) ═════════════
   function kur(win) {
     if (!win || win.parent === win || win.__cnKopru) return;
@@ -486,6 +579,10 @@
           cevap(typeof y === 'function' && m.veri ? !!y(m.veri) : false);
         } else if (m.ad === 'durum') {
           cevap(programDurumu(win));
+        } else if (m.ad === 'odak') {
+          var tarif = Object.prototype.hasOwnProperty.call(ODAKLAR, String(m.veri)) ? ODAKLAR[m.veri] : null;
+          if (!tarif) cevap({ hata: 'odak yok: ' + m.veri });
+          else tarif(win).then(cevap, function (h) { cevap({ hata: String(h && h.message || h) }); });
         } else if (m.ad === 'onay') {
           // Kabulde cevap 15 sn hazır bekler: olay yeniden oynatılamazsa
           // (tetikleyen öğe kapandı) kullanıcı işlemi yineleyince geçer.
@@ -510,7 +607,7 @@
   var api = {
     kirp: kirp, cssYol: cssYol, kunye: kunye, anlamli: anlamli, anlamliAta: anlamliAta,
     ortakAta: ortakAta, basliklar: basliklar, ogeleriSec: ogeleriSec, baglam: baglam,
-    foto: foto, programDurumu: programDurumu, kur: kur
+    foto: foto, programDurumu: programDurumu, ODAKLAR: ODAKLAR, kur: kur
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else kur(kok);

@@ -29,6 +29,8 @@
  *              geldiğini sahiplik kaydını yeniden yazarak söyler (iki saat karşılaştırılmaz)
  *   SONUÇ      `sonuc` komutu (her oturumun aynı kalıbı): bayraklar sessizce
  *              yutulmaz; giriş js/auth.js'in özetinden, modülün açıcısı programda var
+ *   ODAK       bir bileşene ayrılmış sayfa: tarifin dokunduğu her işlev programda var,
+ *              tarif yerindekini kullanır, proje önce yüklenir; not numarası aralıkta
  */
 const fs = require('fs');
 const path = require('path');
@@ -537,7 +539,7 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     opt = opt || {};
     const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
     const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
-    const tam = T.sayfaKur(sablon, cekirdek, { surum: 'aaaaaaa', pr: 1290 });
+    const tam = T.sayfaKur(sablon, cekirdek, Object.assign({ surum: 'aaaaaaa', pr: 1290 }, opt.ayar || {}));
     const dinle = {}, getirilen = [], yazilan = [];
     const db = {
       collection: (p) => ({ orderBy: () => ({ onSnapshot: (f) => { dinle[p] = f; f({ docs: [] }); return () => {}; } }) }),
@@ -1116,6 +1118,72 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(sonra.gonderilen).toHaveLength(1);
     expect(sonra.w[0]).toMatchObject({ onceki: 'A', konu: 'k' });
   });
+
+  // ODAK — sayfa (kullanıcı 2026-11-11: Parametrik Analiz'e ayrılmış Canlı Not). Şeritte
+  // bileşenin adı; program hazır olunca — taşınan proje YÜKLENDİKTEN SONRA (yoksa proje
+  // odağın açtığını ezerdi) — köprüden odak istenir, sonucu #cn[data-odak]'ta. Köprü sahte:
+  // çerçevenin postMessage'ı cevabı hemen yollar.
+  // Proje yüklemesi GEÇ cevaplanır: odak, cevabı beklemeden istenirse sıra bozulur.
+  const sahteKopru = (a, cevaplar) => {
+    const istenen = [];
+    const w = a.cerceve.contentWindow;
+    w.postMessage = (m) => {
+      const ad = m.ad + (typeof m.veri === 'string' ? ':' + m.veri : '');
+      istenen.push(ad);
+      const v = cevaplar[m.ad];
+      setTimeout(() => {
+        istenen.push(ad + ' ✓');
+        window.dispatchEvent(new MessageEvent('message', { data: { cn: 1, tur: 'cevap', ad: m.ad, no: m.no, veri: v }, source: w }));
+      }, m.ad === 'yukle' ? 20 : 0);
+    };
+    return { istenen, w };
+  };
+  const programOlayi = (a, ad) => window.dispatchEvent(new MessageEvent('message',
+    { data: { cn: 1, tur: 'olay', ad, veri: {} }, source: a.cerceve.contentWindow }));
+
+  test('ODAK: şeritte bileşenin adı; program hazır olunca odak istenir, taşınan proje ÖNCE yüklenir', async () => {
+    const a = sayfa({ ayar: { odak: 'parametrik' } });
+    await bekle();
+    expect([a.gizli('cn-odak'), a.d.getElementById('cn-odak').textContent]).toEqual([false, 'Parametrik Analiz']);
+    a.yayinGonder(yayinB('bbbbbbb', ID('b'), []));
+    await bekle();
+    const k = sahteKopru(a, { durum: { hazir: true }, yukle: true, odak: { tip: 'mnt-parametric', id: 'comp-9', kurulan: true } });
+    programOlayi(a, 'basladi'); programOlayi(a, 'hazir');
+    await bekle(40);
+    expect(k.istenen).toEqual(['durum', 'durum ✓', 'odak:parametrik', 'odak:parametrik ✓']);
+    expect(a.d.getElementById('cn').getAttribute('data-odak')).toBe('tamam');
+    // Yenile: açık proje taşınır; yeni programda önce proje, sonra odak
+    k.w._veSettingsBuildProjectData = () => ({ proje: 1 });
+    a.d.getElementById('cn-yenile').click();
+    await bekle();
+    const k2 = sahteKopru(a, { durum: { hazir: true }, yukle: true, odak: { tip: 'mnt-parametric', id: 'comp-9', kurulan: false } });
+    programOlayi(a, 'basladi'); programOlayi(a, 'hazir');
+    await bekle(60);
+    expect(k2.istenen).toEqual(['durum', 'durum ✓', 'yukle', 'yukle ✓', 'odak:parametrik', 'odak:parametrik ✓']);
+    expect(a.d.getElementById('cn').getAttribute('data-odak')).toBe('tamam');
+  });
+
+  test('ODAK: açılamayan bileşen söylenir; odaksız sayfa odak istemez', async () => {
+    const a = sayfa({ ayar: { odak: 'parametrik' } });
+    await bekle();
+    a.yayinGonder(yayinB('bbbbbbb', ID('b'), []));
+    await bekle();
+    sahteKopru(a, { durum: { hazir: true }, odak: { hata: 'odak: mnt-parametric açılamadı' } });
+    programOlayi(a, 'basladi'); programOlayi(a, 'hazir');
+    await bekle(40);
+    expect(a.d.getElementById('cn').getAttribute('data-odak')).toBe('hata');
+    expect(a.d.getElementById('cn-bildirim').textContent).toBe('Parametrik Analiz açılamadı.');
+    const b = sayfa();
+    await bekle();
+    expect(b.gizli('cn-odak')).toBe(true);
+    b.yayinGonder(yayinB('bbbbbbb', ID('b'), []));
+    await bekle();
+    const k = sahteKopru(b, { durum: { hazir: true } });
+    programOlayi(b, 'basladi'); programOlayi(b, 'hazir');
+    await bekle(40);
+    expect(k.istenen).toEqual(['durum', 'durum ✓']);
+    expect(b.d.getElementById('cn').hasAttribute('data-odak')).toBe(false);
+  });
 });
 
 // ═══ PARÇALI YAYIN ═════════════════════════════════════════════════════════
@@ -1405,5 +1473,178 @@ describe('SONUÇ — sonucun görüntüsü tek komutla', () => {
     const yardim = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.js'), 'utf8');
     expect(yardim).toMatch(/node tools\/canli-not\.js sonuc <N>/);
     expect(yardim).toMatch(/'\.canli-not', 'sonuc', 'not-' \+ no \+ '\.png'/);
+  });
+});
+
+// ═══ ODAK ══════════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-11: *"'takoz çökme ve titreşim' modülünün sadece 'parametrik analiz'
+// bileşeni ile uğraşacağız … sadece bu bileşene ait bir 'canlı not' oluşturmanı istiyorum"*.
+// Odaklı sayfa ayrı bir Artifact; program her açılışta o bileşende açılır. İki hata da
+// SESSİZ: tarif programda olmayan bir işlevi çağırırsa sayfa açılır ama pencere açılmaz;
+// iki sayfa aynı numarayı verirse "Canlı not N"in görseli başka notun görselini ezer.
+describe('ODAK — bileşene ayrılmış Canlı Not', () => {
+  const jsKaynak = () => fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js'))
+    .map((f) => fs.readFileSync(path.join(KOK, 'js', f), 'utf8')).join('\n');
+
+  test('odaklar çekirdekte, tarifleri köprüde; tarifin dokunduğu her şey programda var', () => {
+    expect(Object.keys(K.ODAKLAR).sort()).toEqual(Object.keys(CN.ODAKLAR).sort());
+    const js = jsKaynak();
+    Object.keys(CN.ODAKLAR).forEach((ad) => {
+      const o = CN.ODAKLAR[ad], kaynak = K.ODAKLAR[ad].toString();
+      expect(Boolean(o.ad && o.baslik && o.tip && o.taban > 0)).toBe(true);
+      expect(js).toContain("'" + o.tip + "': {");
+      expect(kaynak).toContain("TIP = '" + o.tip + "'");
+      const islevler = [...new Set([...kaynak.matchAll(/win\.([A-Za-z_$][\w$]*)\(/g)].map((m) => m[1]))]
+        .filter((f) => f !== 'setTimeout');
+      expect(islevler.length).toBeGreaterThan(6);
+      islevler.forEach((f) => expect([f, new RegExp('^function ' + f + '\\(', 'm').test(js)]).toEqual([f, true]));
+      ['nodes', 'componentDefs', 'veMntStack'].forEach((g) => expect([g, new RegExp('^var ' + g + '\\b', 'm').test(js)]).toEqual([g, true]));
+      const ornek = /ORNEK = '([a-z]+)'/.exec(kaynak)[1];
+      expect(fs.readFileSync(path.join(KOK, 'js', 'mount-core.js'), 'utf8')).toMatch(new RegExp('\\n {4}' + ornek + ': \\{'));
+      expect(kaynak).toContain("'ve-mnt-param-btn-'");                  // pencerenin Tara düğmesi
+      expect(fs.readFileSync(path.join(KOK, 'js', 'cp-mount-param.js'), 'utf8')).toContain("ve-mnt-param-btn-'");
+    });
+    expect(CN.odakBul('yok')).toBeNull();
+    expect(CN.odakBul('toString')).toBeNull();
+  });
+
+  test('not numarası: odaklı sayfa kendi aralığında; ana sayfa odakların aralığını atlar', () => {
+    const n = (no) => ({ no });
+    expect(CN.sonrakiNo([], 'parametrik')).toBe(1001);
+    expect(CN.sonrakiNo([n(1001), n(1004)], 'parametrik')).toBe(1005);
+    expect(CN.sonrakiNo([])).toBe(1);
+    expect(CN.sonrakiNo([n(131), n(132)])).toBe(133);
+    expect(CN.sonrakiNo([n(999)])).toBe(1000);
+    expect(CN.sonrakiNo([n(1000)])).toBe(1000 + CN.NO_ARALIK + 1);    // ana sayfa aralığa girmez
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    expect(sablon).toContain('CN.sonrakiNo(notlar, AYAR.odak)');
+  });
+
+  // Sahte program: yalnız tarifin dokunduğu globaller. `w` verilirse (köprünün jsdom
+  // çerçevesi) işlevler ona takılır ve gerçek belge kullanılır.
+  function sahteProgram(o, w) {
+    o = o || {};
+    w = w || { document: { getElementById: (id) => w.__dom[id] || null }, setTimeout: (f, ms) => setTimeout(f, Math.min(ms, 5)) };
+    w.__dom = {};
+    const gercek = typeof w.document.createElement === 'function';
+    const dugumYaz = (id) => { if (gercek) { const e = w.document.createElement('button'); e.id = id; w.document.body.appendChild(e); } else w.__dom[id] = {}; };
+    if (o.karsilama) { if (gercek) { const e = w.document.createElement('div'); e.id = 've-module-overlay'; w.document.body.appendChild(e); } else w.__dom['ve-module-overlay'] = { style: { display: 'flex' } }; }
+    Object.assign(w, {
+      nodes: (o.nodes || []).slice(), veMntStack: o.takozda ? [{}] : [], cagri: [], secili: null,
+      componentDefs: { 'mnt-motor': { isMountBody: true }, 'mnt-mount': { isMount: true }, 'mnt-report': {}, 'mnt-wizard': {},
+        'mnt-parametric': { defaultWidth: 60, defaultHeight: 56 }, 'mount-analysis': {} }
+    });
+    let say = 0;
+    w.veSelectModuleFromOverlay = (m) => w.cagri.push(['karsilama', m]);
+    w.veStartModule = (t) => { w.cagri.push(['modul', t]); setTimeout(() => w.veMntStack.push({}), 5); };
+    w.veMntOpenEditor = (id) => { w.cagri.push(['kart', id]); w.veMntStack.push({}); w.nodes = (o.ic || []).slice(); };
+    w.veMntOrnekYukle = (k) => {                                     // Tulga'nın araç şeridi
+      w.cagri.push(['ornek', k]);
+      w.nodes.push({ id: 'm', type: 'mnt-motor', x: 540, y: 392, width: 108, height: 76 },
+        { id: 'r', type: 'mnt-report', x: 1345, y: 163, width: 60, height: 56 },
+        { id: 's', type: 'mnt-wizard', x: 1240, y: 163, width: 60, height: 56 });
+    };
+    w.createNode = (t, x, y) => {
+      if (o.kurulmaz) return null;
+      const n = { id: 'p' + (++say), type: t, x, y, width: 60, height: 56 };
+      w.nodes.push(n); w.cagri.push(['kur', t, x, y]); return n;
+    };
+    w.veStateResetBaseline = () => w.cagri.push(['taban']);
+    w.clearSelection = () => { w.secili = null; };
+    w.addToSelection = (n) => { w.secili = n; };
+    w.veTogglePropertiesPanel = (acik) => { w.cagri.push(['pencere', acik, w.secili && w.secili.id]); if (w.secili) dugumYaz('ve-mnt-param-btn-' + w.secili.id); };
+    return w;
+  }
+  const tarif = (w) => K.ODAKLAR.parametrik(w);
+
+  test('tarif, boş programda: karşılamanın Takoz yolu → örnek → bileşen araç şeridinin boş yerinde → pencere; açılış geri alınamaz', async () => {
+    const w = sahteProgram({ karsilama: true });
+    const r = await tarif(w);
+    expect(w.cagri).toEqual([['modul', 'mount-analysis'], ['ornek', 'tulga'], ['kur', 'mnt-parametric', 1345, 323],
+      ['taban'], ['pencere', true, 'p1']]);
+    expect(r).toEqual({ tip: 'mnt-parametric', id: 'p1', kurulan: true });
+  });
+
+  test('tarif YERİNDEKİNİ kullanır: Takoz içindeyken ve bileşen varken hiçbir şey kurmaz, geri-al tabanına dokunmaz', async () => {
+    const ic = [{ id: 'm', type: 'mnt-motor', x: 540, y: 392 }, { id: 'p7', type: 'mnt-parametric', x: 1240, y: 323 }];
+    const w = sahteProgram({ takozda: true, nodes: ic });
+    expect(await tarif(w)).toEqual({ tip: 'mnt-parametric', id: 'p7', kurulan: false });
+    expect(w.cagri).toEqual([['pencere', true, 'p7']]);
+    // taşınan proje kökte: karşılama kapanır, kartın İÇİNE girilir (modül yeniden kurulmaz)
+    const k = sahteProgram({ karsilama: true, nodes: [{ id: 'kart', type: 'mount-analysis', x: 0, y: 0 }], ic });
+    expect((await tarif(k)).kurulan).toBe(false);
+    expect(k.cagri).toEqual([['karsilama', 'arac-performans'], ['kart', 'kart'], ['pencere', true, 'p7']]);
+    // dolu yer atlanır: Rapor'un altı doluysa solu (şeridin 105 px adımı adlarla sığar)
+    const rapor = { id: 'r', type: 'mnt-report', x: 1345, y: 163, width: 60, height: 56 };
+    const d = sahteProgram({ takozda: true, nodes: [{ id: 'm', type: 'mnt-motor', x: 540, y: 392 }, rapor,
+      { id: 'v', type: 'mnt-viewer', x: 1345, y: 323, width: 60, height: 56 }] });
+    await tarif(d);
+    expect(d.cagri[0]).toEqual(['kur', 'mnt-parametric', 1240, 323]);
+    // gruplama çerçevesinin çizgisine adı değen aday atlanır (Tulga'da Görselleştirici)
+    const c = sahteProgram({ takozda: true, nodes: [{ id: 'm', type: 'mnt-motor', x: 540, y: 392 }, rapor] });
+    c.annotations = [{ type: 'frame', x: 1000, y: 293, width: 330, height: 130 }, { type: 'text', x: 0, y: 0 }];
+    await tarif(c);
+    expect(c.cagri[0]).toEqual(['kur', 'mnt-parametric', 1450, 163]);
+    // hiçbir aday boş değilse her şeyin sağı, en üst sırada
+    const e = sahteProgram({ takozda: true, nodes: [{ id: 'm', type: 'mnt-motor', x: 540, y: 392, width: 108, height: 76 }, rapor,
+      { id: 'v', type: 'mnt-viewer', x: 1345, y: 323, width: 60, height: 56 },
+      { id: 'g', type: 'mnt-2dview', x: 1240, y: 323, width: 60, height: 56 }, { id: 'l', type: 'mnt-library', x: 1450, y: 163, width: 60, height: 56 }] });
+    await tarif(e);
+    expect(e.cagri[0]).toEqual(['kur', 'mnt-parametric', 1600, 163]);
+  });
+
+  test('tarif kurulamayan bileşeni söyler (sessizce bitmez)', async () => {
+    await expect(tarif(sahteProgram({ takozda: true, nodes: [{ id: 'm', type: 'mnt-motor', x: 0, y: 0 }], kurulmaz: true })))
+      .rejects.toThrow(/kurulamadı/);
+  });
+
+  test('köprü: "odak" isteği tarifi koşar ve sonucunu cevaplar; bilinmeyen odak hata döner', async () => {
+    const fr = document.createElement('iframe');
+    document.body.appendChild(fr);
+    const w = fr.contentWindow;
+    K.kur(w);
+    sahteProgram({ takozda: true, nodes: [{ id: 'm', type: 'mnt-motor', x: 0, y: 0 }, { id: 'p3', type: 'mnt-parametric', x: 1, y: 1 }] }, w);
+    const gelen = [];
+    const dinle = (e) => { if (e.data && e.data.cn === 1 && e.data.tur === 'cevap') gelen.push(e.data); };
+    window.addEventListener('message', dinle);
+    const istek = (veri, no) => w.dispatchEvent(new w.MessageEvent('message', { data: { cn: 1, tur: 'istek', ad: 'odak', no, veri }, source: window }));
+    istek('parametrik', 1); istek('yok', 2);
+    await new Promise((r) => setTimeout(r, 400));
+    window.removeEventListener('message', dinle);
+    expect(gelen.find((m) => m.no === 1).veri).toEqual({ tip: 'mnt-parametric', id: 'p3', kurulan: false });
+    expect(gelen.find((m) => m.no === 2).veri).toEqual({ hata: 'odak yok: yok' });
+    expect(w.document.getElementById('ve-mnt-param-btn-p3')).not.toBeNull();
+  });
+
+  test('sayfa: odaklı sayfanın adı kendi başlığı; denetim onu tanır ve güncel bulur; şablon değişince ESKİ', () => {
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
+    expect(sablon).toContain(T.BASLIK_CAPA);
+    const ana = T.sayfaKur(sablon, cekirdek, { surum: 'abc1234', pr: 7 });
+    const odakli = T.sayfaKur(sablon, cekirdek, { surum: 'abc1234', pr: 7, odak: 'parametrik' });
+    expect(ana).toContain('<title>MFSim Canlı Not</title>');
+    expect(odakli).toContain('<title>' + CN.ODAKLAR.parametrik.baslik + '</title>');
+    expect(odakli).not.toContain(T.BASLIK_CAPA);
+    expect(T.sayfaHukmu(odakli, sablon, cekirdek)).toEqual({ guncel: true, ayar: { surum: 'abc1234', pr: 7, odak: 'parametrik' } });
+    expect(T.sayfaHukmu(odakli, sablon.replace('Kayda bağlanıyor…', 'Kayda bağlanılıyor…'), cekirdek).guncel).toBe(false);
+    const os = require('os');
+    const dosya = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cn-odak-')), 'index.html');
+    fs.writeFileSync(dosya, odakli);
+    const cikti = [];
+    const gunluk = jest.spyOn(console, 'log').mockImplementation((m) => cikti.push(String(m)));
+    try { expect(T.denetle({ konum: [dosya] }).guncel).toBe(true); } finally { gunluk.mockRestore(); }
+    expect(cikti.join('\n')).toMatch(/Sayfa güncel .*odak Parametrik Analiz/);
+  });
+
+  test('araç: --odak tanınır, dizinleri ayrı; bilinmeyen odak ve --modul ile birlikte SESSİZCE yutulmaz', () => {
+    const o = T.ayristir(['hazirla', '--odak', 'parametrik']);
+    expect(o.odak).toBe('parametrik');
+    expect(path.relative(KOK, T.yayinDizini(o))).toBe(path.join('.canli-not', 'parametrik', 'yayin'));
+    expect(path.relative(KOK, T.dokumDizini(o))).toBe(path.join('.canli-not', 'parametrik', 'dokum'));
+    expect(path.relative(KOK, T.yayinDizini({}))).toBe(path.join('.canli-not', 'yayin'));
+    expect(path.relative(KOK, T.dokumDizini({}))).toBe(path.join('.canli-not', 'dokum'));
+    expect(() => T.ayristir(['hazirla', '--odak', 'yok'])).toThrow(/--odak: parametrik/);
+    expect(() => T.ayristir(['sonuc', '5', '--odak', 'parametrik', '--modul', 'takoz'])).toThrow(/--odak/);
+    expect(T.ayristir(['sonuc', '1001', '--odak', 'parametrik', '--secici', '#ve-properties']).odak).toBe('parametrik');
   });
 });
