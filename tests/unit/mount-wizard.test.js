@@ -219,6 +219,25 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     }
     global.nodes = [];
   });
+  // ÖRNEK KARTI BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de
+  // kaldıralım."*). Önce: Örnek alanının kartı "Örnekten doldur" başlığını taşıyordu; şimdi kartta
+  // başlık bandı yok, alanın adı Örnek; kılavuz da alanı bu adla anar. FEAD sihirbazının kartı ayrı.
+  test('ÖRNEK KARTI BAŞLIKSIZ: Örnek alanının kartında başlık bandı yok; "Örnekten doldur" ne sihirbazda ne kılavuzda', () => {
+    W.veMntWizAc();
+    W.veMntWizOrnekSec('siper');
+    const yan = document.getElementById('ve-mw-yan');
+    const kart = yan.querySelector('.ve-mw-ornek').closest('.ve-fw-card');
+    expect(kart.parentElement).toBe(yan);
+    expect([...kart.children].map((e) => e.className)).toEqual(['ve-fw-card-b']);   // başlık bandı yok
+    expect(kart.querySelector('.ve-mw-ornek > .ve-fw-lbl').textContent).toBe('Örnek');
+    expect([...yan.querySelectorAll(':scope > .ve-fw-card > .ve-fw-card-h')].map((h) => h.textContent))
+      .toEqual(['STEP\'ten başla', 'Seçilen örnek']);
+    expect(document.getElementById('ve-mw-body').textContent).not.toMatch(/Örnekten doldur/);
+    W.veMntWizKapat(true);
+    const kil = require('fs').readFileSync(require('path').join(__dirname, '../../js/guide-mount.js'), 'utf8');
+    expect(kil).not.toMatch(/Örnekten doldur/);
+    expect(kil).toMatch(/\{ k: 'ornek', ad: 'Örnek', /);
+  });
   // Canlı Not 81 · 82 · 83 (kullanıcı 2026-11-09): "Arada bir boşluk var. Fazla satırlı bir boşluk
   // o." · "Açıklamayı yana alalım." · "Açıklamaları düzeltelim, gereksiz açıklamaları kaldıralım."
   // Önce: adımın satırında adın altında iki satırlık içerik listesi; STEP kartının yönlendirmesi

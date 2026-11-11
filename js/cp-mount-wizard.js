@@ -858,8 +858,10 @@ function veMntWizStepHTML(step, c){
 // `baslikHTML`: başlıkta birim/simge varsa (özet panelinde başlık BÜYÜK HARFLE
 // yazılıyor, "1 g" → "1 G" oluyordu) birim `<u>` içinde verilir — CSS onu
 // dönüştürmez (kökteki kural: BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ ÇEVİRMEZ).
+// Başlık boşsa başlık bandı çizilmez (Örnek alanının kartı, Canlı Not 152).
 function _mwCard(baslik, inner, baslikHTML){
-  return '<section class="ve-fw-card"><header class="ve-fw-card-h"><span>' + (baslikHTML || _mwEsc(baslik)) + '</span></header>'
+  var bas = baslikHTML || (baslik ? _mwEsc(baslik) : '');
+  return '<section class="ve-fw-card">' + (bas ? '<header class="ve-fw-card-h"><span>' + bas + '</span></header>' : '')
     + '<div class="ve-fw-card-b">' + inner + '</div></section>';
 }
 function _mwInp(path, v, opt){
@@ -933,7 +935,9 @@ function _mwStepKaynak(c){
   var ex = (yuklu && typeof veMountCore !== 'undefined') ? veMountCore.getMountExample(yuklu) : null;
   // Gezinme listenin SATIRINDA, yanında (kullanıcı 2026-11-09, Canlı Not 78: *"Bir satır aşağıda
   // olmasının bir anlamı yok"*). Kapı: mount-wizard.test.js → *GEZİNME LİSTENİN SATIRINDA*.
-  h += _mwCard('Örnekten doldur', '<div class="ve-fw-field ve-mw-ornek"><span class="ve-fw-lbl">Örnek</span>'
+  // KART BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de
+  // kaldıralım."*): alanın adı Örnek. Kapı: mount-wizard.test.js → *ÖRNEK KARTI BAŞLIKSIZ*.
+  h += _mwCard('', '<div class="ve-fw-field ve-mw-ornek"><span class="ve-fw-lbl">Örnek</span>'
     + '<div class="ve-mw-ornek-d">' + sec + gez + '</div></div>');
   if(ex){
     var ih = ex.description ? '<div class="ve-fw-exnote">' + _mwEsc(ex.description) + '</div>' : '';

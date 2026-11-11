@@ -541,7 +541,7 @@ var _GM_SIHIRBAZ = [
   { k: 'durum', ad: 'Çözülebilirlik', not: 'Çözülüyor ya da Çözülemiyor; toplam kütle, takoz sayısı.' },
   { k: 'gorunus', ad: '3B · 2B', not: 'Önizlemenin bakışı.', yer: 'sag' },
   { k: 'step', ad: 'STEP’ten başla', not: 'Modeli STEP dosyasından doldurur.', yer: 'sag' },
-  { k: 'ornek', ad: 'Örnekten doldur', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
+  { k: 'ornek', ad: 'Örnek', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
   { k: 'ileri', ad: 'İleri', not: 'Sonraki adım; son adımda Modeli kur.', yer: 'sol-orta' },
   { k: 'kapat', ad: 'Kapat', not: 'Sihirbazı kapatır; tuval değişmez.', yer: 'sol-orta' },
   { k: 'talimat', ad: 'Talimat', not: 'Açık adımda yapılacaklar, sırayla.', cerceve: false, yer: 'sag-dis' },
@@ -1334,7 +1334,7 @@ function _gmSec15(){
   ], ['Adım', 'Ne girilir', 'Not']);
   h += _gmAdimlar([
     'Başlangıç sayfasında <strong>Sihirbazla kur</strong>’a basın.',
-    'İlk adımda modelin kaynağını seçin: ' + _gmN(_GM_SIHIRBAZ, 'ornek') + ' <strong>Örnekten doldur</strong> '
+    'İlk adımda modelin kaynağını seçin: ' + _gmN(_GM_SIHIRBAZ, 'ornek') + ' <strong>Örnek</strong> '
       + 'listesinden bir örnek, ' + _gmN(_GM_SIHIRBAZ, 'step') + ' <strong>STEP’ten başla</strong> ile bir dosya '
       + 'ya da hiçbiri. Ekranda: önizleme dolar, ' + _gmN(_GM_SIHIRBAZ, 'durum') + ' çip modelin çözülüp '
       + 'çözülemediğini söyler.',
