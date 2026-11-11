@@ -40,6 +40,18 @@ function veTekTikEylem(node) {
   return true;
 }
 
+// SAĞ TIK → BİLEŞEN MENÜSÜ (Canlı Not 143). TEK bağlayıcı: createNode ve restoreState (örnek
+// yükleme, geri-al, proje açma) aynı yoldan bağlar — restoreState bağlamıyordu, örnekten gelen
+// bileşende sağ tık hiçbir şey açmıyordu. Port ve adın kendi menüsü ayrı.
+function veNodeSagTik(nodeEl, node) {
+  nodeEl.addEventListener('contextmenu', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof showNodeContextMenu === 'function') showNodeContextMenu(e, node);
+  });
+}
+
 function veAttachNodeDrag(nodeEl, node) {
   // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
   nodeEl.addEventListener('dblclick', function(e) {
@@ -577,34 +589,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // kaydırır, Delete kayış sırasını kapatarak siler (cp-fead.js).
     if(typeof veFeadCizimTus === 'function' && veFeadCizimTus(e)) return;
 
-    // Ctrl+C - Kopyala
+    // Ctrl+C - Kopyala (bileşen menüsüyle aynı işlev: veSeciliKopyala)
     if((e.ctrlKey || e.metaKey) && e.key === 'c') {
       if(selectedNodes.length > 0) {
         e.preventDefault();
-        
-        // Seçili node'ları clipboard'a kopyala — DEĞERLER (data) + ad/ayna/boyut
-        // dahil derin kopya, ki sonradan kaynak değişse bile yapıştırma bozulmasın.
-        clipboard = selectedNodes.map(function(node) {
-          return {
-            type: node.type,
-            x: node.x,
-            y: node.y,
-            data: node.data ? JSON.parse(JSON.stringify(node.data)) : {},
-            customName: node.customName || '',
-            mirrored: !!node.mirrored,
-            width: node.width,
-            height: node.height
-          };
-        });
-        
-        // Offset için ilk node'un pozisyonunu sakla
-        clipboardOffset = {
-          x: selectedNodes[0].x,
-          y: selectedNodes[0].y
-        };
-        
-        // Kullanıcıya bilgi ver
-        showToast(clipboard.length + ' bileşen kopyalandı');
+        veSeciliKopyala();
       }
     }
     
@@ -660,33 +649,11 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
-    // Ctrl+D - Duplicate (seçilileri hızlı kopyala)
+    // Ctrl+D - Duplicate (bileşen menüsüyle aynı işlev: veSeciliCogalt)
     if((e.ctrlKey || e.metaKey) && e.key === 'd') {
       if(selectedNodes.length > 0) {
         e.preventDefault();
-        
-        var toDuplicate = selectedNodes.slice();
-        clearSelection();
-
-        var duplicated = 0;
-        toDuplicate.forEach(function(node) {
-          // TÜM özellikleriyle klonla (data/değerler dahil)
-          var newNode = veCloneNodeFrom(node, node.x + 40, node.y + 40);
-          if(newNode) {
-            duplicated++;
-            addToSelection(newNode);
-          }
-        });
-        if(typeof updateAllConnections === 'function') updateAllConnections();
-
-        // GERÇEKTEN kopyalanan sayıyı bildir (bkz. Ctrl+V'deki aynı gerekçe).
-        if(duplicated === toDuplicate.length) {
-          showToast(duplicated + ' bileşen kopyalandı');
-        } else if(duplicated === 0) {
-          showToast('Kopyalanamadı — bileşen sınırı dolu', 'warning');
-        } else {
-          showToast(duplicated + '/' + toDuplicate.length + ' bileşen kopyalandı — kalanı sınır dolu', 'warning');
-        }
+        veSeciliCogalt();
       }
     }
     
@@ -710,6 +677,53 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
 });
+
+// KOPYALA · ÇOĞALT — kısayol (Ctrl+C · Ctrl+D) ve bileşen menüsü (Canlı Not 143) aynı işlevden.
+// Seçili node'ları clipboard'a kopyala — DEĞERLER (data) + ad/ayna/boyut dahil derin kopya, ki
+// sonradan kaynak değişse bile yapıştırma bozulmasın.
+function veSeciliKopyala() {
+  if(!selectedNodes.length) return false;
+  clipboard = selectedNodes.map(function(node) {
+    return {
+      type: node.type,
+      x: node.x,
+      y: node.y,
+      data: node.data ? JSON.parse(JSON.stringify(node.data)) : {},
+      customName: node.customName || '',
+      mirrored: !!node.mirrored,
+      width: node.width,
+      height: node.height
+    };
+  });
+  // Offset için ilk node'un pozisyonunu sakla
+  clipboardOffset = { x: selectedNodes[0].x, y: selectedNodes[0].y };
+  showToast(clipboard.length + ' bileşen kopyalandı');
+  return true;
+}
+function veSeciliCogalt() {
+  if(!selectedNodes.length) return false;
+  var toDuplicate = selectedNodes.slice();
+  clearSelection();
+  var duplicated = 0;
+  toDuplicate.forEach(function(node) {
+    // TÜM özellikleriyle klonla (data/değerler dahil)
+    var newNode = veCloneNodeFrom(node, node.x + 40, node.y + 40);
+    if(newNode) {
+      duplicated++;
+      addToSelection(newNode);
+    }
+  });
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  // GERÇEKTEN kopyalanan sayıyı bildir (bkz. Ctrl+V'deki aynı gerekçe).
+  if(duplicated === toDuplicate.length) {
+    showToast(duplicated + ' bileşen kopyalandı');
+  } else if(duplicated === 0) {
+    showToast('Kopyalanamadı — bileşen sınırı dolu', 'warning');
+  } else {
+    showToast(duplicated + '/' + toDuplicate.length + ' bileşen kopyalandı — kalanı sınır dolu', 'warning');
+  }
+  return duplicated > 0;
+}
 
 function createCurvedPath(x1, y1, x2, y2) {
   var midX = (x1 + x2) / 2;
@@ -907,13 +921,8 @@ function createNode(type, x, y, width, height) {
     enablePortContextMenu(port, node, portType);
   });
   
-  // Node sağ tık - port düzeni menüsü
-  nodeEl.addEventListener('contextmenu', function(e) {
-    if(e.target.classList.contains('ve-node-port')) return; // Port menüsü ayrı
-    e.preventDefault();
-    e.stopPropagation();
-    showNodeContextMenu(e, node);
-  });
+  // Node sağ tık — bileşen menüsü (Canlı Not 143; geri yüklenen düğüm de aynı bağlayıcıdan)
+  veNodeSagTik(nodeEl, node);
   
   // Node sürükleme — paylasilan tek-dinleyicili sistem (bkz. veAttachNodeDrag)
   veAttachNodeDrag(nodeEl, node);

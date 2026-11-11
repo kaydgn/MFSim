@@ -929,6 +929,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kalalım. Tek tıkla açılınca garip duruyor."*): Takoz'un araç şeridinin tek tıkta pencere açan
   beyanı (`tekTik`, kullanım notu T20) kalktı; hiçbir tip tek tıkta açmaz. Kapı:
   `tek-tik-arac.test.js` → *ÇİFT TIK*.
+- **BİLEŞENE SAĞ TIK = BİLEŞEN MENÜSÜ** (kullanıcı 2026-11-11, Canlı Not 143): Aç · Yeniden adlandır
+  (tuvalde, adın yerinde) · Çoğalt · Kopyala · Boyut (küçük · varsayılan · büyük) · Ad (üst · alt · sol ·
+  sağ) · port düzeni (portlu bileşende) · Sil (silinmez tipte kapalı, sebebi ipucunda); işlem SEÇİMİN
+  tamamına, kısayolun işlevinden (`veSeciliCogalt` · `veSeciliKopyala` · `deleteSelectedNodes`). Sağ tık
+  TEK bağlayıcıdan (`veNodeSagTik`): createNode ve restoreState — örnekten ve geri-al'dan gelen bileşende
+  sağ tık hiçbir şey açmıyordu. Kapı: `bilesen-menusu.test.js` + `bilesen-menusu.spec.js`.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
   olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler

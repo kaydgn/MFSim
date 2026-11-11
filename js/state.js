@@ -468,6 +468,8 @@ function _veRestoreStateNodes(state) {
     
     // Node sürükleme — paylasilan tek-dinleyicili sistem (ui-core.js)
     veAttachNodeDrag(nodeEl, node);
+    // Sağ tık → bileşen menüsü (createNode ile aynı bağlayıcı, Canlı Not 143)
+    if(typeof veNodeSagTik === 'function') veNodeSagTik(nodeEl, node);
 
     // portLayout / kayıtlı taşımalar → port kenarlarını uygula (createNode ile aynı)
     if((def.portLayout || (node.data && node.data.portPositions)) && typeof updatePortPosition === 'function') {
