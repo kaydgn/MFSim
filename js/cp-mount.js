@@ -277,14 +277,18 @@ var _MNT_AP = (typeof VE_MNT_AP !== 'undefined') ? VE_MNT_AP
 //   • Diğer — 57RS… ve TK035/040/050: kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
+// ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
+// dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
+// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
+// mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { marka:'Angst+Pfister', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { marka:'Diğer', name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { marka:'Diğer', name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { marka:'Diğer', name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { marka:'Diğer', name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  '57RS313773':       { marka:'Diğer', aday:false, name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  '57RS313774':       { marka:'Diğer', aday:false, name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  '57RS313773-sr116': { marka:'Diğer', aday:false, name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  '57RS313774-sr116': { marka:'Diğer', aday:false, name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
   'TK035': { marka:'Diğer', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
@@ -358,6 +362,7 @@ function veMntGetLibraryMap(){
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
     var m=VE_MOUNT_LIBRARY[k], c=m.curves||{}, f=m.fits||{};
     map[k]={ key:k, name:m.name, marka:(m.marka||'Diğer'), sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
+      aday:m.aday!==false,                                  // taramanın adayı mı (Canlı Not 133)
       maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z),       // ya da nokta tablosu (varsa)
@@ -379,7 +384,7 @@ function veMntGetLibraryMap(){
         // (kz girildiyse kx = oran·kz, kx girildiyse dinamiği kx × din./stat.).
         var tah=(base.tahmin||[]).filter(function(f){ return !(o[f]!==undefined && o[f]!==null && o[f]!==''); });
         map[k]={ key:k, name:pick('name'), marka:base.marka, sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
-          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
+          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true, aday:base.aday,
           maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
           curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ, amc:base.amc, ap:base.ap,

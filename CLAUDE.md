@@ -393,7 +393,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Excel'in Tarama'sı ayrı: kriter sayısı → sehim). Pencerede ek kısıt (E1–E9), sürünme payı, amaç ağırlığı,
   uzlaşı ve yakın seçenek YOK — motor ölçer, pencere sıralamaya katmaz (`_mntParamCtx`; eski
   projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
-  gruplarda. Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
+  gruplarda; 57RS'nin dört tipi (A26 · ASR-SR-116) aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
+  listesinde ve örneklerde durur; kapı `mount-param.test.js` → *ADAY OLMAYAN TİP*). Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
   Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
   yalnız kesin kriterleri sağlayanlarda). **Kriter 2'nin sınırı TR < %15** (kullanıcı 2026-11-11:
   *"bizim bir TR<15 kriterimizin olması gerekiyor"*; MSB belgesinin %50'sinin yerine): taramanın

@@ -19,6 +19,10 @@ const { cp, rp } = H.kur();
 // resimlerle tamamlanan AMC kodları (137061 · 137062 · 137961) adayları 27'ye çıkarır;
 // o sayı mount-amc.test.js → PARAMETRİK'te kilitli.
 Object.keys(cp.VE_MOUNT_LIBRARY).slice(24).forEach((k) => { delete cp.VE_MOUNT_LIBRARY[k]; });
+// Canlı Not 133 dört 57RS tipini taramanın adaylığından çıkardı (`aday:false`); donmuş kümede
+// aday kalırlar — beklenen sayılar ve onaylı Excel o kümenin. Adaylıktan çıkış kapısı:
+// mount-param.test.js → ADAY OLMAYAN TİP.
+Object.keys(cp.VE_MOUNT_LIBRARY).forEach((k) => { delete cp.VE_MOUNT_LIBRARY[k].aday; });
 Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
 Object.keys(rp).forEach((k) => { if (global[k] === undefined) global[k] = rp[k]; });
 global.veMntKatalog = require('../../js/mount-katalog.js');
