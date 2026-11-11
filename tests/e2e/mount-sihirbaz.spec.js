@@ -125,6 +125,48 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   expect(hatalar).toEqual([]);
 });
 
+// ÜÇLÜ YANDA (kullanıcı 2026-11-11, Canlı Not 136: *"Koordinat değerleri aşağıda değil yanda
+// olsun."*). Önce: etiket üstte, x · y · z kutuları alt satırda. Node'da koşmayan halkalar: kutuların
+// etiketle AYNI satırda ve tekli satırların kutusuyla aynı sol kenarda durması, örneklerin en uzun
+// değerinin (Siper'in takozunda "-948,697", Asfat'ın ağırlık merkezinde "-300,631") kutuya sığması.
+test('ÜÇLÜ YANDA: x · y · z etiketin yanında, tekli satırların kutusuyla aynı sütunda; değer kutuya sığar', async ({ page }) => {
+  await bootApp(page);
+  const sorun = [];
+  for (const ornek of ['siper', 'asfat']) {
+    await page.evaluate((o) => { if (veMntWizAcik()) veMntWizKapat(false); veMntOrnekYukle(o); }, ornek);
+    await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 20000 });
+    await page.evaluate(() => veMntWizAc());
+    for (const adim of ['govde', 'takoz']) {
+      const satirlar = await page.evaluate((a) => {
+        veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === a));
+        const liste = a === 'govde' ? _mwState.govdeler : _mwState.takozlar, cikti = [];
+        liste.forEach((r) => {
+          veMntWizSec(a, r.key);
+          const yan = document.getElementById('ve-mw-yan');
+          const tekSol = [...yan.querySelectorAll('.ve-mw-ed .ve-fw-ed-alan:not(.ve-mw-ed-xyz) > :nth-child(2)')].map((e) => Math.round(e.getBoundingClientRect().left));
+          const gor = (i) => Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').get.call(i);
+          yan.querySelectorAll('.ve-mw-ed .ve-mw-ed-xyz').forEach((sat) => {
+            const et = sat.querySelector(':scope > span').getBoundingClientRect();
+            const kutu = [...sat.querySelectorAll('input')];
+            cikti.push({ ad: (r.ad || '') + ' · ' + sat.querySelector(':scope > span').textContent.trim(),
+              ayniSatir: kutu.every((i) => { const b = i.getBoundingClientRect(); return b.top < et.bottom && b.bottom > et.top; }),
+              sol: Math.round(kutu[0].getBoundingClientRect().left), tekSol,
+              tasan: kutu.filter((i) => i.scrollWidth > i.clientWidth).map(gor) });
+          });
+        });
+        return cikti;
+      }, adim);
+      expect(satirlar.length).toBeGreaterThan(0);
+      satirlar.forEach((x) => {
+        if (!x.ayniSatir) sorun.push(ornek + ' ' + x.ad + ': kutular etiketin altında');
+        if (x.tekSol.some((t) => Math.abs(t - x.sol) > 1)) sorun.push(ornek + ' ' + x.ad + ': sol kenar ' + x.sol + ' ≠ ' + x.tekSol.join(','));
+        if (x.tasan.length) sorun.push(ornek + ' ' + x.ad + ': sığmayan ' + x.tasan.join(' '));
+      });
+    }
+  }
+  expect(sorun).toEqual([]);
+});
+
 // 3B DÜZENİ (kullanıcı 2026-11-05, Canlı Not 40: *"Yazılar falan kayıyor,
 // kutular birbirinin içine giriyor"*; 2026-11-06, Canlı Not 41: *"uzayan
 // çubuklar … tüm yazılar çerçeveli değil"*). Node'da koşmayan halkalar: GERÇEK yazı
