@@ -162,13 +162,24 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();
   });
 
-  test('liste sırası: AMC dışı katalog önce, AMC ailenin · tipin · sertliğin sırasıyla', () => {
+  // Canlı Not 134: *"AMC takoz isimlerini Cone sıralarına göre diz. Yani Cone 38, Cone 39 şeklinde
+  // sıralı gitsin"* — ailenin sırası numarayı her ailede baştan başlatıyordu (Cone 141 → Cone 00).
+  test('liste sırası: AMC dışı katalog önce, AMC adın sayı sırasıyla (Cone 00 … 141 · DSM · Hydraulic Cone)', () => {
     const s = cp._mntLibSirali(cp.veMntGetLibraryList().filter((e) => e.builtin));
     expect(s[0].key).toBe('amc55sha');
-    const amc = s.filter((e) => e.amc).map((e) => e.amc.kod);
-    expect(amc).toEqual(A.kodlar());
-    expect(amc.slice(0, 3)).toEqual(['137005', '137006', '137015']);           // Cone 01 45 · 60 · 70 ShA
-    expect(amc[amc.length - 1]).toBe('137465');                                 // DSM 141 60 ShA
+    const amc = s.filter((e) => e.amc);
+    expect(amc).toHaveLength(A.kodlar().length);
+    const ad = amc.map((e) => e.name.replace(/ \(AMC \d+\)$/, ''));
+    expect(ad.slice(0, 4)).toEqual(['Cone 00 45 ShA', 'Cone 00 60 ShA', 'Cone 00 70 ShA', 'Cone 01 45 ShA']);
+    const no = ad.filter((x) => /^Cone \d/.test(x)).map((x) => Number(x.split(' ')[1]));
+    no.forEach((n, i) => { if (i) expect(n).toBeGreaterThanOrEqual(no[i - 1]); });   // Cone numarası hiç geri gitmez
+    expect(ad.indexOf('Cone 38 70 ShA') + 1).toBe(ad.indexOf('Cone 39 40 ShA'));      // 38'in ardından 39
+    expect(ad.indexOf('Cone 14 2 Holes 65 ShA')).toBeLessThan(ad.indexOf('Cone 14 4 Holes 45 ShA'));
+    expect(ad.indexOf('Cone 50 M16x1.5 70 ShA')).toBeLessThan(ad.indexOf('Cone 50 M16x2 40 ShA'));
+    const ilk = (r) => ad.findIndex((x) => r.test(x));
+    expect(ilk(/^DSM/)).toBeGreaterThan(ilk(/^Cone 200/));                       // Cone'lar bitince DSM
+    expect(ilk(/^Hydraulic/)).toBeGreaterThan(ilk(/^DSM 141/));                   // en sonda Hydraulic Cone
+    expect(ad[ad.length - 1]).toBe('Hydraulic Cone 72 70 ShA');
   });
 });
 
