@@ -393,8 +393,13 @@
   // kendi kaydı, varlık deposu ve sahibi var; program her açılışta o bileşende açılır
   // (tarif köprüde: canli-not-kopru.js → ODAKLAR). `ad` şeritte, `baslik` sayfanın adı,
   // `tip` bileşenin tipi, `taban` not numaralarının başladığı yer (aşağıda).
+  // BELGE ODAĞI (`belge: true`; kullanıcı 2026-11-11: *"Bu HTML belgesini 'canlı not' tarzına
+  // alsana. Üzerinde göstererek değişiklikler yaparız."*): çerçevedeki program değil programın
+  // ÜRETTİĞİ belge — `hazirla` programı derler, belgeyi gerçek tarayıcıda üretir (canli-not.js →
+  // BELGE_URET), köprü ve künye belgeye girer. Bileşen yok (`tip` yok); belge kendini açar.
   var ODAKLAR = {
-    parametrik: { ad: 'Parametrik Analiz', baslik: 'Canlı Not · Parametrik Analiz', tip: 'mnt-parametric', taban: 1000 }
+    parametrik: { ad: 'Parametrik Analiz', baslik: 'Canlı Not · Parametrik Analiz', tip: 'mnt-parametric', taban: 1000 },
+    'param-html': { ad: 'HTML raporu', baslik: 'Canlı Not · HTML raporu', belge: true, taban: 2000 }
   };
   function odakBul(ad) {
     return ad && Object.prototype.hasOwnProperty.call(ODAKLAR, String(ad)) ? ODAKLAR[String(ad)] : null;
