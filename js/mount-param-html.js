@@ -13,7 +13,8 @@
 //   Özet   — K0…Kn: grupların tipi, Uygunluk, statik sehim, dört kesin kriter,
 //            TR, en düşük mod (frekans payı yok — Canlı not 2003)
 //   Tarama — çözülen kombinasyonlar, Excel'in sırası (sağlanan kriter sayısı, sonra
-//            statik sehim); sayı sütununun başlığı sıralar; 100'lük sayfa
+//            statik sehim); sayı sütununun başlığı sıralar; kriterler tek sütun (tanımı
+//            ipucunda); 100'lük sayfa
 //   Sonuç  — seçilen konfigürasyon: yük durumu × takoz × X/Y/Z sehim, modlar; geri ·
 //            ileri; adres (#K1 · #T25) tarayıcının geri tuşuyla
 // Sayı programın yazıcısıyla (js/sayi.js — kaynağı belgeye gömülür); yüz arayüzün
@@ -172,6 +173,11 @@ var veMntParamHtml = (function(){
     '.suz-hep{font-weight:600;border-bottom:1px solid var(--cizgi)}',
     '.suz-aralik{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
     '.suz-aralik label{display:flex;flex-direction:column;gap:4px;color:var(--soluk)}',
+    '.suz.suz-genis{width:300px}',
+    '.suz-kr{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:2px 10px;padding:4px 8px;border:1px solid var(--cizgi)}',
+    '.suz-kr .ad{white-space:nowrap}',
+    '.suz-kr label{display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer}',
+    '.suz-kr .say{color:var(--soluk)}',
     '.suz-alt{display:flex;justify-content:flex-end;gap:8px}',
     '.suz-alt .ana{background:var(--vurgu);border-color:var(--vurgu);color:#ffffff}',
     '.suz-alt .ana[disabled]{background:var(--kagit);color:var(--soluk);border-color:var(--cizgi)}',
@@ -183,6 +189,8 @@ var veMntParamHtml = (function(){
     'td a{color:var(--vurgu);text-decoration:none;font-weight:600}',
     '.ok{color:var(--iyi);font-weight:600}',
     '.no{color:var(--kotu);font-weight:600}',
+    'td.kr .kr-i{display:inline-flex;margin-right:10px}',
+    'td.kr .kr-i span{width:12px;text-align:center}',
     'td.u-en{background:var(--iyi);color:#ffffff;font-weight:600}',
     'td.u-uy{background:var(--iyi-zemin)}',
     '.arac{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap}',
@@ -231,6 +239,15 @@ var veMntParamHtml = (function(){
     function kriterHucre(b){ var h = ''; for(var j = 0; j < 4; j++) h += '<td>' + tik(b & (1 << j)) + '</td>'; return h; }
     function sag(b){ var n = 0; for(var j = 0; j < 4; j++) if(b & (1 << j)) n++; return n; }
     function kBas(){ return V.kriter.map(function(q){ return '<th title="' + esc(q.s) + '">' + esc(q.ad) + '</th>'; }).join(''); }
+    // Kriterlerin adı ve tanımı, satır satır (ipucu); b verilirse satırın ✓ · ✗'i önde.
+    function krTanim(b){
+      return V.kriter.map(function(q, j){ return (b == null ? '' : (b & (1 << j) ? '✓ ' : '✗ ')) + q.ad + ': ' + q.s; }).join('\n');
+    }
+    function krHucre(b){
+      var m = '';
+      for(var j = 0; j < 4; j++) m += tik(b & (1 << j));
+      return '<td class="kr" title="' + esc(krTanim(b)) + '"><span class="kr-i">' + m + '</span>' + sag(b) + ' / 4</td>';
+    }
     var K1 = V.konfig.length > 1 ? 1 : 0;
 
     // ── Özet ──
@@ -255,6 +272,9 @@ var veMntParamHtml = (function(){
     // en çok. Liste, öteki süzgeçlerden geçen satırların değerleri (Excel gibi).
     // `suz:false` başlıkta Filtrele yok (Canlı not 2005); `sira:false` başlığa tık sıralamaz,
     // sıra Filtrele'nin panelinden (Canlı not 2006: takozlar).
+    // Kriterler TEK sütun (Canlı not 2007: "Şunları tek sütuna alalım … faresini üstüne getirsin"):
+    // hücrede dört ✓ · ✗ ve sağlanan sayısı, tanımlar başlığın ve hücrenin ipucunda. Panel sayıyı ve
+    // kriterleri süzer: kriterin süzgeci sütunsuz (k0…k3), `kume` panelin süzgeçleri.
     var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100, suz = {}, acikSuz = null;
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
     var SUT = [], SUTK = {};
@@ -264,11 +284,18 @@ var veMntParamHtml = (function(){
       SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
       SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
       SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
-      V.kriter.forEach(function(q, j){ SUT.push({ k:'k' + j, ad:esc(q.ad), baslik:q.s, tur:'liste', ok:true, deger:function(i){ return (T.k[i] & (1 << j)) ? '✓' : '✗'; } }); });
-      SUT.push({ k:'sag', ad:'Sağlanan', tur:'liste', azalan:true, deger:function(i){ return sag(T.k[i]) + ' / 4'; } });
+      var KUME = ['kr'];
+      V.kriter.forEach(function(q, j){
+        KUME.push('k' + j);
+        SUTK['k' + j] = { k:'k' + j, tur:'liste', deger:function(i){ return (T.k[i] & (1 << j)) ? '✓' : '✗'; } };
+      });
+      SUT.push({ k:'kr', ad:'Kriterler', baslik:krTanim(), tur:'liste', azalan:true, sira:false, kume:KUME,
+        siraAd:['Azdan çoğa sırala', 'Çoktan aza sırala'], deger:function(i){ return sag(T.k[i]) + ' / 4'; } });
       SUT.forEach(function(c){ SUTK[c.k] = c; });
       for(var i = 0; i < T.n; i++) sira.push(i);
     }
+    function kume(k){ return SUTK[k].kume || [k]; }
+    function suzlu(k){ return kume(k).some(function(x){ return !!suz[x]; }); }
     function bos(v){ return v == null || (typeof v === 'number' && !isFinite(v)); }
     function siraUygula(){
       var c = SUTK[anahtar];
@@ -287,7 +314,7 @@ var veMntParamHtml = (function(){
     }
     function gecer(i, haric){
       for(var k in suz){
-        if(k === haric || !Object.prototype.hasOwnProperty.call(suz, k)) continue;
+        if(!Object.prototype.hasOwnProperty.call(suz, k) || (haric && haric.indexOf(k) >= 0)) continue;
         var f = suz[k], v = SUTK[k].deger(i);
         if(f.izin){ if(!f.izin[v]) return false; continue; }
         if(bos(v) || (f.min != null && v < f.min) || (f.max != null && v > f.max)) return false;
@@ -302,24 +329,32 @@ var veMntParamHtml = (function(){
     // süzgecin paneli (Excel'in açılır listesi): sırala · temizle · değerler ya da aralık · Tamam · İptal
     var OK_ALT = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
     var HUNI = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1.5h8L6 5.2V9L4 8V5.2z" fill="currentColor"/></svg>';
-    function degerYaz(c, v){
-      if(c.ok) return v === '✓' ? '<span class="ok">✓</span> Sağlanıyor' : '<span class="no">✗</span> Sağlanmıyor';
-      return esc(v);
+    // Kriterlerin paneli (Canlı not 2007): kriter başına ✓ · ✗ kutusu, satır sayısıyla; tanım adın ipucunda.
+    function krSuz(say){
+      return '<div class="suz-kr">' + V.kriter.map(function(q, j){
+        var g = suz['k' + j];
+        return '<span class="ad" title="' + esc(q.s) + '">' + esc(q.ad) + '</span>' + ['✓', '✗'].map(function(m, e){
+          return '<label><input type="checkbox" data-suz-kr="' + j + '" value="' + m + '" aria-label="' + esc(q.ad) + ' ' + m + '"'
+            + (!g || g.izin[m] ? ' checked' : '') + '>' + tik(!e) + '<span class="say">' + s(say[j][e], 0) + '</span></label>';
+        }).join('');
+      }).join('') + '</div>';
     }
     function suzAc(k, dug){
       if(acikSuz && acikSuz.k === k){ suzKapat(); return; }
-      var c = SUTK[k], f = suz[k], p = $('ve-suz');
+      var c = SUTK[k], f = suz[k], p = $('ve-suz'), haric = kume(k);
+      var ad = c.siraAd || (c.tur === 'sayi' ? ['Küçükten büyüğe sırala', 'Büyükten küçüğe sırala'] : ['A’dan Z’ye sırala', 'Z’den A’ya sırala']);
       var h = '<div class="suz-is">'
-        + '<button type="button" data-suz-is="artan">' + (c.tur === 'sayi' ? 'Küçükten büyüğe sırala' : 'A’dan Z’ye sırala') + '</button>'
-        + '<button type="button" data-suz-is="azalan">' + (c.tur === 'sayi' ? 'Büyükten küçüğe sırala' : 'Z’den A’ya sırala') + '</button>'
-        + '<button type="button" data-suz-is="temizle"' + (f ? '' : ' disabled') + '>Filtreyi temizle</button></div>';
+        + '<button type="button" data-suz-is="artan">' + ad[0] + '</button>'
+        + '<button type="button" data-suz-is="azalan">' + ad[1] + '</button>'
+        + '<button type="button" data-suz-is="temizle"' + (suzlu(k) ? '' : ' disabled') + '>Filtreyi temizle</button></div>';
       if(c.tur === 'liste'){
-        var say = {}, degerler = [];
+        var say = {}, degerler = [], krSay = V.kriter.map(function(){ return [0, 0]; });
         for(var i = 0; i < T.n; i++){
-          if(!gecer(i, k)) continue;
+          if(!gecer(i, haric)) continue;
           var v = c.deger(i);
           if(!Object.prototype.hasOwnProperty.call(say, v)){ say[v] = 0; degerler.push(v); }
           say[v]++;
+          if(c.kume) for(var j = 0; j < krSay.length; j++) krSay[j][T.k[i] & (1 << j) ? 0 : 1]++;
         }
         if(f) Object.keys(f.izin).forEach(function(v){ if(!Object.prototype.hasOwnProperty.call(say, v)){ say[v] = 0; degerler.push(v); } });
         degerler.sort(function(a, b){ return String(a).localeCompare(String(b), 'tr', { numeric:true }); });
@@ -328,8 +363,8 @@ var veMntParamHtml = (function(){
           + '<div class="suz-liste"><label class="suz-hep"><input type="checkbox" data-suz-hep> Tümünü seç</label>'
           + degerler.map(function(v){
             return '<label data-deger="' + esc(v) + '"><input type="checkbox" data-suz-deger="' + esc(v) + '"' + (!f || f.izin[v] ? ' checked' : '') + '>'
-              + '<span class="ad">' + degerYaz(c, v) + '</span><span class="say">' + s(say[v], 0) + '</span></label>';
-          }).join('') + '</div>';
+              + '<span class="ad">' + esc(v) + '</span><span class="say">' + s(say[v], 0) + '</span></label>';
+          }).join('') + '</div>' + (c.kume ? krSuz(krSay) : '');
       } else {
         var yaz = function(v){ return v == null ? '' : esc(veSayi(v, null, { binlik:false })); };
         h += '<div class="suz-aralik"><label>En az<input type="text" inputmode="decimal" data-suz-min value="' + yaz(f && f.min) + '"></label>'
@@ -337,6 +372,7 @@ var veMntParamHtml = (function(){
       }
       h += '<div class="suz-alt"><button type="button" class="ana" data-suz-is="tamam">Tamam</button><button type="button" data-suz-is="iptal">İptal</button></div>';
       p.innerHTML = h;
+      p.classList.toggle('suz-genis', !!c.kume);                          // kriterlerin satır sayısı iki sütunda
       p.hidden = false;
       acikSuz = { k:k, dug:dug };
       dug.setAttribute('aria-expanded', 'true');
@@ -368,7 +404,9 @@ var veMntParamHtml = (function(){
       var k = gorunenKutular(), on = k.filter(function(x){ return x.checked; }).length;
       hep.checked = on > 0 && on === k.length;
       hep.indeterminate = on > 0 && on < k.length;
-      tamam.disabled = !on;
+      var kr = p.querySelectorAll('[data-suz-kr]'), krBos = false;          // kriterin ✓'i de ✗'i de boşsa satır kalmaz
+      for(var j = 0; j + 1 < kr.length; j += 2) if(!kr[j].checked && !kr[j + 1].checked) krBos = true;
+      tamam.disabled = !on || krBos;
     }
     function suzTamam(){
       var k = acikSuz.k, c = SUTK[k], p = $('ve-suz');
@@ -378,6 +416,11 @@ var veMntParamHtml = (function(){
         var izin = {}, hepsi = !aranan;
         kutular.forEach(function(x){ if(x.checked) izin[x.getAttribute('data-suz-deger')] = true; else hepsi = false; });
         if(hepsi) delete suz[k]; else suz[k] = { izin:izin };
+        if(c.kume) V.kriter.forEach(function(q, j){
+          var on = {}, n = 0;
+          Array.prototype.forEach.call(p.querySelectorAll('[data-suz-kr="' + j + '"]'), function(x){ if(x.checked){ on[x.value] = true; n++; } });
+          if(n === 2) delete suz['k' + j]; else suz['k' + j] = { izin:on };
+        });
       } else {
         var mn = veSayiOku(p.querySelector('[data-suz-min]').value), mx = veSayiOku(p.querySelector('[data-suz-max]').value);
         mn = isFinite(mn) ? mn : null; mx = isFinite(mx) ? mx : null;
@@ -390,7 +433,7 @@ var veMntParamHtml = (function(){
       var k = acikSuz.k;
       if(is === 'tamam') suzTamam();
       else if(is === 'iptal') suzKapat();
-      else if(is === 'temizle'){ delete suz[k]; suzKapat(); suzgecUygula(); }
+      else if(is === 'temizle'){ kume(k).forEach(function(x){ delete suz[x]; }); suzKapat(); suzgecUygula(); }
       else { suzKapat(); sirala(k, is === 'artan' ? 1 : -1); }
     }
     function tarama(){
@@ -399,7 +442,7 @@ var veMntParamHtml = (function(){
       sayfa = Math.max(0, Math.min(son, sayfa));
       var a = sayfa * ADIM, b = Math.min(n, a + ADIM), suzSay = Object.keys(suz).length;
       var bs = function(c){
-        var ac = !!suz[c.k];
+        var ac = suzlu(c.k);
         return '<th' + (c.sira === false ? '' : ' data-sira="' + c.k + '"') + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
           + (anahtar === c.k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '><span class="bas">' + c.ad + '</span>'
           + (c.suz === false ? '' : '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"'
@@ -419,8 +462,7 @@ var veMntParamHtml = (function(){
         var x = sira[r];
         h += '<tr data-s="T' + (x + 1) + '"><td class="sol"><a href="#T' + (x + 1) + '">' + s(x + 1, 0) + '</a></td>'
           + T.gruplar.map(function(g, j){ return '<td class="sol">' + esc(tipAdi(j, x)) + '</td>'; }).join('')
-          + '<td>' + s(T.d[x], 2) + '</td><td>' + yuzde(T.T[x]) + '</td><td>' + s(T.fB[x], 2) + '</td>' + kriterHucre(T.k[x])
-          + '<td>' + sag(T.k[x]) + ' / 4</td></tr>';
+          + '<td>' + s(T.d[x], 2) + '</td><td>' + yuzde(T.T[x]) + '</td><td>' + s(T.fB[x], 2) + '</td>' + krHucre(T.k[x]) + '</tr>';
       }
       $('ve-tarama').innerHTML = h + '</tbody></table></div>';
     }
