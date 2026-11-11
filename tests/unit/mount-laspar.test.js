@@ -210,7 +210,10 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(d.querySelectorAll('img')).toHaveLength(0);
     expect(satirlar(k)).toEqual([['Kod', 'LASPAR LMT-1433-00-TK60'], ['Ürün ailesi', 'Industrial Conical Mounts'], ['Tip', '1433'],
       ['Sertlik', '60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '56 mm'],
-      ['A+P eşi', 'Conical bearing 026 S 1'], ['Kaynak', 'LASPAR genel kataloğu 2018 · s. 52']]);
+      ['A+P eşi', 'Conical bearing 026 S 1']]);
+    // KAYNAK (i)'DE (Canlı Not 139)
+    expect(k.querySelector('.ve-mnt-kaynak-i').closest('tr').querySelector('th').textContent).toBe('Ürün ailesi');
+    expect(k.querySelector('.ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · LASPAR genel kataloğu 2018 · s. 52');
     expect(d.querySelector('.mntlib-sec > .mntlib-tip > button.mntlib-bilgi').getAttribute('data-lp')).toBe('LMT-1433-00-TK60');
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. yük|2\.454 N|250 kg/i);
     expect(satirlar(kunye('lp-lmt-0154-01-tk55').querySelector('.ve-mnt-amc'))).toContainEqual(['Ölçüler', 'Ø120 mm · iç Ø20']);
@@ -218,12 +221,16 @@ describe('KÜNYE — Takoz Özellikleri', () => {
   });
   test('programın LASPAR takozu: TK040\'ta model kodu ve kaynak; LMT-1433-00\'da katalog tipi ve (i); "Mount 1"de künye yok', () => {
     const tk = kunye('TK040');
-    expect(satirlar(tk.querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR MLMT-0216-33-TK040'], ['Sertlik', '45 ShA'], ['Kaynak', 'LASPAR test raporu']]);
+    expect(satirlar(tk.querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR MLMT-0216-33-TK040'], ['Sertlik', '45 ShA']]);
+    // ailesiz künyede kaynak Kod satırının (i)'sinde
+    expect(tk.querySelector('.ve-mnt-kaynak-i').closest('tr').querySelector('th').textContent).toBe('Kod');
+    expect(tk.querySelector('.ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · LASPAR test raporu');
     expect(tk.querySelector('.mntlib-bilgi')).toBeNull();
     const lm = kunye('lmt1433-00-55sh');
     expect(satirlar(lm.querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR LMT-1433-00'], ['Ürün ailesi', 'Industrial Conical Mounts'],
       ['Tip', '1433'], ['Sertlik', '55 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '56 mm'],
-      ['A+P eşi', 'Conical bearing 026 S 1'], ['Kaynak', 'BMC FEA raporu · 02.10.2018 · 12.02.2019']]);
+      ['A+P eşi', 'Conical bearing 026 S 1']]);
+    expect(lm.querySelector('.ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · BMC FEA raporu · 02.10.2018 · 12.02.2019');
     expect(lm.querySelector('.mntlib-bilgi').getAttribute('data-lp-eski')).toBe('lmt1433-00-55sh');
     expect(satirlar(kunye('amc55sha').querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR LMT-1433-37'], ['Sertlik', '55 ShA']]);
     expect([kunye('bmc-mount1-55sh').querySelector('.ve-mnt-amc'), kunye('bmc-mount1-55sh').querySelector('.mntlib-bilgi')]).toEqual([null, null]);

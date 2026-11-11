@@ -418,7 +418,7 @@ describe('TEKNİK RESİM — AMC kutusu', () => {
     const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
     const satir = [...d.querySelectorAll('.ve-mnt-amc tr')].map((r) => [r.querySelector('th').textContent, r.querySelector('td').textContent]);
     expect(satir).toContainEqual(['Sönüm', '0,03']);
-    expect(satir).toContainEqual(['Kaynak', 'AMC çizimi · BMC teknik resmi']);
+    expect(d.querySelector('.ve-mnt-amc .ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · AMC çizimi · BMC teknik resmi');
     expect(d.textContent).not.toMatch(/BMC parça/);
   });
 });
@@ -434,7 +434,13 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(d.querySelectorAll('img')).toHaveLength(0);                     // resim yalnız (i)'nin penceresinde
     const satir = [...k.querySelectorAll('tr')].map((r) => [r.querySelector('th').textContent, r.querySelector('td').textContent]);
     expect(satir).toEqual([['Kod', 'AMC 137963'], ['Ürün ailesi', 'Cone with cutouts'], ['Sertlik', '60 ShA'],
-      ['Sıkma torku', '170 N·m'], ['Ağırlık', '1.438 g'], ['Kaynak', 'AMC-EO · 24.11.2025']]);
+      ['Sıkma torku', '170 N·m'], ['Ağırlık', '1.438 g']]);
+    // KAYNAK (i)'DE (Canlı Not 139): Kaynak satırı yok; Ürün ailesi satırının (i)'sinin ipucunda
+    const ki = k.querySelectorAll('.ve-mnt-kaynak-i');
+    expect(ki).toHaveLength(1);
+    expect(ki[0].closest('tr').querySelector('th').textContent).toBe('Ürün ailesi');
+    expect([ki[0].getAttribute('data-ipucu'), ki[0].getAttribute('aria-label')]).toEqual(['Kaynak · AMC-EO · 24.11.2025', 'Kaynak · AMC-EO · 24.11.2025']);
+    expect(ki[0].classList.contains('ve-fp-i')).toBe(true);                             // kaynak 'i'sinin ipucu kalıbı
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|650 kg/i);
   });
   test('üretici veritabanı dışı tipte künye de (i) de yok', () => {

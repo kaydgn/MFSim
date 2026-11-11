@@ -4595,18 +4595,28 @@ function veMntLibCizimAc(dugme){
   if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
   return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
 }
+// KAYNAK (i)'DE (kullanıcı 2026-11-11, Canlı Not 139: *"Kaynak kısmını kaldıralım. Kaynağı 'ürün
+// ailesi' satırına bir (i) butonu koyarak belirtelim. Kullanıcı fare ile bunun üstüne geldiğinde
+// kaynak görünsün."*): künyede Kaynak satırı YOK; kaynak Ürün ailesi satırının (i)'sinin ipucunda
+// (ailesiz künyede Kod satırında). İpucu kaynak 'i'sinin kalıbı (`.ve-fp-i` · `data-ipucu`,
+// cp-fead.js → veFeadIpucuGoster). Kapı: mount-ap.test.js · mount-amc.test.js · mount-laspar.test.js
+// → *KAYNAK (i)'DE*.
+function _mntKaynakI(kaynak){
+  if(!kaynak) return '';
+  var t='Kaynak · '+kaynak;
+  return '<button type="button" class="ve-fp-i ve-mnt-kaynak-i" data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button>';
+}
 function _mntLibAmcKunyeHTML(e){
   var K=_mntLibAmcKunye(e); if(!K) return '';
   var sat=function(ad, v){ return v==null || v==='' ? '' : '<tr><th scope="row">'+ad+'</th><td>'+v+'</td></tr>'; };
   var h='<div class="ve-mnt-amc" data-amc="'+_mntEsc(K.kod)+'">'
     + '<table class="ve-mnt-amc-veri"><tbody>'
     + sat('Kod', 'AMC '+_mntEsc(K.kod))
-    + sat('Ürün ailesi', '<span lang="en">'+_mntEsc(K.aile)+'</span>')
+    + sat('Ürün ailesi', '<span lang="en">'+_mntEsc(K.aile)+'</span>'+_mntKaynakI(K.kaynak))
     + sat('Sertlik', K.sh!=null ? veSayi(K.sh, 0)+' ShA' : null)
     + sat('Sıkma torku', K.tork!=null ? veSayi(K.tork, (K.tork%1)?1:0)+' N·m' : null)
     + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
     + sat('Sönüm', K.sonum!=null ? veSayi(K.sonum, 2) : null)
-    + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
   return h+'</div>';
 }
@@ -4634,13 +4644,12 @@ function _mntLibApKunyeHTML(e){
   var en=function(t){ return '<span lang="en">'+_mntEsc(t)+'</span>'; };
   var h='<div class="ve-mnt-amc" data-ap="'+_mntEsc(K.kod)+'">'
     + '<table class="ve-mnt-amc-veri"><tbody>'
-    + sat('Kod', 'A+P '+_mntEsc(K.kod)) + sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi))
+    + sat('Kod', 'A+P '+_mntEsc(K.kod)) + sat('Ürün ailesi', en(K.aile)+_mntKaynakI(K.kaynak)) + sat('Tip', _mntEsc(K.tipAdi))
     + (K.sinif ? sat('Sertlik', en(K.sinif)+(K.sh!=null ? ' · ~'+veSayi(K.sh, 0)+' ShA' : '')) : '')
     + sat('Ölçüler', _mntApOlcu(K.olcu))
     + sat('Yükseklik', K.olcu && K.olcu.yuk!=null ? veSayi(K.olcu.yuk, (K.olcu.yuk%1)?1:0)+' mm' : null)
     + sat('Rijitlik toleransı', K.tol!=null ? '±%'+veSayi(K.tol, 0) : null)
     + sat('Ağırlık', K.gr!=null ? veSayi(K.gr, 0)+' g' : null)
-    + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
   return h+'</div>';
 }
@@ -4662,13 +4671,12 @@ function _mntLibLpKunyeHTML(e){
   var es=(K.apEsi && _MNT_AP && _MNT_AP.TIP[K.apEsi]) ? _MNT_AP.AILE[_MNT_AP.TIP[K.apEsi][0]][1]+' '+_MNT_AP.TIP[K.apEsi][1] : null;
   var h='<div class="ve-mnt-amc" data-lp="'+_mntEsc(K.kod)+'">'
     + '<table class="ve-mnt-amc-veri"><tbody>'
-    + sat('Kod', 'LASPAR '+_mntEsc(K.kod))
-    + (K.aile ? sat('Ürün ailesi', en(K.aile)) + sat('Tip', _mntEsc(K.tipAdi)) : '')
+    + sat('Kod', 'LASPAR '+_mntEsc(K.kod)+(K.aile ? '' : _mntKaynakI(K.kaynak)))
+    + (K.aile ? sat('Ürün ailesi', en(K.aile)+_mntKaynakI(K.kaynak)) + sat('Tip', _mntEsc(K.tipAdi)) : '')
     + sat('Sertlik', K.sh!=null ? veSayi(K.sh, 0)+' ShA' : null)
     + sat('Ölçüler', _mntLpOlcu(K.olcu))
     + sat('Yükseklik', K.olcu && K.olcu.yuk!=null ? veSayi(K.olcu.yuk, (K.olcu.yuk%1)?1:0)+' mm' : null)
     + sat('A+P eşi', es ? en(es) : null)
-    + sat('Kaynak', K.kaynak ? _mntEsc(K.kaynak) : null)
     + '</tbody></table>';
   return h+'</div>';
 }

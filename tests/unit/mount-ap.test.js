@@ -200,8 +200,11 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(P.kunye('1221402503').cizim).toBe('assets/takoz/ap/cizim-k-026-s1.webp');
     expect('foto' in P.kunye('1221402503')).toBe(false);
     expect(satirlar(k)).toEqual([['Kod', 'A+P 12.2140.2503'], ['Ürün ailesi', 'APSOvib® Conical bearing'], ['Tip', '026 S 1'],
-      ['Sertlik', 'medium · ~60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'],
-      ['Kaynak', 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026']]);
+      ['Sertlik', 'medium · ~60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm']]);
+    // KAYNAK (i)'DE (Canlı Not 139)
+    const ki = k.querySelector('.ve-mnt-kaynak-i');
+    expect(ki.closest('tr').querySelector('th').textContent).toBe('Ürün ailesi');
+    expect(ki.getAttribute('data-ipucu')).toBe('Kaynak · A+P föyü Kasım 2015 · e-mağaza 10.11.2026');
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|2\.550 N|259,9/i);
   });
   test('H-takoz toleransı, marine ağırlığı; A+P künyesi yalnız A+P kodunda', () => {

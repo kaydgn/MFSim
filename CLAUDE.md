@@ -378,7 +378,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
   (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
+  (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
+  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
