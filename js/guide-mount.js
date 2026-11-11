@@ -720,7 +720,7 @@ function _gmSec3(){
       'Her bileşende tek tık seçer, <strong>çift tık</strong> açar: kütle gövdeleri, takozlar ve '
     + 'araçlar — Çözücü, Rapor, Görünümler, 3D Görüntüleyici, Takoz Özellikleri ve Parametrik '
     + 'Analiz — penceresini, Başlangıç Sihirbazı sihirbazı. Pencere seçim boşalınca da '
-    + 'açık kalır; konusu tuvalde kesikli kenarla işaretlidir.');
+    + 'açık kalır.');
   h += _gmH3('Sihirbazı yeniden açmak', 'tur-sihirbaz');
   h += _gmAdimlar([
     'Tuvalde <strong>Başlangıç Sihirbazı</strong>’na ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' çift tıklayın.',

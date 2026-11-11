@@ -262,7 +262,7 @@ button, textarea, input { font: inherit; color: inherit; }
 
 <div class="cn" id="cn">
   <header class="cn-serit">
-    <div class="cn-kimlik"><b>MFSim</b><span class="ad">Canlı Not</span><span class="cn-odak" id="cn-odak" hidden></span><span class="cn-surum" id="cn-surum"></span></div>
+    <div class="cn-kimlik"><b id="cn-marka">MFSim</b><span class="ad">Canlı Not</span><span class="cn-odak" id="cn-odak" hidden></span><span class="cn-surum" id="cn-surum"></span></div>
     <div class="cn-araclar" role="toolbar" aria-label="Kalem">
       <button class="cn-arac" type="button" data-arac="imlec" aria-pressed="true" title="İmleç (Esc)" aria-label="İmleç">
         <svg viewBox="0 0 24 24"><path d="M6 3.5 18.5 13l-5.6.9 3.2 6.1-2.4 1.2-3.2-6.1L6 19z"/></svg></button>
@@ -299,7 +299,7 @@ button, textarea, input { font: inherit; color: inherit; }
     <div class="cn-kilit" id="cn-kilit" hidden>
       <div class="cn-kilit-kart" id="cn-kilit-kart" role="status" aria-live="polite" tabindex="-1">
         <span class="cn-kilit-don" aria-hidden="true"></span>
-        <b>Program güncelleniyor</b>
+        <b id="cn-kilit-baslik">Program güncelleniyor</b>
         <span class="cn-kilit-asama" id="cn-kilit-asama"></span>
         <button class="cn-dugme" type="button" id="cn-kilit-vazgec">Vazgeç</button>
       </div>
@@ -396,6 +396,20 @@ button, textarea, input { font: inherit; color: inherit; }
   // program her açılışta o bileşende açılır (odakla), notlar sayfanın aralığında numaralanır.
   var ODAK = CN.odakBul(AYAR.odak);
   if (ODAK) { $('cn-odak').textContent = ODAK.ad; $('cn-odak').hidden = false; }
+  // BELGE ODAĞI (çekirdek → ODAKLAR, `belge`): çerçevede program değil programın ürettiği belge —
+  // yazılar belgenin adıyla, MFSim adı geçmez (kullanıcı 2026-11-11: *"MFSim açılıyor diyor? Ben
+  // sadece bu HTML'i canlı not olarak istedim."*). Ana sayfanın ve bileşen odağının yazıları aynı.
+  var BELGE = !!(ODAK && ODAK.belge);
+  var AD = BELGE ? { kim: 'Rapor', kimi: 'Raporu', acilis: 'Rapor' } : { kim: 'Program', kimi: 'Programı', acilis: 'MFSim' };
+  if (BELGE) {
+    $('cn-marka').hidden = true;
+    cerceve.title = ODAK.ad;
+    $('cn-acilis').textContent = AD.acilis + ' açılıyor…';
+    $('cn-istek').textContent = AD.kimi + ' güncelle';
+    $('cn-istek').title = 'Ana dalın son raporunu iste';
+    $('cn-yenile').title = 'Raporu yeniden yükle';
+    $('cn-kilit-baslik').textContent = AD.kim + ' güncelleniyor';
+  }
 
   // ── bildirim ────────────────────────────────────────────────────────────
   var bildirimZaman = 0;
@@ -486,10 +500,10 @@ button, textarea, input { font: inherit; color: inherit; }
     if (program.kaynak || program.yuklenen) return;
     var k = CN.programKaynagi(yayin);
     if (k.tur === 'yok') {
-      acilisYaz(kayitDurum === 'yok' || kayitDurum === 'hata' ? 'Kayıt bağlı değil.' : (yayinOkundu ? 'Program yayını yok.' : 'Kayıt bekleniyor…'));
+      acilisYaz(kayitDurum === 'yok' || kayitDurum === 'hata' ? 'Kayıt bağlı değil.' : (yayinOkundu ? AD.kim + ' yayını yok.' : 'Kayıt bekleniyor…'));
       return;
     }
-    programYukle(k, null).then(guncellemeDenetle, function () { acilisYaz('Program indirilemedi.'); });
+    programYukle(k, null).then(guncellemeDenetle, function () { acilisYaz(AD.kim + ' indirilemedi.'); });
   }
   function getir(id) {
     return fetch('/_blob/' + id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); });
@@ -513,7 +527,7 @@ button, textarea, input { font: inherit; color: inherit; }
   function programGetir(k) {
     if (k.tur === 'varlik') return getir(k.id);            // eski biçim: tek varlık
     var plan = CN.yuvaPlani(k.parcalar), biten = 0, toplam = k.parcalar.length;
-    var bitti = function () { biten++; if (!program.kaynak) acilisYaz('MFSim indiriliyor · ' + biten + '/' + toplam); };
+    var bitti = function () { biten++; if (!program.kaynak) acilisYaz(AD.acilis + ' indiriliyor · ' + biten + '/' + toplam); };
     return Promise.all(plan.map(function (yuva) { return yuvaGetir(yuva, bitti); })).then(function (yuvalar) {
       var html = CN.programBirlestir(yuvalar);
       if (k.uzunluk && html.length !== k.uzunluk) throw new Error('program eksik');
@@ -525,13 +539,13 @@ button, textarea, input { font: inherit; color: inherit; }
   }
   function programYukle(k, proje) {
     program.yuklenen = k.surum || '?';
-    if (!program.kaynak) acilisYaz('MFSim indiriliyor…');
+    if (!program.kaynak) acilisYaz(AD.acilis + ' indiriliyor…');
     return programGetir(k).then(function (html) {
       if (!/^\s*<!doctype html/i.test(html)) throw new Error('program değil');
       program.basladi = false; program.hazir = false;
       program.kaynak = k.tur; program.bilgi = k; program.surum = k.surum; program.pr = k.pr || '';
       if (proje) onceki.proje = proje;
-      acilisYaz('MFSim açılıyor…');
+      acilisYaz(AD.acilis + ' açılıyor…');
       surumYaz(); durumYaz();
       cerceve.srcdoc = html;
       program.yuklenen = '';
@@ -564,7 +578,7 @@ button, textarea, input { font: inherit; color: inherit; }
     yukleKilitle(k.surum);                    // proje şimdi alınır: yeni program açılana dek kilitli
     programYukle(k, programProjesi()).then(function () {
       ertelenen = ''; guncelKapat(); $('cn-guncel-ac').hidden = true;
-      bildir('Program güncellendi · ' + k.surum);
+      bildir(AD.kim + ' güncellendi · ' + k.surum);
       guncellemeDenetle();
     }, function () { yukleKilitle(''); btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
   }
@@ -582,7 +596,7 @@ button, textarea, input { font: inherit; color: inherit; }
     if (CN.guncellemeVar(yayin, program.surum, '')) { guncelle(); return; }
     if (!program.bilgi) { programBaslat(); return; }
     programYukle(program.bilgi, programProjesi())
-      .then(function () { bildir('Program yenilendi.'); }, function () { bildir('Program indirilemedi.'); });
+      .then(function () { bildir(AD.kim + ' yenilendi.'); }, function () { bildir(AD.kim + ' indirilemedi.'); });
   }
   // PROGRAMI GÜNCELLE (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı
   // güncelleyen bir buton koyalım"*): Güncelleme yalnız bir oturumun YAYINLADIĞINI yükler;
@@ -595,7 +609,7 @@ button, textarea, input { font: inherit; color: inherit; }
     var surer = d === 'bekliyor' || d === 'yapiliyor';
     b.disabled = surer;
     b.setAttribute('aria-busy', surer ? 'true' : 'false');
-    b.textContent = surer ? 'Güncelleniyor…' : 'Programı güncelle';
+    b.textContent = surer ? 'Güncelleniyor…' : AD.kimi + ' güncelle';
     kilitCiz();
   }
   // KİLİT (kullanıcı 2026-11-11: *"'güncelleniyor' yazısı çıkıyor butonda. Böyle olduğu zaman
@@ -643,7 +657,7 @@ button, textarea, input { font: inherit; color: inherit; }
     if (d === 'tamam' || d === 'guncel') {
       // İstenen ana dalın son hâli: açık program kayıttaki yayından eskiyse o yüklenir.
       if (CN.guncellemeVar(yayin, program.surum, '')) { guncellemeDenetle(); return; }
-      if (d === 'guncel') { istekBekle = false; bildir('Program güncel · ' + (istek.surum || program.surum)); return; }
+      if (d === 'guncel') { istekBekle = false; bildir(AD.kim + ' güncel · ' + (istek.surum || program.surum)); return; }
       setTimeout(function () { istekBekle = false; }, 20000);   // yayın önce yazılır (skill §1); gecikirse gelince yüklenir
     }
     else if (d === 'hata') { istekBekle = false; bildir('Güncellenemedi' + (istek.cevap ? ': ' + istek.cevap : '.')); }
@@ -728,7 +742,7 @@ button, textarea, input { font: inherit; color: inherit; }
   cerceve.addEventListener('load', function () {
     if (program.basladi || !program.kaynak) return;
     yukleKilitle('');
-    acilisYaz('Program açılmadı.');
+    acilisYaz(AD.kim + ' açılmadı.');
   });
 
   // Program giriş ve açılıştan geçince önceki durum geri yüklenir.
