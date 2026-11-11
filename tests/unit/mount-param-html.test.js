@@ -175,6 +175,9 @@ describe('SAYFA', () => {
     expect(no()).toEqual(['3', '2', '1']);
     d.querySelector('#ve-tarama th[data-sira="sag"]').click();               // sağlanan: çoktan aza
     expect(no()).toEqual(['1', '2', '3']);
+    d.querySelector('#ve-tarama th[data-sira="no"]').click();                // No süzgeçsiz, başlığı sıralar
+    d.querySelector('#ve-tarama th[data-sira="no"]').click();
+    expect(no()).toEqual(['3', '2', '1']);
     expect([...d.querySelectorAll('#ve-tarama button[data-sayfa]')].map((b) => b.disabled)).toEqual([true, true]);
   });
 
@@ -241,7 +244,9 @@ describe('SAYFA', () => {
 
     test('tip sütunu: değerler satır sayısıyla; birini kaldırıp Tamam — satırlar, sayaç, özet, düğme; Filtreleri temizle', () => {
       const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
-      expect(d.querySelectorAll('#ve-tarama thead button[data-suz]').length).toBe(d.querySelectorAll('#ve-tarama thead th').length);
+      // Canlı not 2005: "'No' kısmında filtre olmasın." — No'nun başlığında düğme yok, öteki her başlıkta var
+      expect(d.querySelector('#ve-tarama th[data-sira="no"] button')).toBeNull();
+      expect(d.querySelectorAll('#ve-tarama thead button[data-suz]').length).toBe(d.querySelectorAll('#ve-tarama thead th').length - 1);
       ac_(d, 'g0');
       expect(p.hidden).toBe(false);
       expect([...p.querySelectorAll('label[data-deger]')].map((l) => [l.getAttribute('data-deger'), metin(l.querySelector('.say'))])).toEqual([

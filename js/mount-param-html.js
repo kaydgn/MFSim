@@ -254,7 +254,7 @@ var veMntParamHtml = (function(){
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
     var SUT = [], SUTK = {};
     if(T){
-      SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, deger:function(i){ return i + 1; } });
+      SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, suz:false, deger:function(i){ return i + 1; } });
       T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, deger:function(i){ return tipAdi(j, i); } }); });
       SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
       SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
@@ -397,8 +397,8 @@ var veMntParamHtml = (function(){
         var ac = !!suz[c.k];
         return '<th data-sira="' + c.k + '"' + (c.sol ? ' class="sol"' : '') + (c.baslik ? ' title="' + esc(c.baslik) + '"' : '')
           + (anahtar === c.k ? ' aria-sort="' + (yon > 0 ? 'ascending' : 'descending') + '"' : '') + '><span class="bas">' + c.ad + '</span>'
-          + '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"' + (ac ? ' aria-pressed="true"' : '') + '>'
-          + (ac ? HUNI : OK_ALT) + '</button></th>';
+          + (c.suz === false ? '' : '<button type="button" class="suz-dug" data-suz="' + c.k + '" aria-label="Filtrele" title="Filtrele"'
+            + (ac ? ' aria-pressed="true"' : '') + '>' + (ac ? HUNI : OK_ALT) + '</button>') + '</th>';
       };
       var h = '<div class="arac"><span class="sayac">' + (n ? s(a + 1, 0) + '–' + s(b, 0) : '0') + ' / ' + s(n, 0)
         + (T.N > T.n ? ' (' + s(T.N, 0) + ' kombinasyon)' : '') + '</span>'
