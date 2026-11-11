@@ -8,6 +8,8 @@
 // kurulur (E — js/mount-param-excel.js'in başlığı), iki çıktı aynı sayıyı yazar.
 // Belge OKUR, hesaplamaz: tıklanan konfigürasyonun sonucu gömülü veriden çizilir
 // (Excel makrosuz bir tıkla değer taşıyamadığı için her bloğu hazır yazar).
+//   Başlık — künye: aracın kimliği (E.arac · E.motor · E.sanziman — bilinen; Excel
+//            yazmaz, Canlı not 2008), ateşleme, rölanti, silindir, ζ, kütle, tarih
 //   Özet   — K0…Kn: grupların tipi, Uygunluk, statik sehim, dört kesin kriter,
 //            TR, en düşük mod (frekans payı yok — Canlı not 2003)
 //   Tarama — çözülen kombinasyonlar, Excel'in sırası (sağlanan kriter sayısı, sonra
@@ -71,6 +73,7 @@ var veMntParamHtml = (function(){
     var T = E.tarama || {}, V = T.veri || null, L = T.satirlar || [];
     var D = {
       v:1, baslik:E.baslik || 'Takoz konfigürasyonları', tarih:tarih((opt && opt.tarih) || new Date()),
+      arac:E.arac || null, motor:E.motor || null, sanziman:E.sanziman || null,
       fAtes:yuv(E.fAtes, 4), trSinir:XL ? XL.trSinir(E) : 0.15, rolanti:yuv(E.rolanti, 1), silindir:E.silindir || null,
       zeta:yuv(E.zeta, 4), kutle:yuv(E.kutle, 1),
       gruplar:(E.gruplar || []).map(kok), takozlar:(E.takozlar || []).map(function(t){ return { ad:kok(t.ad), grup:t.grup }; }),
@@ -604,8 +607,13 @@ var veMntParamHtml = (function(){
       var sayi = SAYI ? [SAYI.veSayi, SAYI.veSayiUstel, SAYI.veSayiMakine, SAYI.veSayiOku].map(String).join('\n')
         : 'function veSayi(v){ return String(v); }\nfunction veSayiOku(v){ return parseFloat(v); }';
       var T0 = D.tarama;
-      // Künye: ad ve değer hücreleri (Canlı not 2004: "Daha güzel bir şekilde … yayalım bu bilgileri")
+      // Künye: ad ve değer hücreleri (Canlı not 2004: "Daha güzel bir şekilde … yayalım bu bilgileri");
+      // başında aracın kimliği (Canlı not 2008: "Buraya aracın ismini falan da yazalım. Yani bilgi
+      // versin kullanıcıya.") — bilinmeyen hücre yazılmaz; belgenin adında (<title>) da araç
       var kunye = [
+        D.arac ? ['Araç', D.arac] : null,
+        D.motor ? ['Motor', D.motor] : null,
+        D.sanziman ? ['Şanzıman', D.sanziman] : null,
         ['Ateşleme frekansı [Hz]', tr(D.fAtes, 2)],
         D.rolanti ? ['Rölanti [dev/dk]', tr(D.rolanti, 0)] : null,
         D.silindir ? ['Silindir', tr(D.silindir, 0)] : null,
@@ -616,7 +624,7 @@ var veMntParamHtml = (function(){
       ].filter(Boolean).map(function(x){ return '<div><dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('');
       var ust = '<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n'
         + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        + '<title>' + esc(D.baslik) + '</title>\n<style>\n' + yuz + '\n' + CSS + '\n</style>\n</head>\n<body>\n'
+        + '<title>' + esc((D.arac ? D.arac + ' — ' : '') + D.baslik) + '</title>\n<style>\n' + yuz + '\n' + CSS + '\n</style>\n</head>\n<body>\n'
         + '<header><h1>' + esc(D.baslik) + '</h1><dl class="kunye">' + kunye + '</dl>'
         + '<nav><a id="n-ozet" href="#ozet">Özet</a>' + (T0 ? '<a id="n-tarama" href="#tarama">Tarama</a>' : '<a id="n-tarama" href="#tarama" hidden>Tarama</a>')
         + '<a id="n-sonuc" href="#sonuc">Sonuç</a></nav></header>\n<main>\n'
