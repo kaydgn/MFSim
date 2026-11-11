@@ -16,6 +16,13 @@
  *       gömdüğü kopya (sayfa yayını) 16 MB'a. Program 16 MB'ı aşarsa varlık yine
  *       hazırlanır, sayfa yayını UYARIYLA kapalı söylenir; 20 MB'ı aşarsa DURUR.
  *
+ *   node tools/canli-not.js sayfa <yayındaki index.html> [--cikti .canli-not/yayin] [--dal]
+ *       SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE: program 16 MB'ı aştığında sayfa
+ *       yeni programı gömemez. Yayındaki mfsim.html korunur — publish `files`'SIZ
+ *       (verilmeyen dosya yerinde kalır); sayfanın ayar satırı o gömülü programı
+ *       anlatmalı, yayındaki sayfadan (`Artifact read url:<adres> path:index.html`)
+ *       okunur. Yeni program kayıttaki yayından (`yayin/son`) yüklenir. Yalnız ana daldan.
+ *
  *   node tools/canli-not.js yayin --program <varlık kimliği> [--notlar 6,8-21]
  *                           [--kaynak <mfsim.html>] [--cikti <json>]
  *       PROGRAMIN GÜNCELLEMESİ — sayfa yeniden YAYINLANMAZ (kullanıcı
@@ -357,6 +364,31 @@ function hazirla(o) {
   return { sayfa: sayfaYol, mfsim: mfsim, varlik: varlik, boyut: boyut, ayar: ayar, hukum: hukum };
 }
 
+// SAYFANIN YAYINI, GÖMÜLÜ PROGRAM YERİNDE (kullanıcı 2026-11-11, "Programı güncelle"
+// düğmesi sayfaya girmeliydi; program 17,6 MB → sayfa gömemiyor). Ayar yayındaki
+// sayfadan: yayındaki mfsim.html'in künyesi. Sayfa ana dalın şablonu ve çekirdeğiyle.
+function sayfaYayini(o) {
+  if (!o.konum[0]) throw new Error('yayındaki sayfa gerekli: Artifact read url:<adres> path:index.html');
+  if (!o.dal) {
+    const ana = anaDal(), head = git(['rev-parse', 'HEAD']);
+    if (head !== ana.sha) throw new Error('HEAD ' + head.slice(0, 7) + ' ana dal değil (origin/main ' + ana.sha.slice(0, 7) + ')');
+    if (git(['status', '--porcelain', '--untracked-files=no'])) throw new Error('commit edilmemiş değişiklik var');
+  }
+  const sablon = fs.readFileSync(SABLON, 'utf8'), cekirdek = fs.readFileSync(CEKIRDEK, 'utf8');
+  const h = sayfaHukmu(fs.readFileSync(path.resolve(o.konum[0]), 'utf8'), sablon, cekirdek);
+  if (!h.ayar || !h.ayar.surum) throw new Error('yayındaki sayfanın ayar satırı okunamadı (Canlı Not sayfası mı?)');
+  const cikti = o.cikti || VARSAYILAN_CIKTI;
+  fs.mkdirSync(cikti, { recursive: true });
+  const yol = path.join(cikti, 'canli-not.html');
+  const sayfa = sayfaKur(sablon, cekirdek, h.ayar);
+  fs.writeFileSync(yol, sayfa);
+  const goreli = (p) => path.relative(KOK, p) || p;
+  console.log('Sayfa hazır · gömülü program ' + h.ayar.surum + (h.ayar.pr ? ' · PR #' + h.ayar.pr : '') +
+    ' (yayındaki mfsim.html korunur)' + (h.guncel ? ' · yayındaki sayfa zaten bugünkü kaynakla aynı' : ''));
+  console.log('  Artifact publish url:<adres> file_path=' + goreli(yol) + '   (files YOK)');
+  return { sayfa: yol, ayar: h.ayar, guncel: h.guncel, boyut: Buffer.byteLength(sayfa) };
+}
+
 // ── notlar ─────────────────────────────────────────────────────────────────
 // ArtifactData'nın out_dir dökümü belgeyi {id, version, data} sarmalıyla ya da
 // çıplak yazabilir; ikisi de okunur.
@@ -556,6 +588,7 @@ async function ana(argv) {
   const o = ayristir(argv);
   if (o.yardim || !o.komut) { console.log(YARDIM); return; }
   if (o.komut === 'hazirla') return hazirla(o);
+  if (o.komut === 'sayfa') return sayfaYayini(o);
   if (o.komut === 'denetle') return denetle(o);
   if (o.komut === 'yayin') return yayin(o);
   if (o.komut === 'liste') return liste(o);
@@ -568,5 +601,5 @@ if (require.main === module) {
   ana(process.argv.slice(2)).catch((e) => { console.error('✗ ' + (e && e.message ? e.message : e)); process.exit(1); });
 }
 
-module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
+module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, sayfaYayini, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
   yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR, VARLIK_SINIRI, sinirHukmu };

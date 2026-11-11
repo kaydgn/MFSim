@@ -274,7 +274,33 @@
     return s && VARLIK.test(String(s.foto || '')) ? '/_blob/' + s.foto : '';
   }
 
+  // PROGRAMI GÜNCELLE İSTEĞİ (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere
+  // programı güncelleyen bir buton koyalım"*): sayfa kayda `istek/guncelle` yazar ve
+  // Claude'a yorum gönderir; oturum ana dalın SON hâlini yayınlar, durumu aynı belgeye
+  // yazar. Durum: bekliyor → yapiliyor → tamam (yeni yayın) · guncel (yayın zaten ana
+  // dal) · hata. 30 dakikadan eski "bekliyor/yapiliyor" ESKİ sayılır (oturum yok):
+  // düğme yeniden açılır.
+  var ISTEK_DURUMLARI = ['bekliyor', 'yapiliyor', 'tamam', 'guncel', 'hata'];
+  var ISTEK_ESKI_MS = 30 * 60 * 1000;
+  function istekDurumu(d, simdi) {
+    if (!d || typeof d !== 'object') return 'yok';
+    var durum = String(d.durum || '');
+    if (ISTEK_DURUMLARI.indexOf(durum) < 0) return 'yok';
+    if (durum === 'bekliyor' || durum === 'yapiliyor') {
+      var t = Date.parse(d.zaman || '');
+      if (!isFinite(t) || (simdi || 0) - t > ISTEK_ESKI_MS) return 'eski';
+    }
+    return durum;
+  }
+  // Claude'a giden yorumun metni — oturum onu bu başlıktan tanır (skill canli-not §1).
+  var ISTEK_BASLIK = 'Program güncelleme isteği';
+  function istekMetni(o) {
+    o = o || {};
+    return ISTEK_BASLIK + ' · açık sürüm ' + (o.surum || '?') + (o.pr ? ' · #' + o.pr : '');
+  }
+
   var api = {
+    ISTEK_BASLIK: ISTEK_BASLIK, ISTEK_ESKI_MS: ISTEK_ESKI_MS, istekDurumu: istekDurumu, istekMetni: istekMetni,
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
     yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,

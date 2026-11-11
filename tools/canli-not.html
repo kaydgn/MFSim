@@ -264,6 +264,7 @@ button, textarea, input { font: inherit; color: inherit; }
       <span class="cn-baglanti" id="cn-claude" data-d="bekle">Claude</span>
     </div>
     <button class="cn-dugme cn-guncel-ac" type="button" id="cn-guncel-ac" aria-controls="cn-guncel" hidden>Güncelleme</button>
+    <button class="cn-dugme" type="button" id="cn-istek" title="Ana dalın son programını iste">Programı güncelle</button>
     <button class="cn-dugme" type="button" id="cn-yenile" title="Programı yeniden yükle">Yenile</button>
     <button class="cn-dugme" type="button" id="cn-liste-ac" aria-expanded="false" aria-controls="cn-liste">Notlar <span class="cn-sayac" id="cn-sayac" data-bekleyen="0">0</span></button>
   </header>
@@ -427,6 +428,7 @@ button, textarea, input { font: inherit; color: inherit; }
       yayin = snap.exists ? (snap.data() || null) : null;
       if (!program.kaynak) programBaslat(); else guncellemeDenetle();
     }, function () { clearTimeout(yzaman); programBaslat(); });
+    yetki.db.doc('istek/guncelle').onSnapshot(istekGeldi, function () {});
   }
 
   // ── program: kaynağı ve güncellemesi ────────────────────────────────────
@@ -464,6 +466,10 @@ button, textarea, input { font: inherit; color: inherit; }
       });
   }
   function guncellemeDenetle() {
+    // Düğmeyle istenen güncelleme gelince sorulmaz, yüklenir (kullanıcı zaten istedi).
+    if (istekBekle && CN.guncellemeVar(yayin, program.surum, '')) {
+      istekBekle = false; guncelle(); return;
+    }
     $('cn-guncel-ac').hidden = !CN.guncellemeVar(yayin, program.surum, '');
     if (CN.guncellemeVar(yayin, program.surum, ertelenen)) guncelAc();
     else if (!CN.guncellemeVar(yayin, program.surum, '')) guncelKapat();
@@ -511,6 +517,54 @@ button, textarea, input { font: inherit; color: inherit; }
     dosyaAc();
     bildir('Program yenilendi.');
   }
+  // PROGRAMI GÜNCELLE (kullanıcı 2026-11-11: *"Canlı notun içine de belli bir yere programı
+  // güncelleyen bir buton koyalım"*): Güncelleme yalnız bir oturumun YAYINLADIĞINI yükler;
+  // bu düğme ana dalın SON hâlini (başka oturumların birleşmeleri dâhil) ister — kayda
+  // istek (istek/guncelle) ve Claude'a yorum. Oturum derleyip yayınlar; yeni yayın gelince
+  // sayfa onu sormadan yükler (proje taşınır). Yayın zaten ana dalsa "güncel" der.
+  var istek = null, istekBekle = false;
+  function istekCiz() {
+    var b = $('cn-istek'), d = CN.istekDurumu(istek, Date.now());
+    var surer = d === 'bekliyor' || d === 'yapiliyor';
+    b.disabled = surer;
+    b.setAttribute('aria-busy', surer ? 'true' : 'false');
+    b.textContent = surer ? 'Güncelleniyor…' : 'Programı güncelle';
+  }
+  function istekGeldi(snap) {
+    var once = CN.istekDurumu(istek, Date.now());
+    istek = snap && snap.exists ? (snap.data() || null) : null;
+    var d = CN.istekDurumu(istek, Date.now());
+    istekCiz();
+    if (!istekBekle || d === once) return;
+    if (d === 'guncel') { istekBekle = false; bildir('Program güncel · ' + (istek.surum || program.surum)); }
+    else if (d === 'hata') { istekBekle = false; bildir('Güncellenemedi' + (istek.cevap ? ': ' + istek.cevap : '.')); }
+    else if (d === 'tamam') {
+      guncellemeDenetle();                    // yayın önce yazılır (skill §1): gelmişse yüklenir
+      setTimeout(function () { istekBekle = false; }, 20000);
+    }
+  }
+  function istekGonder() {
+    if (!yetki.db) { bildir('Kayıt bağlı değil.'); return; }
+    var zaman = new Date().toISOString();
+    istekBekle = true;
+    istek = { durum: 'bekliyor', zaman: zaman, sayfaSurum: program.surum || '' };
+    istekCiz();
+    yetki.db.doc('istek/guncelle').set({ durum: 'bekliyor', zaman: zaman, sayfaSurum: program.surum || '', cevap: '' })
+      .then(function () {
+        var c = yetki.comments;
+        if (!c || typeof c.sendToClaude !== 'function' || claudeDurum !== 'available') {
+          bildir('Claude oturumu bağlı değil; istek kayıtta.'); return null;
+        }
+        return c.anchorFor($('cn-istek'))
+          .then(function (a) { return c.sendToClaude({ anchor: a, text: CN.istekMetni({ surum: program.surum, pr: program.pr }) }); })
+          .then(function (sonuc) {
+            if (sonuc && sonuc.threadId) yetki.db.doc('istek/guncelle').update({ konu: sonuc.threadId });
+            bildir('Güncelleme istendi.');
+          });
+      })
+      .catch(function () { istekBekle = false; istek = null; istekCiz(); bildir('İstek gönderilemedi.'); });
+  }
+  $('cn-istek').addEventListener('click', istekGonder);
   $('cn-yenile').addEventListener('click', yenile);
   $('cn-guncel-evet').addEventListener('click', guncelle);
   $('cn-guncel-sonra').addEventListener('click', function () { ertelenen = yayin ? yayin.surum : ''; guncelKapat(); });

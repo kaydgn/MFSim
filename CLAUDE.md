@@ -514,7 +514,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular, notun
   satırına sonucun görüntüsünü koyar. Yeni program varlık deposuna ve `yayin/son`a gider: sayfa
   KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05); şeridin
-  **Yenile**'si yalnız programı yeniden yükler, sayfa ve notlar yerinde, proje taşınır. Protokol:
+  **Yenile**'si yalnız programı yeniden yükler, sayfa ve notlar yerinde, proje taşınır.
+  Şeridin **Programı güncelle**'si (kullanıcı 2026-11-11) ana dalın SON hâlini ister
+  (`istek/guncelle` + Claude'a yorum; oturum yayınlar, sayfa sormadan yükler — skill
+  `canli-not` §1); program 16 MB'ı aşınca sayfa `files`'sız yayınlanır (`canli-not.js sayfa`). Protokol:
   skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
   (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js`.
   **"Canlı Not'u getir"** (kullanıcı 2026-11-05: yeni oturumda *"aynı bu yapıda, aynı bu
