@@ -1488,7 +1488,81 @@ function _mntVsKatalog(){
   var V=null;
   if(typeof veMntVsDisliDuzenleri==='function') V={ veMntVsDisliDuzenleri:veMntVsDisliDuzenleri, veMntVsKonvertorler:veMntVsKonvertorler };
   else if(typeof require==='function'){ try { V=require('./mount-veri-sayfasi.js'); } catch(e){} }
-  return V ? { disli:V.veMntVsDisliDuzenleri(), tc:V.veMntVsKonvertorler() } : { disli:[], tc:[] };
+  var K=V ? { disli:V.veMntVsDisliDuzenleri(), tc:V.veMntVsKonvertorler() } : { disli:[], tc:[] };
+  _mntOrtakSanziman(K);
+  return K;
+}
+// ORTAK KATALOG (F002, 2026-11-11) — veri sayfası olmayan şanzıman ve konvertör
+// programın ortak kataloğundan (Araç Performans'ın VE_GEARBOX_PRESETS ·
+// VE_FT_TC_PRESETS; kopya kurulmaz, global okunur). Anahtar 'ap:<anahtar>'.
+// Veri sayfasıyla aynı oranlı düzen ve aynı adlı-aynı stall'lı konvertör
+// yazılmaz (veri sayfası daha çok veri taşır). Yediden çok ileri vitesli düzen
+// yok: Takoz'un vites alanları g1…g7.
+var _MNT_AP_AILE = { '1000_2000':'1000/2000', '3000':'3000', '4000':'4000' };
+function _mntOrtakGlobal(ad){
+  var v=null;
+  if(ad==='VE_GEARBOX_PRESETS' && typeof VE_GEARBOX_PRESETS!=='undefined') v=VE_GEARBOX_PRESETS;
+  else if(ad==='VE_FT_TC_PRESETS' && typeof VE_FT_TC_PRESETS!=='undefined') v=VE_FT_TC_PRESETS;
+  else if(ad==='VE_TRANSFER_PRESETS' && typeof VE_TRANSFER_PRESETS!=='undefined') v=VE_TRANSFER_PRESETS;
+  if(!v && typeof window!=='undefined' && window[ad]) v=window[ad];
+  return v || null;
+}
+function _mntApAileAdi(marka, fam){
+  return fam && _MNT_AP_AILE[fam] ? marka+' '+_MNT_AP_AILE[fam] : marka;
+}
+function _mntOrtakSanziman(K){
+  var G=_mntOrtakGlobal('VE_GEARBOX_PRESETS'), T=_mntOrtakGlobal('VE_FT_TC_PRESETS');
+  var vsD=K.disli.slice(), vsT=K.tc.slice();
+  var esit=function(a, b){ return a.length===b.length && a.every(function(v, i){ return Math.abs(v-b[i])<1e-9; }); };
+  if(G) Object.keys(G).forEach(function(k){
+    var p=G[k], gs=Array.isArray(p.gears) ? p.gears : [];
+    var ileri=gs.filter(function(g){ return String(g.gear).charAt(0)!=='R'; }).map(function(g){ return _mntNum(g.ratio); });
+    var r=gs.filter(function(g){ return String(g.gear).charAt(0)==='R'; })[0];
+    var geri=r ? _mntNum(r.ratio) : null;
+    if(!ileri.length || ileri.length>_MNT_VITES_ALAN.length) return;
+    if(vsD.some(function(x){ return esit(x.ileri, ileri) && x.geri===geri; })) return;
+    var ad=String(p.name||k).split('|'), marka=ad.length>1 ? ad[0].trim() : '', model=(ad[1]||ad[0]).trim();
+    K.disli.push({ k:'ap:'+k, ad:(marka ? marka+' ' : '')+model, etiket:model, aile:_mntApAileAdi(marka||model, p.family),
+                   ileri:ileri, geri:geri });
+  });
+  if(T) Object.keys(T).forEach(function(k){
+    var p=T[k], d=Array.isArray(p.data) ? p.data : [];
+    var s0=d.filter(function(x){ return _mntNum(x.sr, NaN)===0; })[0];
+    var stall=s0 ? _mntNum(s0.tau, NaN) : NaN;
+    if(!(stall>0)) return;
+    var ad=p.name||k;
+    if(vsT.some(function(x){ return x.ad===ad && Math.abs(x.stall-stall)<1e-9; })) return;
+    K.tc.push({ k:'ap:'+k, ad:ad, aile:_mntApAileAdi('Allison', p.family), stall:stall });
+  });
+}
+// TRANSFERİN KATALOĞU — programın ortak transfer kataloğu (VE_TRANSFER_PRESETS);
+// kademe başına bir seçenek, anahtar '<marka|model>#<kademe>'.
+function _mntTransferKatalog(){
+  var P=_mntOrtakGlobal('VE_TRANSFER_PRESETS'), out=[];
+  if(P) Object.keys(P).forEach(function(k){
+    var p=P[k];
+    (p.rows||[]).forEach(function(r){
+      var o=_mntNum(r.ratio, NaN); if(!(o>0)) return;
+      out.push({ k:k+'#'+r.mode, ad:p.model+' · '+r.mode, aile:p.marka, oran:o });
+    });
+  });
+  return out;
+}
+function _mntTransferPresetValues(key){
+  var t=_mntTransferKatalog().filter(function(x){ return x.k===key; })[0];
+  return t ? { iTransfer:t.oran } : null;
+}
+function veMntApplyTransferPreset(nodeId, key){ _mntSanzimanPresetUygula(nodeId, key, 'trPreset', _mntTransferPresetValues); }
+function _mntTransferSapma(node){
+  return _mntPresetSapma(node, 'trPreset', _mntTransferPresetValues, [['iTransfer','transfer oranı']], function(k){
+    var t=_mntTransferKatalog().filter(function(x){ return x.k===k; })[0]; return t ? t.aile+' '+t.ad : k; });
+}
+function _mntTransferKatalogHTML(node){
+  var L=_mntTransferKatalog(); if(!L.length) return '';
+  var sel=_mntSanzimanSecHTML(node, L, 'trPreset', 'veMntApplyTransferPreset', function(x){ return x.ad+' · '+_mntS(x.oran, 3); });
+  return _mntBolum('Katalog', L.length+' kademe',
+      _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Transfer kademesi</span>'+sel+'</label>')
+    + '<div id="ve-mnt-trkat-'+node.id+'" data-tazele>'+_mntSapmaNot(_mntTransferSapma(node))+'</div>');
 }
 // Dişli düzeninin alanları: ileri vitesler (düzende olmayan vites null —
 // uygulanınca SİLİNİR: yedi vitesliden altı vitesliye dönen bir 7. vites
@@ -1505,6 +1579,25 @@ function _mntKonvertorPresetValues(key){
   var c=_mntVsKatalog().tc.filter(function(x){ return x.k===key; })[0];
   return c ? { Rstall:c.stall } : null;
 }
+// ŞANZIMAN → KONVERTÖR (kullanıcı 2026-11-11, Araç Performans'taki gibi): seçili
+// vites konfigürasyonunun ailesi konvertör listesini süzer; aile değişince
+// uymayan konvertör ve onun stall oranı düşer. Aile bilinmiyorsa liste tam.
+function _mntSanzimanAilesi(gearKey){
+  var d=gearKey ? _mntVsKatalog().disli.filter(function(x){ return x.k===gearKey; })[0] : null;
+  return d ? d.aile : null;
+}
+function _mntKonvertorListesi(gearKey){
+  var K=_mntVsKatalog(), a=_mntSanzimanAilesi(gearKey);
+  var L=a ? K.tc.filter(function(x){ return x.aile===a; }) : [];
+  return L.length ? L : K.tc;
+}
+// Seçim sonrası: uymayan konvertörü (ve stall'ı) düşür; ailede tek konvertör
+// varsa onu seç. data: düğüm verisi ya da sihirbazın tork durumu.
+function _mntKonvertorEsle(data){
+  var L=_mntKonvertorListesi(data.gearPreset), tk=data.tcPreset;
+  if(tk && !L.some(function(x){ return x.k===tk; })){ delete data.tcPreset; delete data.Rstall; tk=null; }
+  if(!tk && _mntSanzimanAilesi(data.gearPreset) && L.length===1){ data.tcPreset=L[0].k; data.Rstall=L[0].stall; }
+}
 function _mntSanzimanPresetUygula(nodeId, key, alan, degerler){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
@@ -1514,6 +1607,7 @@ function _mntSanzimanPresetUygula(nodeId, key, alan, degerler){
     Object.keys(v).forEach(function(k){ if(v[k]===null) delete node.data[k]; else node.data[k]=v[k]; });
     node.data[alan]=key;
   }
+  if(alan==='gearPreset') _mntKonvertorEsle(node.data);
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
@@ -1563,7 +1657,7 @@ function _mntSanzimanKatalogHTML(node){
   var K=_mntVsKatalog();
   if(!K.disli.length && !K.tc.length) return '';
   var dis=_mntSanzimanSecHTML(node, K.disli, 'gearPreset', 'veMntApplyGearPreset', function(x){ return x.etiket; });
-  var tc=_mntSanzimanSecHTML(node, K.tc, 'tcPreset', 'veMntApplyTcPreset', function(x){ return x.ad+' · '+_mntS(x.stall, 2); });
+  var tc=_mntSanzimanSecHTML(node, _mntKonvertorListesi((node.data||{}).gearPreset), 'tcPreset', 'veMntApplyTcPreset', function(x){ return x.ad+' · '+_mntS(x.stall, 2); });
   return _mntBolum('Katalog', K.disli.length+' vites konfigürasyonu · '+K.tc.length+' konvertör',
       _mntIzgara(2, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Vites konfigürasyonu</span>'+dis+'</label>'
                   + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Konvertör</span>'+tc+'</label>')
@@ -1640,7 +1734,8 @@ function _mntTransferSection(node){
     + [['ayni','Krankla aynı'],['ters','Krankın tersi']].map(function(o){
         return '<option value="'+o[0]+'"'+(don===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; }).join('')
     + '</select></label>';
-  var h=_mntBolum('Oran ve aks payı', '',
+  var h=_mntTransferKatalogHTML(node);
+  h+=_mntBolum('Oran ve aks payı', '',
       _mntIzgara(2, _mntAlan(node, 'iTransfer', 'Transfer oranı', { zorunlu:true }) + donus)
     + _mntIzgara(2,
         _mntVarsayilanAlan(node, 'phiFwd', 'Aks payı '+_mntSym('φ')+' · ileri', 1,
@@ -5096,8 +5191,144 @@ function _mntCozucuDurumGovde(node){
   var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
   var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok')
     + ' · ileri '+eks(Y.ileri)+' · tork '+eks(Y.torkYon);
-  return _mntCozucuYonGovde(node)
+  return _mntCozucuApGovde(node) + _mntCozucuYonGovde(node)
     + '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
+}
+// ARAÇ PERFORMANS'TAN DOLDUR (F002, 2026-11-11) — Takoz kendi başına kurulur;
+// projede Araç Performans modeli varsa tork zinciri ondan doldurulabilir.
+// Kaynak: motorun tam yük eğrisi (tepe tork, maks. güç, rölanti), konvertörün
+// K/τ eğrisinin SR = 0 noktası (stall), şanzımanın ileri vitesleri ve geri vites
+// (düğümde yoksa çözülen katalog kaydından), transferin EN YÜKSEK oranlı kademesi
+// (takoza en büyük tork). Yazım tek geri-al adımı; alan onu okuyan gövdeye
+// (toplayıcının kaynağına) yazılır, yoksa tipin gövdesine.
+var _MNT_AP_TIP = { engine:1, 'torque-converter':1, gearbox:1, transfer:1 };
+function _mntApListe(L){
+  return (L||[]).some(function(n){ return n && _MNT_AP_TIP[n.type]; });
+}
+function veMntApModeli(){
+  var kok=(typeof veMntStack!=='undefined' && veMntStack.length && veMntStack[0].parentState)
+    ? veMntStack[0].parentState.nodes : (typeof nodes!=='undefined' ? nodes : null);
+  kok=Array.isArray(kok) ? kok : [];
+  for(var i=0;i<kok.length;i++){
+    var n=kok[i], sub=n && n.type==='arac-performans' && n.data && n.data.subTopology;
+    if(sub && _mntApListe(sub.nodes)) return { ad:_mntNodeName(n), nodes:sub.nodes };
+  }
+  return _mntApListe(kok) ? { ad:'Araç Performans', nodes:kok } : null;
+}
+function _mntApZinciri(M){
+  M=M || veMntApModeli(); if(!M) return null;
+  var bul=function(t){ return M.nodes.filter(function(n){ return n && n.type===t; })[0] || null; };
+  var e=bul('engine'), tc=bul('torque-converter'), gb=bul('gearbox'), tr=bul('transfer');
+  var v={}, not=[];
+  if(e){
+    var ed=e.data||{}, bt=null, bp=null;
+    (Array.isArray(ed.torqueData) ? ed.torqueData : []).forEach(function(r){
+      var rpm=_mntNum(r.rpm,NaN), tq=_mntNum(r.torque,NaN), pw=_mntNum(r.power,NaN);
+      if(!Number.isFinite(rpm)) return;
+      if(Number.isFinite(tq) && (!bt || tq>bt.v)) bt={ v:tq, rpm:rpm };
+      if(Number.isFinite(pw) && (!bp || pw>bp.v)) bp={ v:pw, rpm:rpm };
+    });
+    if(bt && bt.v>0){ v.Te=bt.v; v.TeRpm=bt.rpm; }
+    if(bp && bp.v>0){ v.Pmax=Math.round(bp.v*10)/10; v.PmaxRpm=bp.rpm; }
+    var idle=_mntNum((ed.motorSpecs||{}).idleRpm, NaN); if(idle>0) v.idleRpm=idle;
+  }
+  if(tc){
+    var cd=tc.data||{}, C=Array.isArray(cd.tcData) && cd.tcData.length ? cd.tcData : null;
+    if(!C){
+      var TP=_mntOrtakGlobal('VE_FT_TC_PRESETS'), tk=typeof veResolveTCPresetKey==='function' ? veResolveTCPresetKey(tc) : '';
+      if(TP && tk && TP[tk]) C=TP[tk].data;
+    }
+    var s0=(C||[]).filter(function(x){ return _mntNum(x.sr,NaN)===0; })[0];
+    if(s0 && _mntNum(s0.tau,0)>0) v.Rstall=_mntNum(s0.tau);
+  }
+  if(gb){
+    var gd=gb.data||{}, gs=Array.isArray(gd.ftGearData) ? gd.ftGearData : [];
+    var ileri=gs.filter(function(g){ return g && g.name && String(g.name).charAt(0)!=='R'; }).map(function(g){ return _mntNum(g.ratio,NaN); })
+      .filter(function(x){ return Number.isFinite(x) && x!==0; });
+    if(ileri.length){
+      _MNT_VITES_ALAN.forEach(function(k, i){ v[k]=i<ileri.length ? ileri[i] : null; });
+      if(ileri.length>_MNT_VITES_ALAN.length) not.push((ileri.length-_MNT_VITES_ALAN.length)+' üst vites aktarılmadı');
+    }
+    var r=gs.filter(function(g){ return g && g.name && String(g.name).charAt(0)==='R'; })[0], gR=r ? _mntNum(r.ratio,NaN) : NaN;
+    if(!Number.isFinite(gR) || gR===0){
+      var GP=_mntOrtakGlobal('VE_GEARBOX_PRESETS'), gk=typeof veResolveGearboxPresetKey==='function' ? veResolveGearboxPresetKey(gb) : '';
+      var pr=GP && gk && GP[gk] ? (GP[gk].gears||[]).filter(function(g){ return String(g.gear).charAt(0)==='R'; })[0] : null;
+      gR=pr ? _mntNum(pr.ratio,NaN) : NaN;
+    }
+    if(Number.isFinite(gR) && gR!==0) v.gR=gR>0 ? -gR : gR;
+  }
+  if(tr){
+    var ks=(tr.data||{}).ftTrGears, enb=null;
+    (Array.isArray(ks) ? ks : []).forEach(function(k){
+      var o=_mntNum(k.ratio!=null ? k.ratio : k.oran, NaN);
+      if(o>0 && (!enb || o>enb.o)) enb={ o:o, ad:k.kademe||k.mode||'' };
+    });
+    if(enb){ v.iTransfer=enb.o; v._kademe=enb.ad; }
+  }
+  var alanlar=Object.keys(v).filter(function(k){ return k.charAt(0)!=='_' && v[k]!==null; });
+  return alanlar.length ? { ad:M.ad, v:v, alanlar:alanlar, not:not } : null;
+}
+var _MNT_AP_HEDEF = { Te:'mnt-motor', TeRpm:'mnt-motor', Pmax:'mnt-motor', PmaxRpm:'mnt-motor', idleRpm:'mnt-motor',
+  Rstall:'mnt-gearbox', g1:'mnt-gearbox', g2:'mnt-gearbox', g3:'mnt-gearbox', g4:'mnt-gearbox', g5:'mnt-gearbox',
+  g6:'mnt-gearbox', g7:'mnt-gearbox', gR:'mnt-gearbox', iTransfer:'mnt-transfer' };
+var _MNT_AP_BAG = { Te:'enginePreset', Rstall:'tcPreset', g1:'gearPreset', iTransfer:'trPreset' };
+// Takoz'daki değerin Araç Performans'ınkiyle farkı: { ayni, farkli:[alan] }
+function _mntApSapma(Z){
+  var K=_mntGatherTorqueKaynakli().kaynak, ayni=0, farkli=[];
+  Object.keys(_MNT_AP_HEDEF).forEach(function(k){
+    if(Z.v[k]===undefined) return;
+    var n=_mntApHedef(k, K), x=n && n.data ? n.data[k] : undefined;
+    var a=_mntBos(x) ? null : _mntNum(x, NaN), b=Z.v[k];
+    if(b===null ? a===null : (Number.isFinite(a) && Math.abs(a-b)<=1e-9*Math.max(1, Math.abs(b)))) ayni++;
+    else farkli.push(k);
+  });
+  return { ayni:ayni, farkli:farkli };
+}
+function _mntApHedef(k, K){
+  if(K[k]) return K[k];
+  var tip=_MNT_AP_HEDEF[k], L=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
+  var n=L.filter(function(x){ return x && x.type===tip; })[0];
+  if(!n && tip==='mnt-transfer') n=L.filter(function(x){ return x && x.type==='mnt-gearbox'; })[0];
+  return n || null;
+}
+function veMntApDoldur(solverId){
+  var Z=_mntApZinciri(); if(!Z) return 0;
+  var K=_mntGatherTorqueKaynakli().kaynak, yaz=[], atla=[];
+  Object.keys(_MNT_AP_HEDEF).forEach(function(k){
+    if(Z.v[k]===undefined) return;
+    var n=_mntApHedef(k, K);
+    if(!n){ if(Z.v[k]!==null) atla.push(k); return; }
+    yaz.push({ n:n, k:k, v:Z.v[k] });
+  });
+  if(!yaz.length){ if(typeof showToast==='function') showToast('Takoz modelinde motor ve şanzıman yok.', 'warning'); return 0; }
+  yaz.forEach(function(w){
+    if(!w.n.data) w.n.data={};
+    if(w.v===null) delete w.n.data[w.k]; else w.n.data[w.k]=w.v;
+    if(_MNT_AP_BAG[w.k]) delete w.n.data[_MNT_AP_BAG[w.k]];
+  });
+  if(typeof saveState==='function') saveState();
+  var sayi=yaz.filter(function(w){ return w.v!==null; }).length;
+  if(atla.length && typeof showToast==='function') showToast(atla.length+' tork alanı aktarılmadı: gövdesi yok.', 'warning');
+  var cz=(typeof nodes!=='undefined' ? nodes : []).filter(function(n){ return n && n.id===solverId; })[0];
+  if(cz && typeof showNodeProperties==='function') showNodeProperties(cz);
+  return sayi;
+}
+function _mntCozucuApGovde(node){
+  var Z=_mntApZinciri(); if(!Z) return '';
+  var S=_mntApSapma(Z), v=Z.v;
+  var f=_mntFoyAc([{ b:'Halka', gen:'50%' }, { b:'Araç Performans', gen:'50%', sinif:'cz ay' }], 'Araç Performans');
+  var sat=function(ad, x, d, birim){ return '<tr><td>'+ad+'</td>'+_mntFoyCoz(x==null ? '—' : _mntS(x, d)+(birim ? ' '+birim : ''), { ay:true })+'</tr>'; };
+  f+=sat('Tepe tork', v.Te, 0, 'N·m')+sat('Stall oranı', v.Rstall, 2)+sat('1. vites', v.g1, 2)+sat('Geri', v.gR, 2)
+    + sat('Transfer oranı'+(v._kademe ? ' · '+_mntEsc(v._kademe) : ''), v.iTransfer, 3)+sat('Rölanti', v.idleRpm, 0, 'd/dk');
+  var not=S.farkli.length
+    ? _mntNot('<b>Takoz’daki değerler farklı:</b> '+S.farkli.join(', '), 'warn')
+    : _mntNot('Tork zinciri <b>'+_mntEsc(Z.ad)+'</b> modeliyle birebir ('+S.ayni+'/'+S.ayni+')', 'ok');
+  if(Z.not.length) not+=_mntNot(Z.not.join(' · '), 'warn');
+  var btn='<button type="button" class="ve-fp-dugme" id="ve-mnt-apdoldur-'+node.id+'"'
+    + (S.farkli.length ? ' onclick="veMntApDoldur(\''+node.id+'\')"' : ' aria-disabled="true" title="Değerler aynı."')+'>'
+    + veIkon('download')+' Araç Performans’tan doldur</button>';
+  return _mntBolum('Tork zinciri', _mntEsc(Z.ad), f+_MNT_FOY_KAPA+not+'<div class="ve-fp-eylem">'+btn+'</div>',
+                   { id:'ve-mnt-cap-'+node.id, tazele:true });
 }
 // KALDIRIM DARBESİ — yük kitabının girdisi (_mntYonAyari); kitap hemen altında
 // değeri izler. Varsayılan seçim alan yazmaz. İleri yön ve tork yönü kendiliğinden
@@ -5700,7 +5931,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntMotorDurumu: _mntMotorDurumu,
     _mntVitesDurumu: _mntVitesDurumu,
     // Şanzımanın kataloğu ve bağlantı yüzü (2026-11-06)
-    _MNT_VITESLER: _MNT_VITESLER, _mntVsKatalog: _mntVsKatalog, _mntDisliPresetValues: _mntDisliPresetValues, _mntKonvertorPresetValues: _mntKonvertorPresetValues,
+    _MNT_VITESLER: _MNT_VITESLER, _mntVsKatalog: _mntVsKatalog, _mntDisliPresetValues: _mntDisliPresetValues, _mntKonvertorListesi: _mntKonvertorListesi, _mntKonvertorEsle: _mntKonvertorEsle, _mntSanzimanAilesi: _mntSanzimanAilesi, _mntKonvertorPresetValues: _mntKonvertorPresetValues,
     veMntApplyGearPreset: veMntApplyGearPreset, veMntApplyTcPreset: veMntApplyTcPreset,
     _mntDisliSapma: _mntDisliSapma, _mntKonvertorSapma: _mntKonvertorSapma, _mntGearboxSection: _mntGearboxSection,
     _mntBaglantiSection: _mntBaglantiSection, _mntBaglantiDurumu: _mntBaglantiDurumu, _mntBagYon: _mntBagYon,
@@ -5762,7 +5993,7 @@ if(typeof module!=='undefined' && module.exports){
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
-    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
+    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, _mntTransferKatalog: _mntTransferKatalog, _mntTransferPresetValues: _mntTransferPresetValues, veMntApplyTransferPreset: veMntApplyTransferPreset, veMntApModeli: veMntApModeli, _mntApZinciri: _mntApZinciri, veMntApDoldur: veMntApDoldur, _mntCozucuApGovde: _mntCozucuApGovde, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
     _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
     _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
     veMntSetYon: veMntSetYon,
