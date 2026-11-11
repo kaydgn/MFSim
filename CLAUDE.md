@@ -241,7 +241,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   uzaklaştır · sıfırla · **tam ekran**). Açı yazısı, Görünüş, Katmanlar, Uygunluk,
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
-  büyümez). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
+  büyümez); serbest kamerada takoz küpü GÖVDE GİBİ yakınlıkla büyür, G ve CG √yakın (Canlı Not 140;
+  kapı `mount-akso.test.js` → *TAKOZ MODELLE BÜYÜR*). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
   çözümsüz); görünüm tercihi modelde değil, yalnız açı. Sürüklerken kare YAZILI ve
   yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
   parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
