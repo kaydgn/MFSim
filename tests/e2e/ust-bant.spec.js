@@ -189,7 +189,9 @@ test('KOMUTLARIN PENCERESİ — markanın altında yüzer, sayfa ve tuval OYNAMA
   expect(r.odak).toBe('Giriş');
   expect(r.grup.length).toBeGreaterThan(2);
   expect(r.satir).toBeGreaterThan(8);
-  expect(r.yuksek).toBeLessThanOrEqual(22);                     // Canlı Not 92: satır 24 → 22 px (88: 28 + 2 → 24)
+  // Canlı Not 142: satır 22 → 26 px ("biraz aç, çok değil"); 92: 24 → 22; 88: 28 + 2 → 24
+  expect(r.yuksek).toBeGreaterThanOrEqual(25);
+  expect(r.yuksek).toBeLessThanOrEqual(27);
   expect(r.sol).toHaveLength(1);                                // tek sütun: iki sütunun arası ~60 px boştu
   expect(r.kesik).toEqual([]);
   // İKİ TEMADA okunur ve yazı kutusuna sığar (ortak ölçüler)
