@@ -287,7 +287,7 @@ describe('PARAMETRİK — eksik ve tahminli tip aday değil', () => {
   test('adaylar yalnız tam ve tahminsiz tipler; Takoz Özellikleri\'nde radyali girilen AMC kodu aday olur', () => {
     const M = { lib: cp.veMntGetLibraryMap() };
     const ad = P._mntParamAdaylar(M, null).map((a) => a.key);
-    expect(ad).toHaveLength(27);                                                // 24 + teknik resimlerin 3 kodu
+    expect(ad).toHaveLength(23);                                                // 24 − 4 aday olmayan 57RS + teknik resimlerin 3 kodu
     expect(ad).toEqual(expect.arrayContaining(['amc137061', 'amc137062', 'amc137961']));
     expect(ad).not.toContain('amc137962');
     expect(ad.filter((k) => /^ap/.test(k))).toEqual([]);                              // A+P: dinamik tahmini
@@ -295,7 +295,7 @@ describe('PARAMETRİK — eksik ve tahminli tip aday değil', () => {
       data: { mounts: [], overrides: { amc137962: { sx: 1300, sy: 900, dx: 1820, dy: 1260 } } } };
     global.nodes = [lib];
     const ad2 = P._mntParamAdaylar({ lib: cp.veMntGetLibraryMap() }, null).map((a) => a.key);
-    expect(ad2).toHaveLength(28);
+    expect(ad2).toHaveLength(24);
     expect(ad2).toContain('amc137962');
   });
 });

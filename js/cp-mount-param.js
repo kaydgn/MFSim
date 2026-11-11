@@ -61,7 +61,7 @@ function _mntParamAdaylar(M, node){
   ((node && node.data && node.data.haric) || []).forEach(function(k){ haric[k]=true; });
   var tam=(typeof _mntLibTam==='function') ? _mntLibTam : function(){ return true; };
   var tahmin=(typeof _mntLibTahmin==='function') ? _mntLibTahmin : function(){ return []; };
-  return Object.keys(M.lib).filter(function(k){ return tam(M.lib[k]) && !tahmin(M.lib[k]).length; })
+  return Object.keys(M.lib).filter(function(k){ return M.lib[k].aday!==false && tam(M.lib[k]) && !tahmin(M.lib[k]).length; })
     .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:!haric[k] }; });
 }
 
