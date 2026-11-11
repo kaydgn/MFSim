@@ -2156,7 +2156,7 @@ var veMountCore = (function() {
     components: [
       {name:'Motor',            mass:418,  cg:[ 124.960,   0.050, 550.030], Ixx:14.7, Iyy:25.00, Izz:19.10, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor',    at:[327,280]},
       {name:'Şanzıman',         mass:162,  cg:[ 814.550,  40.817, 365.138], Ixx:2.80, Iyy:6.96,  Izz:6.71,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox',  at:[450,280]},
-      {name:'Transfer Kutusu',  mass:184,  cg:[1431.449,  54.419, 202.336], Ixx:4.75, Iyy:6.25,  Izz:3.93,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-transfer', at:[566,280]},
+      {name:'Transfer Kutusu',  mass:184,  cg:[1431.449,  54.419, 202.336], Ixx:4.75, Iyy:6.25,  Izz:3.93,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-transfer', donus:'ters', at:[566,280]},
       {name:'Sağ Arka Braket',  mass:3.7,  cg:[1381.732, 297.711,  72.438], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[612,198]},
       {name:'Sol Arka Braket',  mass:3.7,  cg:[1381.734,-201.321,  76.001], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[619,374]},
       {name:'Sağ Ön Braket',    mass:3.5,  cg:[ 479.996, 293.464, 528.943], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[442,191]},
@@ -2172,11 +2172,12 @@ var veMountCore = (function() {
     ],
     torque: TULGA_TORQUE,
     // Aracın ekseni: ileri −X, sağ +Y. Tork momenti +X — Tulga'nın Adams'ı
-    // (tests/fixtures/adams-tulga.js → TORK YÖNÜ); varsayılanın (T5) tersi.
-    solver: { ileri:'-x', torkYon:'+x' },
+    // (tests/fixtures/adams-tulga.js → TORK YÖNÜ): transferin çıkışı krankın
+    // tersine döner (Transfer Kutusu → donus 'ters'; motorun önü −X'te → +X, F049).
+    solver: { ileri:'-x' },
     // Tork durumları tork zincirinden (torqueChain) TÜRETİLİR — elle yazılmaz ki
-    // TULGA_TORQUE değişince sessizce eskimesin. İşaret Çözücü'nün tork yönünden
-    // (solver.torkYon +X): Tx = +T_shaft (ileri viteste pozitif, geri viteste negatif).
+    // TULGA_TORQUE değişince sessizce eskimesin. İşaret tork yönünden
+    // (transferin dönüşünden +X): Tx = +T_shaft (ileri viteste pozitif, geri viteste negatif).
     //   ileri: 760 × 1.58 × 3.10 × 3.428 × 1 =  12760.66 N·m → Tx = +12760.66
     //   geri : 760 × 1.58 × (−4.49) × 3.428 × 1 = −18482.38 N·m → Tx = −18482.38
     loadCases: (function(){

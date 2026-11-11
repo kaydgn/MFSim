@@ -14,9 +14,10 @@
  *      güncellenmesini ister.
  *
  *   2a. TORK YÖNÜ — Adams'ın tork momenti +X (Tx = +T_shaft), programın
- *      varsayılanının (T5, −X) tersi. 2026-11-02'den beri Çözücü'nün ayarı
- *      (torkYon) ve örnek +X ile geliyor: iki tork satırı 0,489 mm; varsayılan
- *      yönde 17,28 mm. Fark YALNIZ yön.
+ *      varsayılanının (T5, −X) tersi. 2026-11-11'den beri (F049) yön Transfer
+ *      Kutusu'nun çıkış dönüşünden türer; örnekte transfer krankın tersine
+ *      döner (+X): iki tork satırı 0,489 mm; dönüş varsayılanda (krankla aynı,
+ *      −X) 17,28 mm. Fark YALNIZ yön.
  *
  *   3. KAPANMAMIŞ MODAL SORUSU — sevk edilen örnek kataloğa göre düzeltildi
  *      (TK040 dinamik X↔Z takası), ama Adams TAKASLI hâle daha yakın:
@@ -49,10 +50,10 @@ const TOPO = JSON.parse(fs.readFileSync(
 beforeEach(() => { resetStubs(stubs); });
 
 // ── Modeli koş: 'katalog' = sevk edilen örnek, 'adams' = fikstürdeki girdi,
-// 'tork-varsayilan' = örnek, Çözücü'nün tork yönü varsayılanda (−X) ──
+// 'tork-varsayilan' = örnek, transferin dönüşü varsayılanda (krankla aynı → −X) ──
 function solve(variant) {
   const t = JSON.parse(JSON.stringify(TOPO));
-  if (variant === 'tork-varsayilan') delete t.nodes.find((n) => n.type === 'mnt-solver').data.torkYon;
+  if (variant === 'tork-varsayilan') delete t.nodes.find((n) => n.type === 'mnt-transfer').data.donus;
   if (variant === 'adams') {
     const D = REF.INPUT_DELTA;
     t.nodes.forEach((n) => {
@@ -109,7 +110,10 @@ const modalRms = (m) => Math.sqrt(m.reduce((s, f, i) => s + (f - REF.TABLE1_MODE
 describe('fikstür bütünlüğü — karşılaştırma neyi karşılaştırdığını bilmeli', () => {
   test('örneğin Çözücü ayarı: ileri −X, tork yönü +X (Adams); motor 800 d/dk · 4 silindir', () => {
     const cz = TOPO.nodes.find((n) => n.type === 'mnt-solver').data;
-    expect(cp._mntYonAyari(cz)).toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
+    expect(cp._mntYonAyari(cz, cp._mntIleriOnerisi(TOPO.nodes), cp._mntTorkOnerisi(TOPO.nodes)))
+      .toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
+    expect('torkYon' in cz).toBe(false);                               // tork yönü transferin dönüşünden (F049)
+    expect(TOPO.nodes.find((n) => n.type === 'mnt-transfer').data.donus).toBe('ters');
     const m = TOPO.nodes.find((n) => n.type === 'mnt-motor').data;
     expect([+m.idleRpm, +m.cylinders]).toEqual([800, 4]);
   });

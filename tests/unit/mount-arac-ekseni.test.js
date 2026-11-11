@@ -196,7 +196,12 @@ describe('İMZA — ayar sonucu bayatlatır', () => {
     global._veMntLast = cp._mntComputeResults(cozucu().id);
     expect(cp.veMntSonucDurumu().durum).toBe('guncel');
     const d = cozucu().data;
-    [['ileri', '+x'], ['torkYon', '-x'], ['kaldirimG', 2], ['kaldirimYon', 'ayni']].forEach(([k, v]) => {
+    const tr = global.nodes.find((x) => x.type === 'mnt-transfer').data;   // tork yönü transferin dönüşünden (F049)
+    tr.donus = 'ayni';
+    expect(cp.veMntSonucDurumu().durum).toBe('bayat');
+    tr.donus = 'ters';
+    expect(cp.veMntSonucDurumu().durum).toBe('guncel');
+    [['ileri', '+x'], ['kaldirimG', 2], ['kaldirimYon', 'ayni']].forEach(([k, v]) => {
       const once = d[k];
       d[k] = v;
       expect(`${k} ${cp.veMntSonucDurumu().durum}`).toBe(`${k} bayat`);
@@ -284,14 +289,18 @@ describe('ÖRNEKLER — iki kopya aynı ayarı taşır', () => {
       expect(`${e.id} ${JSON.stringify(cp._mntYonAyari(cz))}`)
         .toBe(`${e.id} ${JSON.stringify(cp._mntYonAyari(ex.model.solver))}`);
       ALANLAR.forEach((k) => { if (cz[k] != null) n++; });
+      const tj = (t.nodes.find((x) => x.type === 'mnt-transfer') || {}).data || {};
+      const tc = ex.model.components.find((c) => c.kind === 'mnt-transfer') || {};
+      expect(`${e.id} ${tj.donus}`).toBe(`${e.id} ${tc.donus}`);     // transferin dönüşü (F049)
     });
-    expect(n).toBe(5);                                                // Siper 3 · Tulga 2
+    expect(n).toBe(4);                                                // Siper 3 · Tulga 1 (tork transferde)
   });
 
   test('Siper: ileri +X, kaldırım 3,5 g virajla aynı · Tulga: tork yönü +X', () => {
     expect(cp._mntYonAyari(core.getMountExample('siper').model.solver))
       .toEqual({ ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni', torkYon: '-x' });
-    expect(cp._mntYonAyari(core.getMountExample('tulga').model.solver))
+    const T = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tulga_topoloji.json'), 'utf8')).nodes;
+    expect(cp._mntYonAyari(core.getMountExample('tulga').model.solver, cp._mntIleriOnerisi(T), cp._mntTorkOnerisi(T)))
       .toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
   });
 
@@ -321,7 +330,8 @@ describe('ÖRNEKLER — iki kopya aynı ayarı taşır', () => {
       expect([mo.mass, mo.idleRpm, mo.cylinders]).toEqual([1386.26, 700, 6]);
       global.nodes = [];                                             // çözücü yoksa kurulur ve ayar ona yazılır
       cp._mntLoadExampleFromModel('tulga');
-      expect(cp._mntYonAyari(cozucu().data).torkYon).toBe('+x');
+      expect(global.nodes.find((x) => x.type === 'mnt-transfer').data.donus).toBe('ters');
+      expect(cp._mntTorkOnerisi(global.nodes).torkYon).toBe('+x');
     } finally {
       jest.clearAllTimers();
       jest.useRealTimers();

@@ -492,9 +492,10 @@ describe('Örnek modelleri', () => {
     // her gövde/takoz at:[lx,ly] taşır → önizleme ile kurulan kanvas örtüşür
     expect(m.components.every(c => Array.isArray(c.at) && c.at.length === 2)).toBe(true);
     expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
-    // tork durumları elle yazılmadı; işaret Çözücü'nün tork yönünden — Tulga'nın
-    // Adams'ı +X: Tx = +T_shaft (ileri pozitif, geri negatif)
-    expect(m.solver).toEqual({ ileri: '-x', torkYon: '+x' });
+    // tork durumları elle yazılmadı; işaret tork yönünden — Tulga'nın Adams'ı +X:
+    // transferin çıkışı krankın tersine döner (F049), Tx = +T_shaft (ileri pozitif, geri negatif)
+    expect(m.solver).toEqual({ ileri: '-x' });
+    expect(m.components.find(c => c.kind === 'mnt-transfer').donus).toBe('ters');
     const t = m.torque, chain = d => t.Te * t.Rstall * d.iGear * t.iTransfer * d.phiAxle * t.derate;
     const fwd = m.loadCases.find(c => c.name === 'Forward Torque');
     const rev = m.loadCases.find(c => c.name === 'Reverse Torque');
