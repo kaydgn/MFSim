@@ -274,7 +274,7 @@ describe.each(MODELLER.map((M) => [M.ad, M]))('%s', (ad, M) => {
     let enKotu = 0;
     ['Static', 'Braking', 'Cornering Left', 'Kerb Strike L'].forEach((nm) => {
       const rc = bul(R, nm);
-      if (rc.res.checks.clampCount) return;
+      if (rc.res.checks.clampCount || rc.res.checks.clampYCount) return;   // potansiyelde durdurucu yok
       const F = rc.res.F;
       let q = rc.res.q.slice();
       for (let it = 0; it < 20; it++) {

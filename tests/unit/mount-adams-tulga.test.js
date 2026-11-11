@@ -9,10 +9,10 @@
  *      dağılımı ve k_stat bu satırla doğrulanmış sayılır. Bu sayı büyürse
  *      çözücünün ya da modelin statik tarafında bir şey bozulmuştur.
  *
- *   2. YANAL DURDURUCU — Adams'ta ±12 mm (Kerb Strike satırlarından okunur);
- *      2026-11-11'den beri (F006) örneğin iki ön takozunda da. Ön takozlar
- *      ±12,0'de kesiliyor; arka takozların ~2 mm farkı durdurucuyla KAPANMADI
- *      (açık fark, testte sayıyla).
+ *   2. KALDIRIM DARBESİ — Adams'ta ±12 mm yanal durdurucu ve 2,5 g yanal yük
+ *      (ikisi de Kerb Strike sonuçlarından okundu; kitabı doğrulanmadı). Örnek
+ *      ikisiyle gelir: iki satırın RMS'i 0,82 mm'den (1,55 g, durdurucusuz)
+ *      0,150 mm'ye iniyor. Açık fark: ortadaki ön takoz ~0,4 mm fazla.
  *
  *   2a. TORK YÖNÜ — Adams'ın tork momenti +X (Tx = +T_shaft), programın
  *      varsayılanının (T5, −X) tersi. 2026-11-11'den beri (F049) yön Transfer
@@ -114,7 +114,7 @@ describe('fikstür bütünlüğü — karşılaştırma neyi karşılaştırdı�
   test('örneğin Çözücü ayarı: ileri −X, tork yönü +X (Adams); motor 800 d/dk · 4 silindir', () => {
     const cz = TOPO.nodes.find((n) => n.type === 'mnt-solver').data;
     expect(cp._mntYonAyari(cz, cp._mntIleriOnerisi(TOPO.nodes), cp._mntTorkOnerisi(TOPO.nodes)))
-      .toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
+      .toEqual({ ileri: '-x', kaldirimG: 2.5, kaldirimYon: 'ters', torkYon: '+x' });
     expect('torkYon' in cz).toBe(false);                               // tork yönü transferin dönüşünden (F049)
     expect(TOPO.nodes.find((n) => n.type === 'mnt-transfer').data.donus).toBe('ters');
     const m = TOPO.nodes.find((n) => n.type === 'mnt-motor').data;
@@ -173,23 +173,31 @@ describe('1) statik taraf — Adams ile örtüşüyor ve k_dyn\'den bağımsız'
   });
 });
 
-describe('2) yanal durdurucu — Adams\'ta var, örnekte de var (F006)', () => {
+describe('2) kaldırım darbesi — 12 mm yanal durdurucu ve 2,5 g (F006)', () => {
   test('örneğin iki ön takozunda 12 mm yanal boşluk, kaynağıyla', () => {
     const on = TOPO.nodes.filter((n) => n.type === 'mnt-mount' && +n.data.bosY > 0);
     expect(on.map((n) => n.customName).sort()).toEqual(['Sağ Ön Takoz', 'Sol Ön Takoz']);
     on.forEach((n) => { expect(+n.data.bosY).toBe(12); expect(n.data.bosYKaynak).toMatch(/Adams/); });
   });
 
-  test('ön takozlar Adams gibi ±12,0\'de kesiliyor; durdurucusuz 12,05–12,56', () => {
+  test('kaldırım (2,5 g) + 12 mm durdurucu: iki satır Adams\'la örtüşüyor', () => {
+    const kerb = (r) => r.gap === 'yanal-durdurucu';
+    const s = stats(KAT, kerb);
+    expect(s.n).toBe(30);
+    expect(s.rms).toBeLessThan(0.2);             // ölçülen 0,150 mm (1,55 g'de 0,82)
+    expect(s.max).toBeLessThan(0.5);             // ölçülen 0,41 mm (ortadaki ön takoz)
+  });
+
+  test('ön takozlar ±12,0\'de kesiliyor; durdurucusuz aynı yükte ~19,5 mm', () => {
     ['Kerb Strike (L)', 'Kerb Strike (R)'].forEach((rowName) => {
       const ri = REF.ROWS.findIndex((r) => r.row === rowName);
       [2, 4].forEach((c) => {                                   // Sag_On_X, Sol_On_X
         const t = Math.abs(REF.TABLE1[ri][c][1]);
         expect(t).toBeGreaterThanOrEqual(11.85);
         expect(t).toBeLessThanOrEqual(12.05);
-        expect(Math.abs(KAT.d[ri][c][1])).toBeLessThan(12.02);     // ölçülen 12,00–12,01
-        expect(Math.abs(KAT.d[ri][c][1])).toBeGreaterThan(11.99);
-        expect(Math.abs(YOK.d[ri][c][1])).toBeGreaterThan(12.04);  // durdurucusuz: aşıyor
+        expect(Math.abs(KAT.d[ri][c][1])).toBeLessThan(12.2);      // ölçülen 12,12–12,13 (sonlu temas)
+        expect(Math.abs(KAT.d[ri][c][1])).toBeGreaterThan(12.0);
+        expect(Math.abs(YOK.d[ri][c][1])).toBeGreaterThan(19);     // durdurucusuz 19,6–20,1
       });
     });
   });
@@ -203,16 +211,13 @@ describe('2) yanal durdurucu — Adams\'ta var, örnekte de var (F006)', () => {
     });
   });
 
-  test('AÇIK FARK: arka takozların yanal sehimi ~2 mm az — durdurucu açıklamıyor', () => {
-    // Adams'ta ön takozlar dibe oturunca arka ~9,7 mm; programda durdurucuyla da
-    // ~7,6 mm (durdurucusuz ~7,5). Adams'ın X sehimi de iki katı (0,8–0,9 ↔ 0,4–0,5):
-    // Adams gövdeyi düşey eksende daha çok döndürüyor. Sebep bulunursa bu test kırmızıya döner.
+  test('AÇIK FARK: ortadaki ön takozun yanal sehimi ~0,4 mm fazla', () => {
     ['Kerb Strike (L)', 'Kerb Strike (R)'].forEach((rowName) => {
       const ri = REF.ROWS.findIndex((r) => r.row === rowName);
-      [1, 3].forEach((c) => {
-        expect(Math.abs(KAT.d[ri][c][1])).toBeLessThan(Math.abs(REF.TABLE1[ri][c][1]) - 1.0);
-        expect(Math.abs(KAT.d[ri][c][1]) - Math.abs(YOK.d[ri][c][1])).toBeLessThan(0.4);
-      });
+      // Kaldırım ivmesi ve durdurucu açıklamıyor; sebep bulunursa kırmızıya döner.
+      const fark = Math.abs(KAT.d[ri][0][1]) - Math.abs(REF.TABLE1[ri][0][1]);
+      expect(fark).toBeGreaterThan(0.3);
+      expect(fark).toBeLessThan(0.5);             // ölçülen 0,39 · 0,41 mm
     });
   });
 });

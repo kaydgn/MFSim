@@ -343,7 +343,8 @@
       "isMasterDiff": false,
       "data": {
         "matrixMode": "delta",
-        "ileri": "-x"
+        "ileri": "-x",
+        "kaldirimG": 2.5
       }
     },
     {

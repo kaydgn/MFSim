@@ -44,16 +44,19 @@
  * raporun ilgili sayfası ya da Adams modelinin girdi dosyasıdır. Cevap
  * geldiğinde: doğrulanırsa bu fikstür güncellenir, çürütülürse katalog.
  *
- * ── YANAL DURDURUCU — örnekte de var (F006, 2026-11-11) ────────────────────
+ * ── KALDIRIM DARBESİ — 12 mm yanal durdurucu + 2,5 g (F006, 2026-11-11) ───
  *   Kerb Strike satırlarında ön takozların Y'si ~12 mm'de duruyor: Tablo 1'de
  *      dört hücrenin üçü tam ±12,0, biri 11,9; Tablo 2'de dördü de tam ±12,0.
  *      Örneğin iki ön takozuna 12 mm yanal boşluk girildi (`bosY`, kaynağı
- *      `bosYKaynak`'ta); durdurucusuz 12,05 … 12,56 olan değerler 12,00–12,01.
- *   AÇIK FARK — arka takozların yanal sehimi Adams'ta ~9,7 mm, programda
- *      durdurucuyla da ~7,6 mm (durdurucusuz ~7,5); Adams'ın X sehimi de iki
- *      katı. Adams gövdeyi düşey eksen çevresinde daha çok döndürüyor; sebebi
- *      durdurucu değil, bilinmiyor. 12 mm Adams'ın SONUCUNDAN okundu — girdi
- *      dosyasından ya da takoz çiziminden doğrulanmadı.
+ *      `bosYKaynak`'ta).
+ *   Yalnız durdurucuyla arka takozlar ~2 mm az kalıyordu (temas yükü öne
+ *      çeker). Yük taranınca Adams'ın sonuçları yanal ×1,60 (≈ 2,5 g) ve düşey
+ *      1 g ile tutuyor; örneğin Çözücü'sü kaldırım ivmesini 2,5 g ile taşır.
+ *      İki satırın RMS'i 0,82 → 0,150 mm. Aynı yükte durdurucusuz ön takozlar
+ *      19,6–20,1 mm'ye giderdi.
+ *   AÇIK FARK — ortadaki ön takozun yanal sehimi ~0,4 mm fazla (7,4 ↔ 7,0).
+ *   DOĞRULANMADI — 12 mm ve 2,5 g Adams'ın SONUCUNDAN okundu; girdi dosyası
+ *      ya da yük kitabı gelince buradan doğrulanır.
  *
  * ── TORK YÖNÜ — Çözücü'nün ayarı, örnek +X ─────────────────────────────────
  * Adams'ın tork momenti +X (Tx = +T_shaft); programın varsayılanı −X (T5:

@@ -293,15 +293,15 @@ describe('ÖRNEKLER — iki kopya aynı ayarı taşır', () => {
       const tc = ex.model.components.find((c) => c.kind === 'mnt-transfer') || {};
       expect(`${e.id} ${tj.donus}`).toBe(`${e.id} ${tc.donus}`);     // transferin dönüşü (F049)
     });
-    expect(n).toBe(4);                                                // Siper 3 · Tulga 1 (tork transferde)
+    expect(n).toBe(5);                                                // Siper 3 · Tulga 2 (tork transferde)
   });
 
-  test('Siper: ileri +X, kaldırım 3,5 g virajla aynı · Tulga: tork yönü +X', () => {
+  test('Siper: ileri +X, kaldırım 3,5 g virajla aynı · Tulga: tork yönü +X, kaldırım 2,5 g', () => {
     expect(cp._mntYonAyari(core.getMountExample('siper').model.solver))
       .toEqual({ ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni', torkYon: '-x' });
     const T = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tulga_topoloji.json'), 'utf8')).nodes;
     expect(cp._mntYonAyari(core.getMountExample('tulga').model.solver, cp._mntIleriOnerisi(T), cp._mntTorkOnerisi(T)))
-      .toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
+      .toEqual({ ileri: '-x', kaldirimG: 2.5, kaldirimYon: 'ters', torkYon: '+x' });
   });
 
   test('rölanti ve silindir: JSON Motor\'u = çekirdek modelinin torque alanı', () => {
