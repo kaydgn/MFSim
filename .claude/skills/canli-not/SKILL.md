@@ -138,8 +138,10 @@ başka oturumların birleşmeleri yayınlanmadıkça gelmez. Şeritteki **Progra
 (sahiplik §2'nin başı), sırayla:
 
 1. `ArtifactData get collection:istek doc_id:guncelle` → `durum:'yapiliyor'` (`if_version`).
-2. `git fetch origin main`; `yayin/son`'un `sha`'sı `origin/main` ise → `durum:'guncel'`,
-   `surum` (kısa sha); konuya tek satır cevap, `resolve`. Bitti.
+2. `git fetch origin main`; `ArtifactData get collection:yayin doc_id:son out_dir:…` →
+   `node tools/canli-not.js denetle <döküm>`: *Güncel* ya da *yalnız künye eski* (programın
+   girdileri aynı — belge/araç birleşmesi) → `durum:'guncel'`, `surum` (yayındaki kısa sha);
+   konuya tek satır cevap, `resolve`. Bitti.
 3. Değilse programın güncellemesi (yukarıdaki dört adım; `--notlar` yok): `hazirla` → duman
    (açılış · 0 hata · 0 ağ) → varlık → `yayin` → `yayin/son` → eski varlığı sil.
 4. `yayin/son` yazıldıktan SONRA → `istek/guncelle`: `durum:'tamam'`, `surum`, `pr`. Sayfa
