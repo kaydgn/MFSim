@@ -39,11 +39,16 @@ function yazilar(svg) {
   return out;
 }
 
-// Sihirbazın masası: üç ölçü × üç görünüş — masanın kendi boyları.
+// Sihirbazın masası: 2B sayfası (Canlı Not 137 — üç görünüş tek sayfada), üç ölçü × iki kamera
+// (sığdırma · 2,5 kat yakın) — masanın kendi boyları.
 const MASA_OLCU = [[1098, 824], [900, 640], [700, 520]];
-function masaCiz(veri) {
+function masaCiz(veri, yalnizSigdir) {
   const out = [];
-  MASA_OLCU.forEach(([W, H]) => ['ust', 'yan', 'on'].forEach((g) => out.push(cp.veMnt2DGorunusSVG(veri, W, H, { gorunus: g }))));
+  MASA_OLCU.forEach(([W, H]) => {
+    const A = cp.veMnt2BSayfa(veri, W, H, {});
+    out.push(A.svg);
+    if (!yalnizSigdir) out.push(cp.veMnt2BSayfa(veri, W, H, { kamera: Object.assign({}, A.kamera, { s: A.kamera.s * 2.5 }) }).svg);
+  });
   return out;
 }
 function masaYazilari(svg) {
@@ -62,12 +67,12 @@ describe('Takoz kesit çizimi — sihirbazın masası (Tulga)', () => {
   const veri = tulga();
   const figurler = masaCiz(veri);
 
-  test('örnek gerçekten dolu: beş takoz, bileşenler, birleşik CG, dokuz çizim', () => {
+  test('örnek gerçekten dolu: beş takoz, bileşenler, birleşik CG, altı sayfa', () => {
     expect(veri.mounts.length).toBe(5);
     expect(veri.comps.length).toBeGreaterThanOrEqual(4);
     expect(veri.cg).toBeTruthy();
-    expect(figurler.length).toBe(9);
-    figurler.forEach((f, i) => expect({ i, svg: /^<svg class="ve-mnt2d-gorunus" viewBox="0 0 /.test(f) }).toEqual({ i, svg: true }));
+    expect(figurler.length).toBe(6);
+    figurler.forEach((f, i) => expect({ i, svg: /^<svg class="ve-mnt2d-gorunus ve-mnt2b" width="\d+" height="\d+" viewBox="0 0 /.test(f) }).toEqual({ i, svg: true }));
   });
 
   test('hiçbir yazı ölçek tabanının (10 px) altında değil', () => {
@@ -97,8 +102,8 @@ describe('Takoz kesit çizimi — sihirbazın masası (Tulga)', () => {
  * "0"ını, panelde "Z = 0" yazısını örtüyordu. */
 describe('Takoz kesit çizimi — çizgi yazının altında kalır, işaret yazıyı örtmez', () => {
   const veri = tulga();
-  const masa = masaCiz(veri);
-  const hepsi = masa;
+  const masa = masaCiz(veri, true);       // işaretin örttüğü değer: sığdırma (yakında dışarıdaki kesilir)
+  const hepsi = masaCiz(veri);
   // Sırayla öğeler: yazı (kutusu) ve kılavuz (0,7 px çizgi)
   function ogeler(svg) {
     const out = [];

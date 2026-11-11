@@ -18,7 +18,8 @@
 //  • GÖRÜNÜM FEAD SİHİRBAZININ KABUĞUNDAN (`.ve-fw-*`): aynı ray, masa, denetim
 //    sütunu ve alt çubuk; Takoz'a özgü birkaç kural `.ve-mw-*`. Kullanıcı
 //    "aynısını" istedi; kopya bir kabuk ilk rötuşta ayrışırdı.
-//  • MASA düz görünüş çizicisini okur (`veMnt2DGorunusSVG`, gerçek oranda),
+//  • MASA 3B'de Görünümler'in aksonometrisini, 2B'de üç düz görünüşü tek sayfada
+//    (`veMnt2BSayfa`, ortak ölçek, Canlı Not 137) çizer;
 //    tork adımında zincirin çarpanlarını çekirdekten (`torqueChain`).
 //  • KATALOG BİR ÖNERİ, KISIT DEĞİL (FEAD kural 17): takoz kataloğu ve motor
 //    kataloğu alanları doldurur; değer katalogdan farklıysa "elle" yazılır.
@@ -92,7 +93,7 @@ var _mwSec = { govde:null, takoz:null };   // seçili satır (anahtar)
 var _mwGorunus = '3b';
 var VE_MW_AKSO = 've-mw-akso';   // 3B çizimin kabı (cp-mount.js → _mntAksoKur)
 var VE_MW_AKSO_ALT = 46;         // px — masanın altındaki gösterge (12 + 26 + nefes)
-var _mwGor = {};              // masa görünümü, görünüş başına: { z, tx, ty }
+var _mwGor = {};              // 2B kamerası, adım başına: { s, x, y, z } (yoksa sığdırma)
 var _mwCoz = null;            // son canlı çözüm
 var _mwLiveTimer = null;
 var _mwTaslaklar = {};        // modül düğümü kimliği → taslak (oturumluk; tuvalde model yokken)
@@ -634,7 +635,9 @@ function veMntWizSec(tur, key){
   veMntWizRender();
 }
 function veMntWizGorunus(g){
-  if(g !== '3b' && !VE_MNT2D_GORUNUS[g]) return;
+  // Üstten · Yandan · Önden tek sayfada (Canlı Not 137): eski adlar 2B'yi açar
+  if(VE_MNT2D_GORUNUS[g]) g = '2b';
+  if(g !== '3b' && g !== '2b') return;
   _mwGorunus = g;
   veMntWizRender();
 }
@@ -2503,22 +2506,20 @@ function _mwMasaTur(k){ return k === 'tork' ? 'tork' : 'figur'; }
 // şeklinde, hatta yeni braket görselleştirmesini değiştirdik"*): masanın
 // varsayılan görünüşü Görünümler'in aksonometrisi — AYNI çizici ve kurucu, model
 // sihirbazın durumundan (konumu tam olanlar); sürükle döndürür, tekerlek
-// yakınlaştırır, işarete tık satırı seçer. Düz görünüşler (Üstten · Yandan ·
-// Önden) yanında durur.
-function _mwGorAdi(g){ return g === '3b' ? '3B' : VE_MNT2D_GORUNUS[g].ad; }
-// 3B çizilebilir mi: çizici yüklenmediyse (yükleyici modülü atladıysa) masa
-// düz görünüşe (Üstten) düşer.
+// yakınlaştırır, işarete tık satırı seçer. 2B (Canlı Not 137) yanında durur: Üstten ·
+// Yandan · Önden TEK sayfada, ortak ölçek ve merkezle (cp-mount.js → veMnt2BSayfa).
+function _mwGorAdi(g){ return g === '3b' ? '3B' : '2B'; }
+// 3B çizilebilir mi: çizici yüklenmediyse (yükleyici modülü atladıysa) masa 2B'ye düşer.
 function _mw3B(){
   return _mwGorunus === '3b' && typeof veMntAkso !== 'undefined' && !!(veMntAkso && veMntAkso.ciz)
     && typeof veMntAksoListeVeri === 'function' && typeof _mntAksoKur === 'function';
 }
-function _mwGor2B(){ return _mwGorunus === '3b' ? 'ust' : _mwGorunus; }
 function _mwMasaHTML(k, c){
   var tur = _mwMasaTur(k), uc = (tur === 'figur' && _mw3B());
   var arac = '';
   if(tur === 'figur'){
     arac = '<div class="ve-fw-masa-arac" role="group" aria-label="Görünüş">'
-      + ['3b', 'ust', 'yan', 'on'].map(function(g){
+      + ['3b', '2b'].map(function(g){
           return '<button type="button" class="ve-fw-masa-btn ve-fw-masa-btn-yazi" aria-pressed="' + (_mwGorunus === g) + '"'
             + ' onclick="veMntWizGorunus(\'' + g + '\')">' + _mwGorAdi(g) + '</button>';
         }).join('') + '</div>'
@@ -2537,7 +2538,7 @@ function _mwMasaHTML(k, c){
       + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
     : '';
   return '<div class="ve-fw-masa" id="ve-mw-masa" data-adim="' + k + '" data-tur="' + tur + '"'
-    + (tur === 'figur' ? (uc ? ' data-gorunus="3b"' : ' data-gezin="1" tabindex="0"') : '') + '>'
+    + (tur === 'figur' ? (uc ? ' data-gorunus="3b"' : ' data-gorunus="2b" data-gezin="1" tabindex="0"') : '') + '>'
     + '<div class="ve-fw-masa-cizim" id="ve-mw-masa-cizim"></div>'
     + '<div class="ve-fw-masa-ust"><div id="ve-mw-live" class="ve-fw-cip ve-fw-live">' + _mwCipIcHTML(c) + '</div></div>'
     + arac
@@ -2587,10 +2588,10 @@ function _mwMasaOlc(){
   if(el && el.clientWidth > 40 && el.clientHeight > 40) _mwMasaOlcu = { w:el.clientWidth, h:el.clientHeight };
   return _mwMasaOlcu;
 }
-// MASANIN PAYI — çizim yüzen öğelerin ALTINA girmez: üstte sonuç çipi ve
-// görünüş düğmeleri, sağda yakınlaştırma düğmeleri, altta lejant ve x ekseninin
-// yazısı. Üstüne kısa kenarın %6'sı NEFES (FEAD kural 47 · "SIĞDIRMA NEFESİ").
-var VE_MW_MASA_PAY = { sol:58, sag:66, ust:56, alt:66 };
+// MASANIN PAYI — 2B sayfası yüzen öğelerin ALTINA girmez: üstte sonuç çipi ve
+// görünüş düğmeleri, sağda yakınlaştırma düğmeleri, altta lejant (eksen değerleri
+// panelin kendi payında). Üstüne kısa kenarın %3'ü NEFES.
+var VE_MW_MASA_PAY = { sol:14, sag:52, ust:50, alt:44 };
 // ÖZET PANELİ masanın sağında YÜZER (CSS: `[data-adim="ozet"] > .ve-fw-yan`,
 // 288 px, sağdan 12): geniş masada çizim onun SOLUNA sığdırılır — FEAD'in özet
 // masasının kuralı (`VE_FW_OZET_PANEL`). Pay yokken Transfer Kutusu, Sağ Arka
@@ -2598,12 +2599,13 @@ var VE_MW_MASA_PAY = { sol:58, sag:66, ust:56, alt:66 };
 // container sorgusu) panel alta iner, pay gerekmez.
 var VE_MW_OZET_PANEL = 288;
 function _mwMasaPay(o, adim){
-  var n = Math.round(0.06 * Math.min(o.w, o.h));
+  var n = Math.round(0.03 * Math.min(o.w, o.h));
   var sag = (adim === 'ozet' && o.w > 760) ? VE_MW_OZET_PANEL + 24 : VE_MW_MASA_PAY.sag;
   return { sol:VE_MW_MASA_PAY.sol + n, sag:sag + n, ust:VE_MW_MASA_PAY.ust + n, alt:VE_MW_MASA_PAY.alt + n };
 }
-function _mwGorAnahtar(){ return VE_MW_STEPS[_mwStep].key + ':' + _mwGorunus; }
-function _mwGorDurum(){ var k = _mwGorAnahtar(); return _mwGor[k] || (_mwGor[k] = { z:1, tx:0, ty:0 }); }
+// 2B'NİN KAMERASI adım başına ({s, x, y, z}; yoksa sığdırma) ve son çizimin yerleşimi
+function _mwGorAnahtar(){ return VE_MW_STEPS[_mwStep].key + ':2b'; }
+var _mw2BSon = null;
 function _mwFigurVeri(c){
   var v = c.veri || { comps:[], mounts:[], cg:null };
   var st = _mwState || veMntWizDefault(), k = VE_MW_STEPS[_mwStep].key;
@@ -2633,16 +2635,16 @@ function _mwMasaCiz(c){
   if(tur === 'tork'){ el.innerHTML = _mwTorkZincirSVG(c, o.w, o.h); return; }
   if(_mw3B()){ _mwMasa3B(el, k, o); return; }
   var f = _mwFigurVeri(c);
-  var svg = (typeof veMnt2DGorunusSVG === 'function')
-    ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGor2B(), secili:f.secili, secim:true, pay:_mwMasaPay(o, k) }) : '';
-  if(!svg){
+  var r = (typeof veMnt2BSayfa === 'function')
+    ? veMnt2BSayfa(f.veri, o.w, o.h, { kamera:_mwGor[_mwGorAnahtar()] || null, secili:f.secili, secim:true, pay:_mwMasaPay(o, k), kimlik:'ve-mw2b' }) : null;
+  _mw2BSon = r;
+  if(!r){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
       ? 'Model boş. ' + veYon('Örnek ya da STEP dosyası seçin.')
       : 'Konumlu gövde ya da takoz yok.') + '</div>';
     return;
   }
-  el.innerHTML = svg;
-  _mwGorUygula();
+  el.innerHTML = r.svg;
 }
 // 3B çizim: yalın kap (başlık ve gösterge masada), özet panelinin solunda.
 // SEÇİLİ ÖNDE (kullanıcı 2026-11-10, Canlı Not 119: *"Takoz seçildiğinde, 3D görüntüleyici
@@ -2700,25 +2702,65 @@ function _mwMasa3BSec(ak){
   veMntWizRender();
   return true;
 }
-function _mwGorUygula(){
-  var svg = (typeof document !== 'undefined') ? document.querySelector('#ve-mw-masa-cizim > svg') : null;
-  if(!svg) return;
-  var o = _mwMasaOlcu, g = _mwGorDurum();
-  svg.setAttribute('viewBox', [g.tx, g.ty, o.w / g.z, o.h / g.z].map(function(v){ return Math.round(v * 100) / 100; }).join(' '));
+// 2B: yakınlaştırma ve kaydırma KAMERAYI değiştirir, sayfa yeniden çizilir (Canlı Not 137 —
+// viewBox büyütmesi yazıyı ve ekseni resim gibi büyütüp kaydırıyordu). Tekerlek ve sürükleme
+// imlecin altındaki panelin iki ekseninde; ortak eksen öteki panelde de kayar.
+var _mw2BKare = 0;
+function _mw2BYenile(hemen){
+  if(hemen || typeof requestAnimationFrame !== 'function'){
+    if(_mw2BKare && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(_mw2BKare);
+    _mw2BKare = 0;
+    if(_mwState) _mwMasaCiz(_mwCoz || veMntWizCoz(_mwState));
+    return;
+  }
+  if(_mw2BKare) return;
+  _mw2BKare = requestAnimationFrame(function(){ _mw2BKare = 0; if(_mwState) _mwMasaCiz(_mwCoz || veMntWizCoz(_mwState)); });
 }
-// Yakınlaşma: f çarpanı, (sx, sy) masanın içindeki ekran noktası (verilmezse merkez).
-function _mwGorZoom(f, sx, sy){
-  var o = _mwMasaOlcu, g = _mwGorDurum();
-  if(sx === undefined){ sx = o.w / 2; sy = o.h / 2; }
-  var z2 = Math.max(VE_MW_GOR_Z[0], Math.min(VE_MW_GOR_Z[1], g.z * f));
-  var ux = g.tx + sx / g.z, uy = g.ty + sy / g.z;
-  g.tx = ux - sx / z2; g.ty = uy - sy / z2; g.z = z2;
-  _mwGorUygula();
+function _mw2BSonGetir(){ return _mw2BSon; }
+// (sx, sy): 2B çiziminin içindeki nokta → altındaki panel (yoksa null)
+function _mw2BPanel(sx, sy){
+  var L = _mw2BSon;
+  if(!L || sx === undefined) return null;
+  return L.paneller.filter(function(p){ return sx >= p.x0 && sx <= p.x0 + p.w && sy >= p.y0 && sy <= p.y0 + p.h; })[0] || null;
+}
+function _mw2BKamera(){
+  var L = _mw2BSon;
+  if(!L) return null;
+  var K = L.kamera;
+  return (_mwGor[_mwGorAnahtar()] = { s:K.s, x:K.x, y:K.y, z:K.z });
+}
+// Yakınlaşma: f çarpanı; (sx, sy) verilirse o noktanın altındaki konum yerinde kalır.
+function _mw2BZoom(f, sx, sy){
+  var L = _mw2BSon, K = _mw2BKamera();
+  if(!K) return;
+  var s2 = Math.max(L.s0 * VE_MW_GOR_Z[0], Math.min(L.s0 * VE_MW_GOR_Z[1], K.s * f));
+  var p = _mw2BPanel(sx, sy);
+  if(p){
+    var G = VE_MNT2D_GORUNUS[p.g];
+    var hm = K[G.h] + (sx - p.cx) / K.s, vm = K[G.v] - (sy - p.cy) / K.s;
+    K[G.h] = hm - (sx - p.cx) / s2; K[G.v] = vm + (sy - p.cy) / s2;
+  }
+  K.s = s2;
+  _mw2BYenile();
+}
+function _mw2BKaydir(g, dx, dy){
+  var K = _mw2BKamera();
+  if(!K) return;
+  var G = VE_MNT2D_GORUNUS[g || 'yan'];
+  K[G.h] -= dx / K.s; K[G.v] += dy / K.s;
+  _mw2BYenile();
 }
 function veMntWizZoom(yon){
   if(_mw3B() && typeof veMntAksoAyar === 'function'){ veMntAksoAyar(VE_MW_AKSO, 'yakin', yon > 0 ? 'in' : (yon < 0 ? 'out' : 'reset')); return; }
-  if(yon === 0){ _mwGor[_mwGorAnahtar()] = { z:1, tx:0, ty:0 }; _mwGorUygula(); return; }
-  _mwGorZoom(yon > 0 ? 1.25 : 0.8);
+  if(yon === 0){ delete _mwGor[_mwGorAnahtar()]; _mw2BYenile(); return; }
+  _mw2BZoom(yon > 0 ? 1.25 : 0.8);
+}
+// Masanın içindeki ekran noktası → 2B çiziminin koordinatı
+function _mw2BNokta(e){
+  var svg = document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2b');
+  if(!svg) return null;
+  var r = svg.getBoundingClientRect();
+  return { x:e.clientX - r.left, y:e.clientY - r.top };
 }
 // Dinleyiciler masanın KABINA bir kez bağlanır (çizim her yamada yenilenir).
 function _mwMasaBagla(){
@@ -2729,22 +2771,22 @@ function _mwMasaBagla(){
   m.addEventListener('wheel', function(e){
     if(!m.hasAttribute('data-gezin')) return;
     e.preventDefault();
-    var r = m.getBoundingClientRect();
-    _mwGorZoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+    var n = _mw2BNokta(e);
+    _mw2BZoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, n ? n.x : undefined, n ? n.y : undefined);
   }, { passive:false });
   m.addEventListener('pointerdown', function(e){
     if(!m.hasAttribute('data-gezin') || e.button !== 0) return;
     if(e.target.closest && e.target.closest('button, .ve-fw-cip')) return;
-    _mwKaydir = { x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, id:e.pointerId };
+    var n = _mw2BNokta(e), p = n ? _mw2BPanel(n.x, n.y) : null;
+    _mwKaydir = { x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, id:e.pointerId, g:p ? p.g : 'yan' };
     try { m.setPointerCapture(e.pointerId); } catch(er){}
   });
   m.addEventListener('pointermove', function(e){
     if(!_mwKaydir) return;
-    var g = _mwGorDurum();
-    g.tx -= (e.clientX - _mwKaydir.x) / g.z; g.ty -= (e.clientY - _mwKaydir.y) / g.z;
+    var dx = e.clientX - _mwKaydir.x, dy = e.clientY - _mwKaydir.y;
     _mwKaydir.x = e.clientX; _mwKaydir.y = e.clientY;
     if(Math.hypot(e.clientX - _mwKaydir.x0, e.clientY - _mwKaydir.y0) > 3) m.classList.add('kayiyor');
-    _mwGorUygula();
+    if(dx || dy) _mw2BKaydir(_mwKaydir.g, dx, dy);
   });
   var bitir = function(e){
     if(!_mwKaydir) return;
@@ -2967,6 +3009,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
     veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim,
+    _mw2BZoom: _mw2BZoom, _mw2BKaydir: _mw2BKaydir, _mw2BYenile: _mw2BYenile, _mw2BSonGetir: _mw2BSonGetir,
+    _mw2BKameraGetir: function(){ return _mwGor[_mwGorAnahtar()] || null; },
     _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
     _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML, veMntWizEylemHTML: veMntWizEylemHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,

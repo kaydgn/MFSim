@@ -131,8 +131,7 @@ describe('ÖZET MASASI — çizim yüzen panelin SOLUNDA', () => {
   test('Tulga özeti: hiçbir işaret panelin altına girmiyor (sağ 12 + 288 px)', () => {
     const c = tulga();
     const o = { w: 1490, h: 820 };
-    const svg = cp.veMnt2DGorunusSVG(c.veri, o.w, o.h, { gorunus: 'ust', secim: true, pay: W._mwMasaPay(o, 'ozet') });
-    const d = div(svg);
+    const d = div(cp.veMnt2BSayfa(c.veri, o.w, o.h, { secim: true, pay: W._mwMasaPay(o, 'ozet') }).svg);
     const sag = [];
     d.querySelectorAll('[data-mnt-sec] rect, [data-mnt-sec] circle').forEach((e) => {
       if (e.tagName === 'rect') sag.push(+e.getAttribute('x') + +e.getAttribute('width'));
@@ -228,9 +227,10 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
     const lej = [...masa.querySelectorAll('#ve-mw-masa-lej .ve-fw-lj')].map((e) => e.textContent);
     expect(lej).toEqual(['Gövde', 'Takoz', 'Birleşik CG', 'Braket']);
     const dug = [...masa.querySelectorAll('.ve-fw-masa-arac button')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]);
-    expect(dug).toEqual([['3B', 'true'], ['Üstten', 'false'], ['Yandan', 'false'], ['Önden', 'false']]);
-    W.veMntWizGorunus('ust');
-    expect(document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2d-gorunus')).toBeTruthy();
+    expect(dug).toEqual([['3B', 'true'], ['2B', 'false']]);
+    W.veMntWizGorunus('2b');
+    expect(document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2b')).toBeTruthy();
+    expect(document.getElementById('ve-mw-masa').getAttribute('data-gorunus')).toBe('2b');
     expect(document.getElementById('ve-mw-masa').hasAttribute('data-gezin')).toBe(true);
     W.veMntWizGorunus('3b');
   });
@@ -291,7 +291,7 @@ describe('DÜZ GÖRÜNÜŞTE GÖVDENİN ÇERÇEVESİ (Canlı Not 79)', () => {
     const kutulu = c.veri.comps.filter((x) => x.kutu);
     expect(kutulu.length).toBeGreaterThanOrEqual(2);
     expect(c.veri.comps.filter((x) => !x.kutu).length).toBeGreaterThan(0);              // nokta kütleler
-    const d = div(cp.veMnt2DGorunusSVG(c.veri, 1000, 700, { gorunus: g, secim: true }));
+    const d = div(cp.veMnt2BSayfa(c.veri, 1000, 700, { secim: true }).svg).querySelector('[data-mnt2b="' + g + '"]');
     const rect = [...d.querySelectorAll('.ve-mnt2d-kutu > rect')];
     expect(rect).toHaveLength(kutulu.length);
     // ölçek: iki çerçevenin genişlik oranı kutuların oranı; ağırlık merkezi çerçevenin ortasında
@@ -312,10 +312,127 @@ describe('DÜZ GÖRÜNÜŞTE GÖVDENİN ÇERÇEVESİ (Canlı Not 79)', () => {
   test('seçili gövdenin çerçevesi vurgu; göstergede Gövde', () => {
     const c = tulga();
     const i = c.veri.comps.findIndex((x) => x.kutu);
-    const d = div(cp.veMnt2DGorunusSVG(c.veri, 1000, 700, { gorunus: 'yan', secim: true, secili: { tur: 'govde', i } }));
-    expect(d.querySelector('[data-mnt-sec="govde:' + i + '"].ve-mnt2d-kutu > rect').getAttribute('stroke')).toBe('var(--accent-primary)');
-    W.veMntWizGorunus('yan');
+    const d = div(cp.veMnt2BSayfa(c.veri, 1000, 700, { secim: true, secili: { tur: 'govde', i } }).svg);
+    ['yan', 'on', 'ust'].forEach((g) => expect(d.querySelector('[data-mnt2b="' + g + '"] [data-mnt-sec="govde:' + i + '"].ve-mnt2d-kutu > rect').getAttribute('stroke')).toBe('var(--accent-primary)'));
+    W.veMntWizGorunus('2b');
     expect([...document.querySelectorAll('#ve-mw-masa .ve-fw-lj')].map((e) => e.textContent)).toEqual(['Gövde', 'Takoz', 'Gövde CG', 'Birleşik CG']);
     expect(CSS).toMatch(/\.ve-mw-lj-kutu\{[^}]*border:1px solid var\(--text-secondary\)/);
   });
 });
+
+
+// 2B SAYFASI (kullanıcı 2026-11-11, Canlı Not 137: *"Üstten Yandan Önden görünümler sanki resim
+// alınmış gibi olmuş. Koordinat düzlemi falan resimler ile beraber hareket ediyor. Ayrıca bu
+// görünümlerin tek sayfada olmasını istiyorum. 2B olarak isimlendirilebilir. Arkadaki grid yapısını
+// da istemiyorum."*). Önce: üç ayrı sayfa; yakınlaştırma SVG'nin viewBox'ını büyütüyordu — eksen
+// değerleri, yazılar ve çerçeve resimle birlikte büyüyüp kayıyordu; arkada ızgara. Gerçek tarayıcı
+// tarafı (tekerlek, sürükleme): tests/e2e/mount-sihirbaz.spec.js → 2B SAYFASI.
+describe('2B SAYFASI (Canlı Not 137)', () => {
+  const EKS = { x: 0, y: 1, z: 2 };
+  // panelin işaretlerinin ekran konumu: takozun karesinin ve gövde CG dairesinin merkezi
+  const isaret = (pn, sec) => {
+    const g = pn.querySelector('[data-mnt-sec="' + sec + '"]:not(.ve-mnt2d-kutu)');
+    const c = g.querySelector('circle'), r = g.querySelector('rect');
+    if (c) return { x: +c.getAttribute('cx'), y: +c.getAttribute('cy') };
+    return { x: +r.getAttribute('x') + +r.getAttribute('width') / 2, y: +r.getAttribute('y') + +r.getAttribute('height') / 2 };
+  };
+  const yazilar = (el) => [...el.querySelectorAll('text')];
+  test('üç görünüş tek sayfada: Yandan · Önden · Üstten; ortak eksen hizalı, ölçek tek', () => {
+    const c = tulga();
+    const R = cp.veMnt2BSayfa(c.veri, 1100, 760, { secim: true });
+    expect(R.paneller.map((p) => p.g)).toEqual(['yan', 'on', 'ust']);
+    const d = div(R.svg);
+    const pn = (g) => d.querySelector('[data-mnt2b="' + g + '"]');
+    expect(['yan', 'on', 'ust'].map((g) => yazilar(pn(g)).some((t) => t.textContent === cp.VE_MNT2D_GORUNUS[g].ad))).toEqual([true, true, true]);
+    const [yan, on, ust] = R.paneller;
+    expect(on.x0).toBeGreaterThan(yan.x0 + yan.w);              // Önden Yandan'ın sağında
+    expect(ust.y0).toBeGreaterThan(yan.y0 + yan.h);             // Üstten Yandan'ın altında
+    expect(on.t).toBeCloseTo(yan.t, 6); expect(on.b).toBeCloseTo(yan.b, 6);     // Z satırı ortak
+    expect(ust.l).toBeCloseTo(yan.l, 6); expect(ust.r).toBeCloseTo(yan.r, 6);   // X sütunu ortak
+    // her gövdenin CG'si: Yandan ↔ Üstten aynı ekran x'i, Yandan ↔ Önden aynı ekran y'si (takozun
+    // işareti üst üste binen çiftte yelpazelenir — o kayma görünürlük içindir, konum değil)
+    const secler = [...pn('yan').querySelectorAll('[data-mnt-sec^="govde:"]:not(.ve-mnt2d-kutu)')].map((g) => g.getAttribute('data-mnt-sec'));
+    expect(secler.length).toBeGreaterThan(4);
+    secler.forEach((sec) => {
+      expect(Math.abs(isaret(pn('yan'), sec).x - isaret(pn('ust'), sec).x)).toBeLessThan(0.2);
+      expect(Math.abs(isaret(pn('yan'), sec).y - isaret(pn('on'), sec).y)).toBeLessThan(0.2);
+    });
+    // tek ölçek: aynı gövdenin kutusu Yandan ve Üstten'de aynı enle, Yandan ve Önden'de aynı boyla
+    const kutu = (g, i) => { const r = pn(g).querySelector('[data-mnt-sec="govde:' + i + '"].ve-mnt2d-kutu > rect'); return { w: +r.getAttribute('width'), h: +r.getAttribute('height') }; };
+    const i = c.veri.comps.findIndex((x) => x.kutu);
+    expect(kutu('yan', i).w).toBeCloseTo(kutu('ust', i).w, 0);
+    expect(kutu('yan', i).h).toBeCloseTo(kutu('on', i).h, 0);
+    expect(kutu('yan', i).w / c.veri.comps[i].kutu[EKS.x]).toBeCloseTo(R.kamera.s, 3);
+  });
+  test('YAKINLAŞTIRMA YENİDEN ÇİZER: yazı boyu ve çerçeve yerinde, değerler görünen aralıktan', () => {
+    const c = tulga();
+    const A = cp.veMnt2BSayfa(c.veri, 1100, 760, { secim: true });
+    const K2 = { s: A.kamera.s * 2.5, x: A.kamera.x, y: A.kamera.y, z: A.kamera.z };
+    const B = cp.veMnt2BSayfa(c.veri, 1100, 760, { secim: true, kamera: K2 });
+    const da = div(A.svg), db = div(B.svg);
+    const boy = (d) => [...new Set(yazilar(d).map((t) => t.getAttribute('font-size')))].sort();
+    expect(boy(db)).toEqual(boy(da));                                                    // yazı büyümez
+    const cer = (d) => [...d.querySelectorAll('rect.ve-mnt2b-cerceve')].map((r) => ['x', 'y', 'width', 'height'].map((k) => r.getAttribute(k)).join(','));
+    expect(cer(da)).toHaveLength(3);
+    expect(cer(db)).toEqual(cer(da));                                                    // çerçeve yerinde
+    expect(B.paneller).toEqual(A.paneller);
+    const deger = (d, g) => yazilar(d.querySelector('[data-mnt2b="' + g + '"]')).map((t) => t.textContent).filter((t) => /^[−-]?[\d.]+$/.test(t));
+    expect(deger(db, 'yan')).not.toEqual(deger(da, 'yan'));                              // değerler görünen aralıktan
+    // işaret merkezden 2,5 kat uzaklaşır; çizim alanının dışına düşen kesilir ve etiketlenmez
+    const p = A.paneller[0];
+    const a = isaret(da.querySelector('[data-mnt2b="yan"]'), 'takoz:0'), b = isaret(db.querySelector('[data-mnt2b="yan"]'), 'takoz:0');
+    expect(b.x - p.cx).toBeCloseTo((a.x - p.cx) * 2.5, 0);
+    expect(db.querySelectorAll('clipPath')).toHaveLength(3);
+    expect(db.querySelector('[data-mnt2b="yan"] g[clip-path] [data-mnt-sec="takoz:0"]')).toBeTruthy();
+    const disari = c.veri.mounts.map((m, k) => k).filter((k) => {
+      const q = isaret(db.querySelector('[data-mnt2b="yan"]'), 'takoz:' + k);
+      return q.x < p.l || q.x > p.r || q.y < p.t || q.y > p.b;
+    });
+    expect(disari.length).toBeGreaterThan(0);
+    const yaziYan = yazilar(db.querySelector('[data-mnt2b="yan"]')).map((t) => t.textContent);
+    disari.forEach((k) => expect(yaziYan).not.toContain(c.veri.mounts[k].name));
+  });
+  test('IZGARA YOK: çizgi ızgarası yerine çerçeve ve çentik; masanın kâğıdı ızgarasız', () => {
+    const c = tulga();
+    const svg = cp.veMnt2BSayfa(c.veri, 1100, 760, {}).svg;
+    expect(svg).not.toMatch(/opacity="0\.4"/);                                          // ızgara çizgisi
+    const d = div(svg);
+    // çentik 5 px: çerçevenin kenarından içeri
+    const centik = [...d.querySelectorAll('line.ve-mnt2b-centik')];
+    expect(centik.length).toBeGreaterThan(12);
+    centik.forEach((l) => expect(Math.hypot(l.getAttribute('x2') - l.getAttribute('x1'), l.getAttribute('y2') - l.getAttribute('y1'))).toBeCloseTo(5, 3));
+    expect(CSS).toMatch(/\.ve-fw-masa\[data-gorunus="2b"\]\{ background-image:none; \}/);
+  });
+  test('sihirbaz: 2B düğmesi; yakınlaştırma kamerayı değiştirir, sığdır sıfırlar; eski adlar 2B açar', () => {
+    tulga();
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'govde'));
+    W.veMntWizGorunus('yan');                                                            // eski ad
+    const masa = () => document.getElementById('ve-mw-masa');
+    expect(masa().getAttribute('data-gorunus')).toBe('2b');
+    const L0 = W._mw2BSonGetir();
+    expect(L0 && L0.paneller.length).toBe(3);
+    expect(W._mw2BKameraGetir()).toBeNull();                                             // sığdırma
+    const boy0 = yazilar(masa()).map((t) => t.getAttribute('font-size')).sort().join();
+    W.veMntWizZoom(1); W._mw2BYenile(true);
+    const K = W._mw2BKameraGetir();
+    expect(K.s).toBeCloseTo(L0.s0 * 1.25, 6);
+    expect(new Set(yazilar(masa()).map((t) => t.getAttribute('font-size')))).toEqual(new Set(boy0.split(',')));
+    // Yandan'da sürükleme X ve Z'yi kaydırır; Y yerinde
+    const x0 = K.x, y0 = K.y, z0 = K.z;
+    W._mw2BKaydir('yan', 100, -50); W._mw2BYenile(true);
+    const K2 = W._mw2BKameraGetir();
+    expect(K2.x).toBeCloseTo(x0 - 100 / K.s, 6); expect(K2.z).toBeCloseTo(z0 - 50 / K.s, 6); expect(K2.y).toBeCloseTo(y0, 9);
+    // imlecin altındaki nokta yerinde kalır (Önden'in ortasından 40 px sağı: Y ve Z)
+    const p = W._mw2BSonGetir().paneller[1], sx = p.cx + 40, sy = p.cy - 30;
+    const hm = K2.y + (sx - p.cx) / K2.s, vm = K2.z - (sy - p.cy) / K2.s;
+    W._mw2BZoom(2, sx, sy); W._mw2BYenile(true);
+    const K3 = W._mw2BKameraGetir();
+    expect(K3.y + (sx - p.cx) / K3.s).toBeCloseTo(hm, 6);
+    expect(K3.z - (sy - p.cy) / K3.s).toBeCloseTo(vm, 6);
+    expect(K3.x).toBeCloseTo(K2.x, 9);
+    W.veMntWizZoom(0); W._mw2BYenile(true);
+    expect(W._mw2BKameraGetir()).toBeNull();
+    W.veMntWizGorunus('3b');
+  });
+});
+
