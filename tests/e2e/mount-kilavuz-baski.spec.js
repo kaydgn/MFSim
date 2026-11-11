@@ -127,7 +127,7 @@ test('Takoz kılavuzu A4 baskıda temiz; her işaret görünür', async ({ page 
     return out;
   }, { boy: SAYFA_BOY, kisa: EN_KISA });
 
-  expect(olcum.sekil).toBeGreaterThanOrEqual(25);
+  expect(olcum.sekil).toBeGreaterThanOrEqual(24);   // Parametrik Analiz'in iki şekli pencereyle kalktı (Canlı Not 1001)
   expect(olcum.rozet).toBeGreaterThan(120);
   expect(olcum.tasan.filter((t) => t.px > PAY)).toEqual([]);
   expect(olcum.uzun).toEqual([]);

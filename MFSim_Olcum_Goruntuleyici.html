@@ -7391,7 +7391,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    biraz daha daraltalım"*): iki sütunda sol sütun en uzun adın ("Otomatik
    düzenle") genişliğindeydi, kısa adların yanında ~60 px boşluk kalıyordu —
    pencere 312 → 185 px, satır 24 → 22 px. Önce Canlı Not 88: 352 → 312 px,
-   satır 28 + 2 → 24 px. */
+   satır 28 + 2 → 24 px. Sonra Canlı Not 142 (*"butonlar arasını biraz açabiliriz. Çok yakın …
+   Bir miktar ama, çok değil"*): satır 22 → 26 px. */
 .ve-rb-dock .ve-rb-group{
   display:block; padding:3px 6px; flex:none;
 }
@@ -7409,7 +7410,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-dock .ve-rb-btn,
 .ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm) .ve-rb-btn--lg{
   grid-row:auto; flex-direction:row; justify-content:flex-start; align-self:stretch;
-  width:auto; min-width:0; height:22px; min-height:22px; padding:0 14px 0 6px; gap:6px;
+  width:auto; min-width:0; height:26px; min-height:26px; padding:0 14px 0 6px; gap:6px;
 }
 .ve-rb-dock .ve-rb-btn .ve-rb-ico{ width:14px; height:14px; }
 .ve-rb-dock .ve-rb-btn .ve-rb-lbl{
@@ -9954,6 +9955,8 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-amc-veri th{ text-align:left; font-weight:500; color:var(--text-muted); padding:3px 8px 3px 0; white-space:nowrap; width:1%; }
 .ve-mnt-amc-veri td{ color:var(--text-primary); padding:3px 0; }
 .ve-mnt-amc-veri tr + tr > *{ border-top:1px solid var(--border-color); }
+/* Kaynak Ürün ailesi satırının (i)'sinde (Canlı Not 139): yazının yanında, satırı büyütmez */
+.ve-mnt-amc-veri .ve-mnt-kaynak-i{ width:18px; height:18px; margin:-2px 0 -2px 4px; vertical-align:middle; }
 .ve-fp-dugme[aria-disabled="true"], .ve-fp-dugme[aria-disabled="true"]:hover{
   color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border-color); cursor:default;
 }

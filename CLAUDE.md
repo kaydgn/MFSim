@@ -241,11 +241,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   uzaklaştır · sıfırla · **tam ekran**). Açı yazısı, Görünüş, Katmanlar, Uygunluk,
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
-  büyümez). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
+  büyümez); serbest kamerada takoz küpü GÖVDE GİBİ yakınlıkla büyür, G ve CG √yakın (Canlı Not 140;
+  kapı `mount-akso.test.js` → *TAKOZ MODELLE BÜYÜR*). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
   çözümsüz); görünüm tercihi modelde değil, yalnız açı. Sürüklerken kare YAZILI ve
   yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
   parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
-  model gölgede); tersi de: çizimde parçanın üstündeyken föyün satırı vurgulu
+  model gölgede; perdede seçim HALKASI YOK — Canlı Not 141 · 148, kapı `mount-akso.test.js` → *PERDE*); tersi de: çizimde parçanın üstündeyken föyün satırı vurgulu
   (kullanıcı 2026-11-06, Canlı Not 48). Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
   tonlarında (vurgu + `--isik`): her yüzü gölgedeki zeminden ve aynı tür
   parçadan açık, iki temada. Katı çizimde takoz ve nokta kütle kutularla AYNI
@@ -369,14 +370,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   AMC'nin ölçümünden — aynı tipin ölçülmüş sertlikleri arasında doğrusal, dışında en yakınınki
   (resimler oranın sertlikle değiştiğini gösterdi: Cone 38 40 ShA 2,67 ↔ 60 ShA 1,57) → aynı
   ailesi → bütün tiplerin medyanı, dinamik = statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
-  değer tahminden çıkar; tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
+  değer tahminden çıkar; Rijitlik tablosunun altında oran ve tahmin SATIRI YOK — tahmin hücrede
+  (italik, künyesi ipucunda), eksen takası bölümün durumunda (Canlı Not 138; kapı `mount-amc.test.js`
+  → *TABLONUN ALTI BOŞ*); tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
   olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
   (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
-  (Canlı Not 65); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
+  (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
+  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
@@ -404,7 +408,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
-  **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
+  **Parametrik Analiz** (`mnt-parametric`). **PENCERE BOŞ** (kullanıcı 2026-11-11, Canlı Not 1001:
+  *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*): pencere yalnız
+  kimlik; aşağıdaki pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI
+  DEĞİL (`_mntParamEskiPencereHTML`, e2e onu yerine koyar) — yeniden kurulumda parça parça bağlanır
+  ya da emekli edilir. Kapı: `mount-param.test.js` → *PENCERE BOŞ* + `pencere-kabuk.test.js` →
+  `BOS_PENCERE`. İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
@@ -469,7 +478,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *TIKLA*) + `xlsx-yaz.test.js` (→ *biçimli akış*) + `mount-param-sonuc.spec.js` → *EXCEL* · *EXCEL DİLİMLİ*.
 - `js/mount-param-html.js` — Parametrik Analiz'in **HTML çıktısı, TEMEL** (kullanıcı 2026-11-11: *"HTML
   raporunun temelini kur … sadece temel yapıyı oluştur yeter"* — parametrik analizde büyük değişiklik
-  gelecek, ayrıntı onunla): Sonuç'un eylem satırındaki **HTML’i indir** → tek dosya, çevrimdışı; Özet
+  gelecek, ayrıntı onunla): eski pencerenin (PARKTA, Canlı Not 1001) Sonuç eylem satırındaki **HTML’i
+  indir** — yeni pencere kuruldukça oraya bağlanır; kurucu pencereden bağımsız → tek dosya, çevrimdışı; Özet
   (K0…Kn) · Tarama (sayı sütunu sıralar, 100'lük sayfa) · Sonuç (tıklanan konfigürasyon: yük durumu × takoz
   × X/Y/Z, modlar; adres #K1 · #T25, geri tuşu). **Excel'in PLANINDAN** (`_mntParamExcelPlan`): iki çıktı
   aynı satırı ve sayıyı yazar. **Belge OKUR, hesaplamaz**: sonuç gömülü veriden (Veri kodu ikili — Int16'ya
@@ -1028,8 +1038,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kullanıcı kararı 2026-10-16: *"Tek bir pencerede hepsi sığar … Kullanışlı ve
   kompakt bir tasarım olsun."*). FEAD ve Takoz'un her penceresi kimlik → eksik
   bandı → kategoriler TEK GÖVDEDE alt alta; hiçbir kategori gizli değil. Bölümü
-  kartın başlığı adlandırır: her kategori başlıklı bir bölüm taşır (başlıksızı
-  yalnız tipin beyanı bağışlar: `componentDefs.yerTutucu`). Kategorinin durumu
+  kartın başlığı adlandırır: her kategori başlıklı bir bölüm taşır (bölümsüz pencereyi
+  yalnız kullanıcının kararı bağışlar: `pencere-kabuk.test.js` → `BOS_PENCERE`). Kategorinin durumu
   kabında (`data-d`); eksiğin sonucunu bant yazar, eksik kategori kenarında
   çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
   EYLEM SATIRI (`vePencereEylem`: solda durum notu ya da süren işin çubuğu,

@@ -200,8 +200,11 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(P.kunye('1221402503').cizim).toBe('assets/takoz/ap/cizim-k-026-s1.webp');
     expect('foto' in P.kunye('1221402503')).toBe(false);
     expect(satirlar(k)).toEqual([['Kod', 'A+P 12.2140.2503'], ['Ürün ailesi', 'APSOvib® Conical bearing'], ['Tip', '026 S 1'],
-      ['Sertlik', 'medium · ~60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm'],
-      ['Kaynak', 'A+P föyü Kasım 2015 · e-mağaza 10.11.2026']]);
+      ['Sertlik', 'medium · ~60 ShA'], ['Ölçüler', '107 × 90 mm · delik 80 × 65 · Ø11'], ['Yükseklik', '49,5 mm']]);
+    // KAYNAK (i)'DE (Canlı Not 139)
+    const ki = k.querySelector('.ve-mnt-kaynak-i');
+    expect(ki.closest('tr').querySelector('th').textContent).toBe('Ürün ailesi');
+    expect(ki.getAttribute('data-ipucu')).toBe('Kaynak · A+P föyü Kasım 2015 · e-mağaza 10.11.2026');
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|2\.550 N|259,9/i);
   });
   test('H-takoz toleransı, marine ağırlığı; A+P künyesi yalnız A+P kodunda', () => {
@@ -209,11 +212,11 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(satirlar(kunye('ap1221440440').querySelector('.ve-mnt-amc'))).toContainEqual(['Ağırlık', '337 g']);
     expect(kunye('lmt1433-00-55sh').querySelector('.ve-mnt-amc[data-ap]')).toBeNull();   // LASPAR'ın künyesi (mount-laspar.test.js)
   });
-  test('Rijitlik: tahminli dinamik hücreler işaretli, "Dinamik tahmini" satırı oranı ve kaynağını yazar', () => {
+  test('Rijitlik: tahminli dinamik hücreler işaretli, ipucu oranı ve kaynağını yazar', () => {
     const d = kunye('ap1221402503');
     expect([...d.querySelectorAll('td.tah input')].map((i) => i.id.replace(/^ve-mnt-lib-|-lib1$/g, ''))).toEqual(['dx', 'dy', 'dz']);
-    expect(d.querySelector('#ve-mnt-lib-tah-lib1').textContent).toBe('Dinamik tahministatik × 1,60 · 60 ShA, (Sh + 20)/50 · AMC NR koniler');
-    expect(kunye('ap1221470202').querySelector('#ve-mnt-lib-tah-lib1').textContent).toBe('Dinamik tahministatik × 1,52 · AMC-EO, 9 NR kodun medyanı');
+    expect(d.querySelector('td.tah').getAttribute('title')).toBe('Tahmini · statik × 1,60 · 60 ShA, (Sh + 20)/50 · AMC NR koniler');
+    expect(kunye('ap1221470202').querySelector('td.tah').getAttribute('title')).toBe('Tahmini · statik × 1,52 · AMC-EO, 9 NR kodun medyanı');
     expect(d.querySelectorAll('td.zor')).toHaveLength(0);
   });
   test('(i) A+P\'nin teknik resmini açar; bilinmeyen kodda hiçbir şey', () => {

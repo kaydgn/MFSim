@@ -94,7 +94,7 @@ var VE_GUIDE_MOUNT_SECTIONS = [
   ['m14', '14',   'Rapor üretmek'],
   ['m15', '15',   'Sihirbazla kurmak'],
   ['m16', '16',   'CAD dosyasından model: 3D Görüntüleyici'],
-  ['m17', '17',   'Parametrik analiz: katalogdan seçim'],
+  ['m17', '17',   'Parametrik analiz'],
   ['m18', '18',   'Sık yapılan hatalar'],
   ['m19', '19',   'Sayısal örnek: BMC Siper'],
   ['mEk', 'Ek A', 'Alan → pencere hızlı başvurusu']
@@ -209,8 +209,7 @@ var _GM_KURUCU = {
   'mnt-motor': 'getMntMassPropertiesHTML', 'mnt-gearbox': 'getMntMassPropertiesHTML',
   'mnt-mount': 'getMntMountPropertiesHTML', 'mnt-library': 'getMntLibraryPropertiesHTML',
   'mnt-solver': 'getMntSolverPropertiesHTML',
-  'mnt-2dview': 'getMnt2DViewPropertiesHTML', 'mnt-report': 'getMntReportPropertiesHTML',
-  'mnt-parametric': 'getMntParamPropertiesHTML'
+  'mnt-2dview': 'getMnt2DViewPropertiesHTML', 'mnt-report': 'getMntReportPropertiesHTML'
 };
 
 var _gmPaketOnbellek = null;
@@ -461,7 +460,7 @@ var _GM_PALET = [
   { k: 'motor', ad: 'Motor', not: 'Tuvale sürüklenir.', yer: 'sag' },
   { k: 'takoz', ad: 'Takoz', not: 'Her takoz için bir tane.', yer: 'sag' },
   { k: 'ozellik', ad: 'Takoz Özellikleri', not: 'Takoz tiplerinin kataloğu.', yer: 'sag' },
-  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Katalogdan takoz seçimi.', yer: 'sag' },
+  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Tuvale sürüklenir.', yer: 'sag' },
   { k: 'daralt', ad: 'Daralt', not: 'Sütunu kapatır.', yer: 'sol-orta' },
   { k: 'tuval', ad: 'Tuval', not: 'Bileşen buraya bırakılır.', cerceve: false, yer: 'sol-orta' }
 ];
@@ -574,17 +573,6 @@ var _GM_3B_MENU = [
   { k: 'hizli', ad: 'Hızlı atama', not: 'Rolleri sırayla soran kartı açar ya da kapatır.', yer: 'sol-orta' }
 ];
 
-var _GM_PARAM = [
-  { k: 'gruplar', bolum: 'Gruplar', ad: 'Gruplar', not: 'Sağ/sol çiftler ve tek takozlar; Tara işareti.' },
-  { k: 'katalog', bolum: 'Analiz', ad: 'Analiz', not: 'Analiz türü; grup, aday ve kombinasyon sayısı.' },
-  { k: 'tara', metin: 'Tara', ust: 'button', ad: 'Tara', yer: 'sag', not: 'Kombinasyonları çözer; sürerken Durdur.' }
-];
-
-var _GM_PARAM_KRITER = [
-  { k: 'kesin', bolum: 'Kesin kriterler', ad: 'Kesin kriterler', not: 'Kriter 1 · 1a · 1b · 2.' },
-  { k: 'sira', bolum: 'Sıralama', ad: 'Sıralama', not: 'Ölçüt statik sehim; rijitlik toleransı.' }
-];
-
 // ═══════════════════════════════════════════════════════════════════════════
 //  BÖLÜMLER
 // ═══════════════════════════════════════════════════════════════════════════
@@ -613,7 +601,7 @@ function _gmSec1(){
     ['Modeli sihirbazla kurmak', _gmB('sihirbaz'), 'Beş adım'],
     ['Modeli STEP dosyasından kurmak', _gmB('cad'), 'Roller, kütle, takoz noktası'],
     ['Sonucu okumak', _gmB('sehim') + ' · ' + _gmB('modal') + ' · ' + _gmB('rapor'), 'Sehim, modlar, rapor'],
-    ['Takoz tipini katalogdan seçmek', _gmB('parametrik'), 'Tarama ve öneri'],
+    ['Takoz tipini katalogdan seçmek', _gmB('kutuphane'), 'Takoz Özellikleri’nin Öneri’si'],
     ['Sonucu denetlemek', _gmB('hata') + ' · ' + _gmB('ornek'), 'Uyarı vermeyen hatalar, işlenmiş örnek']
   ], ['Hedef', 'Bölüm', 'Konu']);
   h += _gmNot('Sayısal örneğin sayıları',
@@ -842,10 +830,7 @@ function _gmSec5(){
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
       + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', _gmB('cad')],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', _gmB('rapor')],
-    ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim ve konum taraması: takoz gruplarına kütüphanedeki '
-      + 'tipler ya da konum kaymaları; dört kesin kriter, sonra en küçük statik sehim. Konfigürasyonlar (K0 … K9), seçilenin '
-      + 'kriterleri ve iki grafik pencerenin Sonuç bölümünde, dokuz diyagram tam ekranda, ayrıntı ayrı '
-      + 'bir raporda ve Excel’de', _gmB('parametrik')]
+    ['<strong>Parametrik Analiz</strong>', 'Pencerede bölüm yok', _gmB('parametrik')]
   ], ['Bileşen', 'Ne', 'Not']);
   h += _gmH3('Girdiler ve türeyenler', 'girdi');
   h += _gmAlanTablo('Girdi / türeyen ayrımı', [
@@ -1052,9 +1037,9 @@ function _gmSec9(){
     ['Öneri', 'Seçili markanın modele uyan ilk beş tipi: en yüklü takozda kapasite payı, statik sehim '
       + '<span class="ve-fp-sym">δ</span>, dikey frekans <span class="ve-fp-sym">f<sub>z</sub></span>; satıra tık tipi seçer',
       'Kaba ön seçimdir: model rijit gövde, bütün takozlar aynı tip, yük kütleden ve takoz konumlarından '
-      + 'dağıtılır. Ölçütler Parametrik Analiz’in sınırları — kapasite ≤ 1, sehim 3–5 mm, '
+      + 'dağıtılır. Ölçütler: kapasite ≤ 1, sehim 3–5 mm, '
       + '<span class="ve-fp-sym">f<sub>z</sub></span> ≥ 5 Hz ve ≤ rölanti ateşlemesinin yarısı; sıra sehimi 4 mm’ye '
-      + 'yakın olandan. Kesin seçim Parametrik Analiz’in <strong>Katalogdan seçim</strong>’inde'],
+      + 'yakın olandan'],
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
@@ -1662,184 +1647,14 @@ function _gmSec16(){
   return h;
 }
 
-// ═══ 17 — PARAMETRİK ANALİZ: KATALOGDAN SEÇİM ════════════════════════════
-// Kriterlerin adı ve sınırı pencereyle aynı kaynaktan (js/cp-mount-param.js,
-// js/mount-katalog.js): kılavuz ile pencere aynı tablodan okur.
+// ═══ 17 — PARAMETRİK ANALİZ ═══════════════════════════════════════════════
+// Pencere BOŞ (kullanıcı 2026-11-11, Canlı Not 1001): bölüm anlatılmaz; pencere
+// yeniden kuruldukça bölüm bölüm yazılır.
 function _gmSec17(){
-  var K = (typeof veMntKatalog !== 'undefined') ? veMntKatalog : require('./mount-katalog.js');
-  var V = K.SINIR_VARSAYILAN;
   var h = _gmH2('m17');
-  h += '<p><strong>Parametrik Analiz</strong> bileşeninin ilk analizi <strong>Katalogdan seçim</strong>dir: '
-    + 'takoz gruplarına kütüphanedeki tipleri tek tek takar, her kombinasyonu Çözücü’nün çözüm yolundan '
-    + 'geçirir; dört kesin kriteri sağlayanları 1 g statik sehimi en küçükten başlayarak sıralar. '
-    + 'Tarama bitince pencerenin <strong>Sonuç</strong> bölümü mevcut tasarımı (K0) ve sıranın ilk dokuzunu '
-    + '(K1 … K9), seçilen konfigürasyonun tiplerini ve kriterlerini, iki grafiği taşır; taramanın dokuz diyagramı '
-    + 'tam ekranda açılır. Ayrıntılı rapor (<em>takoz_katalogdan_secim.html</em>), Excel çıktısı '
-    + '(<em>takoz_konfigurasyonlari.xlsx</em>) ve HTML çıktısı (<em>takoz_konfigurasyonlari.html</em>) aynı '
-    + 'listeyi yazar; HTML çıktısında Özet’in ya da Tarama’nın satırı o konfigürasyonun sonucunu açar. '
-    + 'Bileşen <strong>Bileşenler</strong> sütunundan '
-    + 'tuvale sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + ').</p>';
-  h += _gmSahne('parametrik', _gmPencere('mnt-parametric', { tut: ['Gruplar'] }),
-    'Parametrik Analiz penceresi, örnek modelde: gruplar ve tarama.', null, _GM_PARAM);
-  h += _gmAlanTablo('Parametrik Analiz penceresi', [
-    [_gmN(_GM_PARAM, 'gruplar') + ' <strong>Gruplar</strong>', 'Sağ/sol çiftler ve tek takozlar, x konumu, mevcut tip (Takoz penceresinin listesindeki tip)',
-      '“Tara” işareti kalkan grup modeldeki takoz verisiyle kalır'],
-    ['<strong>Adaylar</strong>', 'Kütüphanenin tam ve tahminsiz tipleri, markaya göre gruplu; grubun başlığı açılır kapanır',
-      'İşareti kalkan tip hiçbir gruba takılmaz; markanın kutusu bütün tiplerini birlikte işaretler'],
-    ['<strong>Kriterler</strong> (' + _gmS('param-kriter') + ')', 'Dört kesin kriter ve sınırları; sıralama ölçütü (statik sehim) ve rijitlik toleransı',
-      'Kriterler kapatılamaz'],
-    [_gmN(_GM_PARAM, 'katalog') + ' <strong>Analiz</strong>', 'Tür (Katalogdan seçim · Konum taraması) · grup · tip ya da konum · kombinasyon sayısı',
-      'Kombinasyon = aday sayısı ^ taranan grup sayısı; üst sınır ' + _gmF(K.MAKS_KOMB, 0)],
-    ['<strong>Konum</strong>', 'Konum taramasında Adaylar’ın yerinde: boyuna Δx ve düşey Δz kaymasının en az, en çok ve adımı',
-      'Seri sıfırdan dışa adımlanır; mevcut konum adaydır (' + _gmB('p-konum') + ')'],
-    ['Sonuç', 'Konfigürasyonlar, seçilen konfigürasyon, modlar, statik sehim ve iletilebilirlik, kriterleri '
-      + 'sağlayan kombinasyon sayıları, diyagramların listesi; seçimin modele uygulanması, rapor ve Excel', 'Yalnız taramadan sonra (' + _gmB('p-sonuc') + ')']
-  ], ['Kısım', 'Ne', 'Not']);
-  h += _gmH3('Gruplar', 'p-grup');
-  h += '<p>Bir grubun takozları aynı tiptir. Adında tek bir yan sözcüğü (<em>sağ</em> ya da <em>sol</em>) bulunan '
-    + 'iki takoz, o sözcük çıkınca kalan adları aynıysa çifttir: “Sağ Ön Takoz” ile “Sol Ön Takoz”, '
-    + '“Ön Sağ · 57RS313774” ile “Ön Sol · 57RS313774”. Adla eşleşmeyen iki takoz y’de ayna, x ve z’de '
-    + _gmF(K.TOL_MM, 0) + ' mm içinde aynıysa çifttir. Kalan takoz tek başına bir gruptur (orta hattaki '
-    + 'takoz). Gruplar önden arkaya, x’e göre sıralanır. Katalogdan seçimde takoz konumları değişmez; yalnız tip değişir.</p>';
-  var KV = K.KONUM_VARSAYILAN;
-  h += _gmH3('Konum taraması', 'p-konum');
-  h += '<p><strong>Analiz</strong> bölümünün <strong>Tür</strong> listesinde <strong>Konum taraması</strong> seçilince '
-    + 'takoz tipleri modeldeki gibi kalır; taranan her grubun takozları boyuna (Δx) ve düşey (Δz) aynı kaymayı alır, '
-    + 'sağ ve sol takoz y’de ayna kalır. Aday, <strong>Konum</strong> bölümündeki aralığın Δx × Δz ızgarasıdır: '
-    + 'varsayılan Δx ' + _gmF(KV.dxMin, 0) + ' … ' + _gmF(KV.dxMax, 0) + ' mm, adım ' + _gmF(KV.dxAdim, 0)
-    + ' mm; Δz ' + _gmF(KV.dzMin, 0) + ' … ' + _gmF(KV.dzMax, 0) + ' mm, adım ' + _gmF(KV.dzAdim, 0) + ' mm. '
-    + 'Kriterler ve sıralama katalogdan seçimle aynıdır: modların yerleşimi (Kriter 1 · 1a · 1b), iletilebilirlik ve '
-    + 'statik sehim; seçilen konfigürasyonda modların ayrışması (kinetik enerji dağılımı) da yazılır. Konfigürasyon '
-    + 'grup başına kaymayı, seçilenin ayrıntısı yeni x · z konumunu taşır; <strong>Modele uygula</strong> takozların '
-    + 'x ve z’sini değiştirir ve tarama yeni konumun çevresinde yeniden yapılır. Rapor <em>takoz_konum_taramasi.html</em> '
-    + 'adıyla iner. Takozun eğim açısı taranmaz: takozun eksenleri araç eksenleriyle aynıdır.</p>';
-  h += _gmH3('Kriterler ve sıralama', 'p-kriter');
-  h += '<p>Pencerenin ' + _gmN(_GM_PARAM_KRITER, 'kesin') + ' <strong>Kesin kriterler</strong> bölümü dört kriteri '
-    + 've sınırlarını, ' + _gmN(_GM_PARAM_KRITER, 'sira') + ' <strong>Sıralama</strong> bölümü sıralamanın ölçütünü '
-    + 've rijitlik toleransını taşır (' + _gmS('param-kriter') + ').</p>';
-  h += _gmSahne('param-kriter', _gmPencere('mnt-parametric', { tut: ['Kesin kriterler', 'Sıralama'], yan: false }),
-    'Parametrik Analiz penceresi: kesin kriterler ve sıralama.', null, _GM_PARAM_KRITER);
-  var olcut = {
-    k1: 'bütün modlar &lt; 0,5·f<sub>ateş</sub>',
-    k1a: 'komşu iki mod arası &gt; 0,5 Hz',
-    k1b: 'hiçbir mod 8–10 Hz bandında değil',
-    k2: 'TR(f<sub>ateş</sub>) &lt; %' + _gmF(K.K2_T * 100, 0)
-  };
-  h += _gmTablo('Kesin kriterler', ['No', 'Kriter', 'Ölçüt'],
-    K.KISITLAR.filter(function(x){ return x.zorunlu; }).map(function(x){
-      var ad = (typeof _MNT_PARAM_KRITER_AD !== 'undefined' && _MNT_PARAM_KRITER_AD[x.k]) || x.ad;
-      return [x.no, ad, olcut[x.k]];
-    }), ['c', 'l', 'l']);
-  h += '<p><strong>Sıralama.</strong> Dört kesin kriteri sağlayan kombinasyonlar 1 g statik düşey sehimin takozlar '
-    + 'üzerindeki en büyük mutlak değerine (δ<sub>s</sub>) göre küçükten büyüğe sıralanır: ilki <em>En uygun</em>, '
-    + 'kalanı <em>Uygun</em>; en çok dokuzu K1 … K9’dur. Hiçbir kombinasyon dört kriteri sağlamıyorsa K1 … K9 en az '
-    + 'ihlalli dokuz kombinasyondur — kriterlerin sınırı aşma oranlarının toplamı en küçük olanlar — ve <em>Uygun değil</em>dir. '
-    + 'Mevcut tasarım K0’dır; pencere, rapor ve Excel aynı listeyi yazar.</p>';
-  h += '<p><strong>Rijitlik toleransı</strong> (varsayılan ±%' + _gmF(V.tolerans * 100, 0) + ', kapalı): açıkken bütün '
-    + 'takozların bütün rijitlikleri sert ve yumuşak köşede de çözülür ve dört kriter üç köşenin kötüsüyle sınanır; '
-    + 'δ<sub>s</sub> anma değerdedir.</p>';
-  h += _gmH3('Tarama', 'p-tarama');
-  h += _gmAdimlar([
-    'Motor bileşenine rölanti devri ve silindir sayısı girilir: Kriter 1 ve 2 ateşleme frekansından türer.',
-    _gmN(_GM_PARAM, 'gruplar') + ' <strong>Gruplar</strong> ve <strong>Adaylar</strong> '
-      + 'bölümlerinde taranacaklar işaretlenir (' + _gmS('parametrik') + '); sağ sütundaki '
-      + _gmN(_GM_PARAM, 'katalog') + ' kombinasyon sayısı tarama süresinin ölçüsüdür '
-      + '(kombinasyon başına yaklaşık 0,15 ms).',
-    _gmN(_GM_PARAM, 'tara') + ' <strong>Tara</strong>: her kombinasyonda statik denge ve modal analiz. Düğmenin solundaki '
-      + 'çubuk taranan kombinasyon sayısını ve oranı gösterir; düğme tarama sürerken <strong>Durdur</strong>dur. '
-      + 'Tarama sürerken pencere ve tuval kullanılabilir.',
-    'Pencerenin <strong>Sonuç</strong> bölümü açılır: konfigürasyonlar (K0 … K9), K1’in tipleri ve kriterleri, iki grafik.',
-    'Listeden bir konfigürasyona tıklanır: seçilen bölüm, modlar ve grafik o konfigürasyonu gösterir.',
-    '<strong>Modele uygula</strong>: seçilen konfigürasyonun tipleri taranan grupların takozlarına yazılır '
-      + '(' + _gmB('p-sonuc') + '). Ardından Çözücü’de <strong>Hesapla</strong> ve ana rapor: Çözücü taramanın '
-      + 'ölçtüğü modları ve sehimleri bulur.',
-    '<strong>Raporu indir</strong>: kapsam, yöntem, kriterler, kriterleri sağlayan kombinasyonlar, sonuç (K1 ile '
-      + 'K0 yan yana, şekil), konfigürasyonlar, varsayımlar ve kaynaklar.',
-    '<strong>Excel’i indir</strong>: konfigürasyonların karşılaştırması, tarama tablosu ve her kombinasyonun '
-      + 'sonucu (' + _gmB('p-sonuc') + ', <em>Excel çıktısı</em>).'
-  ]);
-  h += '<p>Model, adaylar, sabit gruplar ya da rijitlik toleransı değişince tarama eskir ve Sonuç bölümü yalnız bu '
-    + 'durumu yazar. Taranan bir grubun takoz tipi değişince tarama eskimez; mevcut tasarım (K0) yeniden ölçülür. '
-    + 'Tarama ve seçilen konfigürasyon proje dosyasına kaydedilmez.</p>';
-  h += _gmH3('Sonuç ve diyagramlar', 'p-sonuc');
-  h += '<p>Kriterler Sonuç bölümünde adlarıyla yazılır; tam ekrandaki diyagramlar kodlarıyla (K1 … K2), kodların '
-    + 'adları diyagram listesinin altındadır. Tip adları listede kısaltılır (katalog numarası düşer, sertlik tireyle '
-    + 'bitişik); bir ailede birden çok kod varsa kısa adda kod kalır (LMT-1433-00-55 · LMT-1433-37-55).</p>';
-  h += _gmAlanTablo('Sonuç bölümü', [
-    ['<strong>Konfigürasyonlar</strong>', 'K0 (mevcut) ve K1 … K9: grupların kısa tipi, uygunluk, statik sehim, TR, '
-      + 'en düşük mod ve dört kriterin işareti (✓ sağlıyor, ✗ sağlamıyor)', 'Satıra tık konfigürasyonu seçer; varsayılan K1'],
-    ['<strong>K1</strong> (seçilen)', 'Grup başına tip: değişen grupta K0’ın tipi üstü çizili, seçilenin tipi kalın; '
-      + 'tipi aynı kalan grup <em>Aynı</em>, taranmayan grup <em>Sabit</em>. Statik sehim ve TR: K0 → seçilen. '
-      + 'Kriterler: sınır, K0’ın ve seçilenin değeri; ✗ hücresi kırmızı',
-      '<strong>Modele uygula</strong>, <strong>Raporu indir</strong> ve <strong>Excel’i indir</strong> bu bölümde; '
-      + 'değer sınıra yuvarlanıyorsa ondalığı uzar'],
-    ['<strong>Modlar</strong>', 'K0’ın ve seçilenin modları, çentik başına bir mod; gri bölge sınır dışıdır '
-      + '(8–10 Hz bandı, 0,5·f<sub>ateş</sub>’in üstü); kırmızı çentik kriteri bozan mod',
-      'Kırmızı köprü 0,5 Hz’ten yakın iki mod; tolerans açıksa gri çizgi modun ±tolerans köşelerindeki yeri'],
-    ['<strong>Statik sehim ve iletilebilirlik</strong>', 'Karo K0, halka seçilen, boş daireler öteki konfigürasyonlar; '
-      + 'ok K0’dan seçilene. Kesikli çizgi Kriter 2', ''],
-    ['<strong>Kriterleri sağlayan</strong>', 'Çözülen kombinasyon sayısı; her kriteri tek başına sağlayan ve dördünü '
-      + 'birden sağlayan kombinasyon sayısı', ''],
-    ['<strong>Diyagramlar</strong>', 'Taramanın dokuz diyagramının listesi; ad, diyagramı tam ekranda açar',
-      'Tam ekranda soldaki listeden öteki diyagrama geçilir']
-  ], ['Bölüm', 'Ne', 'Not']);
-  h += _gmAlanTablo('Diyagramlar (tam ekran)', [
-    ['Pareto cephesi', 'Çözülen her kombinasyon δ<sub>s</sub>–T düzleminde: gri nokta kesin kriterlerden birini '
-      + 'sağlamıyor, mavi dördünü sağlıyor; koyu basamak çizgisi T ile δ<sub>s</sub>’nin dengesi (Pareto cephesi), '
-      + 'halka K1, karo K0; kesikli çizgi Kriter 2',
-      'Sıranın ilk on kombinasyonunda ince çizgi ±tolerans rijitlik köşelerini birleştirir (yumuşak ↔ sert)'],
-    ['Mod yerleşimi', 'Satır başına bir tasarım, çentik başına bir mod: K0 ve K1 … K5. Mavi çentik zıplama ya da '
-      + 'baş-kıç ağırlıklı mod', 'Gölge: 8–10 Hz bandı, 0,5·f<sub>ateş</sub>’in üstü; kırmızı köprü 0,5 Hz’ten yakın '
-      + 'iki mod; gri çizgi ±tolerans köşelerinde modun yeri'],
-    ['Bağlayıcı kriterler', 'Kriter başına kriteri sağlamayan kombinasyon sayısı ve yalnız o kriteri sağlamayan '
-      + '(öteki üçünü sağlayan) kombinasyon sayısı', 'İkinci sayı, kriter sağlansa uygun olacak kombinasyonlardır'],
-    ['Ana etkiler', 'K1’den yalnız bir grubun tipi değişir: yatay eksen o grubun tipi (statik düşey rijitlik '
-      + 'sırasıyla), düşey eksen T ve δ<sub>s</sub>; çizgiler grup numarasıyla',
-      'Dolu işaret uygun, boş işaret uygun değil; halka K1'],
-    ['Kriter haritaları', 'Kesitte kriter başına bir harita: dolu hücre kriteri sağlıyor; son harita dördünün '
-      + 'kesişimi', 'Kesitin her hücresinde sağlanan kriterler haritaların altında adlarıyla'],
-    ['İletilebilirlik haritası', 'Kesitte hücre rengi T (sınıflar %5 · 10 · 15 · 20 · 30; %15 Kriter 2’nin sınırı); çizgi '
-      + 'Kriter 1 sınırı', 'Dolu daire dört kriteri sağlayan hücre'],
-    ['Kriter penceresi', '3B: δ<sub>s</sub>, en yüksek mod f<sub>maks</sub> ve T; kesikli kutu Kriter 1 ve '
-      + 'Kriter 2’nin bıraktığı pencere', 'Kutudaki nokta Kriter 1a ya da 1b’yi bozuyorsa uygun değildir'],
-    ['Tepki yüzeyi', '3B: kesitte seçilen büyüklüğün (T · δ<sub>s</sub> · f<sub>maks</sub>) yüzeyi',
-      'Kesikli çerçeve büyüklüğün sınırı: Kriter 2 · Kriter 1'],
-    ['Tasarım uzayı', '3B: üç taranan grubun tipi eksende, nokta başına bir kombinasyon; rengi kriterlerin durumu',
-      'Kriter 1’de elenenler kutucukla görünür']
-  ], ['Diyagram', 'Ne', 'Not']);
-  h += '<p><strong>Kesit.</strong> Kriter haritaları, İletilebilirlik haritası, Tepki yüzeyi ve Tasarım uzayı iki '
-    + 'taranan grubu eksenlere koyar (tipler statik düşey rijitlik sırasıyla); öteki taranan gruplar seçilen tipte '
-    + 'durur, varsayılan K1’in tipidir. <em>Eksenler</em> ve <em>Grup</em> seçimi dört diyagramda '
-    + 'ortaktır. Tek grup taranıyorsa kesit diyagramları çizilmez; Tasarım uzayı üç taranan grup ister.</p>';
-  h += _gmNot('Excel çıktısı',
-      '<strong>Excel’i indir</strong> taramayı bugünkü sınırlarla <code>takoz_konfigurasyonlari.xlsx</code> '
-    + 'dosyasına yazar; tarama yinelenmez, satırların ölçümü sürerken çubuk eylem satırındadır. '
-    + '<strong>Özet</strong>: mevcut tasarım (K0) ve dört kesin kriteri sağlayan kombinasyonlardan statik sehimi '
-    + 'en küçük dokuzu (K1 … K9); grupların tipi, <em>Uygunluk</em>, statik sehim, dört kesin kriter, frekans '
-    + 'payı, TR ve en düşük mod. <em>Statik sehim</em>: 1 g statik yükte takozların düşey sehiminin en büyüğü '
-    + '(max |δ<sub>z</sub>|). <em>Uygunluk</em>: dört kesin kriter sağlanıyorsa <em>Uygun</em>, statik sehimi en '
-    + 'küçük olan <em>En uygun</em> (koyu yeşil); yeşil, sehim arttıkça açılır; <em>Uygun değil</em> renksizdir. '
-    + 'Kriterin tanımı başlığın notundadır (fareyle başlığın üstüne gelin). K ve <em>Sonuç</em> hücresi '
-    + 'konfigürasyonun sonucunu açar. <strong>Tarama</strong>: çözülen kombinasyonlar, sağlanan kesin kriter '
-    + 'sayısına sonra statik sehime göre sıralı (en çok 20.000 satır); modlar, f<sub>b</sub>, TR, statik sehim, '
-    + 'dört kriter (✓ / ✗), frekans payı, grup başına statik ve azami yük, kapasite; başlık satırında filtre. '
-    + 'Satırın <em>No</em>’su ve takoz tipleri mavi bağlantıdır: tıklanınca o kombinasyonun sonucu açılır; '
-    + 'filtre ve sıralamadan sonra da. <strong>Sonuç</strong>: her konfigürasyonun ve Tarama’nın her satırının '
-    + 'sonucu — her yük durumunda takoz başına X, Y, Z yer değiştirmesi, modlar ve TR; '
-    + '<em>Özet sayfasına dön</em> ya da <em>Tarama sayfasına dön</em>, <em>Geri</em> ve <em>İleri '
-    + 'konfigürasyon</em> düğmeleri. Bağlantı ekranda yalnız o sonucu gösterir; sayfanın başı boştur. '
-    + 'Izgara çizgileri kapalı, tablonun dışındaki satır ve sütunlar gizli açılır.');
-  h += _gmNot('Seçimi modele uygulamak',
-      '<strong>Modele uygula</strong> seçilen konfigürasyonun tiplerini taranan grupların takozlarına yazar; yazım '
-    + 'Takoz penceresinin <strong>Takoz tipi</strong> listesindeki seçimin aynısıdır (rijitlik, kapasite, yasa). '
-    + 'Bütün takozlar tek geri-al adımıdır (Ctrl+Z). Sabit grup değişmez. Tarama eskimez: uygulanan kombinasyon '
-    + 'K0 olur, seçilen bölüm her grupta <em>Aynı</em> yazar ve kriter tablosunun iki sütunu eşitlenir. Kombinasyon '
-    + 'zaten modeldeyse düğme kapalıdır.');
-  h += _gmNot('Etkileşim',
-      '<strong>Diyagramlar</strong> bölümündeki ad diyagramı tam ekranda açar; soldaki listeden öteki diyagrama '
-    + 'geçilir. 3B diyagramlar sol tık + sürükle ile döner; çizim odaktayken oklar döndürür; <em>Sıfırla</em> '
-    + 'başlangıç bakışına döner. Grafikte ve diyagramda işaretin üstüne gelince kombinasyonun grup başına tipi, T, '
-    + 'δ<sub>s</sub> ve sağlamadığı kriterler görünür; mod çentiğinin üstünde modun frekansı ve adı.');
+  h += '<p><strong>Parametrik Analiz</strong> bileşeni <strong>Bileşenler</strong> sütunundan tuvale '
+    + 'sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + '); çift tık penceresini açar. '
+    + 'Pencerede bölüm yoktur.</p>';
   return h;
 }
 
@@ -2091,13 +1906,6 @@ function _gmEkA(){
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',
         'Rapor penceresinin <strong>Frekans yerleşimi ve izolasyon</strong> bölümü kaynağını gösterir'],
-      ['Takoz grupları, taranan grup', 'Parametrik Analiz', '<strong>Gruplar</strong>'],
-      ['Aday takoz tipleri', 'Parametrik Analiz', '<strong>Adaylar</strong>'],
-      ['Kesin kriterler, rijitlik toleransı', 'Parametrik Analiz', '<strong>Kesin kriterler</strong> · <strong>Sıralama</strong>'],
-      ['Taramanın sonucu', 'Parametrik Analiz', '<strong>Konfigürasyonlar</strong> · seçilen konfigürasyon (K1 …) · <strong>Modlar</strong> · <strong>Statik sehim ve iletilebilirlik</strong>'],
-      ['Seçimin takozlara uygulanması', 'Parametrik Analiz', 'seçilen konfigürasyon (Modele uygula)'],
-      ['Kriterleri sağlayan kombinasyonlar', 'Parametrik Analiz', '<strong>Kriterleri sağlayan</strong>'],
-      ['Taramanın dokuz diyagramı (tam ekran)', 'Parametrik Analiz', '<strong>Diyagramlar</strong>: Pareto cephesi · Mod yerleşimi · Bağlayıcı kriterler · Ana etkiler · Kriter haritaları · İletilebilirlik haritası · Kriter penceresi · Tepki yüzeyi · Tasarım uzayı']
     ], ['l', 'c', 'l']);
   return h;
 }

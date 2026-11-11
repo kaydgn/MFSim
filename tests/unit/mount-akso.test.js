@@ -695,6 +695,28 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
     expect(G({ iz: 'dim', b: { x: -1, y: -1, z: 1 }, yakin: 4 })).toBe(9.8);
   });
 
+  // TAKOZ MODELLE BÜYÜR (kullanıcı 2026-11-11, Canlı Not 140: *"Takozlar (yeşil olanlar)
+  // yaklaştırdığımda ufalıyor. Diğer komponentler sabit kalıyor."*). Önce: küp √yakın ile ve 1,75
+  // tavanla büyüyordu — 8 kat yakında gövde 8 kat, küp 1,75 kat; gövdeye oranı 0,22'ye iniyordu.
+  // Şimdi küp gövde gibi yakınlıkla büyür (oranı sabit); uzaklaşırken 0,75'te durur; G √yakın kalır.
+  test('TAKOZ MODELLE BÜYÜR: serbest kamerada küpün gövdeye oranı yakınlıkla değişmez; G √yakın', () => {
+    yukle('siper');
+    const m = cp._mntAksoModel();
+    const ciz = (yakin) => AK.ciz(m, { W: 354, H: 326, kat: { golge: true }, fs: FS, isaret: 1.5, kam: { az: 249.3, el: 19.5 }, kure: true, yakin }).svg;
+    const gen = (svg, sec) => {
+      const d = document.createElement('div'); d.innerHTML = svg;
+      const g = d.querySelector(sec);
+      const xs = [...g.querySelectorAll('path')].flatMap((p) => [...p.getAttribute('d').matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((q) => +q[1]));
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    const oran = (y) => { const s = ciz(y); return gen(s, 'g.ve-ak-t') / gen(s, 'g.ve-ak-g'); };
+    const o1 = oran(1);
+    [2, 4, 8].forEach((y) => expect({ y, oran: +(oran(y) / o1).toFixed(2) }).toEqual({ y, oran: 1 }));
+    expect(+(gen(ciz(8), 'g.ve-ak-t') / gen(ciz(1), 'g.ve-ak-t')).toFixed(1)).toBe(8);   // küp 8 kat
+    expect(olc(ciz(8)).G).toBe(17.1);                                                   // G işaret: tavan 1,75
+    expect(+(gen(ciz(0.4), 'g.ve-ak-t') / gen(ciz(1), 'g.ve-ak-t')).toFixed(2)).toBe(0.75); // uzakta taban
+  });
+
   test('ölçü büyümez: ağırlık ve tepki oklarının ekrandaki boyu katla aynı (aynı px/N)', () => {
     yukle('tulga');
     const m = cp.veMntAksoCozumModel(coz());
@@ -811,7 +833,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
     const a = svg.indexOf('<rect class="ve-ak-perde"'), b = svg.indexOf('<g class="ve-ak-odak">');
     return { alt: svg.slice(0, a), odak: b >= 0 ? svg.slice(b) : '', a, b };
   };
-  test('perde seçiliden hemen önce, odak en üstte; odakta YALNIZ seçilinin gövdesi, halkası ve adı', () => {
+  // Canlı Not 141 · 148: perdede halka YOK — seçili aydınlığıyla ve adıyla ayrılır.
+  test('perde seçiliden hemen önce, odak en üstte; odakta YALNIZ seçilinin gövdesi ve adı, halka yok', () => {
     const sorun = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -825,7 +848,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
         const odakAk = new Set([...p.odak.matchAll(/data-ak="([^"]+)"/g)].map((x) => x[1]));
         if (odakAk.size !== 1 || !odakAk.has(sec)) sorun.push(yer + ': odakta ' + [...odakAk].join(','));
         const gv = m.govde.find((g) => g.k === sec);
-        if (!/ve-ak-sec-hale/.test(p.odak) && (sec[0] === 'T' || sec === 'G' || (!gv.kutu && !gv.levha))) sorun.push(yer + ': halka yok');
+        if (/ve-ak-sec-hale/.test(svg)) sorun.push(yer + ': halka var');
+        if (!gv && sec[0] !== 'T' && sec !== 'G') sorun.push(yer + ': seçili bulunamadı');
         if (sec !== 'G' && !/sec-cip/.test(p.odak)) sorun.push(yer + ': adı çipte değil');
         if (/ve-ak-kilavuz/.test(p.odak)) sorun.push(yer + ': kılavuz perdenin üstünde');
         if (/ve-ak-gol"/.test(p.odak)) sorun.push(yer + ': zemindeki iz perdenin üstünde');

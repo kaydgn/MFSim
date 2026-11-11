@@ -146,10 +146,10 @@ describe('PENCERE — analiz seçimi ve Konum kategorisi', () => {
     PS.veMntParamUnut();
     const k = { id: 'pk', type: 'mnt-parametric', data: {} };
     global.nodes.push(k);
-    const d0 = dom(P.getMntParamPropertiesHTML(k));
+    const d0 = dom(P._mntParamEskiPencereHTML(k));
     expect([...d0.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kriterler']);
     const n = dugum();
-    const d = dom(P.getMntParamPropertiesHTML(n));
+    const d = dom(P._mntParamEskiPencereHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Konum', 'Kriterler']);
     expect(d.querySelector('.ve-fp-side select').value).toBe('konum');
     expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '9', '81']);
@@ -183,7 +183,7 @@ describe('SONUÇ — öneri, galeri, Modele uygula', () => {
     modelKur('kamyon');
     const n = dugum();
     const { S } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa;
-    const d = dom(P.getMntParamPropertiesHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    const d = dom(P._mntParamEskiPencereHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
     expect(kat).not.toBeNull();
     const k1 = kat.querySelector('.ve-prm-k[data-k="1"] .ve-prm-k-ad').textContent;
     expect(k1).toMatch(/^Δx .* mm \+ Δx .* mm$/);

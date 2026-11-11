@@ -110,7 +110,8 @@ describe('ŞEKİLLER — programdan, işaretli', () => {
   });
 
   test('şekil sayısı ve sırası: numaralar boşluksuz', () => {
-    expect(SEKIL.length).toBeGreaterThanOrEqual(25);
+    // Parametrik Analiz'in iki şekli pencereyle birlikte kalktı (pencere boş — Canlı Not 1001)
+    expect(SEKIL.length).toBeGreaterThanOrEqual(24);
     SEKIL.forEach((f, i) => {
       const cap = f.querySelector(':scope > figcaption');
       expect(cap.textContent).toMatch(new RegExp('^Şekil ' + (i + 1) + ' —'));
@@ -145,7 +146,7 @@ describe('ŞEKİLLER — programdan, işaretli', () => {
     const sahne = SEKIL.map((f) => (f.querySelector(':scope > .gk-sahne') || { textContent: '' }).textContent);
     const hepsi = sahne.join(' ');
     ['Kaldırım darbesi', 'Yük kitabı', 'Hesapla', 'Raporu oluştur ve indir',
-      'Takoz tipi', 'Rijitlik', 'Güç grubundaki yeri', 'Kesin kriterler', 'Tara'].forEach((ad) => {
+      'Takoz tipi', 'Rijitlik', 'Güç grubundaki yeri'].forEach((ad) => {
       expect(hepsi).toContain(ad);
     });
     BS.veMntBaslangicKapilar().forEach((k) => expect(hepsi).toContain(k.ad.replace(/\\'/g, "'")));
