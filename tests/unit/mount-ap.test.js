@@ -115,7 +115,7 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
     kodlar.forEach((k) => { const a = aile(k), t = cp._mntLibTam(L['ap' + k]); say[a] = say[a] || [0, 0]; say[a][t ? 0 : 1]++; });
     expect(say).toEqual({ konus: [27, 0], hd: [6, 0], h: [32, 0], marine: [0, 13], gen: [0, 8] });
     const map = cp.veMntGetLibraryMap();
-    expect(['ap1221402503', 'ap1221440455'].map((k) => cp._mntLibTur(map[k]))).toEqual(['tahmin', 'eksik']);
+    expect([cp._mntLibTahmin(map.ap1221402503).length > 0, cp._mntLibTam(map.ap1221440455)]).toEqual([true, false]);   // tahminli · eksik
     expect(map.ap1221402503.ap).toMatchObject({ kod: '1221402503', tip: '026-s1', aile: 'konus', sinif: 'medium', sh: 60 });
   });
   test('girilen değer tahminden çıkar: marinede X · Y girilince dinamiği aynı oranla kurulur, tip tamamlanır', () => {

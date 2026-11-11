@@ -19,6 +19,10 @@
  * tipin satırı listenin ortasına kayar; yalnız listenin kaydırması oynar.
  * jsdom'da yerleşim yok — satırların ölçüsü elle verilir; gerçek yerleşim
  * tests/e2e/mount-pencere.spec.js → *Takoz Özellikleri*.
+ *
+ * İŞARETSİZ (kullanıcı 2026-11-11, Canlı Not 122: *"Baştaki mavi butonlara ne
+ * gerek var … sağ kısımdaki kırmızı ve mavi tike de ne gerek var"*): satırda ve
+ * tetikleyicide yalnız ad ve kz; seçili satır zeminiyle ve kalın adıyla belli.
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -86,6 +90,16 @@ describe('açılır liste — kapalı başlar, tetikleyici seçiliyi gösterir',
   test('liste grup başlığı ve sayaç taşımaz (marka Marka listesinde söylenir)', () => {
     const el = mountPanel(libNode());
     expect(el.list.querySelectorAll('.mntlib-group, .mntlib-count, .mntlib-note').length).toBe(0);
+  });
+
+  test('İŞARETSİZ (Canlı Not 122): satır ve tetikleyici yalnız ad + kz — tür noktası, eğri ve seçim ikonu yok', () => {
+    const el = mountPanel(libNode(null, 'amc137961'));   // eğrili tip seçili: en çok işaretli hâl
+    const opts = Array.from(el.list.querySelectorAll('.mntlib-opt'));
+    expect(opts.length).toBeGreaterThan(1);
+    opts.forEach((o) => expect(Array.from(o.children).map((c) => c.className)).toEqual(['mntlib-opt-name', 'mntlib-kz']));
+    expect(el.list.querySelectorAll('.mf-ico').length).toBe(0);
+    expect(Array.from(el.trigger.children).map((c) => c.classList[0])).toEqual(['mntlib-trigger-name', 'mntlib-kz', 'mf-ico']);
+    expect(el.trigger.querySelector('.mf-ico').classList.contains('mntlib-caret')).toBe(true);   // tek ikon: aç/kapa oku
   });
 
   test('özel takoz seçili olarak "Özel takozlar" markasında listelenir', () => {

@@ -4710,31 +4710,12 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
   transition:filter var(--dur-fast) var(--ease-out);
 }
 .mntlib-add:hover{ background:var(--ink-success); border-color:var(--ink-success); }   /* yeşil düğme, yeşil hover */
-/* Satır göstergeleri — tetikleyici ve liste satırları aynı dili konuşur:
-   nokta = girdi türü (özel / gömülü / değiştirilmiş / eğrili), kz = statik
-   eksenel rijitlik, ∿ = nonlineer yasa taşıyor. */
-.mntlib-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; background:var(--accent-success); }
-.mntlib-dot[data-t="egri"]{ background:var(--accent-danger); }
-.mntlib-dot[data-t="degisti"]{ background:var(--accent-warning); }
-.mntlib-dot[data-t="gomulu"]{ background:var(--accent-primary); }
-.mntlib-dot[data-t="eksik"]{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--text-muted); }
-.mntlib-dot[data-t="tahmin"]{ background:transparent; box-shadow:inset 0 0 0 1.5px var(--accent-primary); }   /* radyal tahmini (Canlı Not 113) */
+/* Satırda ad ve kz (statik eksenel rijitlik) — tür noktası, eğri ve seçim
+   işareti YOK (Canlı Not 122); kz sağa yaslı, sütun hizası satırın kendisinden. */
 .mntlib-kz{
   font-size:var(--fs-micro);color:var(--text-muted);
   white-space:nowrap;
 }
-/* Eğri (activity) ve seçili (check) ikonları SABİT genişlikte yuvalarda
-   (satırda hep var, gerekmeyince boş): eğrili ve eğrisiz satırlarda kz sütunu
-   aynı hizada kalsın — listedeki profesyonel his hizadan gelir, ragged bir sağ
-   kenardan değil. Çizgi ikon (karar 10·B; eskiden '∿' ve '✓' karakteri). */
-.mntlib-wave,
-.mntlib-check{
-  flex:0 0 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;
-}
-.mntlib-wave{ color:var(--accent-danger); }
-.mntlib-check{ color:var(--accent-primary); }
-.mntlib-wave .mf-ico,
-.mntlib-check .mf-ico{ width:11px;height:11px; }
 
 .mntlib-dd{
   position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:var(--z-menu);
