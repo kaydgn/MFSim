@@ -827,6 +827,24 @@ function veMntKanvasBos(){
   return created;
 }
 
+// TUVALİN ÖRNEĞİ (kullanıcı 2026-11-11, Canlı Not 135: *"BMC Siper örneğini açtım … 'başlangıç
+// sihirbazı' bileşenini açtığım zaman, sanki sıfırdan bir başlangıç sihirbazı açmışım gibi oluyor
+// … seçilen örneğin ne olduğu belli olsun"*): yüklenen örneğin anahtarı modülün Başlangıç
+// Sihirbazı bileşenine yazılır (`data.ornek`, projeyle kaydedilir); sihirbaz tuvalden açılınca
+// örneği adıyla gösterir. Anahtarsız `null` işareti siler. Kapı: mount-wizard.test.js → *TUVALİN ÖRNEĞİ*.
+function veMntOrnekIsaretle(key){
+  var w=(typeof nodes!=='undefined') ? nodes.filter(function(n){ return (_mntDef(n)||{}).isMountWizard; })[0] : null;
+  if(!w) return false;
+  w.data=w.data||{};
+  if(key) w.data.ornek=String(key); else delete w.data.ornek;
+  return true;
+}
+function veMntTuvalOrnegi(){
+  var w=(typeof nodes!=='undefined') ? nodes.filter(function(n){ return (_mntDef(n)||{}).isMountWizard; })[0] : null;
+  var k=w && w.data ? w.data.ornek : null;
+  return (k && typeof veMountCore!=='undefined' && veMountCore.getMountExample && veMountCore.getMountExample(k)) ? k : null;
+}
+
 // ÖRNEĞİ ANAHTARIYLA YÜKLE — başlangıç sayfasının örnek satırları. Kayıt girişinde
 // JSON topolojisi varsa ondan (birebir), yoksa programatik model kurucusundan.
 function veMntOrnekYukle(key){
@@ -2558,6 +2576,7 @@ function _mntLoadExampleFromJSON(ref, ex){
       veMntPopulateStarter();
     }
     if(_once){ undoStack = _once; redoStack = []; }
+    veMntOrnekIsaretle(ex && ex.id);
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
@@ -2919,6 +2938,7 @@ function _mntLoadExampleFromModel(anahtar){
       if(EX.solver && EX.solver[k]!=null) cz.data[k]=EX.solver[k]; else delete cz.data[k];
     });
   }
+  veMntOrnekIsaretle(ex ? ex.id : key);
   if(typeof saveState==='function') saveState();
   if(typeof updateAllConnections==='function') updateAllConnections();
   _mntOrnekPaletKapat();
@@ -6059,7 +6079,7 @@ if(typeof module!=='undefined' && module.exports){
     _mnt2DKesisir: _mnt2DKesisir,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
-    veMntGetLibraryList: veMntGetLibraryList,
+    veMntGetLibraryList: veMntGetLibraryList, veMntOrnekIsaretle: veMntOrnekIsaretle, veMntTuvalOrnegi: veMntTuvalOrnegi,
     _mntLibTam: _mntLibTam, _mntLibTahmin: _mntLibTahmin, _mntLibTahminKunye: _mntLibTahminKunye, _mntLibTahminAdi: _mntLibTahminAdi,
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,

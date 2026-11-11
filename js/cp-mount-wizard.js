@@ -463,6 +463,9 @@ function veMntWizAc(){
   if(tuval.length){
     _mwState = veMntWizFromNodes(nodes, { dugum:true });
     _mwState.seededFrom = 'tuval';
+    // Tuvalin örneği (Canlı Not 135): örnekten kurulan model örneğin adıyla açılır
+    var to = (typeof veMntTuvalOrnegi === 'function') ? veMntTuvalOrnegi() : null;
+    if(to) _mwState.tuvalOrnek = to;
   } else if(_mwTaslaklar[_mwModulId()]){
     _mwState = _mwKopya(_mwTaslaklar[_mwModulId()]);
   } else {
@@ -689,11 +692,18 @@ function veMntWizOrnekAdim(yon){
   var k = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList)
     ? veMountCore.getMountExampleList().map(function(e){ return e.id; }) : [];
   if(!k.length || !_mwState) return null;
-  var i = k.indexOf(String(_mwState.seededFrom === undefined ? '' : _mwState.seededFrom));
+  var i = k.indexOf(String(_mwOrnekGosterilen(_mwState) === null ? '' : _mwOrnekGosterilen(_mwState)));
   var j = (i < 0) ? (yon > 0 ? 0 : k.length - 1) : i + (yon > 0 ? 1 : -1);
   if(j < 0 || j >= k.length) return null;
   veMntWizOrnek(k[j]);
   return k[j];
+}
+// Listenin seçilisi: örnekten doldurulduysa o örnek; tuvalden açıldıysa tuvalin örneği
+// (Canlı Not 135); STEP ve tohumsuz durumda yok; "Boş başla" ''.
+function _mwOrnekGosterilen(st){
+  if(!st || st.seededFrom === undefined || st.seededFrom === 'step') return null;
+  if(st.seededFrom === 'tuval') return st.tuvalOrnek || null;
+  return st.seededFrom;
 }
 function veMntWizSifirla(){
   _mwState = veMntWizDefault();
@@ -885,13 +895,16 @@ function _mwStepKaynak(c){
   // gerek var mı? … altta olmasına gerek var mı?"*): örneğin adını listenin seçilisi, sırasını
   // gezinme ("3 / 7") zaten söylüyor; tuvalin kartında başlık modeli adlandırır, satır yalnız
   // sayılar. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
+  var liste = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [];
+  var yuklu = _mwOrnekGosterilen(st);
   if(st.seededFrom === 'tuval'){
+    // Tuvalin örneği adıyla (Canlı Not 135): "sıfırdan açılmış gibi" görünmesin
+    var to = st.tuvalOrnek ? liste.filter(function(e){ return String(e.id) === String(st.tuvalOrnek); })[0] : null;
     h += _mwCard('Tuvaldeki model', '<div class="ve-fw-seeded">' + _mwIkon('check') + ' '
+      + (to ? '<b>' + _mwEsc(to.vehicle || to.name) + '</b> · ' : '')
       + st.govdeler.length + ' gövde · ' + st.takozlar.length + ' takoz</div>');
   }
   h += _mwCard('STEP\'ten başla', _mwStpKartHTML());
-  var liste = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [];
-  var yuklu = (st.seededFrom === undefined || st.seededFrom === 'tuval' || st.seededFrom === 'step') ? null : st.seededFrom;
   var sec = '<select class="ve-fw-inp" onchange="veMntWizOrnekSec(this.value)" aria-label="Örnek">'
     + '<option value="__">' + (yuklu === null ? '— örnek seç —' : '— değiştir —') + '</option>';
   liste.forEach(function(ex){
@@ -2904,6 +2917,8 @@ function veMntWizKur(){
     // STEP'ten kurulduysa roller yeni (ya da var olan) 3D Görüntüleyici'ye —
     // kurulumun TEK geri-al adımının içinde
     _mwStpKayitYaz(_mwStp);
+    // Tuvalin örneği (Canlı Not 135): kurulan model hangi örnekten — STEP'ten ve boştan yok
+    if(typeof veMntOrnekIsaretle === 'function') veMntOrnekIsaretle(_mwOrnekGosterilen(st) || null);
     if(sonuc.yeni.length || sonuc.sil){
       var govdeTakoz = nodes.filter(function(n){ var d = _mwDef(n); return d.isMountBody || d.isMount; });
       var kimlik = {}; govdeTakoz.forEach(function(n){ kimlik[n.id] = 1; });
@@ -2934,7 +2949,7 @@ function veMntWizKur(){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     _mw3B: _mw3B, _mwMasa3BSec: _mwMasa3BSec, _mwAksoDugumler: _mwAksoDugumler, VE_MW_AKSO: VE_MW_AKSO,
-    VE_MW_STEPS: VE_MW_STEPS, VE_MW_GOVDE_TIPLERI: VE_MW_GOVDE_TIPLERI, VE_MW_TORK: VE_MW_TORK,
+    VE_MW_STEPS: VE_MW_STEPS, VE_MW_GOVDE_TIPLERI: VE_MW_GOVDE_TIPLERI, VE_MW_TORK: VE_MW_TORK, _mwOrnekGosterilen: _mwOrnekGosterilen,
     veMntWizDefault: veMntWizDefault, veMntWizState: veMntWizState, veMntWizFromNodes: veMntWizFromNodes,
     veMntWizNodes: veMntWizNodes, veMntWizSorunlar: veMntWizSorunlar, veMntWizCoz: veMntWizCoz,
     veMntWizIssues: veMntWizIssues, veMntWizStepState: veMntWizStepState,

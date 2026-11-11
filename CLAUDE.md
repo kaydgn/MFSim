@@ -108,7 +108,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
   Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
-  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). **İlk hâl** —
+  `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
+  anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
+  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
