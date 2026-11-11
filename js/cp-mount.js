@@ -2094,6 +2094,7 @@ function _mntPencereHTML(node){
   if(node.type==='mnt-solver') return getMntSolverPropertiesHTML(node);
   if(node.type==='mnt-library') return getMntLibraryPropertiesHTML(node);
   if(node.type==='mnt-report') return getMntReportPropertiesHTML(node);
+  if(node.type==='mnt-2dview') return getMnt2DViewPropertiesHTML(node, true);
   if(node.type==='mnt-parametric' && typeof getMntParamPropertiesHTML==='function') return getMntParamPropertiesHTML(node);
   if((_mntDef(node)||{}).isMountBody || _MNT_POINTMASS_DEFAULT[node.type]!==undefined || _MNT_PTO_REF[node.type]
      || /^mnt-(motor|gearbox|bracket|transfer)$/.test(node.type)) return getMntMassPropertiesHTML(node);
@@ -3395,34 +3396,52 @@ function _mntFoyOdak(e, kapId){
   var tr=(e && e.target && e.target.closest) ? e.target.closest('tr[data-ak]') : null;
   return _mntAksoOdak(kapId, tr ? tr.getAttribute('data-ak') : null);
 }
-function _mnt2DIsaretFoy(P){
-  var M=P.M, cg=P.veri.cg, eks=0;
+// İŞARETLER DÜZENLENİR (kullanıcı 2026-11-11, Canlı Not 124: *"Bu tablo üzerinden
+// komponentlere tıkladığımda X, Y, Z koordinatlarını düzenleyebileyim"*): gövdenin ve
+// takozun konum hücresi bileşenin KENDİ alanının girdisi — gövde cgx · cgy · cgz,
+// takoz x · y · z; kimlik ve değer bileşenin penceresindekiyle aynı
+// (`ve-mnt-<alan>-<düğüm>`). Yazınca çizim yeniden kurulur (veMntIsaretYaz), Birleşik
+// CG satırı ve eksik notu yerinde tazelenir; Birleşik CG türetilir, düzenlenmez.
+// `kimlik`: pencerenin düğümü (tazelenen satırların kimliği).
+function _mnt2DIsaretFoy(P, kimlik){
+  var M=P.M, cg=P.veri.cg, eks=0, kim=_mntEsc(kimlik || 'foy');
   var hucre=function(v){ return _mntBos(v) ? '<td class="eks">boş</td>' : '<td>'+_mntS(_mntNum(v),0)+'</td>'; };
-  var sat=function(k, no, ad, x, y, z){
-    if(_mntBos(x) || _mntBos(y) || _mntBos(z)) eks++;
-    return '<tr data-ak="'+k+'"><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hucre(x)+hucre(y)+hucre(z)+'</tr>';
+  var sat=function(k, no, ad, n, al, deger){
+    if(deger.some(_mntBos)) eks++;
+    var hc=n ? al.map(function(a, i){ return _mntFoyGir(n, a, ad+' '+'XYZ'[i], { zorunlu:true, ph:'boş', setter:'veMntIsaretYaz' }); }).join('')
+             : deger.map(hucre).join('');
+    return '<tr data-ak="'+k+'"><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hc+'</tr>';
   };
   var h=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Ad', gen:'40%', sinif:'sol' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }],
                   'İşaretler', 've-mnt-foy--sik');
-  if(cg) h+='<tr class="top" data-ak="G"><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
-  M.g.components.forEach(function(c, i){ h+=sat('g'+(i+1), String(i+1), c.name, c.cgx, c.cgy, c.cgz); });
-  M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), 'T'+(i+1), m.name, m.x, m.y, m.z); });
+  if(cg) h+='<tr class="top" data-ak="G" id="ve-mnt-isr-g-'+kim+'" data-tazele><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
+  M.g.components.forEach(function(c, i){ h+=sat('g'+(i+1), String(i+1), c.name, _mntDugum(c.id), ['cgx','cgy','cgz'], [c.cgx, c.cgy, c.cgz]); });
+  M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), 'T'+(i+1), m.name, _mntDugum(m.id), ['x','y','z'], [m.x, m.y, m.z]); });
   h+=_MNT_FOY_KAPA;
-  if(eks) h+=_mntNot(eks+' işaretin konumu eksik: 0 alındı.', 'warn');
-  return h;
+  return h+'<div id="ve-mnt-isr-eks-'+kim+'" data-tazele>'+(eks ? _mntNot(eks+' işaretin konumu eksik: 0 alındı.', 'warn') : '')+'</div>';
+}
+// İşaretin konumunu yaz (föyün girdisi): bileşenin alanı tek geri-al adımıyla
+// (veMntSet → pencerenin tazelemesi: G satırı, eksik notu), sonra açık
+// Görünümler'in çizimi yeni konumla — kamera, yakınlık ve yazı yerleri yerinde.
+function veMntIsaretYaz(nodeId, key, val){
+  veMntSet(nodeId, key, val);
+  return veMnt2DViewRefresh();
 }
 // GÖRÜNÜMLER PENCERESİ — TEK görünüm (kullanıcı kararı 2026-10-16): döndürülen
 // aksonometri, göstergesi ve altında işaretlerinin föyü (çizimdeki numaraların
 // açılımı, konumları). Tek kategori; sağ sütun yok — kabuk tek sütuna iner.
-function getMnt2DViewPropertiesHTML(node){
+// `tazele`: pencerenin yerinde tazelemesi (veMntPencereTazele) için — çizimin
+// kabı yerinde tazelenmez (veMnt2DViewRefresh kurar), karşılaştırma çizimi
+// kurulmaz: son çizimin kaydını (yapışkan yazı yerleri) ezerdi.
+function getMnt2DViewPropertiesHTML(node, tazele){
   if(!node.data) node.data={};
   var P=_mnt2DPencereVeri(), M=P.M, kapId='ve-mnt-akso3b-'+node.id;
   var bos=!M.g.components.length && !M.g.mounts.length;
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
   var govde=bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'+_mntBolum('İşaretler', em, _mntNot('Kanvasta model yok.', ''))
-    : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+_mntAksoHTML(P, _MNT_KROKI_W, false, kapId)+'</div>'
+    : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+(tazele ? '' : _mntAksoHTML(P, _MNT_KROKI_W, false, kapId))+'</div>'
       + _mntBolum('İşaretler', em, '<div class="ve-mnt-foy-odak" data-ak-kap="'+kapId+'" onmouseover="_mntFoyOdak(event,\''+kapId+'\')"'
-        + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P)+'</div>');
+        + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P, node.id)+'</div>');
   return _mntPencereKabuk(node, [{ k:'akso', ad:'Aksonometrik', govde:govde }], '');
 }
 // Açılışta (cp-core), sütun genişliği değişince ve tam ekran kapanınca:
@@ -5616,7 +5635,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTorkZinciri: _mntTorkZinciri,
     _mntKrokiHTML: _mntKrokiHTML,
     veMntEksikGit: veMntEksikGit,
-    veMntPencereTazele: veMntPencereTazele,
+    veMntPencereTazele: veMntPencereTazele, veMntIsaretYaz: veMntIsaretYaz,
     // Pencere ailesi (2026-10-16): FEAD'in not satırı ve cevap kutusu, iki kategori
     _mntNot: _mntNot,
     _mntDurumKutu: _mntDurumKutu,

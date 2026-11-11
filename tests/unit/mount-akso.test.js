@@ -1319,6 +1319,51 @@ describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki p
     const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
     expect(css).toMatch(/\.ve-mnt-foy-odak \.ve-mnt-foy tr\[data-ak\]:hover td,\n\.ve-properties-content \.ve-mnt-foy-odak \.ve-mnt-foy tr\.ve-ak-satir td\{/);
   });
+
+  // Kullanıcı 2026-11-11 (Canlı Not 124): "Bu tablo üzerinden komponentlere tıkladığımda
+  // X, Y, Z koordinatlarını düzenleyebileyim … Buradan da değişiklikler yapabileyim."
+  // Önce: föyün konum hücreleri düz yazıydı.
+  test('İŞARETLER DÜZENLENİR: gövde ve takoz satırında X · Y · Z bileşenin alanının girdisi; yazınca model, çizim ve G satırı değişir', () => {
+    const N = yukle('tulga');
+    const pen = { id: 'h5', type: 'mnt-2dview', def: componentDefs['mnt-2dview'], data: {} };
+    N.push(pen);
+    const kap = kur('h5');
+    Object.defineProperty(document.getElementById('ve-fp-panes-h5'), 'clientWidth', { value: 356 });
+    expect(cp._mntAksoKur(kap.id, 354)).toBe(true);
+    window.veMntIsaretYaz = cp.veMntIsaretYaz;
+    const foy = document.querySelector('.ve-mnt-foy-odak');
+    expect(foy.querySelectorAll('tr[data-ak="G"] input')).toHaveLength(0);          // birleşik CG türetilir
+    const M = cp._mntCanliModel();
+    M.g.components.forEach((c, i) => expect([...foy.querySelectorAll('tr[data-ak="g' + (i + 1) + '"] input')].map((x) => x.id))
+      .toEqual(['cgx', 'cgy', 'cgz'].map((a) => 've-mnt-' + a + '-' + c.id)));
+    M.g.mounts.forEach((m, i) => expect([...foy.querySelectorAll('tr[data-ak="T' + (i + 1) + '"] input')].map((x) => x.id))
+      .toEqual(['x', 'y', 'z'].map((a) => 've-mnt-' + a + '-' + m.id)));
+    // gövde: Motor'un X'i
+    const motor = N.find((n) => n.id === M.g.components[0].id);
+    const gx = foy.querySelector('#ve-mnt-cgx-' + motor.id);
+    expect(gx.value).toBe(String(motor.data.cgx));
+    const G0 = foy.querySelector('tr[data-ak="G"]').textContent, sv0 = kap.querySelector('svg.ve-mnt2d-akso').outerHTML;
+    gx.value = '300';
+    gx.dispatchEvent(new Event('change'));
+    expect(motor.data.cgx).toBe('300');
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);                                // tek geri-al adımı
+    expect(kap.querySelector('svg.ve-mnt2d-akso').outerHTML).not.toBe(sv0);          // çizim yeni konumla
+    cp.veMntPencereTazele();                                                         // saveState'in kancası
+    expect(foy.querySelector('tr[data-ak="G"]').textContent).not.toBe(G0);
+    expect(cp._mntCanliModel().mp.cg[0]).toBeCloseTo(M.mp.cg[0] + (300 - Number(M.g.components[0].cgx)) / 1000 * motor.data.mass / M.mTop, 6);
+    // takoz: T1'in Z'si
+    const t1 = N.find((n) => n.id === M.g.mounts[0].id), tz = foy.querySelector('#ve-mnt-z-' + t1.id);
+    tz.value = '150';
+    tz.dispatchEvent(new Event('change'));
+    expect([t1.data.z, stubs.saveState.mock.calls.length]).toEqual(['150', 2]);
+    // boşaltılan hücre eksik sayılır: not ve hücrenin tonu
+    tz.value = '';
+    tz.dispatchEvent(new Event('change'));
+    cp.veMntPencereTazele();
+    expect(document.getElementById('ve-mnt-isr-eks-h5').textContent).toBe('1 işaretin konumu eksik: 0 alındı.');
+    expect(tz.parentNode.classList.contains('zor')).toBe(true);
+    delete window.veMntIsaretYaz;
+  });
 });
 
 // 3D Görüntüleyici'nin penceresi CAD'in evi (2026-10-20; kapıları

@@ -222,7 +222,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
   döndürür, tekerlek imlecin altını tutarak yakınlaştırır, sağ tık kaydırır) +
-  işaretlerin föyü; başlıkta bakışın adı ve görünüm düğmeleri (yakınlaştır ·
+  işaretlerin föyü — gövdenin ve takozun X · Y · Z'si föyde DÜZENLENİR (kullanıcı 2026-11-11,
+  Canlı Not 124: bileşenin kendi alanı, tek geri-al adımı, çizim yeni konumla; G türetilir;
+  kapı `mount-akso.test.js` → *İŞARETLER DÜZENLENİR*); başlıkta bakışın adı ve görünüm düğmeleri (yakınlaştır ·
   uzaklaştır · sıfırla · **tam ekran**). Açı yazısı, Görünüş, Katmanlar, Uygunluk,
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan

@@ -170,7 +170,8 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
     const m = P.veri.comps.find((c) => c.id === motor.id);
     expect(m && m.y).toBe(0);
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd3', type: 'mnt-2dview', data: {} });
-    expect(html).toMatch(/<td class="eks">boş<\/td>/);
+    // boş hücre bileşenin alanının BOŞ girdisi (Canlı Not 124: föy düzenlenir) — "boş" yer tutucu, eksik tonu
+    expect(html).toContain('<td class="gir zor"><input type="text" inputmode="decimal" id="ve-mnt-cgy-' + motor.id + '" value="" data-zorunlu placeholder="boş"');
     expect(html).toContain('1 işaretin konumu eksik: 0 alındı.');
   });
 });
