@@ -417,8 +417,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
   Canlı Not 1002 (*"takoz yerlerine göre parametrik analize katılacak takozları seçecek"*):
-  **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; üstten ŞEMA — sütun grup x sırasıyla,
-  satır yan; ölçekli değil: ASFAT'ın ön çifti ölçekte üst üste biniyordu) + **Adaylar** (tip × grup
+  **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; çizim Görünümler'in BİLEŞENİ — Canlı Not 1003:
+  *"Çok sade olmuş"*; takozun çipi grubun NUMARASI, küpü ve çipin kenarı grubun RENGİ, föyün rozetiyle aynı —
+  Canlı Not 1006, `--seri-1…4`, dörtten sonra döner; kaynağı pencere `_mntAksoKaynak` → `P.duzelt`, tam ekranı
+  yok; kapı `mount-akso.test.js` → *GRUBUN RENGİ*) + **Adaylar** (tip × grup
   işaret tablosu; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında; işaretsiz
   grup mevcut tipinde) + sağda taranan grup · kombinasyon (grup sayılarının çarpımı). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
