@@ -49,17 +49,18 @@ const TQ = { Te: 3000, Rstall: 1.62, iTransfer: 1.407, g1: 3.51, g2: 2.0, gR: -4
 beforeEach(() => { resetStubs(stubs); cp._mntForgetResults(); global._veMntLast = null; });
 
 describe('AYAR — doğrulama ve varsayılan', () => {
-  test('boş ayar varsayılan: ileri −X · tork −X · kaldırım 1,55 g virajın tersi', () => {
-    const V = { ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '-x' };
+  // Kaldırım darbesi STANDART 2,5 g (Canlı Not 144 — Tulga'nın yük kitabı; önce 1,55 g)
+  test('boş ayar varsayılan: ileri −X · tork −X · kaldırım 2,5 g virajın tersi', () => {
+    const V = { ileri: '-x', kaldirimG: 2.5, kaldirimYon: 'ters', torkYon: '-x' };
     expect(cp._mntYonAyari()).toEqual(V);
     expect(cp._mntYonAyari({})).toEqual(V);
-    expect([cp.MNT_ILERI, cp.MNT_KALDIRIM_G, cp.MNT_KALDIRIM_YON, cp.MNT_TORK_YON]).toEqual(['-x', 1.55, 'ters', '-x']);
+    expect([cp.MNT_ILERI, cp.MNT_KALDIRIM_G, cp.MNT_KALDIRIM_YON, cp.MNT_TORK_YON]).toEqual(['-x', 2.5, 'ters', '-x']);
   });
   test('tanınmayan değer varsayılana düşer; kaldırım ivmesi > 0 olmalı', () => {
     expect(cp._mntYonAyari({ ileri: 'x', torkYon: '+X', kaldirimYon: 'sol', kaldirimG: 0 }))
-      .toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '-x' });
-    expect(cp._mntYonAyari({ kaldirimG: '-2' }).kaldirimG).toBe(1.55);
-    expect(cp._mntYonAyari({ kaldirimG: 'abc' }).kaldirimG).toBe(1.55);
+      .toEqual({ ileri: '-x', kaldirimG: 2.5, kaldirimYon: 'ters', torkYon: '-x' });
+    expect(cp._mntYonAyari({ kaldirimG: '-2' }).kaldirimG).toBe(2.5);
+    expect(cp._mntYonAyari({ kaldirimG: 'abc' }).kaldirimG).toBe(2.5);
     expect(cp._mntYonAyari({ ileri: '+x', torkYon: '+x', kaldirimYon: 'ayni', kaldirimG: '3.5' }))
       .toEqual({ ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni', torkYon: '+x' });
   });
@@ -109,8 +110,8 @@ describe('YÜK KİTABI — tek üretici', () => {
       return [durum(L, 'Kerb Strike L').n, durum(L, 'Kerb Strike R').n, durum(L, 'Cornering Left').n[1]];
     };
     let [l, r, vL] = ky({});
-    expect(l).toEqual([0, -1.55, -1]);
-    expect(r).toEqual([0, 1.55, -1]);
+    expect(l).toEqual([0, -2.5, -1]);
+    expect(r).toEqual([0, 2.5, -1]);
     expect(Math.sign(l[1])).toBe(-Math.sign(vL));                    // virajın tersi
     [l, r, vL] = ky({ kaldirimG: 3.5, kaldirimYon: 'ayni' });
     expect(l).toEqual([0, 3.5, -1]);
@@ -220,17 +221,20 @@ describe('İMZA — ayar sonucu bayatlatır', () => {
 
 describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
   const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
-  test('Kaldırım darbesi bölümü yük kitabının üstünde; Araç ekseni bölümü yok (Canlı Not 121); seçili değer modelden', () => {
+  // KALDIRIM DARBESİNİN BÖLÜMÜ YOK (kullanıcı 2026-11-11, Canlı Not 144: "Bunu kullanıcıya
+  // girdirmeyelim … standart olarak verelim"): girdisi yok, değeri yük kitabının Kerb Strike
+  // satırında — Siper'in kaydındaki Adams değeri (3,5 g virajla aynı) okunur. Araç ekseni de yok
+  // (Canlı Not 121).
+  test('Kaldırım darbesi bölümü YOK; Araç ekseni bölümü yok; örneğin kaydı yük kitabında', () => {
     kur('siper');
     const n = cozucu();
     ac(n);
     const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
-    expect(bolumler).toEqual(['Kaldırım darbesi', 'Yük kitabı']);
-    expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
-    expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
-    expect(document.getElementById('ve-mnt-kaldirimYon-' + n.id).value).toBe('ayni');
-    expect(document.getElementById('ve-mnt-kaldirimG-' + n.id).value).toBe('3.5');
-    expect(document.querySelector('[data-mnt-vars="ve-mnt-kaldirimG-' + n.id + '"]').getAttribute('data-kaynak')).toBe('elle');
+    expect(bolumler).toEqual(['Yük kitabı']);
+    ['ileri', 'torkYon', 'kaldirimYon', 'kaldirimG'].forEach((k) => expect(document.getElementById('ve-mnt-' + k + '-' + n.id)).toBeNull());
+    const kerb = [...document.querySelectorAll('#ve-mnt-cdur-' + n.id + ' tbody tr')]
+      .find((tr) => tr.firstChild && tr.firstChild.getAttribute('title') === rep._mntRepCaseTr('Kerb Strike L'));
+    expect(kerb.children[2].textContent.replace('−', '-')).toMatch(/^-?3,5/);
     expect(document.querySelector('#ve-mnt-cdur-' + n.id + ' .ve-fp-sect em').textContent).toMatch(/ · ileri \+X · tork −X$/);
   });
 
@@ -238,7 +242,7 @@ describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
     kur('tulga');
     const n = cozucu();
     ac(n);
-    const sec = document.getElementById('ve-mnt-kaldirimYon-' + n.id);
+    const sec = document.getElementById('ve-mnt-solveMode-' + n.id);
     const ad = rep._mntRepCaseTr('Braking');
     const fren = () => [...document.querySelectorAll('#ve-mnt-cdur-' + n.id + ' tbody tr')]
       .find((tr) => tr.firstChild && tr.firstChild.getAttribute('title') === ad);
@@ -246,7 +250,8 @@ describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
     const once = nx();
     cp.veMntSetYon(n.id, 'ileri', '+x');                                // projede yazılı yön (programın yazıcısı)
     expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(document.getElementById('ve-mnt-kaldirimYon-' + n.id)).toBe(sec);
+    expect(sec).toBeTruthy();
+    expect(document.getElementById('ve-mnt-solveMode-' + n.id)).toBe(sec);
     expect(nx()).not.toBe(once);
   });
 

@@ -101,7 +101,7 @@ describe('künye ve yer tutucu yuvası açıklama taşımaz', () => {
         if (Array.isArray(v)) v.forEach(yuru); else if (v && typeof v.type === 'string') yuru(v);
       }
     })(ast.program);
-    expect(kaynaklar.length).toBeGreaterThanOrEqual(5);
+    expect(kaynaklar.length).toBeGreaterThanOrEqual(3);              // kaldırım ve şok darbesi standart (Canlı Not 144 · 145)
     const sapan = kaynaklar.filter((k) => /[;.]/.test(k) || k.split(/\s+/).length > 5);
     expect(sapan).toEqual([]);
   });

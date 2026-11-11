@@ -409,10 +409,8 @@ var _GM_PENCERE_UST = [
 ];
 
 var _GM_COZUCU = [
-  { k: 'kaldirim', bolum: 'Kaldırım darbesi', ad: 'Kaldırım darbesi', not: 'Yanal darbenin ivmesi ve yönü.' },
   { k: 'kitap', bolum: 'Yük kitabı', ad: 'Yük kitabı', not: 'Çözülecek yük durumları: ivme n ve tork T.' },
   { k: 'yontem', bolum: 'Yöntem', ad: 'Yöntem', not: 'Çözüm modu ve sönüm oranı ζ.' },
-  { k: 'sok', bolum: 'Şok darbesi', ad: 'Şok darbesi', not: 'Yarım sinüs darbenin tepe ivmesi ve süresi.' },
   { k: 'hesapla', metin: 'Hesapla', ad: 'Hesapla', yer: 'sag', not: 'Bütün yük durumlarını ve modları çözer.' },
   { k: 'not', s: '.ve-fp-solve-not', ad: 'Durum notu', not: 'Toplam kütle, gövde ve takoz sayısı, son hesabın durumu.' }
 ];
@@ -1132,11 +1130,10 @@ function _gmSec10(){
     ['Tork durumları', 'Değişmez — tork yönü ayrıdır', _gmB('tork-yonu')]
   ], ['Ne', 'Nasıl', 'Nerede görünür']);
   h += _gmH3('Kaldırım darbesi', 'kaldirim');
-  h += '<p>Kerb Strike L / R tekerleğin kaldırıma yandan çarpmasıdır. Büyüklüğü ve yönü '
-    + 'yük kitabına göre değişir; Çözücü’nün <strong>Kaldırım darbesi</strong> bölümü '
-    + _gmNS('cozucu', _GM_COZUCU, 'kaldirim') + ' ikisini ayrı tutar: <strong>İvme</strong> (varsayılan 1,55 g) ve '
-    + '<strong>Yön</strong> — <em>Virajın tersi</em> (Kerb Strike L, Cornering Left’in ters işaretinde; '
-    + 'varsayılan) ya da <em>Virajla aynı</em>.</p>';
+  h += '<p>Kerb Strike L / R tekerleğin kaldırıma yandan çarpmasıdır. Standart değer 2,5 g, '
+    + '<em>virajın tersi</em> yönde (Kerb Strike L, Cornering Left’in ters işaretinde) — Tulga örneğinin '
+    + 'yük kitabı. Değer Çözücü’nün <strong>Yük kitabı</strong>nda ' + _gmNS('cozucu', _GM_COZUCU, 'kitap')
+    + ' Kerb Strike satırlarında görünür; şok darbesi de standarttır: 3 g tepe, 20 ms yarım sinüs.</p>';
   h += _gmH3('Tork yönü', 'tork-yonu');
   h += '<p>Tahrik torku güç grubuna X ekseni etrafında bir <strong>reaksiyon momenti</strong> '
     + 'olarak etkir: T<sub>x</sub> = ±T<sub>mil</sub>. İşareti aracın gidiş yönünden değil, '
@@ -1149,7 +1146,7 @@ function _gmSec10(){
     ['Motorun önü +X’te', '+X', '−X']
   ], ['Diziliş', 'Krankla aynı', 'Krankın tersi']);
   h += _gmNot('Örneklerin ayarı',
-      'Tulga örneği ileri −X, transferin çıkışı krankın tersi (tork yönü +X) ve varsayılan kaldırım darbesiyle; BMC SİPER örneği '
+      'Tulga örneği ileri −X, transferin çıkışı krankın tersi (tork yönü +X) ve standart kaldırım darbesiyle (2,5 g); BMC SİPER örneği '
     + 'ileri +X, tork yönü −X ve 3,5 g virajla aynı yönde kaldırım darbesiyle gelir: ikisi de '
     + 'kendi Adams analizinin yük kitabıdır.');
   return h;
@@ -1157,21 +1154,17 @@ function _gmSec10(){
 
 function _gmSec11(){
   var h = _gmH2('m11');
-  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere dört bölümü alt alta taşır; '
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere bölümleri alt alta taşır; '
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi (' + _gmS('cozucu') + '). Pencere '
     + 'sonucu göstermez — sonuç Sonuçlar sayfasında ve raporda (' + _gmB('rapor') + ').</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
-    [_gmN(_GM_COZUCU, 'kaldirim') + ' Kaldırım darbesi', 'Yanal ivme (g) ve yönü: virajın tersi · virajla aynı',
-      'Kerb Strike L / R satırları (' + _gmB('kaldirim') + ')'],
     [_gmN(_GM_COZUCU, 'kitap') + ' Yük kitabı', 'Çözülecek durumlar, ivme (n) ve tork (T)',
       'Modelin girdisinden; tork durumları tork girildiyse'],
-    [_gmN(_GM_COZUCU, 'yontem') + ' Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır'],
-    [_gmN(_GM_COZUCU, 'sok') + ' Şok darbesi', 'Yarım sinüs darbenin tepe ivmesi (g) ve süresi (ms)',
-      'Bir sonraki Hesapla’da uygulanır']
+    [_gmN(_GM_COZUCU, 'yontem') + ' Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAdimlar([
-    _gmN(_GM_COZUCU, 'yontem') + ' <strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı ve şok '
-      + 'darbesi varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
+    _gmN(_GM_COZUCU, 'yontem') + ' <strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı '
+      + 'varsayılan değeriyle durur (yanındaki <em>i</em> kaynağını söyler).',
     'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez; her takozun viskoz sönüm '
       + 'katsayısı ondan türer: c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>).',
     _gmN(_GM_COZUCU, 'hesapla') + ' <strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin solundaki '
@@ -1891,8 +1884,7 @@ function _gmEkA(){
       ['Kuvvet–sehim eğrisi', 'Takoz Özellikleri', '<strong>Kuvvet–sehim</strong> (takozda <strong>Rijitlik</strong>’in altındaki not)'],
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Kuvvet–sehim</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
-      ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
-      ['Kaldırım darbesi; ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Kaldırım darbesi</strong> · <strong>Yük kitabı</strong>'],
+      ['Yük durumları; kaldırım ve şok darbesi standart, ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Yük kitabı</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],

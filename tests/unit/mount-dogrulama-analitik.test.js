@@ -280,8 +280,10 @@ describe('B2 — önde/arkada farklı takoz: baş-kıç kuplajı 2 SD kapalı fo
 // Fren ve viraj artık gövdeyi döndürür; dönme momenti m·g·n·h'dir.
 const B3 = { m: 1500, kutu: [1200, 800, 900], cg: [100, -10, 700], Lx: 550, Ly: 380, h: 250,
              ks: [1000, 800, 600], kd: [1500, 1200, 900], zeta: 0.03 };
+// Kaldırım 1,55 g: kapalı form durdurucu devrede değilken geçerli; standart 2,5 g'de (Canlı Not 144)
+// bu modelin yanal sehimi durdurucuya ulaşır.
 const R3 = H.coz(H.kurguModel({ govdeler: [{ ad: 'Gövde', m: B3.m, cg: B3.cg, kutu: B3.kutu }],
-  takozlar: H.dortluTakoz(B3.cg, B3.Lx, B3.Ly, B3.h, B3.ks, B3.kd), cozucu: { zeta: B3.zeta } }));
+  takozlar: H.dortluTakoz(B3.cg, B3.Lx, B3.Ly, B3.h, B3.ks, B3.kd), cozucu: { zeta: B3.zeta, kaldirimG: 1.55 } }));
 
 // Kapalı-form statik çözüm (durdurucu devrede değilken): z tek, (x,θy) ve (y,θx) 2×2.
 function b3Sehim(n, ks) {

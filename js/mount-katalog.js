@@ -299,7 +299,7 @@ var veMntKatalog = (function() {
   // İŞLETME yük durumu: 1 g düşey ile birlikte en çok 1 g yatay ivme, tork
   // durumları dâhil (statik, fren, hızlanma, viraj, fren + viraj, tahrik torku,
   // vites durumları, 1 g yanal · boyuna). Öteki durumlar DARBE: 3,5 g düşey,
-  // çukur + fren, 1,55 g bordür, geri esneme — durdurucunun işi.
+  // çukur + fren, 2,5 g bordür (standart, Canlı Not 144), geri esneme — durdurucunun işi.
   function isletmeMi(lc){
     var n = (lc && lc.n) || [];
     return n[2] === -1 && Math.abs(n[0]) <= 1 && Math.abs(n[1]) <= 1;

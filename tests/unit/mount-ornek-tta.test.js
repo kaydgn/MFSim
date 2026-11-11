@@ -478,10 +478,11 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
 describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
   const mm = (v) => +(v * 1000).toFixed(2);
   const durumlar = () => R.allCases.concat(R.gearCases, R.designCases).filter((c) => c.res);
-  test('güç grubunun bütün noktaları, statik konuma göre: X −14,78 / +4,95 · Y ±15,33 · Z −5,64 / +5,19 mm; belirleyen nokta ve durum', () => {
+  // Y zarfı kaldırım darbesinden: standart 2,5 g (Canlı Not 144) — 1,55 g'de ±15,33 mm'ydi
+  test('güç grubunun bütün noktaları, statik konuma göre: X −14,78 / +4,95 · Y ±24,72 · Z −5,64 / +5,19 mm; belirleyen nokta ve durum', () => {
     const Z = R.zarf.toplam;
-    expect(Z.min.map(mm)).toEqual([-14.78, -15.33, -5.64]);
-    expect(Z.max.map(mm)).toEqual([4.95, 15.33, 5.19]);
+    expect(Z.min.map(mm)).toEqual([-14.78, -24.72, -5.64]);
+    expect(Z.max.map(mm)).toEqual([4.95, 24.72, 5.19]);
     expect(Z.minAt).toEqual([
       { durum: 'Pothole Braking', nokta: [-1, -1, 1], govde: 'Motor — Cummins ISM' },
       { durum: 'Kerb Strike L', nokta: 'ag', govde: 'Kardan mili payı' },
@@ -491,7 +492,7 @@ describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
       { durum: 'Kerb Strike R', nokta: 'ag', govde: 'Kardan mili payı' },
       { durum: 'Reverse Torque', nokta: 'ag', govde: 'Sağ arka kulak' }]);
     const mo = R.zarf.govde.find((g) => g.name === 'Motor — Cummins ISM');
-    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-14.78, -12.88, -5.64], [4.95, 11.18, 3.79]]);
+    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-14.78, -18.04, -5.64], [4.95, 18.04, 3.79]]);
   });
   test('hakem: her gövdenin zarfı durumların q\'sundan bağımsız kinematikle (Δu + Δθ × r, kutu ataletten) aynı', () => {
     const G0 = R.mp.cg, q0 = R.qStatic;
@@ -529,7 +530,7 @@ describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
       'Birleşik ağırlık merkezinin ötelemesi ve dönmesi, statik konuma göre', 'Takoz sehim zarfı, yüksüz konumdan [mm]']);
     const hucre = (t, i) => Array.from(tablolar[t].querySelectorAll('tr')).slice(1).map((tr) => tr.cells[i].textContent);
     expect(hucre(0, 0).slice(-1)).toEqual(['Güç grubu (bütün noktalar)']);
-    expect(Array.from(tablolar[0].rows).slice(-1)[0].cells[3].textContent).toBe('−15,33');
+    expect(Array.from(tablolar[0].rows).slice(-1)[0].cells[3].textContent).toBe('−24,72');
     expect(hucre(2, 0)).toContain('İleri tork · 1. Vites');
     expect(hucre(2, 0)).toContain('Tümsek (3,5g) · 3,5g Düşey');
     expect(hucre(2, 0)).toHaveLength(durumlar().length - 1 - 4);    // Statik yok; dört ad ikiz
