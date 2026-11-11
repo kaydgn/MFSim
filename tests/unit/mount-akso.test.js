@@ -833,7 +833,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
     const a = svg.indexOf('<rect class="ve-ak-perde"'), b = svg.indexOf('<g class="ve-ak-odak">');
     return { alt: svg.slice(0, a), odak: b >= 0 ? svg.slice(b) : '', a, b };
   };
-  test('perde seçiliden hemen önce, odak en üstte; odakta YALNIZ seçilinin gövdesi, halkası ve adı', () => {
+  // Canlı Not 141 · 148: perdede halka YOK — seçili aydınlığıyla ve adıyla ayrılır.
+  test('perde seçiliden hemen önce, odak en üstte; odakta YALNIZ seçilinin gövdesi ve adı, halka yok', () => {
     const sorun = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -847,7 +848,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
         const odakAk = new Set([...p.odak.matchAll(/data-ak="([^"]+)"/g)].map((x) => x[1]));
         if (odakAk.size !== 1 || !odakAk.has(sec)) sorun.push(yer + ': odakta ' + [...odakAk].join(','));
         const gv = m.govde.find((g) => g.k === sec);
-        if (!/ve-ak-sec-hale/.test(p.odak) && (sec[0] === 'T' || sec === 'G' || (!gv.kutu && !gv.levha))) sorun.push(yer + ': halka yok');
+        if (/ve-ak-sec-hale/.test(svg)) sorun.push(yer + ': halka var');
+        if (!gv && sec[0] !== 'T' && sec !== 'G') sorun.push(yer + ': seçili bulunamadı');
         if (sec !== 'G' && !/sec-cip/.test(p.odak)) sorun.push(yer + ': adı çipte değil');
         if (/ve-ak-kilavuz/.test(p.odak)) sorun.push(yer + ': kılavuz perdenin üstünde');
         if (/ve-ak-gol"/.test(p.odak)) sorun.push(yer + ': zemindeki iz perdenin üstünde');
