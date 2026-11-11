@@ -888,3 +888,49 @@ describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
     expect(karo).not.toMatch(/yükle"/);
   });
 });
+
+// YÜKLEME EKRANI (kullanıcı 2026-11-11, Canlı Not 128: *"Örnek yüklediğimiz zaman direkt
+// topolojiyi ekrana veriyor. Böyle bir yükleme ekranı gibi bir şey olsun, biraz geç
+// yüklensin … Tık diye açılıyor."*): Yükle → kart (ad · künye · kademeli çubuk); kurucu
+// süre dolmadan ÇAĞRILMAZ, sonra kartın arkasında çağrılır, kart söner. Otomasyonda ve
+// jsdom'da gecikmesiz — öteki testler ve ürün turu eşzamanlı kurucuyu görür.
+describe('YÜKLEME EKRANI — örnek kartın arkasında kurulur', () => {
+  beforeEach(() => { document.body.innerHTML = '<div id="ve-page-topoloji" class="ve-main"></div>'; jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); document.body.innerHTML = ''; });
+  const tulga = () => BS.veMntBaslangicOrnekler().find((o) => o.key === 'tulga');
+
+  test('jsdom ve otomasyon gecikmesiz: kurucu eşzamanlı, kart yok', () => {
+    expect(BS._mntYuklemeGecikmesiz()).toBe(true);
+    casus('veMntOrnekYukle', () => true, (f) => {
+      expect(BS.veMntBaslangicEylem('ornek', 'tulga')).toBe(true);
+      expect(f).toHaveBeenCalledWith('tulga');
+      expect(document.getElementById('ve-mnt-yukleme')).toBeNull();
+    });
+  });
+
+  test('kart: ad, künye, çubuk; kurucu süre dolmadan çağrılmaz, sonra çağrılır, çubuk dolar, kart söner', () => {
+    casus('veMntOrnekYukle', () => true, (f) => {
+      expect(BS.veMntOrnekYuklemeli('tulga', { zorla: true, ms: 1000 })).toBe(true);
+      const k = document.getElementById('ve-mnt-yukleme');
+      const o = tulga();
+      expect(k.querySelector('.ve-mnt-yukleme-bas b').textContent).toBe(o.arac);   // satırdaki ad
+      expect(k.querySelector('.ve-mnt-yukleme-kunye').textContent)
+        .toBe(veSayi(o.govde, 0) + ' gövde · ' + veSayi(o.takoz, 0) + ' takoz · ' + veSayi(o.kutle, 0) + ' kg');
+      const cubuk = k.querySelector('[role="progressbar"]');
+      jest.advanceTimersByTime(600);
+      expect(f).not.toHaveBeenCalled();                                         // kart görünürken model yok
+      expect(Number(cubuk.getAttribute('aria-valuenow'))).toBeGreaterThan(0);   // çubuk ilerliyor
+      jest.advanceTimersByTime(100);
+      expect(f).toHaveBeenCalledWith('tulga');
+      expect(cubuk.getAttribute('aria-valuenow')).toBe('100');
+      expect(document.getElementById('ve-mnt-yukleme')).not.toBeNull();         // söner, hemen kopmaz
+      jest.advanceTimersByTime(500);
+      expect(document.getElementById('ve-mnt-yukleme')).toBeNull();
+    });
+  });
+
+  test('süre sabiti 1–2 sn: "biraz geç" ama bekletmez', () => {
+    expect(BS.VE_MNT_YUKLEME_MS).toBeGreaterThanOrEqual(1000);
+    expect(BS.VE_MNT_YUKLEME_MS).toBeLessThanOrEqual(2000);
+  });
+});

@@ -11067,6 +11067,39 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   container:vebas / size;
 }
 .ve-bas[hidden]{ display:none; }
+/* ÖRNEĞİN YÜKLEME EKRANI (Canlı Not 128): modülün alanını örten kart; model arkasında
+   kurulur, çubuk dolar, kart söner. Perde zeminin kendisi (yarı saydam değil — model
+   kurulurken görünmesin). Kapı: mount-baslangic.test.js → *YÜKLEME EKRANI*. */
+.ve-mnt-yukleme{
+  position:absolute; inset:0; z-index:calc(var(--z-canvas-ui) + 20);
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-primary);
+  opacity:0; transition:opacity var(--dur-fast,0.14s) var(--ease-out,ease);
+}
+.ve-mnt-yukleme.acik{ opacity:1; }
+.ve-mnt-yukleme-kart{
+  width:300px; box-sizing:border-box; padding:18px 20px 20px;
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  box-shadow:var(--shadow-md);
+}
+.ve-mnt-yukleme-bas{ display:flex; align-items:center; gap:8px;
+  font-size:var(--fs-title); color:var(--text-heading); }
+.ve-mnt-yukleme-ico{ width:16px; height:16px; color:var(--accent-primary);
+  animation:ve-mnt-yukleme-don 1.6s linear infinite; }
+@keyframes ve-mnt-yukleme-don{ to{ transform:rotate(360deg); } }
+.ve-mnt-yukleme-kunye{ margin:6px 0 14px; font-size:var(--fs-body); color:var(--text-secondary);
+  font-variant-numeric:tabular-nums; }
+/* Çubuk kademeli: on bölmenin çizgileri zeminde, dolgu vurgu renginde. */
+.ve-mnt-yukleme-cubuk{ position:relative; height:6px; background:var(--bg-tertiary);
+  border:1px solid var(--border-color); overflow:hidden; }
+.ve-mnt-yukleme-cubuk::after{ content:""; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--bg-secondary) calc(10% - 1px) 10%); }
+.ve-mnt-yukleme-cubuk > i{ display:block; height:100%; width:0; background:var(--accent-primary);
+  transition:width 0.85s cubic-bezier(.25,.7,.25,1); }
+@media (prefers-reduced-motion: reduce){
+  .ve-mnt-yukleme, .ve-mnt-yukleme-cubuk > i{ transition:none; }
+  .ve-mnt-yukleme-ico{ animation:none; }
+}
 .ve-bas-ic{ box-sizing:border-box; display:flex; }
 .ve-bas-ic--masa{ min-height:100%; flex-wrap:wrap; align-items:stretch; }
 .ve-bas-ic--sutun{ max-width:1120px; margin:0 auto; padding:28px 48px 28px; flex-direction:column; }

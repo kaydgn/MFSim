@@ -85,7 +85,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Sihirbazı bileşenini (`mnt-wizard`) taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Takoz'a girişte Bileşenler sütunu KAPALI** (kullanıcı 2026-11-06, Canlı
   Not 62: *"otomatik açık olarak geliyor. Gelmesin"*): `veMntPaletKapat` geçişsiz ve kadrajdan
-  önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). Kapı:
+  önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). **Örneğin
+  Yükle'si önce YÜKLEME EKRANINI açar** (kullanıcı 2026-11-11, Canlı Not 128: *"Tık diye
+  açılıyor"*): kart (ad · künye · kademeli çubuk), model kartın arkasında kurulur, kart söner
+  (`veMntOrnekYuklemeli`, `VE_MNT_YUKLEME_MS`); otomasyonda ve jsdom'da gecikmesiz. Kapı:
+  `mount-baslangic.test.js` → *YÜKLEME EKRANI* + `mount-baslangic.spec.js` → *YÜKLEME EKRANI*. Kapı:
   `mount-baslangic.test.js` → *TAKOZ'A GİRİŞ* + `mount-baslangic.spec.js` → *BOŞ KANVAS*. **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
   AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
   iddiası taşımaz (kurgunun tasarım özellikleri testte sayıyla kilitli). Gerçek aracın satırı da
