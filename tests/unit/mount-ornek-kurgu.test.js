@@ -95,10 +95,12 @@ describe('hafif ve kamyon — kurgunun tasarım özellikleri tutuyor', () => {
   const tork = (e) => { const g = json(e).nodes.find((n) => n.type === 'mnt-motor').data;
     const s = json(e).nodes.find((n) => n.type === 'mnt-gearbox').data; return g.Te * s.Rstall * s.g1; };
 
-  test.each([['hafif', 1], ['kamyon', 2]])('%s: Kriter 1 · 1a · 1b · 2 tutuyor; 1. viteste %s takoz çekmede', (id, cek) => {
+  // Kriter 2'nin sınırı %15 (kullanıcı 2026-11-11): hafif'in TR'si %19,0 — %50 sınırında tutuyordu.
+  // Rölanti değişmez: §8.17'nin kaldıraç sayıları (Canlı Not 70) hafif'in 800 d/dk'sına bağlı.
+  test.each([['hafif', 1, 'no'], ['kamyon', 2, 'ok']])('%s: Kriter 1 · 1a · 1b tutuyor, Kriter 2 %s; 1. viteste %s takoz çekmede', (id, cek, k2) => {
     const e = core.getMountExample(id), Rx = R[id];
     const U = rp.veMntUygunluk(Rx, {});
-    expect([st(U, '1'), st(U, '1a'), st(U, '1b'), st(U, '2')]).toEqual(['ok', 'ok', 'ok', 'ok']);
+    expect([st(U, '1'), st(U, '1a'), st(U, '1b'), st(U, '2')]).toEqual(['ok', 'ok', 'ok', k2]);
     expect(vites(Rx, '1. Vites').checks.tensionCount).toBe(cek);
     expect(vites(Rx, '1. Vites').checks.clampCount).toBe(0);              // durdurucuya değmiyor
     // 1. vitesin torku bir GİRDİ (Te · R_stall · i₁), sonuç değil: künyede durur

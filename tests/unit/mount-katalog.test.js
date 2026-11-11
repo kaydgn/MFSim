@@ -16,6 +16,9 @@
  * Gerçek modellerle "aynı yol" kapısı: mount-param.test.js.
  */
 const K = require('../../js/mount-katalog.js');
+// Sentetik T'ler Kriter 2'nin %50 sınırına göre yazıldı; sınır %15'e inince (kullanıcı 2026-11-11)
+// her T aynı oranla ölçeklenir — testlerin geçen/kalan deseni sınırdan bağımsız.
+const TK = K.K2_T / 0.5;
 
 const tk = (id, name, x, y, z, libKey) => ({ id, name, x, y, z, libKey: libKey || null });
 
@@ -93,9 +96,10 @@ describe('KISIT — dört kesin kriter programın uygunluk tablosuyla aynı yön
     expect(ok('k1b', o([5, 6, 10, 11, 12, 14], 0.1))).toBe(false);
     expect(ok('k1b', o([5, 6, 7.999, 10.001, 12, 14], 0.1))).toBe(true);
   });
-  test('Kriter 2: T ≥ %50 ihlal; T sonsuzsa (sönümsüz rezonans) ihlal ve ihlal büyüklüğü sonlu', () => {
-    expect(ok('k2', o([5, 6, 7, 11, 12, 14], 0.5))).toBe(false);
-    expect(ok('k2', o([5, 6, 7, 11, 12, 14], 0.4999))).toBe(true);
+  test('Kriter 2: T ≥ sınır (%15) ihlal; T sonsuzsa (sönümsüz rezonans) ihlal ve ihlal büyüklüğü sonlu', () => {
+    expect(K.K2_T).toBe(0.15);
+    expect(ok('k2', o([5, 6, 7, 11, 12, 14], 0.15))).toBe(false);
+    expect(ok('k2', o([5, 6, 7, 11, 12, 14], 0.1499))).toBe(true);
     const r = K.degerlendir(o([5, 6, 7, 11, 12, 14], Infinity), c, 1).sonuc.k2;
     expect(r.ok).toBe(false);
     expect(Number.isFinite(r.v) && r.v > 0).toBe(true);
@@ -148,10 +152,10 @@ describe('KÖŞE ve EK KISIT — tolerans, alt sınırlar, darbe', () => {
   const ok = (k, x, cc) => K.degerlendir(x, cc || c, 1).sonuc[k];
 
   test('her kısıt kendi kötü köşesinde: frekans üstü ve T sertte, sehim ve alt frekans yumuşakta', () => {
-    const anma = o([5.5, 6.5, 8.5, 11, 12, 14], 0.3, [-4]);
-    const x = Object.assign({}, anma, { sert: o([5.9, 7, 9.1, 11.8, 12.9, 15.1], 0.55, [-3.5]), yumusak: o([5.1, 6, 7.8, 10.2, 11, 12.9], 0.2, [-5.1]) });
+    const anma = o([5.5, 6.5, 8.5, 11, 12, 14], 0.3 * TK, [-4]);
+    const x = Object.assign({}, anma, { sert: o([5.9, 7, 9.1, 11.8, 12.9, 15.1], 0.55 * TK, [-3.5]), yumusak: o([5.1, 6, 7.8, 10.2, 11, 12.9], 0.2 * TK, [-5.1]) });
     expect([ok('k1', anma).ok, ok('k1', x).ok]).toEqual([true, false]);              // sert köşe 15,1 ≥ 15
-    expect([ok('k2', anma).ok, ok('k2', x).ok]).toEqual([true, false]);              // sert köşe T 0,55
+    expect([ok('k2', anma).ok, ok('k2', x).ok]).toEqual([true, false]);              // sert köşe T sınırın 1,1 katı
     expect([ok('sehim', anma).ok, ok('sehim', x).ok]).toEqual([true, false]);        // yumuşak köşe 5,1 > 5
     expect(ok('sehimAlt', x).deger).toBe(3.5);                                       // alt sınır sert köşede
     expect(ok('altMod', x).deger).toBe(5.1);
@@ -229,7 +233,7 @@ describe('TARAYICI', () => {
     olc1: (t) => {
       if (izle) izle.push(t.join(','));
       const k = t.map(kNum), s = k[0] * 2 + k[1] * 2 + k[2];
-      return { f: [4, 5, 6, 7, 11, 5 + s / 2], T: s / 40, dz: k.map((x) => -12 / x), pay: [1, 1, 1], kap: [null, null, null] };
+      return { f: [4, 5, 6, 7, 11, 5 + s / 2], T: s / 40 * TK, dz: k.map((x) => -12 / x), pay: [1, 1, 1], kap: [null, null, null] };
     },
     olc2: (t) => ({ dIsl: t.map((x) => 20 / kNum(x)), cekmeMm: 0 })
   });
@@ -339,7 +343,7 @@ describe('DEPO — ölçü saklanır, hüküm sınırdan yeniden kurulur', () =>
   const olc1 = (t) => {
     if (u(t, 0) < 0.03) return null;                                             // çözülemeyen
     return { f: [2.6 + 2 * u(t, 1), 4 + 2 * u(t, 2), 5.5 + 2 * u(t, 3), 7 + 0.8 * u(t, 4), 9.6 + 2 * u(t, 5), 13 + 8 * u(t, 6)],
-             T: 0.15 + 0.4 * u(t, 7), dz: [-(1.6 + 6 * u(t, 8)), -1.2, -1], pay: [100, 100, 100],
+             T: (0.15 + 0.4 * u(t, 7)) * TK, dz: [-(1.6 + 6 * u(t, 8)), -1.2, -1], pay: [100, 100, 100],
              kap: [100 / (0.6 + 0.6 * u(t, 9)), null, 140], ked: { bounce: 0.6 + 0.4 * u(t, 10), roll: 0.7 + 0.3 * u(t, 11) } };
   };
   const olc2 = (t) => {

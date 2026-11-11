@@ -115,7 +115,7 @@ describe('DÜZEN', () => {
     const bas = S.hucre.filter((h) => h[0] === 6).sort((a, b) => a[1] - b[1]).map((h) => h[2]);
     expect(bas).toEqual(['K', 'Sonuç', 'Ön takoz', 'Sağ/Sol arka takoz', 'Uygunluk', 'Statik sehim [mm]',
       'Kriter 1 · Modal bant < 17,50 Hz', 'Kriter 1a · Mod ayrıklığı > 0,5 Hz', 'Kriter 1b · 8–10 Hz bandında mod yok',
-      'Kriter 2 · TR < %50', 'Frekans payı [Hz]', 'TR [%]', 'En düşük mod [Hz]']);
+      'Kriter 2 · TR < %15', 'Frekans payı [Hz]', 'TR [%]', 'En düşük mod [Hz]']);
     expect(hucre(S, 8, 7)[2]).toBeCloseTo(5.9178, 4);
     expect(hucre(S, 8, 7)[3].bicim).toBe('0.00');
   });

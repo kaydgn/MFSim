@@ -929,8 +929,8 @@ var veMountCore = (function() {
   //
   //   T(r) = √[ (1 + (2ζr)²) / ((1 − r²)² + (2ζr)²) ]
   //
-  // İzolasyon (T<1) ancak r>√2'de başlar; T<0.5 (%50 kriteri) için düşük
-  // sönümde r>√3≈1.73 gerekir. ζ→0'da T→1/|1−r²| (sönümsüz limit) — bu yüzden
+  // İzolasyon (T<1) ancak r>√2'de başlar; T<0.15 (Kriter 2, %15) için düşük
+  // sönümde r>√(1+1/0.15)≈2.77 gerekir. ζ→0'da T→1/|1−r²| (sönümsüz limit) — bu yüzden
   // çok küçük ζ (ör. 0.001) sonucu neredeyse tümüyle frekans oranı belirler.
   // f_nat ≤ 0 → NaN. r=1 (rezonans) ve ζ=0 → sonsuz.
   function transmissibility(fExc, fNat, zeta){

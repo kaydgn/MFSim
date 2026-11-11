@@ -394,7 +394,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
   gruplarda. Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
   Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
-  yalnız kesin kriterleri sağlayanlarda). **Hazırlık Çözücü'nün toplayıcısının TAMAMI** — yön ayarı (ileri ·
+  yalnız kesin kriterleri sağlayanlarda). **Kriter 2'nin sınırı TR < %15** (kullanıcı 2026-11-11:
+  *"bizim bir TR<15 kriterimizin olması gerekiyor"*; MSB belgesinin %50'sinin yerine): taramanın
+  `K2_T`'si ile ana raporun `MNT_TR_SINIR`'ı AYNI (kapı: *AYNI HÜKÜM* + `cp-mount-report.test.js`). **Hazırlık Çözücü'nün toplayıcısının TAMAMI** — yön ayarı (ileri ·
   kaldırım · tork yönü) dâhil, yalnız takozlar değişir: yön düşünce yük durumları varsayılana
   iniyordu (Tulga'nın iki tork durumu ters, Adams'tan RMS 17,28 mm). Kapı: `mount-katalog.test.js`
   (→ *SIRA* · *DEPO* · *CANLI* · *TAM* · *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *TEK YOL — yön

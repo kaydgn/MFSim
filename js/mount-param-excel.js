@@ -235,6 +235,9 @@ var veMntParamExcel = (function(){
     return bilinen < azami.length ? 'Bilinen yeter' : 'Yeter';
   }
 
+  // Kriter 2'nin sınırı (veMntKatalog.K2_T; planın E.trSinir'i — elle kurulan E'de bu).
+  var TR_SINIR = 0.15;
+  function trSinir(E){ return (E && E.trSinir > 0) ? E.trSinir : TR_SINIR; }
   // ── notlar (başlığın üstüne gelince) ─────────────────────────────────────
   function notlar(E){
     var y = E.fAtes / 2;
@@ -255,7 +258,7 @@ var veMntParamExcel = (function(){
         + 'TR = √[(1 + (2ζr)²) / ((1 − r²)² + (2ζr)²)]\n'
         + 'r = f_ateş / f_b;  f_b = √(Σk_z,din / m) / 2π\n'
         + 'ζ = ' + tr(E.zeta, 3) + ';  m = ' + tr(E.kutle, 1) + ' kg\n'
-        + 'Sınır: < %50 (referans %10)',
+        + 'Sınır: < %' + tr(trSinir(E) * 100, 0) + ' (referans %10)',
       pay: 'Kriter 1, 1a ve 1b\'den sınırına en yakın olanın sınıra uzaklığı: en küçüğü '
         + '(' + tr(y, 2) + ' − en yüksek mod; en küçük ayrıklık − 0,5; modların 8–10 Hz bandına uzaklığı).\n'
         + 'Eksi değer: kriter sağlanmıyor.'
@@ -275,7 +278,7 @@ var veMntParamExcel = (function(){
     var bas = [['K'], ['Sonuç']].concat(G.map(function(g){ return [g]; })).concat([
       ['Uygunluk', N.uygunluk], ['Statik sehim [mm]', N.sehim], ['Kriter 1 · Modal bant < ' + tr(E.fAtes / 2, 2) + ' Hz', N.k1],
       ['Kriter 1a · Mod ayrıklığı > 0,5 Hz', N.k1a], ['Kriter 1b · 8–10 Hz bandında mod yok', N.k1b],
-      ['Kriter 2 · TR < %50', N.k2], ['Frekans payı [Hz]', N.pay], ['TR [%]'], ['En düşük mod [Hz]']]);
+      ['Kriter 2 · TR < %' + tr(trSinir(E) * 100, 0), N.k2], ['Frekans payı [Hz]', N.pay], ['TR [%]'], ['En düşük mod [Hz]']]);
     bas.forEach(function(b, i){
       S.hucre.push([HR, 2 + i, b[0], BAS]);
       if(b[1]){ var k = notKutusu(b[1]); S.not.push([HR, 2 + i, b[1], k[0], k[1]]); }
@@ -578,7 +581,7 @@ var veMntParamExcel = (function(){
   }
 
   return { kitap:kitap, kitapIs:kitapIs, frekansPayi:frekansPayi, kapasite:kapasite, sayfaAdi:sayfaAdi, kisa:kisa, kisaUzun:kisaUzun,
-           ayirici:ayirici, temiz:temiz,
+           ayirici:ayirici, temiz:temiz, TR_SINIR:TR_SINIR, trSinir:trSinir,
            kok:kok, modAdi:modAdi, px:px, olc:olc };
 })();
 

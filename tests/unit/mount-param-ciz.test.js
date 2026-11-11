@@ -232,6 +232,14 @@ describe('3B — dönerken ölçek sabit, çizim kabın içinde', () => {
   });
 });
 
+describe('T SINIFLARI — Kriter 2\'nin sınırı bir sınıf sınırı', () => {
+  test('iletilebilirlik haritasının sınıfları artan; %15 (veMntKatalog.K2_T) aralarında', () => {
+    const K = require('../../js/mount-katalog.js');
+    expect(C.T_SINIF).toEqual([5, 10, 15, 20, 30]);
+    expect(C.T_SINIF).toContain(K.K2_T * 100);
+  });
+});
+
 describe('GÖSTERGE — çizimin sınıflarıyla, sayılar Türkçe', () => {
   test('örnek işaretin sınıfı ve sayı', () => {
     const h = C.gosterge([{ s: 've-pd-n2', ad: 'Uygun', n: 19618 }, { s: 've-pd-cephe', sekil: 'cizgi', ad: 'Pareto cephesi' }]);

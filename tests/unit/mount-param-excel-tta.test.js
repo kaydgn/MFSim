@@ -59,7 +59,8 @@ const satirlar = (ad) => wb.readSheet(wb.sheets.findIndex((s) => s.name === ad))
 // Sonuç'un düzeni (14 yük durumu, 6 mod): blok boyu 36, adım 38; j. bloğun ilk satırı 7 + 38j,
 // başlığı bir altında (0 tabanlı dizin 7 + 38j). K0–K9 j = 0…9, Tarama'nın No'su n → j = 9 + n.
 const ADIM = 38, ILK = (j) => 7 + ADIM * j, BI = (j) => ILK(j), SERIT = (j) => '$A$' + ILK(j) + ':$A$' + (ILK(j) + 35);
-const ad2key = () => { const m = {}; ent.D.adaylar.forEach((a) => { m[a.name] = a.key; }); return m; };
+// Excel adı "ASR…" eki olmadan yazar ("57RS313773 (ASR-SR-116)" → "57RS313773"): ikisi de anahtara.
+const ad2key = () => { const m = {}; ent.D.adaylar.forEach((a) => { m[a.name] = a.key; m[global.veMntParamExcel.temiz(a.name)] = a.key; }); return m; };
 // Kombinasyonu modelin KOPYASINA uygula ve Çözücü'yle çöz.
 function coz(tip) {
   const t = JSON.parse(JSON.stringify(TOPO));

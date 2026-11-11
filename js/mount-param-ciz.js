@@ -442,9 +442,10 @@ var veMntParamCiz = (function(){
 
   // ── D4 · İLETİLEBİLİRLİK HARİTASI — kesitte T ve kısıt sınırları ─────────
   // V: { n, kz:[], T:Float64Array(n·n) (%), sinir:[{ ad, s, gec }], kesin, uygun
-  //      (Uint8Array), uz:[i, j]|null, ix, xAd, yAd }. T sınıfları %10 adımlı,
-  //      son sınıf Kriter 2'nin ötesi.
-  var T_SINIF = [10, 20, 30, 40, 50];
+  //      (Uint8Array), uz:[i, j]|null, ix, xAd, yAd }. T sınıfları: %15 Kriter 2'nin
+  //      sınırı (veMntKatalog.K2_T, kullanıcı 2026-11-11) bir sınıf sınırı — altı iki, ötesi
+  //      üç sınıf.
+  var T_SINIF = [5, 10, 15, 20, 30];
   function tSinif(t){ for(var k = 0; k < T_SINIF.length; k++) if(t < T_SINIF[k]) return k; return T_SINIF.length; }
   function tHaritasi(V, o){
     var W = o.W, px = o.fs.k, n = V.n;
