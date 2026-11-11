@@ -45,7 +45,8 @@
 // MODEL (m):
 //   govde : [{ k, no, ad, m [kg], x, y, z [mm], kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır],
 //            braket, levha:{ takoz:k, govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } | null }
-//   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır] }]
+//   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır],
+//            renk? (1–4: Parametrik Analiz'de grubun rengi — küp ve çip `ve-ak-renk-N`, --seri-N) }]
 //   G     : { x, y, z, m, bilgi:[satır] }
 //   cgR   : [x, y, z] mm — mod şekli ve statik dengenin dönme merkezi (çözümün G'si)
 //   q     : { u:[mm ×3], t:[rad ×3] } | null — statik denge yer değiştirmesi
@@ -589,7 +590,7 @@ var veMntAkso = (function(){
       else if(e.cizgi) k+='<line class="ve-ak-kilavuz"'+ak(e.k)+' x1="'+R(e.cizgi[0])+'" y1="'+R(e.cizgi[1])+'" x2="'+R(e.cizgi[2])+'" y2="'+R(e.cizgi[3])+'"/>';
       var b=e.kutu, ort=(b.l+b.r)/2, fs2=e.fs2||e.fs;
       if(e.cip){
-        y+='<g class="ve-ak-cip '+(e.sinif||'')+'"'+ak(e.k, e.bilgi)+'><rect x="'+R(b.l)+'" y="'+R(b.t)+'" width="'+R(b.r-b.l)+'" height="'+R(b.b-b.t)+'" rx="3"/>'
+        y+='<g class="ve-ak-cip '+(e.sinif||'')+(e.ek ? ' '+e.ek : '')+'"'+ak(e.k, e.bilgi)+'><rect x="'+R(b.l)+'" y="'+R(b.t)+'" width="'+R(b.r-b.l)+'" height="'+R(b.b-b.t)+'" rx="3"/>'
           + yazi(ort, b.t+3+e.fs*0.86, e.m1, '', e.fs, 'middle', e.kalin)
           + (e.m2 ? yazi(ort, b.t+3+e.fs*0.86+fs2*1.2, e.m2, 'ikincil', fs2, 'middle', false) : '')+'</g>';
       } else {
@@ -898,7 +899,7 @@ var veMntAkso = (function(){
         var t=it.t, tc=hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z];
         var TY=yuzler(tc, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
         it.br.filter(function(g){ return g.levha.vz*K.d[2]>0; }).forEach(braketCiz);
-        koy(t.k, '<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
+        koy(t.k, '<g class="ve-ak-t'+(t.renk ? ' ve-ak-renkli ve-ak-renk-'+t.renk : '')+'"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
         it.br.filter(function(g){ return g.levha.vz*K.d[2]<=0; }).forEach(braketCiz);
         var tq=P(tc), te=sec(t.k) ? 12*tk : 7*tk;
         if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
@@ -1196,7 +1197,7 @@ var veMntAkso = (function(){
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
         var m1=etk==='genis' ? t.no+' '+t.ad : (sec ? t.no+' '+kisalt(t.ad) : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no));
         ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(sec ? 10 : 6)*tk, m1:m1, fs:FK, kalin:true, cip:true,
-          sinif:sec ? 't-cip sec-cip' : 't-cip', pri:sec ? 10 : 5, balon:balon }, olc));
+          sinif:sec ? 't-cip sec-cip' : 't-cip', ek:t.renk ? 've-ak-renkli ve-ak-renk-'+t.renk : '', pri:sec ? 10 : 5, balon:balon }, olc));
       });
       if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true,
         cip:balon, sinif:balon ? 'g-cip' : '' }, olc));
