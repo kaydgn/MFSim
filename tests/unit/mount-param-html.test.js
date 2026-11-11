@@ -207,6 +207,20 @@ describe('SAYFA', () => {
     expect(metin(d.querySelector('#ve-sonuc .izgara div'))).toBe('UygunlukUygun değil');
   });
 
+  // Belge Canlı Not'ta çerçevede (srcdoc) açılır: "#tarama" üst sayfanın adresine çözülür ve
+  // varsayılan gezinme çerçeveyi sayfanın kendisine götürüyordu ("MFSim açılıyor", 2026-11-11).
+  test('bağlantı varsayılan yoldan GİTMEZ: tık yakalanır, görünüm belgenin içinde değişir', () => {
+    const w = ac(html), d = w.document;
+    const tik = (el) => { const e = new w.MouseEvent('click', { bubbles: true, cancelable: true }); el.dispatchEvent(e); return e.defaultPrevented; };
+    expect(tik(d.getElementById('n-tarama'))).toBe(true);
+    expect(d.getElementById('v-tarama').hidden).toBe(false);
+    expect(tik(d.querySelector('#ve-tarama tbody tr a'))).toBe(true);
+    expect(metin(d.querySelector('#ve-sonuc h2'))).toBe('No 1');
+    expect(tik(d.querySelector('#ve-sonuc .arac a[href="#tarama"]'))).toBe(true);
+    expect(d.getElementById('v-tarama').hidden).toBe(false);
+    expect(w.location.hash).toBe('#tarama');
+  });
+
   test('adres görünümü seçer: #T3 o sonuç; #sonuc son seçilen (varsayılan K1); bozuk adres Özet', () => {
     expect(metin(ac(html, '#T3').document.querySelector('#ve-sonuc h2'))).toBe('No 3');
     const w = ac(html, '#sonuc');

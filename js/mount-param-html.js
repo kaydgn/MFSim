@@ -317,8 +317,8 @@ var veMntParamHtml = (function(){
 
     // ── gezinme: adres → görünüm ──
     var GORUNUM = ['ozet', 'tarama', 'sonuc'];
-    function goster(){
-      var a = (location.hash || '').replace(/^#/, ''), g = 'ozet';
+    function goster(h){
+      var a = (h != null ? h : (location.hash || '')).replace(/^#/, ''), g = 'ozet';
       if(konu(a)){ secili = a; g = 'sonuc'; sonuc(); }
       else if(a === 'tarama' || a === 'sonuc') g = a;
       if(g === 'sonuc' && !konu(a)) sonuc();
@@ -329,16 +329,25 @@ var veMntParamHtml = (function(){
       });
       if(typeof window.scrollTo === 'function' && !/jsdom/i.test(navigator.userAgent)) window.scrollTo(0, 0);
     }
+    // Bağlantı varsayılan yoldan GİTMEZ: belge bir çerçevede (srcdoc) açılınca "#tarama" üst
+    // sayfanın adresine çözülür ve çerçeve belgeden çıkıp o sayfayı yükler (Canlı Not'ta ölçüldü:
+    // çerçeve "https://…/#tarama" oldu). Adres belgenin kendi konumunda değişir, görünüm hemen.
+    function git(h){
+      try { if(location.hash !== h) location.hash = h; } catch(err){ /* adres değişmezse de görünüm çizilir */ }
+      goster(h);
+    }
     document.addEventListener('click', function(e){
       var t = e.target;
       var th = t.closest && t.closest('th[data-sira]');
       if(th){ sirala(th.getAttribute('data-sira')); return; }
       var sb = t.closest && t.closest('button[data-sayfa]');
       if(sb){ sayfa += +sb.getAttribute('data-sayfa'); tarama(); return; }
+      var a = t.closest && t.closest('a[href^="#"]');
+      if(a){ e.preventDefault(); git(a.getAttribute('href')); return; }
       var tr_ = t.closest && t.closest('tr[data-s]');
-      if(tr_ && !(t.closest && t.closest('a'))){ location.hash = '#' + tr_.getAttribute('data-s'); goster(); }
+      if(tr_) git('#' + tr_.getAttribute('data-s'));
     });
-    window.addEventListener('hashchange', goster);
+    window.addEventListener('hashchange', function(){ goster(); });
     ozet(); tarama(); sonuc(); goster();
     window.veRapor = { goster:goster, sirala:sirala, secili:function(){ return secili; } };
   }
