@@ -109,7 +109,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). Seçili gövde ve
   Seçili takoz BAŞLIKLI BÖLÜMLERDE, etiket kalın, üçlünün her kutusunda ekseni (Canlı Not 117 · 118; kapı
   `mount-wizard.test.js` → *DÜZENLEYİCİ BÖLÜMLÜ*); üçlü (x · y · z) etiketin YANINDA, kutular tekli satırların
-  sütununda, gövde ve takoz adımında sütun 380 px (Canlı Not 136; kapı `mount-sihirbaz.spec.js` → *ÜÇLÜ YANDA*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  sütununda, gövde ve takoz adımında sütun 380 px (Canlı Not 136; kapı `mount-sihirbaz.spec.js` → *ÜÇLÜ YANDA*);
+  masanın görünüşü 3B · **2B**: Yandan · Önden · Üstten TEK sayfada, ortak ölçek ve merkezle (X sütunu,
+  Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
+  görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
+  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
   Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
   `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
