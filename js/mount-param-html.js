@@ -190,6 +190,14 @@ var veMntParamHtml = (function(){
     '.izgara div{flex:1 1 150px;padding:6px 10px;border-right:1px solid var(--cizgi);border-bottom:1px solid var(--cizgi)}',
     'th.grup{text-align:center}',
     'th.ayir,td.ayir{border-left:1px solid var(--cizgi)}',
+    'table.izg th,table.izg td{border:1px solid var(--cizgi);padding:6px 12px}',
+    'table.izg td{min-width:68px}',
+    'table.izg thead th{background:var(--zemin)}',
+    'table.izg th.grup{text-align:center}',
+    'table.izg th.ayir,table.izg td.ayir{border-left:2px solid var(--cizgi-koyu)}',
+    'table.izg .yuk{position:sticky;left:0;z-index:1;background:var(--zemin);font-weight:600;border-right:2px solid var(--cizgi-koyu)}',
+    'table.izg tbody tr:hover td{background:var(--vurgu-zemin)}',
+    'table.izg tbody tr:hover td.yuk{background:var(--zemin)}',
     '.kap.dar{max-width:560px}',
     '.izgara b{display:block;font-weight:500;color:var(--soluk);font-size:var(--fs-kucuk)}',
     '.tipler{color:var(--soluk);margin:-4px 0 12px}',
@@ -457,15 +465,15 @@ var veMntParamHtml = (function(){
       if(c.tur === 'K') oz.unshift(['Uygunluk', esc(V.konfig[c.n].u || '—')]);
       V.kriter.forEach(function(q, j){ oz.push(['<span title="' + esc(q.s) + '">' + esc(q.ad) + '</span>', tik(kb & (1 << j))]); });
       h += '<div class="izgara">' + oz.map(function(x){ return '<div><b>' + x[0] + '</b>' + x[1] + '</div>'; }).join('') + '</div>';
-      h += '<h3>Sehim [mm]</h3><div class="kap"><table><thead><tr><th class="sol" rowspan="2">Yük durumu</th>'
+      h += '<h3>Sehim [mm]</h3><div class="kap"><table class="izg"><thead><tr><th class="sol yuk" rowspan="2">Yük durumu</th>'
         + V.takozlar.map(function(t, m){ return '<th colspan="3" class="grup ayir" title="' + esc(tt[m] || '') + '">' + esc(t.ad) + '</th>'; }).join('')
         + '</tr><tr>' + V.takozlar.map(function(){ return '<th class="ayir">X</th><th>Y</th><th>Z</th>'; }).join('') + '</tr></thead><tbody>';
       vaka.forEach(function(va, q){
-        h += '<tr><td class="sol">' + esc(va) + '</td>';
+        h += '<tr><td class="sol yuk">' + esc(va) + '</td>';
         for(var m = 0; m < V.takozlar.length; m++) for(var a = 0; a < 3; a++) h += '<td' + (a ? '' : ' class="ayir"') + '>' + s(deger(q, m, a), 2) + '</td>';
         h += '</tr>';
       });
-      h += '</tbody></table></div><h3>Modlar</h3><div class="kap dar"><table><thead><tr><th class="sol">Mod</th>'
+      h += '</tbody></table></div><h3>Modlar</h3><div class="kap dar"><table class="izg"><thead><tr><th class="sol">Mod</th>'
         + '<th class="sol">Mod tipi</th><th>f [Hz]</th></tr></thead><tbody>';
       modlar.forEach(function(md, j){ h += '<tr><td class="sol">' + (j + 1) + '</td><td class="sol">' + esc(md[1]) + '</td><td>' + s(md[0], 2) + '</td></tr>'; });
       $('ve-sonuc').innerHTML = h + '</tbody></table></div>';

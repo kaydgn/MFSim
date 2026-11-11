@@ -183,6 +183,12 @@ describe('SAYFA', () => {
     expect(metin(d.querySelector('#ve-sonuc h2'))).toBe('No 2');
     expect(metin(d.querySelector('#ve-sonuc .tipler'))).toBe('Ön takoz: 57RS313774 · Sağ/Sol arka takoz: Cone 39 50 ShA (AMC 137982)');
     const [sehim, mod] = d.querySelectorAll('#ve-sonuc table');
+    // Canlı not 2002 ("Sonuç kısmını aynı Excel gibi … Sütun aralarını çizgili … Yük durumu sütununu da
+    // ayıralım"): iki tablo ızgara, Yük durumu sütunu ayrık (başlığı ve her satırın ilk hücresi)
+    expect([sehim.className, mod.className]).toEqual(['izg', 'izg']);
+    expect([...sehim.querySelectorAll('tr')].every((r) => r.querySelector('.yuk') === r.querySelector('th, td') || !r.querySelector('.yuk'))).toBe(true);
+    expect([...sehim.querySelectorAll('tbody tr')].map((r) => r.children[0].classList.contains('yuk'))).toEqual([true, true]);
+    expect(sehim.querySelector('thead th').classList.contains('yuk')).toBe(true);
     const st = [...sehim.querySelectorAll('tbody tr')].map((r) => [...r.children].map(metin));
     expect(st[0]).toEqual(['Static', '−0,12', '0,00', '−15,00', '0,02', '0,00', '−12,00', '0,02', '0,00', '−12,10']);
     expect(st[1].slice(1)).toEqual(Array(9).fill('—'));                      // sonuç yok
