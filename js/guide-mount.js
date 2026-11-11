@@ -507,7 +507,7 @@ var _GM_TAKOZ = [
 ];
 
 var _GM_KUTUPHANE = [
-  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir.' },
+  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir, oklar listede gezer.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
   { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
@@ -1042,9 +1042,10 @@ function _gmSec9(){
     + 'değil.</p>';
   h += _gmSahne('kutuphane', _gmPencere('mnt-library'), 'Takoz Özellikleri penceresi.', null, _GM_KUTUPHANE);
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
-    ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi ve <strong>Yeni takoz</strong>; özel '
-      + 'tipte ad alanı ve <strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler '
-      + 'seçili tipin adını başlıklarında taşır'],
+    ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi, <strong>Önceki tip</strong> · '
+      + '<strong>Sonraki tip</strong> okları ve <strong>Yeni takoz</strong>; özel tipte ad alanı ve '
+      + '<strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler seçili tipin adını '
+      + 'başlıklarında taşır. Oklar listenin sırasıyla gezer; ilk tipte yukarı, son tipte aşağı ok kapalıdır'],
     ['Öneri', 'Seçili markanın modele uyan ilk beş tipi: en yüklü takozda kapasite payı, statik sehim '
       + '<span class="ve-fp-sym">δ</span>, dikey frekans <span class="ve-fp-sym">f<sub>z</sub></span>; satıra tık tipi seçer',
       'Kaba ön seçimdir: model rijit gövde, bütün takozlar aynı tip, yük kütleden ve takoz konumlarından '

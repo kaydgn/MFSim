@@ -108,13 +108,17 @@ test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili 
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
   });
   await page.waitForSelector('#ve-properties .mntlib-bilgi', { timeout: 10000 });
+  // Satırın sonunda tipler arasında gezen oklar (Canlı Not 155), (i) okların solunda
   const satir = await page.evaluate(() => {
     const P = document.getElementById('ve-properties'), r = (e) => e.getBoundingClientRect();
     const tr = P.querySelector('.mntlib-tip .mntlib-trigger'), bi = P.querySelector('.mntlib-tip .mntlib-bilgi'), ek = P.querySelector('.mntlib-add');
+    const ok = P.querySelector('.mntlib-tip .mntlib-adimlar');
     return { img: P.querySelectorAll('img').length, bilgi: [Math.round(r(bi).width), Math.round(r(bi).height)],
-      ayniSatir: Math.abs(r(bi).top - r(tr).top) < 0.5, solunda: r(tr).right <= r(bi).left, sagKenar: Math.abs(r(bi).right - r(ek).right) < 0.5 };
+      ayniSatir: Math.abs(r(bi).top - r(tr).top) < 0.5 && Math.abs(r(ok).top - r(tr).top) < 0.5, solunda: r(tr).right <= r(bi).left,
+      oklar: [Math.round(r(ok).width), Math.round(r(ok).height)], okSagda: r(bi).right <= r(ok).left,
+      sagKenar: Math.abs(r(ok).right - r(ek).right) < 0.5 };
   });
-  expect(satir).toEqual({ img: 0, bilgi: [26, 26], ayniSatir: true, solunda: true, sagKenar: true });
+  expect(satir).toEqual({ img: 0, bilgi: [26, 26], ayniSatir: true, solunda: true, oklar: [43, 26], okSagda: true, sagKenar: true });
   for (let tur = 0; tur < 2; tur++) {
     await page.click('#ve-properties .mntlib-trigger');
     const L = await page.evaluate(() => {
@@ -142,6 +146,53 @@ test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili 
   expect(await page.evaluate(() => [!!document.getElementById('ve-bas-buyuk-perde'),
     !!(document.activeElement && document.activeElement.classList.contains('mntlib-bilgi')),
     document.getElementById('ve-properties-overlay').classList.contains('visible')])).toEqual([false, true, true]);
+});
+
+// OKLAR (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu
+// istiyorum, yukarı aşağı"*): gerçek fareyle AYNI noktaya art arda tık listede aşağı iner. LASPAR'ın
+// ilk tiplerinde teknik resim (i) gelip gider; oklar (i)'nin sağında olduğu için yerinde kalır — solunda
+// olsalardı ikinci tık (i)'ye düşerdi. Odak okta kalır, geri-al adımı yazılmaz, listenin seçili satırı
+// izler, ilk tipte Önceki tip kapalı.
+test('Takoz Özellikleri: Tip satırının okları tipler arasında gezer, yerinden kaymaz', async ({ page }) => {
+  await bootApp(page);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  const id = await page.evaluate(() => {
+    const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
+    n.data = n.data || {}; delete n.data._selKey;                       // listenin ilk tipi
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
+    return n.id;
+  });
+  await page.waitForSelector('#mntlib-adim-sonraki-' + id, { timeout: 10000 });
+  const durum = () => page.evaluate((i) => {
+    const n = nodes.find((x) => x.id === i), b = document.getElementById('mntlib-adim-sonraki-' + i).getBoundingClientRect();
+    const sec = document.querySelector('#mntlib-list-' + i + ' .mntlib-opt.sel');
+    return { sel: n.data._selKey || null, yer: [Math.round(b.left), Math.round(b.top)], bilgi: !!document.getElementById('mntlib-bilgi-' + i),
+      liste: sec ? /veMntLibSelect\('[^']+','([^']+)'\)/.exec(sec.getAttribute('onclick'))[1] : null,
+      odak: document.activeElement ? document.activeElement.id : '', geri: undoStack.length };
+  }, id);
+  const once = await durum();
+  expect(await page.evaluate((i) => {
+    const b = document.getElementById('mntlib-adim-onceki-' + i);
+    return [b.getAttribute('aria-disabled'), b.title];
+  }, id)).toEqual(['true', 'İlk tip seçili.']);
+  const kutu = await page.locator('#mntlib-adim-sonraki-' + id).boundingBox();
+  const izler = [];
+  for (let k = 0; k < 6; k++) {
+    await page.mouse.click(kutu.x + kutu.width / 2, kutu.y + kutu.height / 2);
+    izler.push(await durum());
+  }
+  expect(new Set(izler.map((d) => d.sel)).size).toBe(6);                   // her tık bir sonraki tip
+  expect(izler.every((d) => d.liste === d.sel)).toBe(true);                 // listenin seçili satırı izler
+  expect(new Set(izler.map((d) => d.bilgi)).size).toBe(2);                 // (i) gelip gitti …
+  expect(izler.filter((d) => d.yer.join() !== once.yer.join())).toEqual([]); // … oklar yerinde
+  expect(izler.every((d) => d.odak === 'mntlib-adim-sonraki-' + id)).toBe(true);
+  expect(izler.every((d) => d.geri === once.geri)).toBe(true);             // listeden seçim gibi: geri-al adımı yok
+  // Klavye: odak oktayken Enter bir sonrakine, Önceki tip geri getirir
+  await page.keyboard.press('Enter');
+  const enter = await durum();
+  expect(enter.sel).not.toBe(izler[5].sel);
+  await page.click('#mntlib-adim-onceki-' + id);
+  expect((await durum()).sel).toBe(izler[5].sel);
 });
 
 // Tam ekranda düz görünüşler YOK (2026-10-16); işaretler adlarıyla, koordinat
