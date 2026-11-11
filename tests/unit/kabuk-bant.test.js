@@ -179,7 +179,7 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde yok', () => {
     // öğe oydu. (Komut ara bantta yok — Canlı Not 24; ölçü bandın kalan denetimi.)
     const boy = (s) => Number((kural(s).match(/(?:^|;)\s*height:\s*(\d+)px/) || [])[1]);
     expect(boy('.ve-bant-avatar')).toBeGreaterThan(0);
-    expect(boy('.ve-rb-expand')).toBeLessThanOrEqual(boy('.ve-bant-avatar'));
+    expect(boy('.ve-rb-marka')).toBeLessThanOrEqual(boy('.ve-bant-avatar'));   // marka komutları açar (Canlı Not 125)
     // Denetimlerin altında ve üstünde en az 3 px: bant ince ama sıkışık değil.
     expect(serit - boy('.ve-bant-avatar')).toBeGreaterThanOrEqual(6);
   });

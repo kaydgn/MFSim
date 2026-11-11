@@ -17,10 +17,10 @@
 // kısmın programdan tamamen kalkmasını istiyorum. Buradaki özelliklerin ise,
 // böyle kenarda açılır bir ufak pencere şeklinde belirmesini istiyorum.
 // Programı daraltıyor"*): şerit hep katlı; sabitleme, daralt tutamağı ve çift
-// tık kalktı. Bandın sağ ucundaki #ve-rb-expand kenarda küçük bir pencere
-// (#ve-rb-dock) açar: başında sekmeler, altında seçili sekmenin grupları liste
-// olarak. Komut, dışarı tık ve Esc pencereyi kapatır; sayfa hiç kaymaz
-// (--ribbon-h hep bandın boyu).
+// tık kalktı. Bandın SOL ucundaki MARKA (#ve-rb-expand — "MFSim ▾", Canlı Not 125)
+// altında küçük bir pencere (#ve-rb-dock) açar: başında sekmeler ve hesap düğmesi,
+// altında seçili sekmenin grupları liste olarak. Komut, dışarı tık ve Esc pencereyi
+// kapatır; sayfa hiç kaymaz (--ribbon-h hep bandın boyu).
 
 // ── Komut tanımları ──────────────────────────────────────────────────────
 // run    : global fonksiyon adı (yoksa buton sessizce devre dışı görünür)
@@ -471,7 +471,7 @@ function veRibbonInit() {
   host._rbInit = true;
 
   host.addEventListener('click', function(e) {
-    // Bandın sağ ucundaki düğme komutların penceresini açar / kapatır
+    // Marka (bandın sol ucu) komutların penceresini açar / kapatır
     if(e.target.closest('#ve-rb-expand')) { veRibbonAc(); return; }
 
     var tabBtn = e.target.closest('.ve-rb-tab');
@@ -506,6 +506,9 @@ function veRibbonInit() {
   var disari = function(e) {
     if(!_veRibbonPeek) return;
     if(host.contains(e.target)) return;
+    // Hesap menüsü pencerenin başlığındaki avatardan açılır (Canlı Not 125): onun
+    // içine tık pencerenin dışı sayılmaz.
+    if(e.target && e.target.closest && e.target.closest('.ve-avatar-menu')) return;
     _veRibbonPeek = false;
     veRibbonRender();
   };
@@ -513,6 +516,7 @@ function veRibbonInit() {
   document.addEventListener('mousedown', disari, true);
   document.addEventListener('keydown', function(e) {
     if(e.key !== 'Escape' || !_veRibbonPeek) return;
+    if(document.querySelector('.ve-avatar-menu')) return;   // önce hesap menüsü kapanır (TEK ESC TEK KATMAN)
     e.stopPropagation(); e.preventDefault();
     veRibbonAc(false);
     var tog = document.getElementById('ve-rb-expand');

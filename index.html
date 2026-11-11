@@ -195,9 +195,9 @@
      şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
      seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-     Yerleşim: marka │ modül ····· hesap │ [komutlar]. Şeridin gövdesi YOK (Canlı
-     Not 59): komutlar bandın sağ ucundaki düğmenin açtığı küçük pencerede
-     (#ve-rb-dock, aşağıda) — sayfa hiç aşağı itilmez.
+     Yerleşim: [marka ▾] │ modül. Şeridin gövdesi YOK (Canlı Not 59): komutlar
+     markanın açtığı küçük pencerede (#ve-rb-dock, aşağıda; Canlı Not 125), hesap
+     düğmesi pencerenin başlığında — sayfa hiç aşağı itilmez.
 
      Bant YALNIZ komut yüzeyidir. Sayfa anahtarı (Topoloji / Sonuçlar) bir
      zamanlar buranın sağ ucundaydı; artık çalışma alanının solundaki dikey
@@ -208,13 +208,14 @@
      EZMEZ — yalnız o iki kabın içini yazar. -->
 <div id="ve-ribbon">
   <div class="ve-rb-strip" id="ve-rb-strip">
-    <!-- Marka + proje adı — ETİKET, düğme değil. Buradan bir proje menüsü
-         açılıyordu; içindeki komutların tümü artık şeritte (Giriş / Araçlar
-         sekmeleri, bkz. js/ribbon.js), bu yüzden menü kaldırıldı. Aynı komutu
-         iki yüzeyde tutmak yalnızca yer ve bakım maliyeti demekti.
-         id KORUNUR: js/toolbar.js proje adını buraya yazar, js/results.js
-         rapor başlığı için geri okur. -->
-    <span class="logo" id="ve-project-name-btn" title="MFSim"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span></span>
+    <!-- MARKA KOMUTLARI AÇAR (kullanıcı 2026-11-11, Canlı Not 125: *"Şuradaki kısmı, sol
+         tarafta bulunan MFSim yazısına tıkladığımızda açılan şekle getirelim"*): bandın
+         sağ ucundaki ok ve hesap düğmesi kalktı; MFSim yazısı komutların penceresini
+         (#ve-rb-dock) açar, hesap düğmesi pencerenin başlığında. id'ler KORUNUR:
+         #ve-rb-expand pencerenin düğmesi (js/ribbon.js), #ve-project-name-btn proje
+         adının yeri (js/toolbar.js yazar, js/results.js rapor başlığı için okur). -->
+    <button type="button" class="ve-rb-marka" id="ve-rb-expand" title="Komutlar"
+            aria-haspopup="dialog" aria-expanded="false" aria-controls="ve-rb-dock"><span class="logo" id="ve-project-name-btn" title="MFSim"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span></span><span class="mf-ico mf-ico-chevron-down ve-rb-marka-ok" aria-hidden="true"></span></button>
 
     <!-- MODÜL ADI — hangi modülün içindeyiz. Kaynak `veSidebarScope`
            (js/components.js): modül aç/kapa oradan geçen TEK nokta, yani
@@ -228,13 +229,6 @@
       <!-- Komut ara ve Çözücü bantta YOK (kullanıcı 2026-11-05, Canlı Not 24:
            "komut ara ve çözücü kısmına gerek yok. Kullanılmıyor zaten"). Komut
            paleti Ctrl+K'de, Çözücü şeridin Giriş sekmesinde. -->
-      <!-- AVATAR — arkasındaki ad UYDURULMUYOR, AÇILIYOR: kullanıcı bir kez
-           yazar (Ayarlar → Görünüm → Kimlik ya da bu menü), tarayıcıda
-           saklanır, projeye YAZILMAZ. Ad yokken sahte baş harf basılmaz. -->
-      <button type="button" class="ve-bant-avatar ve-bant-avatar--bos"
-              id="ve-bant-avatar" onclick="veAvatarMenuAc()"
-              title="Hesap menüsü" aria-label="Hesap menüsü"
-              aria-haspopup="menu" aria-expanded="false"></button>
 
 
     <!-- Radyo düğmesi buradaydı; komut şeride taşındı (Araçlar → Mola → Radyo,
@@ -248,12 +242,6 @@
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>
 
-    <!-- KOMUTLAR — bandın sağ ucunda, hep yerinde (yalnız ok döner): kenarda
-         açılan küçük pencereyi açar ve kapatır (Canlı Not 59). Eskiden şeridin
-         gövdesini açıp sabitliyordu; gövde kalktı. `aria-expanded` her çizimde
-         js/ribbon.js'ten yazılır. -->
-    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Komutlar" aria-label="Komutlar"
-            aria-haspopup="dialog" aria-expanded="false" aria-controls="ve-rb-dock"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></button>
   </div>
 
   <!-- KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59: *"Şu kısmın programdan
@@ -263,7 +251,16 @@
        ucundaki düğme bu küçük pencereyi açar: başında sekmeler, altında seçili sekmenin
        grupları liste olarak; komut, dışarı tık ve Esc kapatır. İçini js/ribbon.js yazar. -->
   <div class="ve-rb-dock" id="ve-rb-dock" role="dialog" aria-label="Komutlar">
-    <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+    <div class="ve-rb-dock-bas">
+      <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+      <!-- AVATAR — pencerenin başlığında (Canlı Not 125). Arkasındaki ad UYDURULMUYOR,
+           AÇILIYOR: kullanıcı bir kez yazar (Ayarlar → Görünüm → Kimlik ya da bu menü),
+           tarayıcıda saklanır, projeye YAZILMAZ. Ad yokken sahte baş harf basılmaz. -->
+      <button type="button" class="ve-bant-avatar ve-bant-avatar--bos"
+              id="ve-bant-avatar" onclick="veAvatarMenuAc()"
+              title="Hesap menüsü" aria-label="Hesap menüsü"
+              aria-haspopup="menu" aria-expanded="false"></button>
+    </div>
     <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
   </div>
 </div>

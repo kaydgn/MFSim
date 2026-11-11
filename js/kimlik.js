@@ -125,11 +125,14 @@ function _veAvatarMenuHTML() {
   return h;
 }
 
-// Sağa yaslı, avatarın 6 px altında; ekrandan TAŞMAZ.
+// Avatarın 6 px altında, sağ kenarına yaslı; solda yer yoksa (avatar komutların
+// penceresinin başlığında, ekranın solunda — Canlı Not 125) SOL kenarına yaslı.
+// Ekrandan TAŞMAZ.
 function _veAvatarMenuKonum(btn, m) {
   var r = btn.getBoundingClientRect();
   var w = m.offsetWidth || 248;
   var sol = Math.round(r.right - w);
+  if(sol < 8) sol = Math.round(r.left);
   m.style.top = Math.round(r.bottom + 6) + 'px';
   m.style.left = Math.max(8, Math.min(sol, window.innerWidth - w - 8)) + 'px';
 }

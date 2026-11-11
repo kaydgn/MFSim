@@ -84,14 +84,16 @@ test.describe('Statik kabuk (giriş öncesi)', () => {
     expect(tuslar.kaydetFn).toBe(true);
   });
 
-  test('marka düz etiket — proje menüsü kaldırılmıştı', async ({ page }) => {
-    // Menüdeki her komut şeritte de vardı; menü kalktı. Geri gelirse burada
-    // görünür (regresyon kapısı).
+  test('marka komutların penceresini açar — eski proje menüsü yok (Canlı Not 125)', async ({ page }) => {
+    // Eski proje menüsü (#ve-file-menu) kalktı; marka artık komutların penceresinin
+    // düğmesi: ad #ve-project-name-btn'de, ok düğmede, adın kabının dışında.
     await page.goto('/index.html');
     await expect(page.locator('#ve-file-menu')).toHaveCount(0);
     await expect(page.locator('[onclick*="veToggleFileMenu"]')).toHaveCount(0);
     await expect(page.locator('#ve-project-name-btn')).toBeVisible();
-    await expect(page.locator('#ve-project-name-btn .ve-brand-chev')).toHaveCount(0);
+    await expect(page.locator('#ve-rb-expand > #ve-project-name-btn')).toHaveCount(1);
+    await expect(page.locator('#ve-rb-expand > .ve-rb-marka-ok')).toHaveCount(1);
+    await expect(page.locator('#ve-project-name-btn .ve-rb-marka-ok')).toHaveCount(0);
   });
 });
 

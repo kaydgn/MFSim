@@ -791,9 +791,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Kapı: `durum-seridi.test.js` + `validation.test.js` → *sonuç bildirimde* +
   `kabuk-sutun.spec.js` → *DURUM ŞERİDİ YOK*.
 - **ŞERİDİN GÖVDESİ YOK — komutlar kenardaki küçük pencerede** (kullanıcı
-  2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın sağ ucundaki
-  **Komutlar** düğmesi (`#ve-rb-expand`) bandın altında YÜZEN pencereyi
-  (`#ve-rb-dock`: sekmeler + başlıklı iki sütunlu liste) açar; komut, dışarı tık
+  2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın SOL ucundaki
+  **MFSim ▾** markası (`#ve-rb-expand`; kullanıcı 2026-11-11, Canlı Not 125: *"MFSim
+  yazısına tıkladığımızda açılan şekle getirelim"*) altında YÜZEN pencereyi
+  (`#ve-rb-dock`: sekmeler + hesap düğmesi + başlıklı liste) açar; bandın sağ ucu boş
+  (avatar pencerenin başlığında); komut, dışarı tık
   (yakalama evresinde — Kayış Tablosu mousedown'ı yutuyor) ve Esc kapatır;
   `--ribbon-h` hep bandın boyu, sayfa itilmez. Kılavuzda komutun yeri
   "Komutlar’daki …". Kapı: `kabuk-bant.test.js` → *ŞERİT BANDI İNCE* +

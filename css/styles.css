@@ -6872,7 +6872,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Komut ara ve Çözücü bantta YOK (kullanıcı 2026-11-05, Canlı Not 24): komut
    paleti Ctrl+K'de, Çözücü şeritte. Kapı: ust-bant.spec.js → *KOMUT ARA YOK*. */
 
-/* AVATAR — bandın sağ ucu. Ad yokken SAHTE BAŞ HARF BASILMAZ: nötr bir
+/* AVATAR — komutların penceresinin başlığında (Canlı Not 125; önce bandın sağ
+   ucundaydı). Ad yokken SAHTE BAŞ HARF BASILMAZ: nötr bir
    daire durur ve menüsü adı yazmaya çağırır. "Bilinmiyor"u "biliniyormuş
    gibi" göstermemek bu deponun kuralı. */
 .ve-bant-avatar{
@@ -7010,8 +7011,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    seçili sekmenin grupları — başlıklı, iki sütunlu liste. Pencere YÜZER: sayfayı
    itmez, köşesi keskin, gölgesi yüzenin. Kapı: ust-bant.spec.js → *KOMUTLARIN
    PENCERESİ*. */
+/* SOLDA, MARKANIN ALTINDA (Canlı Not 125): markanın açtığı menü — pencerenin sol
+   kenarı markanın düğmesinin sol kenarında (bandın dolgusu 12 px, düğme −4 px). */
 .ve-rb-dock{
-  position:absolute; top:calc(100% + 4px); right:12px;
+  position:absolute; top:calc(100% + 4px); left:8px;
   /* Genişlik içerikten — sekmeler ve en uzun ad (Canlı Not 92); aynı sayfada
      sekme değişince pencere oynamaz (sekmelerin şeridi en geniş öğe). */
   width:max-content; max-width:calc(100vw - 16px);
@@ -7033,11 +7036,16 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 @media (prefers-reduced-motion: reduce){
   #ve-ribbon.is-peek .ve-rb-dock{ animation:none; }
 }
+/* Pencerenin başlığı: sekmeler + hesap düğmesi (Canlı Not 125), altında tek çizgi. */
+.ve-rb-dock-bas{
+  display:flex; align-items:center; flex:none;
+  border-bottom:1px solid var(--border-color);
+}
+.ve-rb-dock-bas > .ve-bant-avatar{ margin:0 8px 0 auto; }
 /* Sekmeler: pencerenin başlığı — altı çizgili düz sekme (bandın diliyle). */
 .ve-rb-tabs{
   display:flex; align-items:stretch; gap:2px; flex:none;
   height:var(--bant-h, 32px); padding:0 6px;
-  border-bottom:1px solid var(--border-color);
   overflow:hidden;
 }
 .ve-rb-dock .ve-rb-tab{ height:auto; border-radius:0; background:none; padding:0 9px; }
@@ -7052,22 +7060,22 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   overflow-x:hidden; overflow-y:auto;
 }
 
-/* ── Komutların düğmesi (bandın sağ ucu) ──
-   Hep yerinde, yalnız ok döner: düğme yalnız bir durumda görünseydi bandın sağ
-   kümesi kayar ve ikinci tık avatara giderdi (ölçülmüş eski kusur). */
-.ve-rb-expand{
-  display:flex; align-items:center; justify-content:center;
-  /* 24 px: avatarla AYNI boy — bandın en yüksek öğesi olmasın. */
-  width:24px; height:24px; padding:0; align-self:center; margin-left:6px;
-  background:none; border:1px solid transparent; cursor:pointer; font:inherit;
-  color:var(--text-muted); border-radius:var(--radius-sm);
-  transition:color var(--dur-fast,0.12s), background-color var(--dur-fast,0.12s);
+/* ── Komutların düğmesi: MARKA (Canlı Not 125) ──
+   Bandın sol ucunda, markanın kendisi + küçük ok; hep yerinde, yalnız ok döner.
+   24 px: avatarla AYNI boy — bandın en yüksek öğesi olmasın. */
+.ve-rb-marka{
+  display:flex; align-items:center; gap:5px;
+  height:24px; padding:0 6px 0 4px; margin-left:-4px; align-self:center; flex-shrink:0;
+  background:none; border:1px solid transparent; cursor:pointer; font:inherit; color:inherit;
+  border-radius:var(--radius-sm);
+  transition:background-color var(--dur-fast,0.12s);
 }
-.ve-rb-expand .mf-ico{ transition:transform var(--dur-fast,0.12s) var(--ease-out,ease); }
-#ve-ribbon.is-peek .ve-rb-expand .mf-ico{ transform:rotate(180deg); }
-.ve-rb-expand:hover{ color:var(--text-primary); background-color:var(--bg-tertiary); }
-#ve-ribbon.is-peek .ve-rb-expand{ color:var(--text-primary); background-color:var(--bg-tertiary); border-color:var(--border-color); }
-.ve-rb-expand:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+.ve-rb-marka-ok{ width:12px; height:12px; color:var(--text-muted);
+  transition:transform var(--dur-fast,0.12s) var(--ease-out,ease); }
+#ve-ribbon.is-peek .ve-rb-marka-ok{ transform:rotate(180deg); }
+.ve-rb-marka:hover{ background-color:var(--bg-tertiary); }
+#ve-ribbon.is-peek .ve-rb-marka{ background-color:var(--bg-tertiary); border-color:var(--border-color); }
+.ve-rb-marka:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
 /* ── Grup ── */
 /* Yan boşluk grup ARASI mesafeyi iki kere sayar (7 + 7 = 14px). 11px'te bu 22px
@@ -7175,10 +7183,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 
 /* Bildirim rozeti (güncelleme mevcut) — hem komutun kendisinde hem sekmesinde.
    Sekmedeki nokta olmasaydı haber, o sekme açılana dek görünmezdi. */
-.ve-rb-btn.has-badge, .ve-rb-tab.has-badge, .ve-rb-expand.has-badge{ position:relative; }
+.ve-rb-btn.has-badge, .ve-rb-tab.has-badge, .ve-rb-marka.has-badge{ position:relative; }
 .ve-rb-btn.has-badge::after,
 .ve-rb-tab.has-badge::after,
-.ve-rb-expand.has-badge::after{
+.ve-rb-marka.has-badge::after{
   content:""; position:absolute; width:7px; height:7px; border-radius:50%;
   background:var(--accent-danger); box-shadow:0 0 6px var(--accent-danger);
   animation:ve-rb-badge-pulse 2s ease-in-out infinite; pointer-events:none;
@@ -7186,7 +7194,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-btn--lg.has-badge::after{ top:4px; right:4px; }
 .ve-rb-btn--sm.has-badge::after{ top:2px; right:2px; }
 .ve-rb-tab.has-badge::after{ top:6px; right:5px; }
-.ve-rb-expand.has-badge::after{ top:1px; right:1px; }
+.ve-rb-marka.has-badge::after{ top:1px; right:1px; }
 @keyframes ve-rb-badge-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.65; transform: scale(0.85); }

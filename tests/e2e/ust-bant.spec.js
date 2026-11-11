@@ -129,7 +129,10 @@ test('bantta dolu düğme yok', async ({ page }) => {
 // KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59: *"Şu kısmın programdan
 // tamamen kalkmasını istiyorum. Buradaki özelliklerin ise, böyle kenarda açılır bir
 // ufak pencere şeklinde belirmesini istiyorum. Programı daraltıyor"*): açık gövde
-// sayfayı 94 px aşağı itiyordu. Pencere bandın sağ ucunda YÜZER: tuval oynamaz.
+// sayfayı 94 px aşağı itiyordu. Pencere YÜZER: tuval oynamaz. MARKA AÇAR (kullanıcı
+// 2026-11-11, Canlı Not 125: *"Şuradaki kısmı, sol tarafta bulunan MFSim yazısına
+// tıkladığımızda açılan şekle getirelim"*): düğme bandın sol ucundaki "MFSim ▾",
+// pencere onun altında; hesap düğmesi pencerenin başlığında, bandın sağ ucu boş.
 const pencereOlc = () => {
   const k = (s) => { const e = document.querySelector(s); if (!e) return null;
     const b = e.getBoundingClientRect();
@@ -155,7 +158,8 @@ const pencereOlc = () => {
   };
 };
 
-test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAMAZ', async ({ page }) => {
+test('KOMUTLARIN PENCERESİ — markanın altında yüzer, sayfa ve tuval OYNAMAZ', async ({ page }) => {
+  test.setTimeout(90000);   // iki tema × üç sekme × kontrast + yerleşim: yük altında 30 sn'yi aşıyordu (#1329)
   await ac(page, 'fead-analysis');
   const once = await page.evaluate(pencereOlc);
   expect(once.acik).toBe(false);
@@ -170,11 +174,15 @@ test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAM
   // sayfa ve tuval yerinde: pencere yüzüyor, itmiyor
   expect(r.sayfa.y).toBe(once.sayfa.y);
   expect(r.tuval).toEqual(once.tuval);
-  // KENARDA, KÜÇÜK: bandın altında, sağ kenarı düğmenin sağ kenarında
+  // KENARDA, KÜÇÜK: bandın altında, sol kenarı markanın (düğmenin) sol kenarında
   expect(r.pencere.y).toBeGreaterThanOrEqual(r.bant.b);
   expect(r.pencere.y - r.bant.b).toBeLessThanOrEqual(6);
-  expect(Math.abs(r.pencere.r - r.dugme.r)).toBeLessThanOrEqual(1);
-  expect(r.pencere.w).toBeLessThanOrEqual(200);                 // Canlı Not 92: 312 → 185 px (88: 352 → 312)
+  expect(Math.abs(r.pencere.x - r.dugme.x)).toBeLessThanOrEqual(1);
+  expect(r.dugme.x).toBeLessThanOrEqual(12);                    // bandın SOL ucu (Canlı Not 125)
+  expect(r.pencere.w).toBeLessThanOrEqual(240);                 // Canlı Not 92: 312 → 185 px; 125: + hesap düğmesi
+  // bandın sağ ucu boş: avatar pencerenin başlığında, bantta düğme kalmadı
+  expect(await page.evaluate(() => [...document.querySelectorAll('#ve-rb-strip button')].map((b) => b.id))).toEqual(['ve-rb-expand']);
+  expect(await page.evaluate(() => !!document.querySelector('#ve-rb-dock .ve-rb-dock-bas > #ve-bant-avatar'))).toBe(true);
   // sekmeler pencerenin başında; açılınca odak seçili sekmede
   expect(r.sekme).toEqual(expect.arrayContaining(['Giriş', 'Görünüm', 'Araçlar']));
   expect(r.aktif).toBe('Giriş');
@@ -309,12 +317,14 @@ const menuOlc = () => {
     ustte: nok.every(([x, y]) => { const u = document.elementFromPoint(x, y); return !!(u && m.contains(u)); }),
     // + 0: fark (−0,5; 0) aralığındayken Math.round −0 verir ve toBe(0) onu
     // Object.is ile ayırır — yarım pikselin içinde yaslı menü "kaymış" sayılıyordu.
-    sagHiza: Math.round(r.right - a.right) + 0, ekranda: r.left >= 0 && r.right <= innerWidth,
+    sagHiza: Math.round(r.right - a.right) + 0, solHiza: Math.round(r.left - a.left) + 0,
+    ekranda: r.left >= 0 && r.right <= innerWidth,
   };
 };
 
 test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async ({ page }) => {
   await ac(page, 'fead-analysis');
+  await page.click('#ve-rb-expand');                   // avatar komutların penceresinde (Canlı Not 125)
   await page.click('#ve-bant-avatar');
   const r = await page.evaluate(menuOlc);
   expect(r).not.toBeNull();
@@ -322,7 +332,9 @@ test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async
   expect(r.kenar).toBe('1px');
   expect(r.golge).toBe(true);
   expect(r.ustte).toBe(true);
-  expect(r.sagHiza).toBe(0);           // avatarın sağ kenarına yaslı
+  // avatarın sağ kenarına yaslı; avatar ekranın solundaysa (komutların penceresinde,
+  // Canlı Not 125) sol kenarına
+  expect([r.sagHiza, r.solHiza]).toContain(0);
   expect(r.ekranda).toBe(true);
 });
 
@@ -333,6 +345,7 @@ test('hesap menüsü OKUNUR bir yüzey — opak, kenarlıklı, en üstte', async
 test('hesap menüsü SIKI — satır ≈ 24 px, avatar 28 px, menü ≤ 175 px', async ({ page }) => {
   await ac(page, 'fead-analysis');
   await page.evaluate(() => veKimlikAdYaz('Kerem Aydoğan'));
+  await page.click('#ve-rb-expand');
   await page.click('#ve-bant-avatar');
   const o = await page.evaluate(() => {
     const m = document.querySelector('.ve-avatar-menu');
@@ -366,6 +379,7 @@ test('hesap menüsü sütundaki müfettişin ÜSTÜNDE açılıyor', async ({ pa
   await page.waitForTimeout(400);
   await page.evaluate(() => veTogglePropertiesPanel(true));
   await page.waitForTimeout(600);
+  await page.click('#ve-rb-expand');
   await page.click('#ve-bant-avatar');
   const r = await page.evaluate(menuOlc);
   // Sütun eskiden PENCERE katmanındaydı (4000) — bandın menüsü (2000) onun
@@ -380,6 +394,7 @@ test('TEK ESC TEK KATMAN — menüyü kapatan tuş alttaki paneli sökmüyor', a
   await page.waitForTimeout(400);
   await page.evaluate(() => veTogglePropertiesPanel(true));
   await page.waitForTimeout(600);
+  await page.click('#ve-rb-expand');
   await page.click('#ve-bant-avatar');
   await expect(page.locator('.ve-avatar-menu')).toHaveCount(1);
   await page.keyboard.press('Escape');
@@ -394,6 +409,7 @@ test('ad menüden, YERİNDE değişiyor — tarayıcı `prompt`u yok', async ({ 
   await ac(page, 'fead-analysis');
   let diyalog = 0;
   page.on('dialog', (d) => { diyalog++; d.dismiss(); });
+  await page.click('#ve-rb-expand');
   await page.click('#ve-bant-avatar');
   await page.click('.ve-avatar-menu [data-ve-avatar="ad"]');
   await expect(page.locator('.ve-avatar-menu-ad input')).toBeFocused();
@@ -422,18 +438,17 @@ test('kayıtlı ad AÇILIŞTA avatara geliyor', async ({ page }) => {
 
 // KOMUTLARIN DÜĞMESİ YERİNDE DURUR. Eskiden yalnız katlıyken vardı: basınca
 // kayboluyor, sağ küme 26 px kayıyor ve tıklanan noktaya AVATAR oturuyordu —
-// ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü).
-test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında', async ({ page }) => {
+// ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü). Düğme artık marka
+// (Canlı Not 125): basınca yerinde kalır, ikinci tık yine ona gider ve kapatır.
+test('markaya basınca düğme YERİNDE ve hâlâ altında; ikinci tık kapatır', async ({ page }) => {
   await ac(page, 'fead-analysis');
-  const x = () => page.evaluate(() => ['#ve-bant-avatar', '#ve-rb-expand']
-    .map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)));
+  const x = () => page.evaluate(() => Math.round(document.getElementById('ve-rb-expand').getBoundingClientRect().left));
   const nokta = await page.evaluate(() => { const r = document.getElementById('ve-rb-expand').getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   const once = await x();
   await page.mouse.click(nokta.x, nokta.y);
   await page.waitForTimeout(300);
-  const sonra = await x();
-  expect(sonra).toEqual(once);
+  expect(await x()).toBe(once);
   const r = await page.evaluate(({ x, y }) => ({
     acik: document.getElementById('ve-ribbon').classList.contains('is-peek'),
     aria: document.getElementById('ve-rb-expand').getAttribute('aria-expanded'),
@@ -445,6 +460,23 @@ test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında
   await page.mouse.click(nokta.x, nokta.y);
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-peek'))).toBe(false);
+});
+
+// HESAP MENÜSÜ PENCERENİN İÇİNDEN (Canlı Not 125): menüye tık pencereyi kapatmaz;
+// Esc önce menüyü, ikinci Esc pencereyi kapatır.
+test('hesap menüsü komutların penceresinden — menüye tık pencereyi kapatmaz, Esc sırayla', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  await page.click('#ve-rb-expand');
+  await page.click('#ve-bant-avatar');
+  await page.click('.ve-avatar-menu .ve-avatar-menu-bas');          // menünün içine tık
+  const acik = () => page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-peek'));
+  expect(await acik()).toBe(true);
+  await expect(page.locator('.ve-avatar-menu')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.ve-avatar-menu')).toHaveCount(0);
+  expect(await acik()).toBe(true);
+  await page.keyboard.press('Escape');
+  expect(await acik()).toBe(false);
 });
 
 // KALDIRILAN DÜĞMENİN YOLU AÇIK KALIR. Kaydet ikonu banttan kalktı ve

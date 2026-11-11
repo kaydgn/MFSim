@@ -56,7 +56,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
   test('komut şeritte de var — Giriş sekmesinde ve Sonuç Araçları\'nda', async ({ page }) => {
     // Keşfedilebilirlik: elinde dosya olan kullanıcı Sonuçlar sayfasına
     // gitmeden komutu bulabilmeli. Şeridin gövdesi YOK (Canlı Not 59): komut
-    // bandın sağ ucundaki düğmenin açtığı pencerede; öteki yolu komut paleti
+    // markanın (MFSim, Canlı Not 125) açtığı pencerede; öteki yolu komut paleti
     // (kapsamı komut-kapsami.test.js).
     await page.goto('/index.html');
     await page.fill('#mfsim-login-password', 'mfsim2024');
@@ -69,6 +69,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     await expect(ribbonImport).toHaveCount(1);              // Giriş sekmesi
     await page.click('#ve-rb-expand');                       // komutların penceresi
     await expect(ribbonImport.first()).toBeVisible();
+    await page.keyboard.press('Escape');                     // pencere rayın üstünde yüzer
 
     await page.click('.ve-nav-item[data-subtab="sonuclar"]');
     await expect(page.locator('#ve-ribbon button', { hasText: 'içe aktar' })).toHaveCount(1);
