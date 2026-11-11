@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /**
- * takoz-gorsel.js — takoz veritabanlarının GÖRSELLERİ (AMC Mecanocaucho® · Angst+Pfister APSOvib®)
+ * takoz-gorsel.js — takoz veritabanlarının GÖRSELLERİ (AMC Mecanocaucho® · Angst+Pfister APSOvib® · LASPAR)
  *
  *   node tools/takoz-gorsel.js            # indir (önbellek) + üret, iki üretici
- *   node tools/takoz-gorsel.js --ap       # yalnız Angst+Pfister (--amc: yalnız AMC)
+ *   node tools/takoz-gorsel.js --ap       # yalnız Angst+Pfister (--amc: yalnız AMC · --lp: yalnız LASPAR)
  *   node tools/takoz-gorsel.js --kuru     # yalnız listeyi ve hedefleri yaz
  *
  * ANGST+PFISTER (2026-11-10): tipin ölçülü çizimi (e-mağaza fotoğrafı yok, Canlı Not
  * 111) — konik yatak, marine ve jeneratör yatağı genel katalogun (2017)
  * sayfasından kırpılır (çizimin vektör nesnelerinin kutusu + 6 pt pay), H-takozun
  * üç şekli föyün (2018) 2. sayfasındaki görüntülerden. Çıktı assets/takoz/ap/.
+ *
+ * LASPAR (2026-11-11): tipin ölçülü çizimi — genel katalogun (2018, laspargroup.com →
+ * Kataloglarımız) anti-vibrasyon sayfalarından kırpılır (çizimin vektör nesnelerinin ve ölçü
+ * yazılarının kutusu, alt yazısı hariç). Çıktı assets/takoz/lp/.
  *
  * Kaynak üreticinin sitesi (mecanocaucho.com → cdn.amcsa.es, 2026-11-10): tipin
  * ÖLÇÜLÜ ÇİZİMİ (SVG) — programdaki tek takoz görseli (Canlı Not 111: ürün ve
@@ -32,6 +36,7 @@ const { execFileSync } = require('child_process');
 const KOK = path.join(__dirname, '..');
 const HEDEF = path.join(KOK, 'assets', 'takoz', 'amc');
 const HEDEF_AP = path.join(KOK, 'assets', 'takoz', 'ap');
+const HEDEF_LP = path.join(KOK, 'assets', 'takoz', 'lp');
 const ONBELLEK = path.join(KOK, '.takoz-gorsel');
 const CDN = 'https://cdn.amcsa.es/images/families/';
 const KATALOG = 'https://cdn.amcsa.es/downloads/catalog/cauchometal_en.pdf';
@@ -87,6 +92,27 @@ function listesiAp() {
   [...ciz].forEach((c) => { const z = AP_CIZIM[c]; L.push({ ad: 'cizim-' + c, url: z.b || AP_KATALOG, tur: 'pdf', sayfa: z.s, kutu: z.k, maske: z.m || [], en: z.en || CIZIM_EN, hedef: HEDEF_AP }); });
   return L;
 }
+// ── LASPAR ─────────────────────────────────────────────────────────────────
+const LP_KATALOG = 'https://drive.usercontent.google.com/download?id=1gDoV00IIwu3lYZXtcrT8tOv6S2yh97na&export=download';
+// Çizim (js/mount-laspar.js → TIP[].çizim): katalogun PDF sayfası (s) ve kutu (k: x0, üst, x1, alt pt) —
+// çizimin vektör nesneleri ve ölçü yazıları + ~6 pt pay; komşu çizime ve alt yazıya girmez.
+const LP_CIZIM = {
+  'k-1423-1436': { s: 54, k: [169.5, 105.5, 300, 305] },
+  'k-1881': { s: 54, k: [301, 105.5, 437.5, 323] },
+  'k-1433': { s: 54, k: [438, 105.5, 573.8, 323.8] },
+  'm-lmt': { s: 36, k: [39, 112, 191, 322] },
+  'm-mlmt': { s: 36, k: [193, 147, 346, 322] },
+  'c-0154': { s: 56, k: [39, 74, 179, 296] },
+  'c-0502': { s: 56, k: [180, 79, 327, 296] },
+  's-1880-1875': { s: 50, k: [65, 75, 208, 337] },
+  't-1887': { s: 52, k: [53, 72, 246, 348] }
+};
+function listesiLp() {
+  const P = require('../js/mount-laspar.js'), L = [];
+  const ciz = new Set(Object.keys(P.TIP).map((t) => P.TIP[t][2]));
+  [...ciz].forEach((c) => { const z = LP_CIZIM[c]; L.push({ ad: 'cizim-' + c, url: LP_KATALOG, tur: 'pdf', sayfa: z.s, kutu: z.k, maske: z.m || [], en: z.en || CIZIM_EN, hedef: HEDEF_LP }); });
+  return L;
+}
 const CIZIM_EN = 640;          // çizimin genişliği (px)
 const KALITE = 0.82;
 
@@ -107,8 +133,10 @@ function indir(url) {
 async function main() {
   const argv = process.argv.slice(2);
   const kuru = argv.includes('--kuru');
-  const L = (argv.includes('--ap') ? [] : listesi().map((x) => Object.assign({ hedef: HEDEF }, x)))
-    .concat(argv.includes('--amc') ? [] : listesiAp());
+  const tek = ['--amc', '--ap', '--lp'].filter((b) => argv.includes(b));   // yalnız bu üretici(ler)
+  const al = (b) => !tek.length || tek.includes(b);
+  const L = (al('--amc') ? listesi().map((x) => Object.assign({ hedef: HEDEF }, x)) : [])
+    .concat(al('--ap') ? listesiAp() : []).concat(al('--lp') ? listesiLp() : []);
   if (kuru) { L.forEach((x) => console.log(x.ad.padEnd(22), x.url)); return; }
   // Klasör başına künye; listede olmayan eski kalem (kalkan fotoğraflar) künyeye geri yazılmaz.
   const kunyeler = {};
@@ -181,4 +209,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { listesi, listesiAp, CIZIM, HIDROLIK, AP_CIZIM };
+module.exports = { listesi, listesiAp, listesiLp, CIZIM, HIDROLIK, AP_CIZIM, LP_CIZIM };

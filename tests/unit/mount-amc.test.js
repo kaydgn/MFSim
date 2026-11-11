@@ -144,7 +144,7 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
       'TK035', 'TK040', 'TK050', 'amc137963', 'amc137964', 'amc137731', 'amc137981', 'amc137982', 'amc137983',
       'amc137830', 'amc137833', 'amc177296', 'amc137829', 'lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh',
       'bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
-    expect(Object.keys(L)).toHaveLength(24 + 138 + 86);                       // + A+P (js/mount-ap.js)
+    expect(Object.keys(L)).toHaveLength(24 + 138 + 86 + 43);                  // + A+P (js/mount-ap.js) + LASPAR (js/mount-laspar.js)
   });
 
   test('tahminli tip uygulanınca tip notu 6/6 der ve radyalin tahmini olduğunu söyler; elle girilen değer farktır', () => {
@@ -406,8 +406,8 @@ describe('KÜNYE — Takoz Özellikleri', () => {
       ['Sıkma torku', '170 N·m'], ['Ağırlık', '1.438 g'], ['Kaynak', 'AMC-EO · 24.11.2025']]);
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|650 kg/i);
   });
-  test('AMC dışı tipte künye de (i) de yok', () => {
-    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'TK040' } };
+  test('üretici veritabanı dışı tipte künye de (i) de yok', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: '57RS313773' } };
     global.nodes = [lib];
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
     expect([d.querySelector('.ve-mnt-amc'), d.querySelector('.mntlib-bilgi')]).toEqual([null, null]);

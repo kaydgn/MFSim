@@ -39,8 +39,9 @@ const SERTLIKSIZ = Object.keys(AMC.KOD).filter((k) => AMC.KOD[k][1] === null).ma
 const AP = require('../../js/mount-ap.js');
 const SINIFLI = Object.keys(AP.KOD).filter((k) => AP.KOD[k][2] === null).map((k) => 'ap' + k);
 const ADLI = Object.keys(L).filter((k) => !KAYNAKLI[k] && SERTLIKSIZ.indexOf(k) < 0 && SINIFLI.indexOf(k) < 0);
-// ürün + sertlik + isteğe bağlı (parça no), üretici önekiyle: "AMC 137963" · "A+P 12.2140.2503"
-const BICIM = /^(\S+(?: \S+)*?) (\d{2}) ShA(?: \(((?:AMC |A\+P )?[0-9A-Z.]+)\))?$/;
+// ürün + sertlik + isteğe bağlı (parça no), üretici önekiyle: "AMC 137963" · "A+P 12.2140.2503" ·
+// "LASPAR LMT-1433-00-TK60"
+const BICIM = /^(\S+(?: \S+)*?) (\d{2}) ShA(?: \(((?:AMC |A\+P |LASPAR )?[0-9A-Z.-]+)\))?$/;
 
 describe('AD KURALI — ürün + sertlik + (parça no)', () => {
   test('her ad biçimde: proje, rapor ya da not yok', () => {
