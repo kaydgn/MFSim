@@ -759,6 +759,10 @@ var veMntAkso = (function(){
     // içinden de görünür. Üstte çizilen kenar ve halka alttaki bir yazının
     // içinden geçmesin (yazı kuralı): seçilinin kutusu ve halkasının çevresi
     // yazılara TAM engel (sec). Zemindeki izi perdenin altında kalır.
+    // PERDEDE HALKA YOK (kullanıcı 2026-11-11, Canlı Not 141 · 148: *"Böyle yuvarlak olmasına gerek
+    // yok"* · *"Yuvarlak daire içine almaya gerek yok. Diğer komponentleri gölgelesek yeter."*):
+    // perde varken seçili yalnız aydınlığıyla ve adıyla ayrılır; halka perdesiz seçimde kalır.
+    // Kapı: mount-akso.test.js → *PERDE*.
     var odak=(_secili!=null && !!o.perde), odakSvg='';
     var engel=[], govdeSvg='', secSvg='', takozSvg='', hm=4.4*tk/sc;
     // ÖRTÜ (o.ortu): çizimin üstünde yüzen yüzeyler (sihirbazın masasında
@@ -883,7 +887,7 @@ var veMntAkso = (function(){
         // Seçili nokta kütle büyür: aydınlık dolgusu (CSS) 2,4·ik'lik noktada
         // vurgu kenarının içinde kayboluyordu.
         koy(it.g.k, '<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R((it.g.k===_secili ? 3.6 : 2.4)*ik)+'"/>');
-        if(it.g.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
+        if(it.g.k===_secili && !odak) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
         var ne=sec(it.g.k) ? 8*ik : 3*ik;
         if(!it.gizli || sec(it.g.k)) engel.push({ l:gq[0]-ne, t:gq[1]-ne, r:gq[0]+ne, b:gq[1]+ne });
         return;
@@ -898,7 +902,7 @@ var veMntAkso = (function(){
         it.br.filter(function(g){ return g.levha.vz*K.d[2]<=0; }).forEach(braketCiz);
         var tq=P(tc), te=sec(t.k) ? 12*tk : 7*tk;
         if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
-        if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*tk)+'"/>';
+        if(t.k===_secili && !odak) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*tk)+'"/>';
         return;
       }
       var q=it.q, g=q.g, Y=yuzler(q.c, q.h);
@@ -942,7 +946,7 @@ var veMntAkso = (function(){
       else gSvg='<g'+ak('G', m.G.bilgi)+'>'+gIz+gAm+'</g>';
       var ge=sec('G') ? 12.5*ik : 8*ik;
       engel.push({ l:gq[0]-ge, t:gq[1]-ge, r:gq[0]+ge, b:gq[1]+ge });
-      if(_secili==='G') secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(10.5*ik)+'"/>';
+      if(_secili==='G' && !odak) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(10.5*ik)+'"/>';
     }
     if(o.yalnizHareket) return { hareket:govdeSvg+takozSvg+gSvg+secSvg, H:H, F:F };
 
