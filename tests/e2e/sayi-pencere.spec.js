@@ -90,8 +90,9 @@ for (const [modul, M] of Object.entries(MODULLER)) {
         re.lastIndex = 0;
         let m;
         while ((m = re.exec(metin))) {
-          const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
-          const ad = tur === 'sonda %' ? null : sinifla(m[0], bag);
+          const bas = Math.max(0, m.index - 30);
+          const bag = metin.slice(bas, m.index + m[0].length + 20).replace(/\s+/g, ' ');
+          const ad = tur === 'sonda %' ? null : sinifla(m[0], bag, metin.slice(bas, m.index).replace(/\s+/g, ' ').length);
           if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
           else sorun.push(`${tip}: ${tur} "${m[0]}" ⟨${bag.trim()}⟩`);
         }
