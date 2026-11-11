@@ -88,6 +88,10 @@ function _mntRepEngine(R, opts){
 // Modal frekanslardan biri (ör. roll) bu bağıntıya KONMAZ — bkz. çekirdek
 // bounceFrequency yorumu.
 // Dönüş: { fFire, fBounce, r, T (sönümlü), T0 (sönümsüz), zeta, ok }
+// KRİTER 2'NİN SINIRI: rölantide iletilebilirlik < %15 (kullanıcı kararı 2026-11-11: "bizim
+// bir TR<15 kriterimizin olması gerekiyor"). Kaynak belgenin (MSB Tank Taşıyıcı, aşağıda
+// §8.8) hedefi %50'ydi. Parametrik Analiz'in taraması AYNI sınırla (mount-katalog.js K2_T).
+var MNT_TR_SINIR = 0.15;
 function _mntRepIsolation(R, opts){
   var C=_rMountCore();
   var eng=_mntRepEngine(R, opts);
@@ -97,7 +101,7 @@ function _mntRepIsolation(R, opts){
   var fB=(C && C.bounceFrequency) ? C.bounceFrequency(R && R.mounts, m, R && R.kBasis) : NaN;   // taban modal çözümünki
   var T =(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, zeta) : NaN;
   var T0=(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, 0)    : NaN;
-  return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<0.5) };
+  return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<MNT_TR_SINIR) };
 }
 
 // Ateşleme frekansında YÖN BAŞINA iletilebilirlik ve izolasyon yüzdesi.
@@ -128,7 +132,7 @@ function _mntRepIsolation3(R, opts){
              // İzolasyon yüzdesi = (1−T)·100. T > 1'de NEGATİF çıkar ve öyle
              // bırakılır: rezonans bölgesinde titreşim azalmaz, katlanır.
              iso:(Number.isFinite(T)?(1-T)*100:NaN),
-             ok:(Number.isFinite(T) && T<0.5) };
+             ok:(Number.isFinite(T) && T<MNT_TR_SINIR) };
   });
   return { fFire:fFire, dirs:dirs };
 }
@@ -1356,7 +1360,8 @@ function _mntRepModeMatrix(modes){
 
 // §8.8 — Frekans yerleşimi + iletilebilirlik (opsiyonel; motor devri + silindir + sönüm girdisi)
 // Kriter 1: Roll modu (en yüksek rijit gövde modu) < %50 ateşleme frekansı.
-// Kriter 2: Rölantide iletilebilirlik (transmissibility) < %50 (en kötü mod belirleyici).
+// Kriter 2: Rölantide iletilebilirlik (transmissibility) < %15 (MNT_TR_SINIR; kullanıcı kararı
+// 2026-11-11 — kaynak belgenin hedefi %50'ydi).
 //
 // BU İKİ KRİTERİN KAYNAĞI (uydurma eşik değil, müşteri hedef kriteri):
 //   "MSB Tank Taşıyıcı Araç — Motor Takoz İncelemesi" (Güven YAVUZ, 11.03.2019),
@@ -1392,7 +1397,7 @@ function _mntRepFreqPlacement(R, opts){
   // Modal frekanslar bu bağıntının tabanı DEĞİLDİR — aşağıda yalnız bağlam
   // (tanı) olarak gösterilir.
   var iso=_mntRepIsolation(R, opts);
-  var fB=iso.fBounce, Tiso=iso.T, ok2=(Tiso<0.5);
+  var fB=iso.fBounce, Tiso=iso.T, ok2=(Tiso<MNT_TR_SINIR), trs='%'+_rF(MNT_TR_SINIR*100, 0);
   var Tstr=isFinite(Tiso)?('%'+_rF(Tiso*100,1)):'∞';
   // Tanı: modal bant ve bounce frekansının bant içindeki yeri.
   var fLo=modes[0].f_Hz, fHi=modes[modes.length-1].f_Hz;
@@ -1422,10 +1427,10 @@ function _mntRepFreqPlacement(R, opts){
 
   // Kriter 2 rozeti
   var cls2=ok2?'check':'warn';
-  h+='<div class="note '+cls2+'"><span class="t">'+(ok2?'Uygun':'Dikkat')+' · Kriter 2 — Rölanti iletilebilirliği &lt; %50</span>';
+  h+='<div class="note '+cls2+'"><span class="t">'+(ok2?'Uygun':'Dikkat')+' · Kriter 2 — Rölanti iletilebilirliği &lt; '+trs+'</span>';
   h+='\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> '
     +'(sönümsüz karşılığı '+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'∞')+') ';
-  h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
+  h+= ok2 ? '&lt; '+trs+' — güç grubu rölantide izole bölgede çalışır.'
          : '&ge; %50 — izolasyon yetersiz.';
   h+='</div>';
 
@@ -1451,10 +1456,9 @@ function _mntRepIso3Table(R, opts, sdof){
   h+='<tr><th>Tahrik yönü</th><th>İletilebilirlik T</th><th>İzolasyon [%]</th><th>Durum</th></tr>';
   i3.dirs.forEach(function(d){
     var st = !Number.isFinite(d.T) ? '—'
-      : (d.T<0.2 ? '<span class="ok">✓ iyi</span>'
-      : (d.T<0.5 ? '<span class="ok">✓</span>'
+      : (d.T<MNT_TR_SINIR ? '<span class="ok">✓</span>'
       : (d.T<1 ? '<span style="color:var(--warn,#7c5400)">zayıf</span>'
-               : '<span style="color:var(--warn,#7c5400)">büyütme ⚠</span>')));
+               : '<span style="color:var(--warn,#7c5400)">büyütme ⚠</span>'));
     h+='<tr><td class="l">'+_rEsc(d.name)+'</td>'
       +'<td>'+(Number.isFinite(d.T)?_rF(d.T,4):'—')+'</td>'
       +'<td>'+(Number.isFinite(d.iso)?_rFs(d.iso,2):'—')+'</td>'
@@ -1465,7 +1469,7 @@ function _mntRepIso3Table(R, opts, sdof){
     +'Tam 6 serbestlik dereceli frekans yanıtından (dönme kuplajları dâhil); '
     +'düşey tek-serbestlik kestirimi: \\( T='+(isFinite(sdof && sdof.T)?_rTeX(_rF(sdof.T,4)):'—')+' \\). '
     +'Tedarikçi raporlarındaki “<span lang="en">Isolation %</span>” sütunu (AMC, Angst+Pfister) bu büyüklüktür. '
-    +'Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); şirket kriteri (Kriter 2) \\( T&lt;0{,}5 \\). '
+    +'Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); şirket kriteri (Kriter 2) \\( T&lt;'+_rTeX(_rF(MNT_TR_SINIR, 2))+' \\). '
     +'Negatif izolasyon: ateşleme frekansı o yönde bir rezonansa denk gelir, titreşim büyür.</p>';
   return h;
 }
@@ -2161,7 +2165,7 @@ function _mntRepSoftening(R, opts){
       k1:  haveIdle ? (pl.exceed.length===0) : null,
       k1a: pl.minGapPair ? (pl.minGap > GAP_MIN) : null,
       k1b: (pl.inBand.length===0),
-      k2:  Number.isFinite(row.T) ? (row.T < 0.5) : null,
+      k2:  Number.isFinite(row.T) ? (row.T < MNT_TR_SINIR) : null,
       k2r: Number.isFinite(row.T) ? (row.T < 0.10) : null
     };
   }
@@ -2464,7 +2468,7 @@ function _mntRepConsistency(R){
 }
 
 // ═══ "Motor Takozu Uygunluğu" — analizi şirket hedef kriterlerine göre denetler ═══
-//  1) PowerPack Roll modu < %50·f_ateş  2) Rölanti transmissibility < %50
+//  1) PowerPack Roll modu < %50·f_ateş  2) Rölanti transmissibility < %15 (MNT_TR_SINIR)
 //  3) Vites başına takoz kuvvetleri kontrol  4) Maks tork·3,5g düşey·1g yanal·1g boyuna
 // ── UYGUNLUK — TEK HESAP, İKİ YÜZEY ─────────────────────────────────────────
 // Raporun uygunluk tablosu ile bileşen pencerelerinin "Uygunluk" bloğu AYNI
@@ -2523,10 +2527,10 @@ function veMntUygunluk(R, opts){
 
   // Kriter 2 — Rölanti transmissibility. §8.8 ile AYNI hesap noktası
   // (_mntRepIsolation): taban DÜŞEY (bounce) frekansıdır, modal frekans değil.
-  // İKİ EŞİK gösterilir: uygulamanın hükmü %50 kapısına göredir; kaynak
+  // İKİ EŞİK gösterilir: uygulamanın hükmü MNT_TR_SINIR kapısına göredir; kaynak
   // dokümanların (ör. ASR-SR-116) kullandığı %10 referansı da basılır ki aynı
   // sayı için iki farklı hükmün nereden geldiği görünsün.
-  var T_GATE=0.5, T_REF=0.10;
+  var T_GATE=MNT_TR_SINIR, T_REF=0.10;
   var iso=_mntRepIsolation(R, opts), c2;
   if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri ve silindir sayısı yok (Motor)'};
   else c2={st:(iso.T<T_GATE?'ok':'no'),
@@ -2559,7 +2563,7 @@ function veMntUygunluk(R, opts){
   var satirlar=[['1', 'Modal bant — tüm modlar','Modal bant','&lt; %50 · f<sub>ateş</sub>',c1],
    ['1a','Modlar arası ayrıklık','Mod ayrıklığı','&gt; 0,5 Hz',c1a],
    ['1b','Yaylandırılmamış kütle bandı','Yaylandırılmamış kütle bandı','8–10 Hz ile çakışmama',c1b],
-   ['2', 'Rölanti transmissibility','Rölanti iletilebilirliği','&lt; %50 (referans %10)',c2],
+   ['2', 'Rölanti transmissibility','Rölanti iletilebilirliği','&lt; %'+_rF(MNT_TR_SINIR*100, 0)+' (referans %10)',c2],
    ['3', 'Vites başına takoz kuvvetleri','Vites kuvvetleri','kontrol',c3],
    ['4', 'Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','Tasarım yükleri','kontrol',c4]
   ].map(function(r){ return { no:r[0], ad:r[1], kisa:r[2], hedef:r[3], st:r[4].st, bulgu:r[4].bulgu }; });
@@ -2611,7 +2615,7 @@ function _mntRepFindCase(R, name){
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
     veMntGenerateReport: veMntGenerateReport,
-    veMntUygunluk: veMntUygunluk,
+    veMntUygunluk: veMntUygunluk, MNT_TR_SINIR: MNT_TR_SINIR,
     veMntRaporOpts: veMntRaporOpts,
     _mntReportEnsureAssets: _mntReportEnsureAssets,
     _mntBuildReportHTML: _mntBuildReportHTML,

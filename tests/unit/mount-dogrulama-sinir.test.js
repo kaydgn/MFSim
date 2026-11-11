@@ -171,19 +171,20 @@ describe('Kriter 2 — §8.8 ile uygunluk tablosu aynı sayıyı ve aynı hükm�
     const R = motorlu(RA, rpm, 6);
     const iso = rp._mntRepIsolation(R, {});
     const U = rp.veMntUygunluk(R, {});
-    expect(st(U, '2')).toBe(iso.T < 0.5 ? 'ok' : 'no');
+    expect(st(U, '2')).toBe(iso.T < rp.MNT_TR_SINIR ? 'ok' : 'no');
     // Tablo sayıyı Türkçe yazar ve sondaki sıfırı atar ("%3"); yazılan sayı ayrıştırılıp kıyaslanır.
     const yazilan = /T=<b>%([0-9.,]+)<\/b>/.exec(U.satirlar.find((s) => s.no === '2').bulgu);
     expect(yazilan).not.toBeNull();
     expect(Math.abs(veSayiOku(yazilan[1]) - iso.T * 100)).toBeLessThanOrEqual(0.05 + 1e-9);
   });
 
-  // Eşiğin kendisi: yukarıdaki dört devirde T eşiğe yakın değil, yani eşik 0,6'ya
-  // kaysa hiçbiri düşmezdi (mutasyonla ölçüldü). Devir, T = 0,5·(1 ± %1) olacak
-  // biçimde SDOF bağıntısının tersinden kurulur (r > √2'de T azalan → ikiye bölme).
+  // Eşiğin kendisi: yukarıdaki dört devirde T eşiğe yakın değil, yani eşik kaysa
+  // hiçbiri düşmezdi (mutasyonla ölçüldü). Devir, T = sınır·(1 ± %1) olacak biçimde
+  // (sınır %15, kullanıcı 2026-11-11) SDOF bağıntısının tersinden kurulur (r > √2'de T
+  // azalan → ikiye bölme).
   test.each([['eşiğin %1 üstünde → kontrol', 1.01, 'no'], ['eşiğin %1 altında → uygun', 0.99, 'ok']])('T %s', (ad, k, beklenen) => {
     const iso0 = rp._mntRepIsolation(RA, {});
-    const hedef = 0.5 * k;
+    const hedef = rp.MNT_TR_SINIR * k;
     let a = Math.SQRT2 * 1.0001, b = 20;
     for (let i = 0; i < 200; i++) {
       const c = (a + b) / 2;

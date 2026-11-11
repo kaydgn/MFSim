@@ -182,7 +182,10 @@ var veMntKatalog = (function() {
                           isletme:true, durdurucu:true, cekme:true, darbe:true, tolerans:false };
   // Geçerli aralık [alt, üst, alt dâhil değil mi]; listede olmayan sınır > 0.
   var SINIR_ARALIK = { agirlik:[0, 1], surunme:[0, 1], tolerans:[0, 0.5, true] };
-  var K1_ORAN = 0.5, K1A_HZ = 0.5, K1B = [8, 10], K2_T = 0.5;
+  // Kriter 2'nin sınırı: rölantide iletilebilirlik < %15 (kullanıcı kararı 2026-11-11: "bizim bir
+  // TR<15 kriterimizin olması gerekiyor"; MSB Tank Taşıyıcı belgesinin hedefi %50'ydi). Ana
+  // raporun sınırıyla AYNI (cp-mount-report.js → MNT_TR_SINIR; kapı mount-param.test.js → AYNI HÜKÜM).
+  var K1_ORAN = 0.5, K1A_HZ = 0.5, K1B = [8, 10], K2_T = 0.15;
 
   // o (aşama 1): { f:[Hz], T, dz:[mm] (statik düşey sehim, basma eksi), pay:[kg],
   //                kap:[kg|null], ked:{bounce, roll} (0–1) | null, sert?, yumusak? }

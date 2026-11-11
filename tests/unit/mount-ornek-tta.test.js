@@ -457,11 +457,12 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
     expect([2, 3, 4, 5].map((i) => +dz(g1, i).toFixed(2))).toEqual([3.6, -6.37, 3.59, -6.38]);
     expect([2, 3, 4, 5].map((i) => +dz(gR, i).toFixed(2))).toEqual([-7.34, 4.56, -7.34, 4.56]);
   });
-  test('kriterler (rölanti 800 → f_ateş 40 Hz, sınır 20 Hz): 1 değil — yalpalama 21,07 Hz; 1b değil — 3. mod 8,73 Hz bantta; 1a · 2 · 3 · 4 · 5 uygun', () => {
+  // Kriter 2'nin sınırı %15 (kullanıcı 2026-11-11): TR %16,6 — %50 sınırında uygundu.
+  test('kriterler (rölanti 800 → f_ateş 40 Hz, sınır 20 Hz): 1 değil — yalpalama 21,07 Hz; 1b değil — 3. mod 8,73 Hz bantta; 2 değil — TR %16,6 ≥ %15; 1a · 3 · 4 · 5 uygun', () => {
     expect(R.modes.map((m) => [+m.f_Hz.toFixed(2), m.label])).toEqual([[7.18, 'lateral+yaw'], [7.95, 'fore-aft'],
       [8.73, 'yaw+lateral'], [12.22, 'pitch'], [15.27, 'bounce'], [21.07, 'roll']]);
     const U = rep.veMntUygunluk(R);
-    expect(U.satirlar.map((s) => [s.no, s.st])).toEqual([['1', 'no'], ['1a', 'ok'], ['1b', 'no'], ['2', 'ok'], ['3', 'ok'], ['4', 'ok'], ['5', 'ok']]);
+    expect(U.satirlar.map((s) => [s.no, s.st])).toEqual([['1', 'no'], ['1a', 'ok'], ['1b', 'no'], ['2', 'no'], ['3', 'ok'], ['4', 'ok'], ['5', 'ok']]);
     const duz = (no) => U.satirlar.find((s) => s.no === no).bulgu.replace(/<[^>]+>/g, '');
     expect(duz('1')).toContain('mod 6 21,07 Hz');
     expect(duz('1')).toContain('= 20 Hz');

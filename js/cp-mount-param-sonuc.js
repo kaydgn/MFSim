@@ -1124,7 +1124,7 @@ function _mntParamExcelPlan(ent, H){
   var sehim=function(o){ var m=-Infinity; ((o && o.dz) || []).forEach(function(v){ if(Math.abs(v)>m) m=Math.abs(v); }); return m>-Infinity ? m : NaN; };
   var eng=M.eng || {}, sv=M.solver || { data:{} };
   var adayAd=(D.adaylar || []).map(function(a){ return a.name; });
-  var E={ baslik:'Takoz konfigürasyonları', fAtes:M.fAtes, rolanti:eng.idleRpm, silindir:eng.cylinders,
+  var E={ baslik:'Takoz konfigürasyonları', fAtes:M.fAtes, trSinir:veMntKatalog.K2_T, rolanti:eng.idleRpm, silindir:eng.cylinders,
           zeta:_mntZetaOf(sv), kutle:NaN, gruplar:M.G.map(function(g){ return g.ad; }),
           takozlar:M.gather.mounts.map(function(m, i){ return { ad:m.name, grup:grupOf[i] }; }),
           konfig:[], tarama:{ N:0, gruplar:D.taranan.slice(), adaylar:D.taranan.map(function(){ return adayAd; }), satirlar:[], veri:null } };

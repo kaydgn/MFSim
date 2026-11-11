@@ -256,9 +256,10 @@ describe('Motor takozu uygunluğu (hedef kontrolü)', () => {
     expect(h).toContain('0,2');              // en küçük ayrıklık 0,2 Hz → 1a kırmızı
     expect(h).toContain('mod 3 9,4 Hz');     // 8–10 Hz bandında → 1b kırmızı
   });
-  test('Kriter 2 hem %50 kapısını hem %10 referansını basar', () => {
+  test('Kriter 2 hem %15 kapısını (kullanıcı 2026-11-11) hem %10 referansını basar', () => {
     const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
-    expect(h).toContain('%50 (referans %10)');
+    expect(rep.MNT_TR_SINIR).toBe(0.15);
+    expect(h).toContain('%15 (referans %10)');
     expect(h).toMatch(/%10 referans eşiğin(in üzerinde|i de sağlıyor)/);
   });
   test('idle girdisi yoksa kriter 1&2 bekliyor; 3&4 değerlendirilir', () => {

@@ -1706,7 +1706,7 @@ function _gmSec17(){
     k1: 'bütün modlar &lt; 0,5·f<sub>ateş</sub>',
     k1a: 'komşu iki mod arası &gt; 0,5 Hz',
     k1b: 'hiçbir mod 8–10 Hz bandında değil',
-    k2: 'TR(f<sub>ateş</sub>) &lt; %50'
+    k2: 'TR(f<sub>ateş</sub>) &lt; %' + _gmF(K.K2_T * 100, 0)
   };
   h += _gmTablo('Kesin kriterler', ['No', 'Kriter', 'Ölçüt'],
     K.KISITLAR.filter(function(x){ return x.zorunlu; }).map(function(x){
@@ -1781,7 +1781,7 @@ function _gmSec17(){
       'Dolu işaret uygun, boş işaret uygun değil; halka K1'],
     ['Kriter haritaları', 'Kesitte kriter başına bir harita: dolu hücre kriteri sağlıyor; son harita dördünün '
       + 'kesişimi', 'Kesitin her hücresinde sağlanan kriterler haritaların altında adlarıyla'],
-    ['İletilebilirlik haritası', 'Kesitte hücre rengi T (%10 adım; en koyu sınıf Kriter 2’nin ötesi); çizgi '
+    ['İletilebilirlik haritası', 'Kesitte hücre rengi T (sınıflar %5 · 10 · 15 · 20 · 30; %15 Kriter 2’nin sınırı); çizgi '
       + 'Kriter 1 sınırı', 'Dolu daire dört kriteri sağlayan hücre'],
     ['Kriter penceresi', '3B: δ<sub>s</sub>, en yüksek mod f<sub>maks</sub> ve T; kesikli kutu Kriter 1 ve '
       + 'Kriter 2’nin bıraktığı pencere', 'Kutudaki nokta Kriter 1a ya da 1b’yi bozuyorsa uygun değildir'],

@@ -83,8 +83,8 @@ describe('_mntRepIsolation3 — yön başına iletilebilirlik', () => {
     i4.dirs.forEach((d) => expect(d.iso).toBeCloseTo((1 - d.T) * 100, 9));
   });
 
-  test('şirket kriteri (T < 0,5) yön başına işaretlenir', () => {
-    i3.dirs.forEach((d) => expect(d.ok).toBe(d.T < 0.5));
+  test('şirket kriteri (Kriter 2, T < 0,15) yön başına işaretlenir', () => {
+    i3.dirs.forEach((d) => expect(d.ok).toBe(d.T < rep.MNT_TR_SINIR));
   });
 
   test('motor tanımı yoksa hesap HİÇ yapılmaz', () => {
