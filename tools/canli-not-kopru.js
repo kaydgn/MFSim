@@ -471,7 +471,9 @@
         win.clearSelection();
         win.addToSelection(n);
         win.veTogglePropertiesPanel(true);
-        return kosul(function () { return win.document.getElementById('ve-mnt-param-btn-' + n.id); }, 15000);
+        // Pencere bileşenin: kitin kökü (data-mnt-pencere) açık sütunda — içeriği ne olursa olsun
+        // (Canlı Not 1001'den beri pencere boş, yeniden kuruluyor).
+        return kosul(function () { return win.document.querySelector('.ve-properties-content [data-mnt-pencere="' + n.id + '"]'); }, 15000);
       }).then(function () { return { tip: TIP, id: n.id, kurulan: kurulan }; });
     }
   };

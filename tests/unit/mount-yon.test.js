@@ -49,7 +49,7 @@ describe('Parametrik Analiz: Tara kapalıyken sebebine bağlı', () => {
     delete m.data.idleRpm; delete m.data.cylinders;
     const n = pnode();
     expect(P._mntParamHazirlik(n).eksik).toBe('Rölanti devri ve silindir sayısı yok');
-    const { b, metin } = bagli(dom(P.getMntParamPropertiesHTML(n)), '#ve-mnt-param-btn-pa');
+    const { b, metin } = bagli(dom(P._mntParamEskiPencereHTML(n)), '#ve-mnt-param-btn-pa');
     expect(b.disabled).toBe(true);
     expect(metin).toBe('Rölanti devri ve silindir sayısı yok. Motor penceresinde girin.');
   });
@@ -57,13 +57,13 @@ describe('Parametrik Analiz: Tara kapalıyken sebebine bağlı', () => {
     modelKur('kamyon');
     const n = pnode();
     P.veMntParamAdayHepsi('pa', false);
-    const { b, metin } = bagli(dom(P.getMntParamPropertiesHTML(n)), '#ve-mnt-param-btn-pa');
+    const { b, metin } = bagli(dom(P._mntParamEskiPencereHTML(n)), '#ve-mnt-param-btn-pa');
     expect(b.disabled).toBe(true);
     expect(metin).toBe('Aday tip yok');
   });
   test('hazırken Tara açık ve bağsız', () => {
     modelKur('kamyon');
-    const b = dom(P.getMntParamPropertiesHTML(pnode())).querySelector('#ve-mnt-param-btn-pa');
+    const b = dom(P._mntParamEskiPencereHTML(pnode())).querySelector('#ve-mnt-param-btn-pa');
     expect(b.disabled).toBe(false);
     expect(b.hasAttribute('aria-describedby')).toBe(false);
   });

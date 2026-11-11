@@ -242,7 +242,7 @@ describe('KOŞUCU', () => {
     global.vePencereIlerleme = (id, il) => { if (il) iz.push([il.metin, il.oran]); return PK.vePencereIlerleme(id, il); };
     global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
     const n = global.nodes.find((x) => x.id === 'pa');
-    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    document.body.innerHTML = '<div class="ve-properties-content">' + P._mntParamEskiPencereHTML(n) + '</div>';
     expect(document.querySelector('.ve-fp-kat[data-k="sonuc"] button[data-excel]').textContent).toMatch(/Excel’i indir/);
     const p1 = PS.veMntParamExcelIndir('pa');
     const p2 = await PS.veMntParamExcelIndir('pa');

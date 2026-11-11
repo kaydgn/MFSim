@@ -142,8 +142,17 @@ function dom(html) { const d = document.createElement('div'); d.innerHTML = html
 // raporda) ve sütun içeriği varsa çizilir — yoksa kabuk tek sütun.
 const takozTipi = (t) => !!t && (/^mnt-/.test(t) || t === 'mount-analysis');
 const uygunlukVar = (el) => [...el.querySelectorAll('.ve-fp-sect b')].some((x) => x.textContent.trim() === 'Uygunluk');
+// BOŞ PENCERE — kullanıcının kararıyla bölümsüz pencere (Canlı Not 1001: Parametrik Analiz
+// "Her şeyi kaldıralım. Adım adım kurgulayacağız"). Listedeki tipin penceresi BOŞ olmak
+// zorunda: yeniden kurulumda ilk bölüm girince tip listeden çıkar.
+const BOS_PENCERE = ['mnt-parametric'];
 function aile(d, t) {
   const b = [];
+  if (BOS_PENCERE.indexOf(t) >= 0) {
+    const g = d.querySelector('.ve-fp .ve-fp-govde');
+    if (!g || g.children.length || d.querySelector('.ve-fp-side')) b.push('boş pencere bölüm taşıyor — tipi BOS_PENCERE’den çıkarın');
+    return b;
+  }
   const fp = d.querySelector('.ve-fp');
   if (!fp) return ['kabuk yok'];
   if (!fp.firstElementChild || !fp.firstElementChild.classList.contains('ve-fp-split')) b.push('kabuktan önce şerit');
@@ -376,22 +385,8 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     TAKOZ_TIP.forEach((t) => topla(takozPencere(t)));
     const govde = global.nodes.find((n) => n.type === 'mnt-motor');
     const nk = govde.data.pointMass; govde.data.pointMass = true; topla(takozPencere('mnt-motor')); govde.data.pointMass = nk;
-    // Parametrik Analiz'in Sonuç bölümleri yalnız taramadan sonra: ASFAT, üç
-    // grup × dört aday (64 kombinasyon) — konfigürasyonlar, seçilen K, iki grafik,
-    // kriterleri sağlayan ve diyagramların listesi (diyagramlar galeride).
-    global.nodes = JSON.parse(oku('assets/examples/asfat_topoloji.json')).nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
-    const tutulan = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116'];
-    const pn = { id: 'pa-k', type: 'mnt-parametric', data: {
-      haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => tutulan.indexOf(k) < 0) } };
-    global.nodes.push(pn);
-    const Hz = pa._mntParamHazirlik(pn), O = pa._mntParamOlcucu(Hz.M, global.veMntKatalog.baglam(Hz.ctx));
-    const it = global.veMntKatalog.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2 });
-    it.adim(Infinity);
-    ps._mntParamSonucKaydet(pn.id, Hz, O, it.depo());
-    const sonuc = dom(getMntParamPropertiesHTML(pn));
-    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(6);
-    topla(sonuc);
-    expect(basliklar.size).toBeGreaterThan(40);                       // tarama gerçekten taradı
+    // Parametrik Analiz'in penceresi BOŞ (Canlı Not 1001): bölüm başlığı vermez;
+    // kılavuzun Ek A'sı da onun bölümlerini anmaz.
     // 3D Görüntüleyici'nin dosyalı bölümleri (Parçalar · Kütle · Model): güç
     // grubu, roller ve hesap — dosyasız pencere yalnız "STEP dosyası"nı taşır
     const STP = require('../../js/mount-step.js');

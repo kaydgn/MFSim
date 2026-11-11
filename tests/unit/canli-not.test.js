@@ -1501,8 +1501,8 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
       ['nodes', 'componentDefs', 'veMntStack'].forEach((g) => expect([g, new RegExp('^var ' + g + '\\b', 'm').test(js)]).toEqual([g, true]));
       const ornek = /ORNEK = '([a-z]+)'/.exec(kaynak)[1];
       expect(fs.readFileSync(path.join(KOK, 'js', 'mount-core.js'), 'utf8')).toMatch(new RegExp('\\n {4}' + ornek + ': \\{'));
-      expect(kaynak).toContain("'ve-mnt-param-btn-'");                  // pencerenin Tara düğmesi
-      expect(fs.readFileSync(path.join(KOK, 'js', 'cp-mount-param.js'), 'utf8')).toContain("ve-mnt-param-btn-'");
+      expect(kaynak).toContain('.ve-properties-content [data-mnt-pencere=');   // pencerenin kökü (içeriğinden bağımsız)
+      expect(fs.readFileSync(path.join(KOK, 'js', 'cp-mount.js'), 'utf8')).toContain("nitelik:' data-mnt-pencere=\"'+node.id+'\"'");
     });
     expect(CN.odakBul('yok')).toBeNull();
     expect(CN.odakBul('toString')).toBeNull();
@@ -1524,10 +1524,15 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
   // çerçevesi) işlevler ona takılır ve gerçek belge kullanılır.
   function sahteProgram(o, w) {
     o = o || {};
-    w = w || { document: { getElementById: (id) => w.__dom[id] || null }, setTimeout: (f, ms) => setTimeout(f, Math.min(ms, 5)) };
+    w = w || { document: { getElementById: (id) => w.__dom[id] || null, querySelector: (q) => w.__dom[q] || null },
+      setTimeout: (f, ms) => setTimeout(f, Math.min(ms, 5)) };
     w.__dom = {};
     const gercek = typeof w.document.createElement === 'function';
-    const dugumYaz = (id) => { if (gercek) { const e = w.document.createElement('button'); e.id = id; w.document.body.appendChild(e); } else w.__dom[id] = {}; };
+    const pencereYaz = (id) => {                                      // açık sütunda bileşenin penceresi (kitin kökü)
+      if (!gercek) { w.__dom['.ve-properties-content [data-mnt-pencere="' + id + '"]'] = {}; return; }
+      const k = w.document.createElement('div'); k.className = 've-properties-content';
+      k.innerHTML = '<div data-mnt-pencere="' + id + '"></div>'; w.document.body.appendChild(k);
+    };
     if (o.karsilama) { if (gercek) { const e = w.document.createElement('div'); e.id = 've-module-overlay'; w.document.body.appendChild(e); } else w.__dom['ve-module-overlay'] = { style: { display: 'flex' } }; }
     Object.assign(w, {
       nodes: (o.nodes || []).slice(), veMntStack: o.takozda ? [{}] : [], cagri: [], secili: null,
@@ -1552,7 +1557,7 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     w.veStateResetBaseline = () => w.cagri.push(['taban']);
     w.clearSelection = () => { w.secili = null; };
     w.addToSelection = (n) => { w.secili = n; };
-    w.veTogglePropertiesPanel = (acik) => { w.cagri.push(['pencere', acik, w.secili && w.secili.id]); if (w.secili) dugumYaz('ve-mnt-param-btn-' + w.secili.id); };
+    w.veTogglePropertiesPanel = (acik) => { w.cagri.push(['pencere', acik, w.secili && w.secili.id]); if (w.secili) pencereYaz(w.secili.id); };
     return w;
   }
   const tarif = (w) => K.ODAKLAR.parametrik(w);
@@ -1613,7 +1618,7 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     window.removeEventListener('message', dinle);
     expect(gelen.find((m) => m.no === 1).veri).toEqual({ tip: 'mnt-parametric', id: 'p3', kurulan: false });
     expect(gelen.find((m) => m.no === 2).veri).toEqual({ hata: 'odak yok: yok' });
-    expect(w.document.getElementById('ve-mnt-param-btn-p3')).not.toBeNull();
+    expect(w.document.querySelector('.ve-properties-content [data-mnt-pencere="p3"]')).not.toBeNull();
   });
 
   test('sayfa: odaklı sayfanın adı kendi başlığı; denetim onu tanır ve güncel bulur; şablon değişince ESKİ', () => {

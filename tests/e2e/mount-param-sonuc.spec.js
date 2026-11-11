@@ -13,7 +13,10 @@
  *     3B gerçek fareyle ve oklarla döner; kesit seçicisi haritayı değiştirir;
  *     ✕ kapatır, pencere yerinde kalır
  *   · Modele uygula gerçek tıkla takozlara yazar, tek geri-al adımı, Ctrl+Z
- * Yerleşim ve kontrast ölçüsü yüzey turunda (yuzey-turu.js → takozTuru).
+ * PARKTA (kullanıcı 2026-11-11, Canlı Not 1001: pencere boş, adım adım yeniden kuruluyor):
+ * pencere bölüm taşımıyor; spec eski pencereyi (_mntParamEskiPencereHTML) yerine koyar —
+ * tarama, Sonuç, Excel ve kitin eylem satırı gerçek tarayıcıda sınanmaya devam eder.
+ * Yerleşim ve kontrast ölçüsü yüzey turunda (yuzey-turu.js → takozTuru: yalnız boş pencere).
  */
 const { test, expect } = require('@playwright/test');
 const { githubFikstur } = require('./helpers/github-fikstur');
@@ -32,6 +35,7 @@ async function kur(page, nTip = 6) {
     && typeof window.veMntParamTara === 'function' && Array.isArray(window.nodes), null, { timeout: 90000 });
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
+  await page.evaluate(() => { window.getMntParamPropertiesHTML = window._mntParamEskiPencereHTML; });   // parkta: eski pencere
   await page.evaluate(() => { veMntOrnekYukle('asfat'); });
   await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('57RS') >= 0), null, { timeout: 20000 });
   await page.waitForTimeout(500);
