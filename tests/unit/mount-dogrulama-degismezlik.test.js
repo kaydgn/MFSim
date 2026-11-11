@@ -44,13 +44,15 @@ const tabanK = (R) => R.kBasis || R.mounts.map((m) => m.kdyn);
 const yok = () => {};
 
 // Takozun ilettiği kuvvet — HAKEM yazımı: yasa (fit) ya da lineer k_stat, artı
-// aktif durdurucu teması k_stop·(δz ∓ gap), k_stop = 100·k_z,stat.
-function kuvvetHakem(mt, d, clamped) {
+// aktif durdurucu teması k_stop·(δz ∓ gap), k_stop = 100·k_z,stat; yanal (F006)
+// teması k_stop·(δy ∓ gapY), k_stop = 100·k_y,stat.
+function kuvvetHakem(mt, d, clamped, clampedY) {
   const f = [0, 1, 2].map((a) => {
     const fit = mt.fits && mt.fits[['x', 'y', 'z'][a]];
     return fit ? H.fitKuvvet(fit, d[a] * 1000) : mt.kstat[a] * d[a];
   });
   if (clamped) f[2] += ORAN * mt.kstat[2] * (d[2] - Math.sign(d[2]) * GAP);
+  if (clampedY) f[1] += ORAN * mt.kstat[1] * (d[1] - Math.sign(d[1]) * mt.gapY);
   return f;
 }
 
@@ -94,7 +96,7 @@ describe.each(MODELLER.map((M) => [M.ad, M]))('%s', (ad, M) => {
   test('6 bileşenli denge Σ Aᵀf = F — kuvvetler HAKEM yasasıyla, durdurucu dâhil', () => {
     let enBuyuk = 0;
     tum(R).forEach((rc) => {
-      const fList = rc.res.perMount.map((pm, i) => kuvvetHakem(R.mounts[i], pm.delta, pm.clamped));
+      const fList = rc.res.perMount.map((pm, i) => kuvvetHakem(R.mounts[i], pm.delta, pm.clamped, pm.clampedY));
       const s = H.genelKuvvet(R.mounts, R.mp.cg, fList);
       const olc = H.norm(rc.res.F) + R.mp.m * G;
       enBuyuk = Math.max(enBuyuk, H.norm(s.map((v, c) => v - rc.res.F[c])) / olc);
@@ -169,7 +171,7 @@ describe.each(MODELLER.map((M) => [M.ad, M]))('%s', (ad, M) => {
     let n = 0;
     R.allCases.forEach((rc) => {
       const rb = bul(RB, rc.name).res;
-      if (rc.res.checks.clampCount || rb.checks.clampCount) return;
+      if (rc.res.checks.clampCount || rb.checks.clampCount || rc.res.checks.clampYCount || rb.checks.clampYCount) return;
       rc.res.perMount.forEach((pm, i) => pm.delta.forEach((v, k) => expect(Math.abs(rb.perMount[i].delta[k] - a * v)).toBeLessThan(1e-12)));
       n++;
     });
@@ -186,7 +188,7 @@ describe.each(MODELLER.map((M) => [M.ad, M]))('%s', (ad, M) => {
     let n = 0;
     R.allCases.forEach((rc) => {
       const rb = bul(RB, rc.name).res;
-      if (rc.res.checks.clampCount || rb.checks.clampCount) return;
+      if (rc.res.checks.clampCount || rb.checks.clampCount || rc.res.checks.clampYCount || rb.checks.clampYCount) return;
       rc.res.perMount.forEach((pm, i) => pm.delta.forEach((v, k) => expect(Math.abs(rb.perMount[i].delta[k] - v / b)).toBeLessThan(1e-12)));
       n++;
     });

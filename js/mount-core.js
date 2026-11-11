@@ -481,6 +481,13 @@ var veMountCore = (function() {
   const STOP_STIFF_RATIO = 100;      // k_stop / kz (Adams BMC_TTAR_2031 kalibrasyonu)
   const STOP_MAXITER = 50;           // aktif-küme üst sınırı (tipik 1-3 iterasyon)
 
+  // ── YANAL (y) durdurucu — takoz başına, isteğe bağlı (F006) ──
+  // mnt.gapY [m] > 0 ise takozun yanal sehimi ±gapY'de aynı biçimde temasa oturur:
+  // k_stop = ratio·ky. Tanımsız ya da ≤ 0 → yanal durdurucu YOK (eski davranış birebir).
+  // Kaynak: Tulga Adams tablosu, Kerb Strike satırlarında ön takozlar ±12,0 mm'de kesiliyor.
+  function stopGapY(mnt){ const g=mnt && mnt.gapY; return (g > 0) ? g : 0; }
+  function stopWant(d, g){ return (d < -g) ? -1 : (d > g) ? +1 : 0; }
+
   // Durduruculu tek yük durumu çözümü. Küçük sehimde solveCase ile AYNI sonucu
   // verir (hiçbir takoz gap'i aşmaz → aktif küme boş → saf lineer). Dönüş
   // solveCase ile aynı biçim + perMount[i].clamped, checks.clampCount, stopConverged.
@@ -490,12 +497,13 @@ var veMountCore = (function() {
     const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
     const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
     // Takoz kinematik matrisleri + düşey (z) satırları (bir kez hesapla).
-    const A=[], az=[];
+    const A=[], az=[], ay=[], gY=[];
     for(const mnt of mounts){
       const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
-      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]);
+      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]); ay.push(Ai[1]); gY.push(stopGapY(mnt));
     }
     const active = new Array(mounts.length).fill(0);   // 0 / −1 (alt) / +1 (üst)
+    const activeY = new Array(mounts.length).fill(0);  // yanal: 0 / −1 / +1
     let q=null, converged=false;
     for(let iter=0; iter<STOP_MAXITER; iter++){
       // K_eff = Kstat + Σ_aktif k_stop·(az⊗az) ; rhs = F + Σ k_stop·(sgn·gap)·az
@@ -504,6 +512,11 @@ var veMountCore = (function() {
       for(let i=0;i<mounts.length;i++){
         if(!active[i]) continue;
         const kS = mounts[i].kstat[2]*ratio, r=az[i], dg=active[i]*gap;
+        for(let a=0;a<6;a++){ for(let b=0;b<6;b++) K[a][b]+=kS*r[a]*r[b]; rhs[a]+=kS*dg*r[a]; }
+      }
+      for(let i=0;i<mounts.length;i++){
+        if(!activeY[i]) continue;
+        const kS = mounts[i].kstat[1]*ratio, r=ay[i], dg=activeY[i]*gY[i];
         for(let a=0;a<6;a++){ for(let b=0;b<6;b++) K[a][b]+=kS*r[a]*r[b]; rhs[a]+=kS*dg*r[a]; }
       }
       q = solveLinear(K, rhs);
@@ -518,18 +531,24 @@ var veMountCore = (function() {
         const dz = az[i].reduce((s,a,j)=>s+a*q[j],0);
         const want = (dz < -gap) ? -1 : (dz > gap) ? +1 : 0;
         if(want !== active[i]){ active[i]=want; changed=true; }
+        if(gY[i]){
+          const wy = stopWant(ay[i].reduce((s,a,j)=>s+a*q[j],0), gY[i]);
+          if(wy !== activeY[i]){ activeY[i]=wy; changed=true; }
+        }
       }
       if(!changed){ converged=true; break; }
     }
     // Sonuç kur — dibe oturan takozda fz = kz·δz + k_stop·(δz∓gap) (temas dahil).
     const perMount=[]; const sumF=[0,0,0];
-    let tensionCount=0, overLinearCount=0, clampCount=0;
+    let tensionCount=0, overLinearCount=0, clampCount=0, clampYCount=0;
     for(let i=0;i<mounts.length;i++){
       const mnt=mounts[i];
       const delta=[0,1,2].map(k=>A[i][k].reduce((s,a,j)=>s+a*q[j],0));
       let fz = mnt.kstat[2]*delta[2];
       if(active[i]) fz += mnt.kstat[2]*ratio*(delta[2]-active[i]*gap);
-      const f=[mnt.kstat[0]*delta[0], mnt.kstat[1]*delta[1], fz];
+      let fy = mnt.kstat[1]*delta[1];
+      if(activeY[i]) fy += mnt.kstat[1]*ratio*(delta[1]-activeY[i]*gY[i]);
+      const f=[mnt.kstat[0]*delta[0], fy, fz];
       for(let k=0;k<3;k++) sumF[k]+=f[k];
       const tension = delta[2] > TENSION_EPS_M;
       if(tension) tensionCount++;
@@ -537,12 +556,14 @@ var veMountCore = (function() {
       if(overLinear) overLinearCount++;
       const clamped = active[i] !== 0;
       if(clamped) clampCount++;
-      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped});
+      const clampedY = activeY[i] !== 0;
+      if(clampedY) clampYCount++;
+      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped, clampedY});
     }
     const checks={
       sumFzOk: Math.abs(sumF[2]-F[2]) < 1e-3*Math.max(1,Math.abs(F[2])),
       sumFzResidual: sumF[2]-F[2],
-      tensionCount, overLinearCount, clampCount, stopConverged: converged
+      tensionCount, overLinearCount, clampCount, clampYCount, stopConverged: converged
     };
     return {q, F, perMount, sumF, checks};
   }
@@ -578,12 +599,13 @@ var veMountCore = (function() {
     const onIter = (typeof opts.onIter === 'function') ? opts.onIter : null;  // (iter, ‖r‖) — ilerleme/yakınsama izi
     const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
     const N=mounts.length;
-    const A=[], az=[], laws=[];
+    const A=[], az=[], ay=[], gY=[], laws=[];
     for(const mnt of mounts){
       const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
-      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]); laws.push(mountStaticLaws(mnt));
+      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]); ay.push(Ai[1]); gY.push(stopGapY(mnt)); laws.push(mountStaticLaws(mnt));
     }
     const active = new Array(N).fill(0);             // 0 / −1 (alt) / +1 (üst) durdurucu
+    const activeY = new Array(N).fill(0);            // yanal durdurucu (gapY > 0 olan takozda)
     const Fscale = norm(F) + m*g + 1;
     const tol = NL_RTOL * Fscale;
 
@@ -603,6 +625,11 @@ var veMountCore = (function() {
           const kS=mounts[i].kstat[2]*ratio;
           fz += kS*(d2-active[i]*gap);
           if(wantK) kz += kS;
+        }
+        if(useStop && activeY[i]){                   // yanal durdurucu (y ekseni)
+          const kS=mounts[i].kstat[1]*ratio;
+          fy += kS*(d1-activeY[i]*gY[i]);
+          if(wantK) ky += kS;
         }
         for(let a=0;a<6;a++) g6[a]+=Ai[0][a]*fx+Ai[1][a]*fy+Ai[2][a]*fz;
         if(wantK){
@@ -649,28 +676,35 @@ var veMountCore = (function() {
         const dz=az[i].reduce((s,a,j)=>s+a*q[j],0);
         const want=(dz<-gap)?-1:(dz>gap)?+1:0;
         if(want!==active[i]){ active[i]=want; changed=true; }
+        if(gY[i]){
+          const wy=stopWant(ay[i].reduce((s,a,j)=>s+a*q[j],0), gY[i]);
+          if(wy!==activeY[i]){ activeY[i]=wy; changed=true; }
+        }
       }
       if(!changed){ stopConverged=true; break; }
     }
     // ── Sonuç kur (solveCaseStop ile AYNI biçim; kuvvet yasadan, durdurucu dahil) ──
     const perMount=[]; const sumF=[0,0,0];
-    let tensionCount=0, overLinearCount=0, clampCount=0;
+    let tensionCount=0, overLinearCount=0, clampCount=0, clampYCount=0;
     for(let i=0;i<N;i++){
       const mnt=mounts[i], law=laws[i];
       const delta=[0,1,2].map(k=>A[i][k].reduce((s,a,j)=>s+a*q[j],0));
       let fz=law[2].force(delta[2]);
       if(useStop && active[i]) fz += mnt.kstat[2]*ratio*(delta[2]-active[i]*gap);
-      const f=[law[0].force(delta[0]), law[1].force(delta[1]), fz];
+      let fy=law[1].force(delta[1]);
+      if(useStop && activeY[i]) fy += mnt.kstat[1]*ratio*(delta[1]-activeY[i]*gY[i]);
+      const f=[law[0].force(delta[0]), fy, fz];
       for(let k=0;k<3;k++) sumF[k]+=f[k];
       const tension = delta[2] > TENSION_EPS_M;      if(tension) tensionCount++;
       const overLinear = delta.some(dv => Math.abs(dv) > LINEAR_LIMIT_M); if(overLinear) overLinearCount++;
       const clamped = active[i] !== 0;               if(clamped) clampCount++;
-      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped});
+      const clampedY = activeY[i] !== 0;             if(clampedY) clampYCount++;
+      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped, clampedY});
     }
     const checks={
       sumFzOk: Math.abs(sumF[2]-F[2]) < 1e-3*Math.max(1,Math.abs(F[2])),
       sumFzResidual: sumF[2]-F[2],
-      tensionCount, overLinearCount, clampCount,
+      tensionCount, overLinearCount, clampCount, clampYCount,
       stopConverged, converged, newtonIters
     };
     return {q, F, perMount, sumF, checks};

@@ -44,13 +44,16 @@
  * raporun ilgili sayfası ya da Adams modelinin girdi dosyasıdır. Cevap
  * geldiğinde: doğrulanırsa bu fikstür güncellenir, çürütülürse katalog.
  *
- * ── ADAMS'TA OLUP MFSim'DE OLMAYAN ŞEY ──────────────────────────────────────
- * Girdi farkı değil MODEL farkı; iki Adams tablosu da hemfikir:
- *   YANAL DURDURUCU — Kerb Strike satırlarında ön takozların Y'si ~12 mm'de
- *      duruyor: Tablo 1'de dört hücrenin üçü tam ±12,0, biri 11,9; Tablo 2'de
- *      dördü de tam ±12,0. MFSim'de yalnız düşey (±15 mm) durdurucu olduğu için
- *      o değerleri aşıyor (12,05 … 12,56) ve ön takozlar dibe oturmadığı için
- *      arka takozlara yük dağılmıyor (Adams ~9,7 mm, MFSim ~7,5 mm).
+ * ── YANAL DURDURUCU — örnekte de var (F006, 2026-11-11) ────────────────────
+ *   Kerb Strike satırlarında ön takozların Y'si ~12 mm'de duruyor: Tablo 1'de
+ *      dört hücrenin üçü tam ±12,0, biri 11,9; Tablo 2'de dördü de tam ±12,0.
+ *      Örneğin iki ön takozuna 12 mm yanal boşluk girildi (`bosY`, kaynağı
+ *      `bosYKaynak`'ta); durdurucusuz 12,05 … 12,56 olan değerler 12,00–12,01.
+ *   AÇIK FARK — arka takozların yanal sehimi Adams'ta ~9,7 mm, programda
+ *      durdurucuyla da ~7,6 mm (durdurucusuz ~7,5); Adams'ın X sehimi de iki
+ *      katı. Adams gövdeyi düşey eksen çevresinde daha çok döndürüyor; sebebi
+ *      durdurucu değil, bilinmiyor. 12 mm Adams'ın SONUCUNDAN okundu — girdi
+ *      dosyasından ya da takoz çiziminden doğrulanmadı.
  *
  * ── TORK YÖNÜ — Çözücü'nün ayarı, örnek +X ─────────────────────────────────
  * Adams'ın tork momenti +X (Tx = +T_shaft); programın varsayılanı −X (T5:
