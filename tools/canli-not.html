@@ -63,6 +63,8 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-kimlik b { font-family: var(--dar); font-weight: 600; font-size: var(--fs-3); letter-spacing: .02em; }
 .cn-kimlik span.ad { font-family: var(--dar); font-weight: 500; font-size: var(--fs-3); color: var(--kalem); }
 .cn-surum { font-family: var(--veri); font-size: var(--fs-0); color: var(--soluk); white-space: nowrap; }
+.cn-kimlik .cn-odak { font-family: var(--dar); font-weight: 600; font-size: var(--fs-1); color: var(--mavi); background: var(--mavi-zemin);
+  padding: 1px 7px; border-radius: 2px; white-space: nowrap; align-self: center; }
 .cn-araclar { display: flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid var(--cizgi); border-radius: 2px; background: var(--kagit); }
 .cn-arac {
   width: 32px; height: 30px; display: grid; place-items: center;
@@ -260,7 +262,7 @@ button, textarea, input { font: inherit; color: inherit; }
 
 <div class="cn" id="cn">
   <header class="cn-serit">
-    <div class="cn-kimlik"><b>MFSim</b><span class="ad">Canlı Not</span><span class="cn-surum" id="cn-surum"></span></div>
+    <div class="cn-kimlik"><b>MFSim</b><span class="ad">Canlı Not</span><span class="cn-odak" id="cn-odak" hidden></span><span class="cn-surum" id="cn-surum"></span></div>
     <div class="cn-araclar" role="toolbar" aria-label="Kalem">
       <button class="cn-arac" type="button" data-arac="imlec" aria-pressed="true" title="İmleç (Esc)" aria-label="İmleç">
         <svg viewBox="0 0 24 24"><path d="M6 3.5 18.5 13l-5.6.9 3.2 6.1-2.4 1.2-3.2-6.1L6 19z"/></svg></button>
@@ -390,6 +392,10 @@ button, textarea, input { font: inherit; color: inherit; }
   }
   surumYaz();
   if (AYAR.surum) $('cn-surum').title = 'Sayfa ' + AYAR.surum + (AYAR.pr ? ' · #' + AYAR.pr : '');
+  // ODAK (kullanıcı 2026-11-11: bir bileşene ayrılmış Canlı Not): şeritte bileşenin adı;
+  // program her açılışta o bileşende açılır (odakla), notlar sayfanın aralığında numaralanır.
+  var ODAK = CN.odakBul(AYAR.odak);
+  if (ODAK) { $('cn-odak').textContent = ODAK.ad; $('cn-odak').hidden = false; }
 
   // ── bildirim ────────────────────────────────────────────────────────────
   var bildirimZaman = 0;
@@ -734,13 +740,26 @@ button, textarea, input { font: inherit; color: inherit; }
           program.hazir = true; durumYaz();
           if (onceki.proje) {
             var p = onceki.proje; onceki.proje = null;
-            kopru('yukle', p, 20000).then(function (ok) { if (ok) bildir('Önceki durum yüklendi.'); }, function () {});
-          }
+            kopru('yukle', p, 20000).then(function (ok) { if (ok) bildir('Önceki durum yüklendi.'); }, function () {})
+              .then(odakla);
+          } else odakla();
           return;
         }
         if (++deneme < 1200) setTimeout(yokla, 1000);
       }, function () { if (++deneme < 1200) setTimeout(yokla, 1000); });
     })();
+  }
+  // Odaklı sayfa: program açılınca (Güncelle ve Yenile dâhil) bileşenin penceresi açılır —
+  // tarif köprüde, yerindekini kullanır. Sonuç `#cn[data-odak]`ta (duman bunu bekler).
+  function odakla() {
+    if (!ODAK) return;
+    $('cn').setAttribute('data-odak', 'bekle');
+    kopru('odak', AYAR.odak, 90000).then(function () {
+      $('cn').setAttribute('data-odak', 'tamam');
+    }, function () {
+      $('cn').setAttribute('data-odak', 'hata');
+      bildir(ODAK.ad + ' açılamadı.');
+    });
   }
 
   // ── araç seçimi ─────────────────────────────────────────────────────────
@@ -825,9 +844,7 @@ button, textarea, input { font: inherit; color: inherit; }
   }
 
   // ── not kartı ───────────────────────────────────────────────────────────
-  function sonrakiNo() {
-    return notlar.reduce(function (m, n) { return Math.max(m, n.no || 0); }, 0) + 1;
-  }
+  function sonrakiNo() { return CN.sonrakiNo(notlar, AYAR.odak); }
   function kartAc() {
     var ilk = kart.hidden;
     kart.hidden = false;

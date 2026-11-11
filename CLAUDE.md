@@ -529,7 +529,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Şeridin **Programı güncelle**'si (kullanıcı 2026-11-11) ana dalın SON hâlini ister
   (`istek/guncelle` + Claude'a yorum; oturum yayınlar, sayfa sormadan yükler — skill
   `canli-not` §1); istek sürerken ve yeni program açılana dek program KİLİTLİ (perde + `inert`,
-  Vazgeç isteği bırakır — kullanıcı 2026-11-11). Şeridin **Oturumu çağır**'ı (kullanıcı
+  Vazgeç isteği bırakır — kullanıcı 2026-11-11). **Odaklı sayfa** (kullanıcı 2026-11-11: *"sadece
+  bu bileşene ait bir 'canlı not'"*): bir bileşene ayrılmış AYRI Artifact — ilki Parametrik
+  Analiz; program her açılışta o bileşenin penceresinde açılır, notları kendi aralığında
+  (1001'den), araç komutları `--odak parametrik`; adres ve protokol skill `canli-not` §5. Kapı:
+  `canli-not.test.js` → *ODAK*. Şeridin **Oturumu çağır**'ı (kullanıcı
   2026-11-11: *"HTML üzerinden Claude'a komutlar göndersin"*) Canlı Not'un oturumunu uyandıran
   görevi çalıştırır; sayfa oturum AÇMAZ (o komut sayfaya kapalı), oturum geldiğini sahiplik
   kaydını yeniden yazarak söyler (skill `canli-not` §1 · *Oturumu çağır*). **Yayını YALNIZ sahibi oturum yapar ve yayın
