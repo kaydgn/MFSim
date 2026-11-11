@@ -265,7 +265,7 @@ describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)'
     expect(['amc137962', 'amc137961', 'amc137963', 'amc137461'].map((k) => [cp._mntLibTahmin(M[k]).length > 0, cp._mntEntryHasLaw(M[k]), cp._mntLibTam(M[k])]))
       .toEqual([[true, false, true], [false, true, true], [false, false, true], [false, false, false]]);   // tahminli · eğrili · tam · eksik
   });
-  test('Takoz Özellikleri: tahminli hücreler işaretli, durum "tahmini", eksik bandı yok; kaynağı Rijitlik\'te', () => {
+  test('Takoz Özellikleri: tahminli hücreler işaretli, durum "tahmini", eksik bandı yok; kaynağı hücrenin ipucunda', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137005' } };
     global.nodes = [lib];
     const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
@@ -274,9 +274,29 @@ describe('RADYAL TAHMİN — AMC\'nin yayımlamadığı radyal (Canlı Not 113)'
     expect([...d.querySelectorAll('td.zor')]).toHaveLength(0);
     expect(d.querySelector('.ve-fp-kat[data-k="rij"]').getAttribute('data-d')).toBe('ok');
     expect(d.textContent).not.toMatch(/reddeder|rijitlik eksik/);
-    const g = d.querySelector('#ve-mnt-lib-tah-lib1');
-    expect([g.getAttribute('data-d'), g.textContent]).toEqual(['warn', 'Radyal tahminikz × 2,44 · Solid cone, 4 tip · AMC-EO · AMC çizimi']);
+    expect(d.querySelector('td.tah').getAttribute('title')).toBe('Tahmini · kz × 2,44 · Solid cone, 4 tip · AMC-EO · AMC çizimi');
     expect(d.querySelector('#ve-mnt-lib-sx-lib1').value).toBe('315');
+  });
+  // TABLONUN ALTI BOŞ (kullanıcı 2026-11-11, Canlı Not 138: *"Bu kısmı kaldırabilir miyiz? Gerek
+  // olduğunu düşünmüyorum."*). Önce Rijitlik tablosunun altında iki satır vardı: "Eksenler arası oran
+  // yayılımı 1,00 · sınır 1,5" ve "Radyal tahmini kz × …". Takoz penceresinde de oran satırı vardı.
+  // Eksen takası bölümün durumunda kalır ("oran?"); tahmin hücrede.
+  test('TABLONUN ALTI BOŞ: Rijitlik tablosunun altında oran ve tahmin satırı yok — Takoz Özellikleri ve Takoz', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'amc137005' } };
+    global.nodes = [lib];
+    const d = document.createElement('div'); d.innerHTML = cp.getMntLibraryPropertiesHTML(lib);
+    const rij = [...d.querySelectorAll('section')].find((s) => /^Rijitlik/i.test(s.textContent.trim()));
+    expect(rij).toBeTruthy();
+    expect(rij.querySelectorAll('.ve-fp-gate')).toHaveLength(0);
+    expect(d.textContent).not.toMatch(/oran yayılımı|Radyal tahmini|Dinamik tahmini/);
+    // takası durum hâlâ yakalar: eksenleri takaslı özel tipte bölüm eksik, sebep bantta
+    const ozel = { key: 'u1', name: 'Takaslı', sx: 300, sy: 300, sz: 300, dx: 330, dy: 330, dz: 1500 };
+    const lib2 = { id: 'lib2', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [ozel], _selKey: 'u1' } };
+    global.nodes = [lib2];
+    const d2 = document.createElement('div'); d2.innerHTML = cp.getMntLibraryPropertiesHTML(lib2);
+    expect(d2.querySelector('.ve-fp-kat[data-k="rij"]').getAttribute('data-d')).not.toBe('ok');
+    expect(d2.textContent).toMatch(/eksen takası olabilir/);                              // eksik bandı
+    expect(d2.querySelectorAll('.ve-fp-gate')).toHaveLength(0);
   });
   test('ÇÖZÜCÜ: radyali yayımlanmayan tip modeli reddettirmez — eskiden boş radyal hata veriyordu', () => {
     const H = require('../helpers/takoz-dogrulama.js');

@@ -228,13 +228,14 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(satirlar(kunye('amc55sha').querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR LMT-1433-37'], ['Sertlik', '55 ShA']]);
     expect([kunye('bmc-mount1-55sh').querySelector('.ve-mnt-amc'), kunye('bmc-mount1-55sh').querySelector('.mntlib-bilgi')]).toEqual([null, null]);
   });
-  test('Rijitlik: konikte "Radyal ve dinamik tahmini", mobilde "Dinamik tahmini" ve X · Y boş (zorunlu)', () => {
+  test('Rijitlik: konikte radyal ve dinamik tahmini, mobilde dinamik tahmini ve X · Y boş (zorunlu)', () => {
     const d = kunye('lp-lmt-1433-00-tk60');
     expect([...d.querySelectorAll('td.tah input')].map((i) => i.id.replace(/^ve-mnt-lib-|-lib1$/g, ''))).toEqual(['sx', 'dx', 'sy', 'dy', 'dz']);
-    expect(d.querySelector('#ve-mnt-lib-tah-lib1').textContent)
-      .toBe('Radyal ve dinamik tahminikz × 2,06 · LMT-1433-00 FEA · statik × 1,60 · 60 ShA, (Sh + 20)/50 · AMC NR koniler');
+    // künye hücrenin ipucunda (tablonun altında satır yok — Canlı Not 138)
+    expect(d.querySelector('td.tah').getAttribute('title'))
+      .toBe('Tahmini · kz × 2,06 · LMT-1433-00 FEA · statik × 1,60 · 60 ShA, (Sh + 20)/50 · AMC NR koniler');
     const m = kunye('lp-mlmt-0608-04-tk45');
-    expect(m.querySelector('#ve-mnt-lib-tah-lib1').textContent).toBe('Dinamik tahministatik × 1,30 · 45 ShA, (Sh + 20)/50 · AMC NR koniler');
+    expect(m.querySelector('td.tah').getAttribute('title')).toBe('Tahmini · statik × 1,30 · 45 ShA, (Sh + 20)/50 · AMC NR koniler');
     expect([...m.querySelectorAll('td.zor input')].map((i) => i.id.replace(/^ve-mnt-lib-|-lib1$/g, ''))).toEqual(['sx', 'dx', 'sy', 'dy']);
   });
   test('(i) LASPAR\'ın ve programın LMT-1433-00\'ının teknik resmini açar; bilinmeyen kodda hiçbir şey', () => {

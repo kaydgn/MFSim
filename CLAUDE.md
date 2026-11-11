@@ -369,7 +369,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   AMC'nin ölçümünden — aynı tipin ölçülmüş sertlikleri arasında doğrusal, dışında en yakınınki
   (resimler oranın sertlikle değiştiğini gösterdi: Cone 38 40 ShA 2,67 ↔ 60 ShA 1,57) → aynı
   ailesi → bütün tiplerin medyanı, dinamik = statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
-  değer tahminden çıkar; tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
+  değer tahminden çıkar; Rijitlik tablosunun altında oran ve tahmin SATIRI YOK — tahmin hücrede
+  (italik, künyesi ipucunda), eksen takası bölümün durumunda (Canlı Not 138; kapı `mount-amc.test.js`
+  → *TABLONUN ALTI BOŞ*); tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
   olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece

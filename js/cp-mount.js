@@ -2173,13 +2173,9 @@ function _mntTakozTipGovde(node){
       + _mntFoyGir(node, r[1], 'Dinamik k'+r[3], { zorunlu:true, tahmin:tahT.indexOf(r[1])>=0 })
       + _mntFoyCoz((s>0 && k>0) ? _mntS(k/s,2) : '—', { ay:true, id:'ve-mnt-oran-'+r[3]+'-'+node.id })+'</tr>';
   });
-  var O=_mntOranYayilim(d), sinir=_mntS(_MNT_ORAN_YAYILIM_SINIR,1);
-  var kapi='<div class="ve-fp-gate ve-mnt-ic" data-d="'+(O ? (O.yayilim>_MNT_ORAN_YAYILIM_SINIR ? 'warn' : 'ok') : 'wait')+'"'
-    + ' id="ve-mnt-oranyay-'+node.id+'" data-tazele title="'+_mntEsc(O
-        ? 'Din./stat. oranı yayılımı '+_mntS(O.yayilim,2)+' · sınır '+sinir
-        : 'Altı rijitlik eksik')+'">'
-    + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
-  h+=_mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA+kapi);
+  // Oran yayılımının satırı YOK (Canlı Not 138, Takoz Özellikleri'yle aynı): eksen takası bölümün
+  // durumunda ("oran?", _mntTakozTipDurumu).
+  h+=_mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA);
   h+='<div id="ve-mnt-yasa-'+node.id+'" data-tazele>'+_mntMountCurveNote(node)+'</div>';
   // Kapasite hesabın GİRDİSİ DEĞİL, raporun kapasite kullanımını ölçtüğü
   // sınır: çözücü onu görmez.
@@ -4354,18 +4350,12 @@ function _mntLibRijitlikHTML(node, e, setter){
       + _mntLibFoyGir(node, e, 'd'+a[0], 'Dinamik '+a[1]+' [N/mm]', setter, { zorunlu:true })
       + _mntFoyCoz((st>0 && dn>0) ? _mntS(dn/st,2) : '—', { ay:true, id:'ve-mnt-lib-or'+a[0]+'-'+node.id })+'</tr>';
   });
-  var O=_mntOranYayilim(_mntLibTakozAlan(e)), sinir=_mntS(_MNT_ORAN_YAYILIM_SINIR,1);
-  var kapi='<div class="ve-fp-gate ve-mnt-ic" data-d="'+(O ? (O.yayilim>_MNT_ORAN_YAYILIM_SINIR ? 'warn' : 'ok') : 'wait')+'"'
-    + ' id="ve-mnt-lib-yay-'+node.id+'" data-tazele title="'+_mntEsc(O
-        ? 'Din./stat. oranı yayılımı '+_mntS(O.yayilim,2)+' · sınır '+sinir
-        : 'Altı rijitlik eksik')+'">'
-    + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
-  // Tahmini değer (Canlı Not 113): üreticinin yayımlamadığı eksen ya da dinamik — değer girilince satır düşer.
-  if(_mntLibTahmin(e).length) kapi+='<div class="ve-fp-gate ve-mnt-ic" data-d="warn" id="ve-mnt-lib-tah-'+node.id+'">'
-    + '<i></i>'+_mntLibTahminAdi(e)
-    + '<span>'+_mntEsc(_mntLibTahminKunye(e))+'</span></div>';
+  // TABLONUN ALTINDA SATIR YOK (kullanıcı 2026-11-11, Canlı Not 138: *"Bu kısmı kaldırabilir miyiz?
+  // Gerek olduğunu düşünmüyorum."*): "Eksenler arası oran yayılımı" ve "… tahmini" satırları kalktı.
+  // Eksen takası bölümün durumunda ("oran?", _mntLibDurumlari), tahmin hücrede (italik, künyesi
+  // ipucunda — _mntLibFoyGir). Kapı: mount-amc.test.js → *TABLONUN ALTI BOŞ*.
   // Künye tipin adı: uzun ad (A+P) sütunda kesilir, tamamı ipucunda (yerleşim kapısı)
-  return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi, { emTam:'[N/mm] · '+e.name });
+  return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA, { emTam:'[N/mm] · '+e.name });
 }
 // Grafiğin göstergesi — çizilen eksen grupları (renk), statik (düz), dinamik
 // (kesikli) ve ölçüm noktaları. Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
