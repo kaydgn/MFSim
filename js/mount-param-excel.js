@@ -88,10 +88,45 @@ var veMntParamExcel = (function(){
     if(h) s = h[1].replace(/\s+/g, '') + '-' + h[2];
     return (s + (ek ? ' ' + ek : '')).trim();
   }
-  // Konfigürasyonun Özet'teki adı (Sonuç'taki blokuna bağlı): K + grupların kısa tipi.
-  function sayfaAdi(k, tipler){
+  // Ailesi kısaltılmayan kısa tip ("LMT-1433-37 55 ShA" → "LMT-1433-37-55").
+  function kisaUzun(ad){
+    var s = temiz(ad), m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(s), ek = '';
+    if(m){ s = m[1]; if(m[2].length <= 5) ek = m[2]; }
+    s = s.replace(/\s*ShA\b/g, '').trim();
+    var h = /^(.*\S)\s+(\d+)$/.exec(s);
+    if(h) s = h[1].replace(/\s+/g, '') + '-' + h[2];
+    return (s + (ek ? ' ' + ek : '')).trim();
+  }
+  // Kısaltılan aile ve kodu ("LMT-1433-37 55 ShA" → ['LMT', 'LMT-1433-37']); yoksa null.
+  function aileKodu(ad){
+    var s = temiz(ad), m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(s);
+    if(m) s = m[1];
+    var a = /^(([A-Za-z]+)-[\d-]+)(\s+\d+)?$/.exec(s.replace(/\s*ShA\b/g, '').trim());
+    return a ? [a[2], a[1]] : null;
+  }
+  // Ad kümesinde AYIRT EDİCİ kısa tip: bir ailede birden çok kod varsa ("LMT-1433-00"
+  // ile "LMT-1433-37" — ikisi de "LMT-55" olurdu) ailenin bütün tipleri kodlu kısa
+  // ada; yine çakışan ad kodlu kısa ada, o da çakışırsa adın kendisine çıkar. Küme:
+  // adaylar ve grupların mevcut tipleri — pencere ve Excel aynı kümeden. Dönüş: ad → kısa ad.
+  function ayirici(adlar){
+    var tek = {}, aile = {}, sonuc = {};
+    (adlar || []).forEach(function(a){ if(a != null && temiz(a)) tek[temiz(a)] = true; });
+    var L = Object.keys(tek);
+    L.forEach(function(a){ var k = aileKodu(a); if(k) (aile[k[0]] = aile[k[0]] || {})[k[1]] = true; });
+    var ilk = function(a){ var k = aileKodu(a); return (k && Object.keys(aile[k[0]]).length > 1) ? kisaUzun(a) : kisa(a); };
+    var say = function(f){ var g = {}; L.forEach(function(a){ var k = f(a); g[k] = (g[k] || 0) + 1; }); return g; };
+    var G1 = say(ilk), G2 = say(kisaUzun);
+    L.forEach(function(a){
+      var k = ilk(a), u = kisaUzun(a);
+      sonuc[a] = G1[k] < 2 ? k : G2[u] < 2 ? u : a;
+    });
+    return function(ad){ var t = temiz(ad); return (t in sonuc) ? sonuc[t] : kisa(ad); };
+  }
+  // Konfigürasyonun Özet'teki adı (Sonuç'taki blokuna bağlı): K + grupların kısa tipi
+  // (f: ayirici'nin işlevi; yoksa kisa).
+  function sayfaAdi(k, tipler, f){
     if(k.mevcut) return 'K' + k.K + ' Mevcut';
-    var s = 'K' + k.K, ek = tipler.map(kisa).filter(Boolean).join(' + ');
+    var s = 'K' + k.K, ek = tipler.map(f || kisa).filter(Boolean).join(' + ');
     return ek ? s + ' ' + ek : s;
   }
   function modAdi(l){
@@ -506,7 +541,11 @@ var veMntParamExcel = (function(){
       adim: function(){
         if(evre === 0){
           D = sonucDuzen(E);
-          var adlar = E.konfig.map(function(k){ return sayfaAdi(k, k.tipler || []); });
+          var evren = [];
+          E.konfig.forEach(function(k){ evren = evren.concat(k.tipler || []); });
+          ((E.tarama && E.tarama.adaylar) || []).forEach(function(L){ evren = evren.concat(L || []); });
+          var ks = ayirici(evren);
+          var adlar = E.konfig.map(function(k){ return sayfaAdi(k, k.tipler || [], ks); });
           OZ = ozet(E, adlar, D);
           SON = sonucSayfa(E, D);
           evre = N ? 4 : 3;
@@ -538,7 +577,8 @@ var veMntParamExcel = (function(){
     return I.kitap();
   }
 
-  return { kitap:kitap, kitapIs:kitapIs, frekansPayi:frekansPayi, kapasite:kapasite, sayfaAdi:sayfaAdi, kisa:kisa, temiz:temiz,
+  return { kitap:kitap, kitapIs:kitapIs, frekansPayi:frekansPayi, kapasite:kapasite, sayfaAdi:sayfaAdi, kisa:kisa, kisaUzun:kisaUzun,
+           ayirici:ayirici, temiz:temiz,
            kok:kok, modAdi:modAdi, px:px, olc:olc };
 })();
 

@@ -320,6 +320,26 @@ describe('AD', () => {
     expect(E_.sayfaAdi({ K: 0, mevcut: true }, [])).toBe('K0 Mevcut');
   });
 
+  // AYIRT EDİCİ (2026-11-11, Tulga): "LMT-1433-37 55 ShA" ile "LMT-1433-00 55 ShA" ikisi de
+  // "LMT-55" oluyordu — K6 ile K7 aynı adla görünüyordu. Ailede birden çok kod varsa ailenin
+  // bütün tipleri kodlu; tek kodlu aile onaylanan kısa adında kalır.
+  test('AYIRT EDİCİ kısa ad: aynı kısa adı alan iki tip ayrı; ailede tek kod varsa kısa ad değişmez', () => {
+    const U = ['LMT-1433-37 55 ShA', 'LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', '57RS313773 (A26)', '57RS313773 (ASR-SR-116)',
+      'Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA', 'TK035 35 ShA (57RS328045)'];
+    const f = E_.ayirici(U);
+    expect(U.map(f)).toEqual(['LMT-1433-37-55', 'LMT-1433-00-55', 'LMT-1433-00-40', '57RS313773 A26', '57RS313773',
+      'Cone39-50', 'Mount1-55', 'TK035-35']);
+    expect(new Set(U.map(f)).size).toBe(U.length);
+    const g = E_.ayirici(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', 'Cone 39 50 ShA (AMC 137982)']);
+    expect(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA'].map(g)).toEqual(['LMT-55', 'LMT-40']);
+    expect(g('Kümede olmayan 70 ShA')).toBe(E_.kisa('Kümede olmayan 70 ShA'));
+    expect(E_.sayfaAdi({ K: 6 }, ['LMT-1433-37 55 ShA', '57RS313774 (A26)', 'LMT-1433-00 55 ShA'], f))
+      .toBe('K6 LMT-1433-37-55 + 57RS313774 A26 + LMT-1433-00-55');
+    // iki kodu da kısa adında çakışan tip adın kendisine çıkar
+    const h = E_.ayirici(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)']);
+    expect(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)'].map(h)).toEqual(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)']);
+  });
+
   test('mod adı onaylanan biçimde', () => {
     expect(E_.modAdi('pitch+bounce')).toBe('Pitch + Bounce');
     expect(E_.modAdi('fore-aft')).toBe('Fore-aft');

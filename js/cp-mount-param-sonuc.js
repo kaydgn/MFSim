@@ -6,23 +6,24 @@
 // pencerelerinin SONUÇ GÖSTERMEZ kuralının (2026-10-16) TEK istisnası bu
 // pencere; ayrıntılı rapor yine ayrı belgede.
 //
-// SADE SONUÇ (kullanıcı kararı 2026-10-18: "Tablo + iki sade grafik, diğer
-// diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"): Öneri ·
-// Kriterler · Modlar · Statik sehim ve iletilebilirlik · Yakın seçenekler ·
-// Eleme · Diyagramlar. Kısıtlar ADIYLA (Kısıtlar kategorisinin adları; kod
-// yok). On diyagram pencerede çizilmez: Diyagramlar listesinden tam ekranın
-// galerisinde açılır ve ancak açılınca çizilir.
+// SONUÇ EXCEL'İN ÖZET'İ (kullanıcı 2026-11-11: "yaptığımız değişiklikleri bu bileşene
+// aktarmamışız … güncel ve modern bir hale getirelim"): Konfigürasyonlar — K0 (mevcut)
+// ve K1…K9: dört kesin kriteri sağlayanlar statik sehimden (yoksa en az ihlalli dokuz),
+// Uygunluk En uygun · Uygun · Uygun değil; tıklanan K'nın ayrıntısı (tipler, kriterler,
+// Modele uygula · Raporu indir ·
+// Excel'i indir) · Modlar · Statik sehim ve iletilebilirlik · Kriterleri sağlayan ·
+// Diyagramlar. Excel'in Özet'i AYNI listeden (_mntParamKonfig). Diyagramlar pencerede
+// çizilmez (kullanıcı kararı 2026-10-18: "diğer diyagramlar kalsın fakat kullanıcı
+// istediği zaman açabilsin"): listeden tam ekranın galerisinde açılır.
 //
 // DEPO BELLEKTE, MODELDE DEĞİL: tarama düğüm başına `_MNT_PARAM_SONUC`ta durur
-// — proje dosyasına ve geri-al yığınına girmez. Sınır, açıklık ve ağırlık
-// değişince özet depodan yeniden kurulur (veMntKatalog.ozet — kapı:
-// mount-katalog.test.js → CANLI); model, aday, sabit grup, tolerans ya da
-// sürünme değişince tarama ESKİR (imza) ve Sonuç yalnız durumu yazar.
+// — proje dosyasına ve geri-al yığınına girmez. Model, aday, sabit grup ya da
+// rijitlik toleransı değişince tarama ESKİR (imza) ve Sonuç yalnız durumu yazar.
 //
 // MODELE UYGULA (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran bir düğme
-// yok; altı takozun tipini tek tek değiştirdim"): öneri ya da yakın seçenek
-// taranan grupların takozlarına yazılır (veMntParamUygula). Taranan grubun
-// tipi imzada yok: Sonuç yerinde kalır, uygulanan kombinasyon "Mevcut" olur.
+// yok; altı takozun tipini tek tek değiştirdim"): seçilen K taranan grupların
+// takozlarına yazılır (veMntParamUygula). Taranan grubun tipi imzada yok: Sonuç
+// yerinde kalır, uygulanan kombinasyon K0 olur.
 //
 // ÇİZİM GERÇEK GENİŞLİKTE: gövdenin genişliği pencere açılınca ölçülür
 // (veMntParamCizKur, cp-core.js), grafik o genişlikte 1:1 kurulur.
@@ -110,6 +111,8 @@ function _mntParamKose(ent, idx, tol){
 }
 function _mntPrmSehim(o){ var m=0; ((o && o.dz) || []).forEach(function(v){ if(Math.abs(v)>m) m=Math.abs(v); }); return m; }
 function _mntPrmNo(Q){ return Q.zorunlu ? 'K'+Q.no : Q.no; }
+// Kriterin adı pencerenin ve Excel'in adıyla (Kesin kriterler tablosu); ek kısıtta motorun adı.
+function _mntPrmKrAd(Q){ return (Q.zorunlu && typeof _MNT_PARAM_KRITER_AD!=='undefined' && _MNT_PARAM_KRITER_AD[Q.k]) || Q.ad; }
 function _mntPrmKisit(k){ for(var i=0;i<veMntKatalog.KISITLAR.length;i++) if(veMntKatalog.KISITLAR[i].k===k) return veMntKatalog.KISITLAR[i]; return null; }
 function _mntPrmKesinBit(){
   var b=0;
@@ -151,22 +154,9 @@ function _mntPrmV11(ent, S, Hk, c){
   return {
     nokta:nok, cephe:cephe, biyik:biyik, dis:dis, xMax:xMax, yMax:yMax, say:say,
     uzlasi:bir ? { x:D.d[bir.idx], y:D.T[bir.idx]*100, i:bir.idx, ad:_mntPrmAd(S) } : null,
-    mevcut:m1 ? { x:_mntPrmSehim(m1), y:m1.T*100, ip:'Mevcut tasarım\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' } : null,
+    mevcut:m1 ? { x:_mntPrmSehim(m1), y:m1.T*100, ad:'K0', ip:'K0 · Mevcut\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' } : null,
     e1:c.acik.sehimAlt ? c.s.sehimAlt : null, e2:c.acik.sehim ? c.s.sehimUst : null, k2:veMntKatalog.K2_T*100
   };
-}
-// Uygun olmayan, ihlal toplamı en küçük n kombinasyon (iki aşaması ölçülmüş).
-function _mntPrmYakin(ent, Hk, n){
-  var D=ent.D, L=[];
-  for(var x=0;x<D.N;x++){
-    if(D.d1[x]!==1 || D.d2[x]!==1 || !Hk.m[x]) continue;
-    var v=Hk.v1[x]+Hk.v2[x];
-    if(L.length<n || v<L[L.length-1][0]){
-      L.push([v, x]); L.sort(function(a, b){ return a[0]-b[0] || a[1]-b[1]; });
-      if(L.length>n) L.pop();
-    }
-  }
-  return L.map(function(e){ return e[1]; });
 }
 // Kombinasyonun bozduğu kısıtların numaraları (en çok iki, fazlası "…").
 function _mntPrmBozuk(Hk, x){
@@ -174,8 +164,8 @@ function _mntPrmBozuk(Hk, x){
   veMntKatalog.KISITLAR.forEach(function(Q, i){ if(Hk.m[x] & (1<<i)) b.push(_mntPrmNo(Q)); });
   return b.length>2 ? b.slice(0, 2).join(' · ')+' …' : b.join(' · ');
 }
-// D7 · Mod yerleşimi: mevcut tasarım, sıranın ilk beşi; uygun beşten azsa
-// en az ihlalli YAKIN tasarımlar (adında bozduğu kısıtlar), ±tolerans köşeleriyle.
+// D7 · Mod yerleşimi: mevcut tasarım (K0) ve sıranın ilk beşi (K1…K5; adında bozduğu
+// kısıtlar), ±tolerans köşeleriyle.
 function _mntPrmV7(ent, S, c, Hk){
   var K=veMntKatalog, tol=c.s.tolerans, satir=[];
   var ekle=function(ad, idx, vurgu){
@@ -187,41 +177,21 @@ function _mntPrmV7(ent, S, c, Hk){
       ip:o.f.map(function(f, i){ return ad+' · '+(i+1)+'. mod\n'+_mntS(f, 2)+' Hz · '+_mntPrmModAdi(lab[i]); }),
       kose:(o.sert && o.yumusak) ? { a:o.yumusak.f, b:o.sert.f } : null });
   };
-  ekle('Mevcut', -1);
+  ekle('K0 · Mevcut', -1);
   S.sira.slice(0, 5).forEach(function(r, k){
-    ekle((k===0 ? _mntPrmAd(S) : 'Sıra '+(k+1))+(S.uygunN ? '' : ' · '+_mntPrmBozuk(Hk, r.idx)), r.idx, k===0);
+    ekle('K'+(k+1)+(Hk.m[r.idx] ? ' · '+_mntPrmBozuk(Hk, r.idx) : ''), r.idx, k===0);
   });
-  if(S.uygunN && S.uygunN<5) _mntPrmYakin(ent, Hk, 5-S.uygunN).forEach(function(x, k){ ekle('Yakın '+(k+1)+' · '+_mntPrmBozuk(Hk, x), x); });
   var k1=K.K1_ORAN*c.fAtes, fm=k1;
   satir.forEach(function(r){ r.f.forEach(function(f){ if(f>fm) fm=f; }); if(r.kose) r.kose.b.forEach(function(f){ if(f>fm) fm=f; }); });
   return { satir:satir, e3:c.acik.altMod ? c.s.altMod : null, bant:K.K1B, k1:k1, k1a:K.K1A_HZ, xMax:Math.max(fm*1.04, k1*1.15) };
 }
-// D9 · Bağlayıcı kısıtlar.
+// D9 · Bağlayıcı kriterler.
 function _mntPrmV9(ent, c, Hk){
   var B=veMntKatalog.baglayici(ent.D, c, Hk);
   return { n:B.n, uygun:B.uygun, kisit:B.kisit.map(function(q){
     var Q=_mntPrmKisit(q.k);
-    return { no:_mntPrmNo(Q), ad:Q.ad, red:q.red, tek:q.tek, ip:_mntPrmNo(Q)+' · '+Q.ad };
+    return { no:_mntPrmNo(Q), ad:_mntPrmKrAd(Q), red:q.red, tek:q.tek, ip:_mntPrmNo(Q)+' · '+_mntPrmKrAd(Q) };
   }) };
-}
-// D10 · Sınır duyarlılığı: açık ve sınırı olan her ek kısıt; pencere biriminde.
-// Aralık sınırın çevresi (0,6–1,6 katı) ve ölçülerin yayıldığı yer (en çok 3 katı).
-var _MNT_PRM_KISA = { sehimAlt:'δ_s alt', sehim:'δ_s üst', altMod:'f_min', kapasite:'Kapasite', ayrisma:'KED',
-                      isletme:'δ işletme', durdurucu:'δ sürünme', darbe:'Darbe' };
-function _mntPrmV10(ent, c, Hk){
-  var K=veMntKatalog, P=[];
-  K.KISITLAR.forEach(function(Q){
-    if(Q.zorunlu || !c.acik[Q.k]) return;
-    var d=K.duyarlilik(ent.D, c, Q.k, Hk);
-    if(!d) return;
-    var E=_MNT_PARAM_EK[Q.k], y=_MNT_PARAM_YUZDE[E[2]] ? 100 : 1;
-    var v=d.deger.map(function(a){ return a*y; }), L=d.sinir*y;
-    var lo=Math.min(0.6*L, v.length ? v[0] : L), hi=Math.max(1.6*L, v.length ? Math.min(v[v.length-1], 3*L) : L);
-    var pay=(hi-lo)*0.04;
-    P.push({ no:Q.no, ad:Q.ad+' ['+E[1]+']', kisa:_MNT_PRM_KISA[Q.k]+' ['+E[1]+']', yon:d.yon, deger:v, na:d.na, sinir:L,
-             xMin:Math.max(0, lo-pay), xMax:hi+pay });
-  });
-  return { panel:P };
 }
 // D8 · Ana etkiler: sıranın birincisinden yalnız bir grubun tipi değişir.
 function _mntPrmKz(a){ return _mntNum(a && a.e ? a.e.sz : NaN, NaN); }
@@ -303,7 +273,7 @@ function veMntParamKesit(nodeId, alan, deger){
   else { st.sabit=Object.assign({}, st.sabit || {}); st.sabit[alan]=Number(deger); }
   if(_MNT_PARAM_TAM && _MNT_PARAM_TAM.nodeId===nodeId) _MNT_PARAM_TAM.kur();
 }
-// D5 · Kısıt haritaları: açık kısıt başına bir harita ve kesişimi.
+// D5 · Kriter haritaları: açık kriter başına bir harita ve kesişimi.
 function _mntPrmV5(ent, Z, K){
   var D=ent.D, Hk=Z.Hk, c=Z.S.ctx, n=K.n, P=[], bos=[];
   var coz=function(x, asama){ return D.d1[x]===1 && (asama===1 || D.d2[x]===1); };
@@ -366,7 +336,7 @@ function _mntPrmKatEks(ad, kz){
   if(v[v.length-1]!==n-1){ v.push(n-1); kat.push(_mntS(kz[n-1], 0)); }
   return { ad:ad, min:0, max:Math.max(1, n-1), I:{ v:v, b:0 }, kat:kat };
 }
-// D2 · Kısıt penceresi: δs × f_maks × T; kutu, ek kısıtların ve kesin
+// D2 · Kriter penceresi: δs × f_maks × T; kutu, ek kısıtların ve kesin
 // kriterlerin bıraktığı pencere (E1–E2 · K1 · K2).
 function _mntPrmV2(ent, Z, c, kam){
   var D=ent.D, Hk=Z.Hk, S=Z.S, kb=_mntPrmKesinBit(), N=D.N, x;
@@ -388,11 +358,11 @@ function _mntPrmV2(ent, Z, c, kam){
     nok.push({ p:[D.d[x], D.fMax[x], D.T[x]*100], s:SN[q][0], r:SN[q][1], i:x });
   }
   var isaret=[], bir=S.sira[0], m1=ent.mevcut.o1;
-  if(m1) isaret.push({ p:[_mntPrmSehim(m1), Math.max.apply(null, m1.f), m1.T*100], s:'ve-pd-mev', ad:'Mevcut', r:6.5,
-                       ip:'Mevcut tasarım\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' });
+  if(m1) isaret.push({ p:[_mntPrmSehim(m1), Math.max.apply(null, m1.f), m1.T*100], s:'ve-pd-mev', ad:'K0', r:6.5,
+                       ip:'K0 · Mevcut\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' });
   if(bir) isaret.push({ p:[D.d[bir.idx], D.fMax[bir.idx], D.T[bir.idx]*100], s:'ve-pd-uz', ad:_mntPrmAd(S), r:7, i:bir.idx });
   return {
-    ad:'Kısıt penceresi', kam:kam, say:say, nokta:nok, isaret:isaret,
+    ad:'Kriter penceresi', kam:kam, say:say, nokta:nok, isaret:isaret,
     eks:[_mntPrmEks('δ_s [mm]', 0, xM), _mntPrmEks('f_maks [Hz]', yA, yB), _mntPrmEks('T [%]', 0, zM)],
     kutu:{ a:[c.acik.sehimAlt ? c.s.sehimAlt : 0, yA, 0], b:[c.acik.sehim ? c.s.sehimUst : xM, k1, veMntKatalog.K2_T*100] }
   };
@@ -481,11 +451,12 @@ function _mntParamSonucKat(node, H){
 }
 
 // DİYAGRAMLAR — yalnız tam ekranın galerisinde (veMntParamTamEkran), açılınca
-// çizilir. Sıra: genel bakış → tasarımın modları → neyin bağladığı → sınırın
-// etkisi → tip değişiminin etkisi. `o.arac`: 3B'nin araç satırına (sıfırla).
-var _MNT_PRM_DIYAGRAM = [['d11', 'Pareto cephesi'], ['d7', 'Mod yerleşimi'], ['d9', 'Bağlayıcı kısıtlar'],
-                         ['d10', 'Sınır duyarlılığı'], ['d8', 'Ana etkiler'], ['d5', 'Kısıt haritaları'],
-                         ['d4', 'İletilebilirlik haritası'], ['d2', 'Kısıt penceresi'], ['d3', 'Tepki yüzeyi'],
+// çizilir. Sıra: genel bakış → tasarımın modları → neyin bağladığı → tip
+// değişiminin etkisi. `o.arac`: 3B'nin araç satırına (sıfırla). Sınır duyarlılığı
+// ek kısıtların sınırıyla emekli (2026-11-10).
+var _MNT_PRM_DIYAGRAM = [['d11', 'Pareto cephesi'], ['d7', 'Mod yerleşimi'], ['d9', 'Bağlayıcı kriterler'],
+                         ['d8', 'Ana etkiler'], ['d5', 'Kriter haritaları'],
+                         ['d4', 'İletilebilirlik haritası'], ['d2', 'Kriter penceresi'], ['d3', 'Tepki yüzeyi'],
                          ['d1', 'Tasarım uzayı']];
 var _MNT_PRM_3B = { d2:true, d3:true, d1:true };
 var _MNT_PARAM_TAM = null;      // açık galeri: { nodeId, pd, kur, sec }
@@ -494,9 +465,9 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
   if(pd==='d11'){
     var v=_mntPrmV11(ent, S, Hk, c);
     return { svg:C.pareto(v, o).svg, lj:C.gosterge([
-      { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v.say[0], r:2 }, { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v.say[1], r:2.5 },
+      { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v.say[0], r:2 },
       { s:'ve-pd-n2', ad:'Uygun', n:v.say[2] }, { s:'ve-pd-cephe', sekil:'cizgi', ad:'Pareto cephesi', n:S.paretoN },
-      { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) }, { s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' },
+      { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) }, { s:'ve-pd-mev', sekil:'karo', ad:'K0' },
       { s:'ve-pd-biyik', sekil:'cizgi', ad:tol }]) };
   }
   if(pd==='d7'){
@@ -506,11 +477,6 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
       { s:'ve-pd-bolge', sekil:'alan', ad:'Sınır dışı' }]) };
   }
   if(pd==='d9') return { svg:C.baglayici(_mntPrmV9(ent, c, Hk), o).svg };
-  if(pd==='d10'){
-    var P=_mntPrmV10(ent, c, Hk);
-    P.panel=P.panel.filter(function(p){ return p.deger.length>0; });   // ölçüsü olmayan (kapasitesiz) kısıt her sınırda sağlar
-    return P.panel.length ? { svg:C.duyarlilik(P, o).svg } : { not:'Öteki kısıtları sağlayan kombinasyon yok' };
-  }
   if(pd==='d8'){
     var v8=_mntPrmV8(ent, S, c, Hk);
     if(!v8) return { not:'Çözülen kombinasyon yok' };
@@ -538,9 +504,9 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
   if(pd==='d2'){
     var v2=_mntPrmV2(ent, Z, c, kam);
     return { ust:o.arac ? '<div class="ve-pd-arac">'+o.arac+'</div>' : '', svg:C.uc(v2, o).svg, lj:C.gosterge([
-      { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v2.say[0], r:2 }, { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v2.say[1], r:2.5 },
-      { s:'ve-pd-n2', ad:'Uygun', n:v2.say[2] }, { s:'ve-pd-kutu', sekil:'kesik', ad:'E1–E2 · K1 · K2' },
-      { s:'ve-pd-uz', sekil:'halka', ad:tolj }, { s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' }]) };
+      { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v2.say[0], r:2 },
+      { s:'ve-pd-n2', ad:'Uygun', n:v2.say[2] }, { s:'ve-pd-kutu', sekil:'kesik', ad:'K1 · K2' },
+      { s:'ve-pd-uz', sekil:'halka', ad:tolj }, { s:'ve-pd-mev', sekil:'karo', ad:'K0' }]) };
   }
   if(pd==='d3' || pd==='d1'){
     var K3=_mntPrmKesit(nodeId, ent, S);
@@ -556,7 +522,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
       var lj3=[];
       for(var t=0;t<=5;t++) lj3.push({ s:'ve-pd-t'+t, sekil:'alan', ad:sec.d3==='T' ? (t===0 ? 'T < %10' : t===5 ? 'T ≥ %50' : '%'+(t*10)+'–'+(t*10+10)) : String(t+1) });
       return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+seg+(o.arac || '')+'</div>', svg:C.uc(v3, o).svg,
-               lj:C.gosterge(lj3.concat([{ s:'ve-pd-kutu', sekil:'kesik', ad:sec.d3==='T' ? 'K2' : sec.d3==='d' ? 'E2' : 'K1' },
+               lj:C.gosterge(lj3.concat(sec.d3==='d' ? [] : [{ s:'ve-pd-kutu', sekil:'kesik', ad:sec.d3==='T' ? 'K2' : 'K1' }]).concat([
                  { s:'ve-pd-kesin', ad:'Kesin kriterler' }, { s:'ve-pd-n3', ad:'Uygun' }, { s:'ve-pd-uz', sekil:'halka', ad:tolj }])) };
     }
     var v1=_mntPrmV1(nodeId, ent, Z, K3, kam);
@@ -565,7 +531,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
       + ' onchange="veMntParamSec(\''+nodeId+'\',\'d1k1\',this.checked)"> K1\'de elenen · '+_mntS(v1.say[0], 0)+'</label>';
     return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+kut+(o.arac || '')+'</div>', svg:C.uc(v1, o).svg, lj:C.gosterge([
       { s:'ve-pd-n0', ad:'K1\'de elenen', n:v1.say[0], r:2 }, { s:'ve-pd-n0 k', ad:'Öteki kesin kriterde elenen', n:v1.say[1], r:2.2 },
-      { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v1.say[2], r:2.5 }, { s:'ve-pd-n2', ad:'Uygun', n:v1.say[3] },
+      { s:'ve-pd-n2', ad:'Uygun', n:v1.say[3] },
       { s:'ve-pd-uz', sekil:'halka', ad:tolj }]) };
   }
   return null;
@@ -576,9 +542,9 @@ function _mntPrmKap(nodeId, pd, svg){
     + (uc ? svg.replace(/^<svg /, '<svg tabindex="0" ') : svg)+'</div>';
 }
 
-// ── SADE SONUÇ — öneri, kriterler, iki grafik, yakın seçenekler, eleme ──────
-// Önerinin adı: uygun kombinasyon yoksa sıranın birincisi en az ihlalli olandır.
-function _mntPrmAd(S){ return S.uygunN ? 'Öneri' : 'En az ihlalli'; }
+// ── SONUÇ — konfigürasyonlar (Excel'in Özet'i), seçilenin ayrıntısı, iki grafik ──
+// Sıranın birincisinin adı: K1 (Excel'in Özet'iyle aynı).
+function _mntPrmAd(){ return 'K1'; }
 // Kombinasyonun birinci aşama ölçümü (modlar; tolerans açıksa köşeleri) —
 // taramanın ölçücüsüyle, kombinasyon başına bir kez; −1 mevcut tasarım.
 function _mntPrmOlc(ent, idx){
@@ -623,61 +589,147 @@ function _mntPrmBantta(o){
   });
   return f===null ? 'Bantta' : _mntS(f, 1)+' Hz';
 }
-// KRİTERLER — açık kısıtlar KISITLAR sırasıyla; statik sehimin iki sınırı TEK
-// satır. Hüküm: mevcut tasarımda hepsi() (taramanın ölçücüsünün ölçümü),
-// öneride deponun ölçüsü — huninin ve sıranın kullandığı hükmün aynısı.
-// Satır: { k, ad, sinir, m, o }; m · o: { v (yazı), ok (true · false · null: değerlendirilmedi) }.
-function _mntPrmKriterler(ent, Z, c){
-  var K=veMntKatalog, D=ent.D, bir=Z.S.sira[0], idx=bir ? bir.idx : -1, s=c.s, sat=[];
+// KONFİGÜRASYONLAR — K0 (mevcut tasarım) ve sıranın başı (veMntKatalog.siralama): dört kesin
+// kriteri sağlayan varsa YALNIZ onlar, en küçük statik sehimden, en çok dokuz; yoksa en az
+// ihlalli dokuz (Excel'in onaylanan kuralı). Uygunluk: dördünü sağlayanların ilki En uygun,
+// kalanı Uygun; öteki Uygun değil. Pencere, rapor ve Excel'in Özet'i AYNI listeden.
+function _mntParamKonfig(ent, Z, c){
+  var D=ent.D, Hk=Z.Hk, kesin=_mntPrmKesinBit(), bitK=_MNT_PRM_KESIN.map(_mntPrmBit);
+  var m1=ent.mevcut.o1, R=m1 ? veMntKatalog.hepsi(m1, ent.mevcut.o2, c).sonuc : {};
+  var kr0=_MNT_PRM_KESIN.map(function(q){ return !!(R[q] && R[q].ok); });
+  var L=[{ K:0, idx:-1, mevcut:true, tipler:ent.M.G.map(function(){ return null; }), kriter:kr0,
+           uygunluk:(m1 && kr0.indexOf(false)<0) ? 'Uygun' : 'Uygun değil',
+           d:m1 ? _mntPrmSehim(m1) : NaN, T:m1 ? m1.T : NaN, fMin:(m1 && m1.f.length) ? Math.min.apply(null, m1.f) : NaN }];
+  var en=true;
+  var sec=Z.S.sira.slice(0, VE_MNT_PRM_XLS_KONFIG);
+  if(Z.S.uygunN>0) sec=sec.slice(0, Math.min(sec.length, Z.S.uygunN));    // uygunlar sıranın başında
+  sec.forEach(function(r, i){
+    var b=Hk.m[r.idx], ok=!(b & kesin);
+    L.push({ K:i+1, idx:r.idx, mevcut:false, tipler:D.tipler(r.idx), kriter:bitK.map(function(x){ return !(b & x); }),
+             uygunluk:ok ? (en ? 'En uygun' : 'Uygun') : 'Uygun değil', d:D.d[r.idx], T:D.T[r.idx], fMin:D.fMin[r.idx] });
+    if(ok) en=false;
+  });
+  return L;
+}
+// Seçili K — görünüm durumu (_MNT_PARAM_SECIM, modelde değil); yoksa K1 (yoksa K0).
+function _mntPrmSecK(nodeId, L){
+  var k=_mntPrmSecim(nodeId).k;
+  return (k>=0 && k<L.length) ? k : (L.length>1 ? 1 : 0);
+}
+function veMntParamKSec(nodeId, k){
+  _mntPrmSecim(nodeId).k=k;
+  var n=_mntParamDugum(nodeId);
+  if(n && typeof showNodeProperties==='function') showNodeProperties(n);
+}
+// Konfigürasyonun grup başına tip adı (taranmayan grup ve K0: modelin tipi).
+function _mntPrmKAdi(ent, k){
+  var M=ent.M;
+  return M.G.map(function(g, i){
+    var key=k.tipler[i] || g.tip;
+    return (key && M.lib[key]) ? M.lib[key].name : '—';
+  });
+}
+// Kısa tip — Excel'in ayırıcısıyla AYNI kümeden (adaylar + grupların mevcut tipi):
+// aynı kısa adı alan iki tip ayrı yazılır, K adları Excel'in Özet'iyle birebir.
+function _mntPrmKisaF(ent){
+  var M=ent.M, X=(typeof veMntParamExcel!=='undefined') ? veMntParamExcel : null;
+  if(!X || !X.ayirici) return function(ad){ return String(ad); };
+  var adlar=((ent.D && ent.D.adaylar) || []).map(function(a){ return a.name; });
+  M.G.forEach(function(g){ if(g.tip && M.lib[g.tip]) adlar.push(M.lib[g.tip].name); });
+  return X.ayirici(adlar);
+}
+var _MNT_PRM_KRITER_NO = ['1', '1a', '1b', '2'];
+function _mntParamKonfigHTML(node, ent, L, sec){
+  var h='<div class="ve-prm-kl" role="listbox" aria-label="Konfigürasyonlar">', ks=_mntPrmKisaF(ent);
+  L.forEach(function(k, i){
+    var ad=_mntPrmKAdi(ent, k), u=k.uygunluk==='En uygun' ? 'en' : k.uygunluk==='Uygun' ? 'uy' : 'yok';
+    var tam=ad.map(function(a, gi){ return ent.M.G[gi].ad+' · '+a; }).join('\n');
+    h+='<button type="button" class="ve-prm-k" role="option" aria-selected="'+(i===sec)+'" data-k="'+k.K+'"'
+      + ' title="'+_mntEsc(tam)+'" onclick="veMntParamKSec(\''+node.id+'\','+i+')">'
+      + '<span class="ve-prm-k-no">K'+k.K+'</span>'
+      + '<span class="ve-prm-k-ad">'+(k.mevcut ? '<em>Mevcut</em>' : '')
+      + ad.map(function(a){ return '<span class="t">'+_mntEsc(ks(a))+'</span>'; }).join(' + ')+'</span>'
+      + '<span class="ve-prm-k-uy" data-u="'+u+'">'+k.uygunluk+'</span>'
+      + '<span class="ve-prm-k-o">'+_mntSym('δ<sub>s</sub>')+' '+_mntS(k.d, 2)+' mm · TR %'+_mntS(k.T*100, 1)
+      + ' · '+_mntSym('f<sub>min</sub>')+' '+_mntS(k.fMin, 1)+' Hz</span>'
+      + '<span class="ve-prm-k-kr">'+k.kriter.map(function(ok, j){
+          return '<span data-ok="'+ok+'">'+veDurumIkon(ok ? 'ok' : 'err')+_MNT_PRM_KRITER_NO[j]+'</span>';
+        }).join('')+'</span></button>';
+  });
+  return _mntBolum('Konfigürasyonlar', '', h+'</div>');
+}
+// KRİTERLER — dört kesin kriter (hüküm), K0 ile seçilen yan yana; hüküm mevcut
+// tasarımda hepsi() (taramanın ölçücüsünün ölçümü), seçilende deponun ölçüsü — sıranın
+// kullandığı hükmün aynısı. Satır: { k, ad, sinir, m, o }; m · o: { v (yazı), ok }.
+function _mntPrmKriterler(ent, Z, c, idx){
+  var K=veMntKatalog, D=ent.D, sat=[];
   var hm=ent.mevcut.o1 ? K.hepsi(ent.mevcut.o1, ent.mevcut.o2, c).sonuc : {}, ho={};
   if(idx>=0) K.KISITLAR.forEach(function(Q){
     if(c.acik[Q.k] && (Q.asama===1 || D.d2[idx]===1)) ho[Q.k]=K.hukum(Q.k, D.X[Q.k][idx], c);
   });
-  var om={ o:_mntPrmOlc(ent, -1), d:ent.mevcut.o1 ? _mntPrmSehim(ent.mevcut.o1) : NaN };
-  var oo={ o:idx>=0 ? _mntPrmOlc(ent, idx) : null, d:idx>=0 ? D.d[idx] : NaN };
+  var om={ o:_mntPrmOlc(ent, -1) }, oo={ o:idx>=0 ? _mntPrmOlc(ent, idx) : null };
   var hucre=function(k, h, x){
     if(!h || h.na) return { v:'—', ok:null };
     var v=h.deger, t;
-    if(k==='k1' || k==='altMod') t=_mntPrmYaz(v, h.sinir, 1)+' Hz';
+    if(k==='k1') t=_mntPrmYaz(v, h.sinir, 1)+' Hz';
     else if(k==='k1a') t=_mntPrmYaz(v, h.sinir, 2)+' Hz';
-    else if(k==='k1b') t=h.ok ? 'Dışında' : _mntPrmBantta(x.o);
-    else if(k==='cekme') t=v>0 ? _mntS(v, 2)+' mm' : 'Yok';
-    else if(k==='k2' || k==='kapasite' || k==='ayrisma' || k==='darbe') t='%'+_mntPrmYaz(v*100, h.sinir*100, 1);
-    else t=_mntPrmYaz(v, h.sinir, 1)+' mm';
+    else if(k==='k1b') t=h.ok ? 'Yok' : _mntPrmBantta(x.o);
+    else t='%'+_mntPrmYaz(v*100, h.sinir*100, 1);
     return { v:t, ok:!!h.ok };
   };
-  var acA=!!c.acik.sehimAlt, acU=!!c.acik.sehim;
-  var sehim=function(h, x){
-    var a=acA ? h.sehimAlt : null, u=acU ? h.sehim : null;
-    if((acA && !a) || (acU && !u)) return { v:'—', ok:null };
-    var boz=(a && !a.ok) ? a : (u && !u.ok) ? u : null;
-    return { v:_mntPrmYaz(boz ? boz.deger : x.d, boz ? boz.sinir : (u || a).sinir, 2)+' mm', ok:!boz };
-  };
   K.KISITLAR.forEach(function(Q){
-    if(!c.acik[Q.k] || (Q.k==='sehim' && acA)) return;
-    if(Q.k==='sehimAlt' || Q.k==='sehim'){
-      var ikisi=acA && acU, b='&nbsp;';
-      sat.push({ k:'sehim', ad:ikisi ? 'Statik sehim' : Q.ad,
-        sinir:ikisi ? _mntPrmSin(s.sehimAlt)+'–'+_mntPrmSin(s.sehimUst)+b+'mm'
-             : (acA ? '≥'+b+_mntPrmSin(s.sehimAlt) : '≤'+b+_mntPrmSin(s.sehimUst))+b+'mm',
-        m:sehim(hm, om), o:sehim(ho, oo) });
-      return;
-    }
-    sat.push({ k:Q.k, ad:Q.ad, sinir:_mntPrmSinirYazi(Q.k, c), m:hucre(Q.k, hm[Q.k], om), o:hucre(Q.k, ho[Q.k], oo) });
+    if(!Q.zorunlu || !c.acik[Q.k]) return;
+    sat.push({ k:Q.k, ad:'Kriter '+Q.no+' · '+_MNT_PARAM_KRITER_AD[Q.k], sinir:_mntParamKriterSinir(Q.k, c.fAtes),
+               m:hucre(Q.k, hm[Q.k], om), o:hucre(Q.k, ho[Q.k], oo) });
   });
   return sat;
 }
-// MODLAR — mevcut ve önerinin modları; sınırı bozan mod (Kriter 1 · 1a · 1b,
-// en düşük mod) kırmızı. Tolerans açıksa köşeler de sınanır ve bıyık çizilir.
-function _mntPrmModV(ent, Z, c){
-  var K=veMntKatalog, S=Z.S, bir=S.sira[0], k1=K.K1_ORAN*c.fAtes, fm=k1, kopru=false, satir=[];
+// Seçilen K'nın ayrıntısı: grup başına tip (K0'ınkinden değişen kalın), TR ve statik
+// sehim (K0 → seçilen), kriterler, eylemler.
+function _mntParamSeciliHTML(node, ent, Z, c, L, sec){
+  var k=L[sec], k0=L[0], M=ent.M, ad=_mntPrmKAdi(ent, k), ad0=_mntPrmKAdi(ent, k0);
+  var h='<div class="ve-prm-og">';
+  M.G.forEach(function(g, i){
+    var tip;
+    if(k.mevcut) tip='<span class="ayni">'+_mntEsc(ad0[i])+'</span>';
+    else if(!k.tipler[i]) tip='<span class="ayni">'+_mntEsc(ad[i])+'</span><em>Sabit</em>';
+    else if(ad[i]===ad0[i]) tip='<span class="ayni">'+_mntEsc(ad[i])+'</span><em>Aynı</em>';
+    else tip='<s>'+_mntEsc(ad0[i])+'</s><b>'+veIkon('arrow-right')+_mntEsc(ad[i])+'</b>';
+    h+='<div class="ve-prm-og-s"><span class="ve-prm-og-g">'+_mntEsc(g.ad)+'</span><span class="ve-prm-og-t">'+tip+'</span></div>';
+  });
+  h+='</div>';
+  var ok=function(a, b, d){ return k.mevcut ? _mntS(a, d) : _mntS(a, d)+' → '+_mntS(b, d); };
+  h+=_mntIzgara(2, _mntOku('Statik sehim <u>[mm]</u>', ok(k0.d, k.d, 2))
+                 + _mntOku('TR <u>[%]</u>', ok(k0.T*100, k.T*100, 1)));
+  var R=_mntPrmKriterler(ent, Z, c, k.idx);
+  var td=function(x){
+    return '<td'+(x.ok===false ? ' class="kr"' : '')+' title="'+_mntEsc(x.v)+'">'+x.v+(x.ok===null ? '' : veDurumIkon(x.ok ? 'ok' : 'err'))+'</td>';
+  };
+  var kol=k.mevcut ? [{ b:'Kriter', gen:'46%', sinif:'sol' }, { b:'Sınır', gen:'27%' }, { b:'K0', gen:'27%' }]
+    : [{ b:'Kriter', gen:'34%', sinif:'sol' }, { b:'Sınır', gen:'22%' }, { b:'K0', gen:'22%' }, { b:'K'+k.K, gen:'22%' }];
+  var t=_mntFoyAc(kol, 'Kriterler', 've-mnt-foy--sar ve-prm-kriter');
+  R.forEach(function(r){
+    t+='<tr data-k="'+r.k+'"><td class="sol">'+r.ad+'</td><td class="sf">'+r.sinir+'</td>'+td(r.m)+(k.mevcut ? '' : td(r.o))+'</tr>';
+  });
+  h+=t+_MNT_FOY_KAPA;
+  h+='<div class="ve-fp-eylem ve-prm-eylem">'+(k.mevcut ? '' : _mntPrmUygulaDugme(node.id, ent, k.idx, 'K'+k.K, 'Modele uygula'))
+    + '<button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
+    + veIkon('download')+' Raporu indir</button>'
+    + '<button type="button" class="ve-fp-dugme" data-excel onclick="veMntParamExcelIndir(\''+node.id+'\')">'
+    + veIkon('download')+' Excel’i indir</button></div>';
+  return _mntBolum('K'+k.K+(k.mevcut ? ' · Mevcut' : ''), k.uygunluk, h, { id:'ve-mnt-prm-secili-'+node.id });
+}
+// MODLAR — K0 ve seçilenin modları; sınırı bozan mod (Kriter 1 · 1a · 1b) kırmızı.
+// Tolerans açıksa köşeler de sınanır ve bıyık çizilir.
+function _mntPrmModV(ent, Z, c, idx, ad){
+  var K=veMntKatalog, k1=K.K1_ORAN*c.fAtes, fm=k1, kopru=false, satir=[];
   var ekle=function(ad, o, vurgu){
     if(!o || !o.f || !o.f.length) return;
     var kotu=o.f.map(function(){ return false; });
     [o].concat(o.sert && o.yumusak ? [o.sert, o.yumusak] : []).forEach(function(x){
       var f=(x.f || []).map(function(v, i){ return [v, i]; }).sort(function(p, q){ return p[0]-q[0]; });
       f.forEach(function(p, j){
-        if(p[0]>=k1 || (c.acik.altMod && p[0]<c.s.altMod) || (p[0]>=K.K1B[0] && p[0]<=K.K1B[1])) kotu[p[1]]=true;
+        if(p[0]>=k1 || (p[0]>=K.K1B[0] && p[0]<=K.K1B[1])) kotu[p[1]]=true;
         if(j && p[0]-f[j-1][0]<=K.K1A_HZ){ kotu[p[1]]=kotu[f[j-1][1]]=true; if(x===o) kopru=true; }
         if(p[0]>fm) fm=p[0];
       });
@@ -687,53 +739,21 @@ function _mntPrmModV(ent, Z, c){
       ip:o.f.map(function(f, i){ return ad+' · '+(i+1)+'. mod\n'+_mntS(f, 2)+' Hz'+(lab[i] ? ' · '+_mntPrmModAdi(lab[i]) : ''); }),
       kose:(o.sert && o.yumusak) ? { a:o.yumusak.f, b:o.sert.f } : null });
   };
-  ekle('Mevcut', _mntPrmOlc(ent, -1));
-  if(bir) ekle(_mntPrmAd(S), _mntPrmOlc(ent, bir.idx), true);
-  var bolge=[[k1, Infinity]];
-  if(c.acik.altMod) bolge.unshift([0, c.s.altMod]);
-  return { satir:satir, bolge:bolge, bant:K.K1B, k1a:K.K1A_HZ, kopru:kopru,
-           ozel:[k1].concat(c.acik.altMod ? [c.s.altMod] : []), xMax:Math.max(k1*1.25, fm*1.06) };
+  ekle('K0', _mntPrmOlc(ent, -1), !(idx>=0));
+  if(idx>=0) ekle(ad || 'K1', _mntPrmOlc(ent, idx), true);
+  return { satir:satir, bolge:[[k1, Infinity]], bant:K.K1B, k1a:K.K1A_HZ, kopru:kopru,
+           ozel:[k1], xMax:Math.max(k1*1.25, fm*1.06) };
 }
-// STATİK SEHİM VE İLETİLEBİLİRLİK — mevcut → öneri ve yakın seçenekler; bant statik sehim sınırları.
-function _mntPrmDagV(ent, Z, c, L){
-  var D=ent.D, S=Z.S, bir=S.sira[0], m1=ent.mevcut.o1;
+// STATİK SEHİM VE İLETİLEBİLİRLİK — K0, seçilen ve öteki K'lar.
+function _mntPrmDagV(ent, c, L, sec){
+  var k0=L[0], ks=L[sec], m1=ent.mevcut.o1;
   return {
-    mevcut:m1 ? { x:_mntPrmSehim(m1), y:m1.T*100, ip:'Mevcut\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' } : null,
-    oneri:bir ? { x:D.d[bir.idx], y:D.T[bir.idx]*100, i:bir.idx, ad:_mntPrmAd(S) } : null,
-    yakin:L.map(function(x){ return { x:D.d[x], y:D.T[x]*100, i:x }; }),
-    e1:c.acik.sehimAlt ? c.s.sehimAlt : null, e2:c.acik.sehim ? c.s.sehimUst : null, k2:veMntKatalog.K2_T*100
+    mevcut:m1 ? { x:k0.d, y:k0.T*100, ad:'K0', ip:'K0 · Mevcut\nT %'+_mntS(k0.T*100, 1)+' · δs '+_mntS(k0.d, 2)+' mm' } : null,
+    oneri:sec>0 ? { x:ks.d, y:ks.T*100, i:ks.idx, ad:'K'+ks.K } : null,
+    yakin:L.slice(1).filter(function(k){ return k.K!==ks.K; }).map(function(k){ return { x:k.d, y:k.T*100, i:k.idx }; }),
+    e1:null, e2:null, k2:veMntKatalog.K2_T*100
   };
 }
-// YAKIN SEÇENEKLER — sıranın 2.–6. kombinasyonu; uygun beşten azsa en az
-// ihlalli uygun olmayanlarla tamamlanır.
-function _mntPrmYakinL(ent, Z){
-  var S=Z.S, L=S.sira.slice(1, 6).map(function(r){ return r.idx; });
-  if(L.length<5 && S.uygunN) _mntPrmYakin(ent, Z.Hk, 5-L.length).forEach(function(x){ L.push(x); });
-  return L;
-}
-
-function _mntParamOneriHTML(node, ent, Z){
-  var S=Z.S, bir=S.sira[0], D=ent.D, M=ent.M, ad=_mntPrmAd(S);
-  if(!bir) return _mntBolum(ad, '', _mntNot('Çözülen kombinasyon yok', 'warn'));
-  var t=D.tipler(bir.idx), h='<div class="ve-prm-og">';
-  M.G.forEach(function(g, i){
-    var mev=(g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—', yeni=t[i] ? ((M.lib[t[i]] || {}).name || t[i]) : null, tip;
-    if(!yeni) tip='<span class="ayni">'+_mntEsc(mev)+'</span><em>Sabit</em>';
-    else if(t[i]===g.tip) tip='<span class="ayni">'+_mntEsc(yeni)+'</span><em>Aynı</em>';
-    else tip='<s>'+_mntEsc(mev)+'</s><b>'+veIkon('arrow-right')+_mntEsc(yeni)+'</b>';
-    h+='<div class="ve-prm-og-s"><span class="ve-prm-og-g">'+_mntEsc(g.ad)+'</span><span class="ve-prm-og-t">'+tip+'</span></div>';
-  });
-  var m1=ent.mevcut.o1;
-  h+='</div>'+_mntIzgara(2, _mntOku('İletilebilirlik', (m1 ? '%'+_mntS(m1.T*100, 1) : '—')+' → %'+_mntS(D.T[bir.idx]*100, 1))
-      + _mntOku('Statik sehim <u>[mm]</u>', (m1 ? _mntS(_mntPrmSehim(m1), 2) : '—')+' → '+_mntS(D.d[bir.idx], 2)))
-    + '<div class="ve-fp-eylem ve-prm-eylem">'+_mntPrmUygulaDugme(node.id, ent, bir.idx, ad, 'Modele uygula')
-    + '<button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
-    + veIkon('download')+' Raporu indir</button>'
-    + '<button type="button" class="ve-fp-dugme" data-excel onclick="veMntParamExcelIndir(\''+node.id+'\')">'
-    + veIkon('download')+' Excel’i indir</button></div>';
-  return _mntBolum(ad, '', h);
-}
-// Kombinasyon modelde mi: taranan her grubun bugünkü tipi kombinasyonunki.
 function _mntPrmModelde(ent, idx){
   var t=ent.D.tipler(idx);
   return ent.M.G.every(function(g, i){ return !t[i] || t[i]===g.tip; });
@@ -745,22 +765,8 @@ function _mntPrmUygulaDugme(nodeId, ent, idx, ad, yazi){
     + (ici ? ' aria-disabled="true" title="'+_mntEsc(ad)+' modelde."' : ' onclick="veMntParamUygula(\''+nodeId+'\','+idx+')"')
     + '>'+veIkon('check')+' '+yazi+'</button>';
 }
-function _mntParamKriterHTML(ent, Z, c){
-  var R=_mntPrmKriterler(ent, Z, c), ad=_mntPrmAd(Z.S), nm=0, no=0;
-  var td=function(x){
-    return '<td'+(x.ok===false ? ' class="kr"' : '')+' title="'+_mntEsc(x.v)+'">'+x.v+(x.ok===null ? '' : veDurumIkon(x.ok ? 'ok' : 'err'))+'</td>';
-  };
-  var h=_mntFoyAc([{ b:'Kriter', gen:'34%', sinif:'sol' }, { b:'Sınır', gen:'22%' }, { b:'Mevcut', gen:'22%' }, { b:ad, gen:'22%' }],
-                  'Kriterler', 've-mnt-foy--sar ve-prm-kriter');
-  R.forEach(function(r){
-    if(r.m.ok===false) nm++;
-    if(r.o.ok===false) no++;
-    h+='<tr data-k="'+r.k+'"><td class="sol">'+_mntEsc(r.ad)+'</td><td class="sf">'+r.sinir+'</td>'+td(r.m)+td(r.o)+'</tr>';
-  });
-  return _mntBolum('Kriterler', 'Mevcut '+_mntS(nm, 0)+' ihlal · '+ad+' '+_mntS(no, 0)+' ihlal', h+_MNT_FOY_KAPA);
-}
-function _mntParamModHTML(node, ent, Z, c, o){
-  var V=_mntPrmModV(ent, Z, c);
+function _mntParamModHTML(node, ent, Z, c, o, k){
+  var V=_mntPrmModV(ent, Z, c, k.mevcut ? -1 : k.idx, 'K'+k.K);
   if(!V.satir.length) return '';
   var lj=[{ s:'ve-pd-bolge', sekil:'alan', ad:'Sınır dışı' }, { s:'ve-pd-tik k', sekil:'dik', ad:'Sınırı bozan mod' }];
   if(V.kopru) lj.push({ s:'ve-pd-yakin', sekil:'cizgi', ad:'Aralık ≤ '+_mntS(V.k1a, 1)+' Hz' });
@@ -768,49 +774,31 @@ function _mntParamModHTML(node, ent, Z, c, o){
   return _mntBolum('Modlar', '', '<div class="ve-pd-kap" data-pd="mod" data-dugum="'+node.id+'">'+veMntParamCiz.modSerit(V, o).svg+'</div>'
     + veMntParamCiz.gosterge(lj));
 }
-function _mntParamDagHTML(node, ent, Z, c, o, L){
-  var V=_mntPrmDagV(ent, Z, c, L);
-  if(!V.mevcut && !V.oneri) return '';
+function _mntParamDagHTML(node, ent, c, o, L, sec){
+  var V=_mntPrmDagV(ent, c, L, sec);
+  if(!V.mevcut && !V.oneri && !V.yakin.length) return '';
   var lj=[];
-  if(V.mevcut) lj.push({ s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' });
+  if(V.mevcut) lj.push({ s:'ve-pd-mev', sekil:'karo', ad:'K0' });
   if(V.oneri) lj.push({ s:'ve-pd-uz', sekil:'halka', ad:V.oneri.ad });
-  if(V.yakin.length) lj.push({ s:'ve-pd-yk', ad:'Yakın seçenekler' });
-  if((V.e1!=null || V.e2!=null) && !(V.e1!=null && V.e2!=null && V.e2<=V.e1)) lj.push({ s:'ve-pd-kabul', sekil:'alan', ad:'Statik sehim '+(V.e1!=null && V.e2!=null
-    ? _mntPrmSin(V.e1)+'–'+_mntPrmSin(V.e2) : V.e1!=null ? '≥ '+_mntPrmSin(V.e1) : '≤ '+_mntPrmSin(V.e2))+' mm' });
+  if(V.yakin.length){
+    var k1=sec===1 ? 2 : 1, kn=L.length-1;                                    // seçilen K kalın halkada
+    lj.push({ s:'ve-pd-yk', ad:k1===kn ? 'K'+kn : 'K'+k1+'–K'+kn });
+  }
   return _mntBolum('Statik sehim ve iletilebilirlik', '', '<div class="ve-pd-kap" data-pd="dag" data-dugum="'+node.id+'">'
     + veMntParamCiz.sehimT(V, o).svg+'</div>'+veMntParamCiz.gosterge(lj));
 }
-function _mntParamYakinHTML(node, ent, Z, L){
-  var S=Z.S, D=ent.D, M=ent.M, Hk=Z.Hk, bir=S.sira[0];
-  if(!bir || !L.length) return '';
-  var t0=D.tipler(bir.idx), h='<ol class="ve-prm-yakin">';
-  L.forEach(function(x, k){
-    var t=D.tipler(x), boz=[];
-    veMntKatalog.KISITLAR.forEach(function(Q, i){ if(Hk.m[x] & (1<<i)) boz.push(Q.ad); });
-    var tip=M.G.map(function(g, i){
-      var nm=t[i] ? ((M.lib[t[i]] || {}).name || t[i]) : ((g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—');
-      return '<li'+(t[i]===t0[i] ? ' class="ayni"' : '')+' title="'+_mntEsc(g.ad+' · '+nm)+'">'+_mntEsc(nm)+'</li>';
-    }).join('');
-    h+='<li><span class="ve-prm-no">'+_mntS(k+2, 0)+'</span><div class="ve-prm-y"><ul>'+tip+'</ul><div class="ve-prm-y-o">'
-      + '<span>%'+_mntS(D.T[x]*100, 1)+' · '+_mntS(D.d[x], 2)+' mm</span>'
-      + (boz.length ? '<span class="ve-prm-y-boz">'+veDurumIkon('err')+_mntEsc(boz.slice(0, 2).join(' · ')+(boz.length>2 ? ' …' : ''))+'</span>'
-                    : '<span class="ve-prm-y-ok">'+veDurumIkon('ok')+'Uygun</span>')
-      + _mntPrmUygulaDugme(node.id, ent, x, 'Seçenek', 'Uygula')
-      + '</div></div></li>';
+// KRİTERLERİ SAĞLAYAN — çözülen kombinasyonlardan her kesin kriteri tek başına ve
+// dördünü birden sağlayanların sayısı.
+function _mntParamSaglayanHTML(Z){
+  var S=Z.S, coz=S.N-S.hata;
+  var h=_mntFoyAc([{ b:'Kriter', gen:'72%', sinif:'sol' }, { b:'Sağlayan', gen:'28%' }], 'Kriterleri sağlayan', 've-prm-eleme')
+    + '<tr><td class="sol">Çözülen</td><td>'+_mntS(coz, 0)+'</td></tr>';
+  veMntKatalog.KISITLAR.forEach(function(Q){
+    if(!Q.zorunlu) return;
+    h+='<tr data-k="'+Q.k+'"><td class="sol">Kriter '+Q.no+' · '+_MNT_PARAM_KRITER_AD[Q.k]+'</td><td>'+_mntS(coz-(S.red[Q.k] || 0), 0)+'</td></tr>';
   });
-  return _mntBolum('Yakın seçenekler', '', h+'</ol>');
-}
-function _mntParamElemeHTML(Z){
-  var S=Z.S, ad={}, onceki=S.N;
-  veMntKatalog.KISITLAR.forEach(function(Q){ ad[Q.k]=Q.ad; });
-  var h=_mntFoyAc([{ b:'Kısıt', gen:'74%', sinif:'sol' }, { b:'Kalan', gen:'26%' }], 'Eleme', 've-prm-eleme')
-    + '<tr><td class="sol">Taranan</td><td>'+_mntS(S.N, 0)+'</td></tr>';
-  S.huni.forEach(function(x){
-    if(x.kalan===onceki) return;
-    h+='<tr><td class="sol">'+(x.k==='cozulen' ? 'Çözülen' : _mntEsc(ad[x.k]))+'</td><td>'+_mntS(x.kalan, 0)+'</td></tr>';
-    onceki=x.kalan;
-  });
-  return _mntBolum('Eleme', '', h+_MNT_FOY_KAPA);
+  h+='<tr data-k="dort"><td class="sol"><b>Dört kriter</b></td><td><b>'+_mntS(S.uygunN, 0)+'</b></td></tr>';
+  return _mntBolum('Kriterleri sağlayan', _mntS(S.N, 0)+' kombinasyon', h+_MNT_FOY_KAPA);
 }
 // Galerinin listesi: çizilebilen diyagramlar (kesit iki, tasarım uzayı üç taranan grup ister).
 function _mntPrmGaleri(ent){
@@ -834,16 +822,18 @@ function _mntParamSonucBaglam(node, H, ent){
 }
 function _mntParamSonucHTML(node, H, ent){
   var B=_mntParamSonucBaglam(node, H, ent);
-  if(ent.html && ent.html.anahtar===B.anahtar) return ent.html.v;
-  var Z=B.Z, c=B.c, L=_mntPrmYakinL(ent, Z);
-  var h=_mntParamOneriHTML(node, ent, Z)+_mntParamKriterHTML(ent, Z, c)+_mntParamModHTML(node, ent, Z, c, B.o)
-    + _mntParamDagHTML(node, ent, Z, c, B.o, L)+_mntParamYakinHTML(node, ent, Z, L)+_mntParamElemeHTML(Z)+_mntParamDiyagramHTML(node, ent);
+  var L=_mntParamKonfig(ent, B.Z, B.c), sec=_mntPrmSecK(node.id, L), anahtar=B.anahtar+'|'+sec;
+  if(ent.html && ent.html.anahtar===anahtar) return ent.html.v;
+  var Z=B.Z, c=B.c;
+  var h=_mntParamKonfigHTML(node, ent, L, sec)+_mntParamSeciliHTML(node, ent, Z, c, L, sec)
+    + _mntParamModHTML(node, ent, Z, c, B.o, L[sec])+_mntParamDagHTML(node, ent, c, B.o, L, sec)
+    + _mntParamSaglayanHTML(Z)+_mntParamDiyagramHTML(node, ent);
   var v='<div id="ve-mnt-prm-sonuc-'+node.id+'" data-tazele>'+h+'</div>';
-  ent.html={ anahtar:B.anahtar, v:v };
+  ent.html={ anahtar:anahtar, v:v };
   return v;
 }
-// Isıtıcının adımları (koşucu her birini ayrı dilimde çağırır): özet,
-// önerinin ölçümü, bölüm. Pencere kurulumu aynı belleği okur.
+// Isıtıcının adımları (koşucu her birini ayrı dilimde çağırır): özet, K1'in ölçümü,
+// bölüm. Pencere kurulumu aynı belleği okur.
 function _mntParamSonucIsitici(node, H, ent){
   var B=null;
   return [
@@ -858,8 +848,8 @@ function _mntParamSonucIsitici(node, H, ent){
 // Kesit, büyüklük ve kamera seçimi galeride. Diyagramlar kısıtı KODUYLA
 // yazar (dar çizimde ad sığmaz): açık kısıtların kodu ve adı rayın altında.
 function _mntPrmKodlar(c){
-  return '<div class="ve-pd-ray-b">Kısıtlar</div><dl class="ve-pd-kod">'+veMntKatalog.KISITLAR.filter(function(Q){ return c.acik[Q.k]; }).map(function(Q){
-    return '<dt>'+_mntPrmNo(Q)+'</dt><dd>'+_mntEsc(Q.ad)+'</dd>';
+  return '<div class="ve-pd-ray-b">Kriterler</div><dl class="ve-pd-kod">'+veMntKatalog.KISITLAR.filter(function(Q){ return c.acik[Q.k]; }).map(function(Q){
+    return '<dt>'+_mntPrmNo(Q)+'</dt><dd>'+_mntEsc(_mntPrmKrAd(Q))+'</dd>';
   }).join('')+'</dl>';
 }
 function veMntParamTamEkran(nodeId, pd){
@@ -922,7 +912,7 @@ function _mntParamIpucu(nodeId, idx){
   if(D.d1[idx]!==1) return sat.concat(['Çözülemedi']).join('\n');
   sat.push('T %'+_mntS(D.T[idx]*100, 1)+' · δs '+_mntS(D.d[idx], 2)+' mm');
   var m=Z.Hk.m[idx], boz=[];
-  veMntKatalog.KISITLAR.forEach(function(Q, i){ if(m & (1<<i)) boz.push(Q.ad); });
+  veMntKatalog.KISITLAR.forEach(function(Q, i){ if(m & (1<<i)) boz.push('Kriter '+Q.no+' · '+_mntPrmKrAd(Q)); });
   sat.push(boz.length ? boz.join('\n') : (D.d2[idx]===1 ? 'Uygun' : 'İkinci aşama çözülemedi'));
   return sat.join('\n');
 }
@@ -1059,6 +1049,21 @@ function veMntParamUygula(nodeId, idx){
   return n;
 }
 
+// Raporun girdisi: pencerenin ve Excel'in K listesi (K0 mevcut, K1…K9) ölçümüyle —
+// modlar, TR, statik sehim, kriterlerin hükmü; K1 ve K0'da işletme ve darbe yükleri de.
+function _mntParamZenginlestir(ent, Z, H){
+  var c=veMntKatalog.baglam(H.ctx), O=ent.O;
+  var konfig=_mntParamKonfig(ent, Z, c).map(function(k, n){
+    var o1=null, o2=null;
+    if(k.mevcut){ o1=ent.mevcut.o1; o2=ent.mevcut.o2; }
+    else {
+      try { o1=O.olc1(k.tipler); } catch(e){ o1=null; }
+      if(o1 && n===1){ try { o2=O.olc2(k.tipler); } catch(e){ o2=null; } }
+    }
+    return Object.assign({}, k, { o1:o1, o2:o2, h:o1 ? veMntKatalog.hepsi(o1, null, c).sonuc : {}, ad:_mntPrmKAdi(ent, k) });
+  });
+  return { S:Z.S, M:ent.M, A:H.aday, sabit:H.sabit, ctx:c, kSay:VE_MNT_PRM_XLS_KONFIG, konfig:konfig, tarih:new Date() };
+}
 // Raporu bugünkü sınırlarla indirir (tarama yinelenmez).
 function veMntParamRapor(nodeId){
   var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
@@ -1066,7 +1071,7 @@ function veMntParamRapor(nodeId){
   var H=_mntParamHazirlik(node);
   if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return; }
   var E;
-  try { E=_mntParamZenginlestir(_mntParamOzet(ent, veMntKatalog.baglam(H.ctx)).S, H, ent.O); }
+  try { E=_mntParamZenginlestir(ent, _mntParamOzet(ent, veMntKatalog.baglam(H.ctx)), H); }
   catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); return; }
   _mntReportEnsureAssets(function(ok){
     if(!ok){ _mntParamYaz(nodeId, 'Rapor varlıkları yüklenemedi', 'no'); return; }
@@ -1124,38 +1129,19 @@ function _mntParamExcelPlan(ent, H){
           takozlar:M.gather.mounts.map(function(m, i){ return { ad:m.name, grup:grupOf[i] }; }),
           konfig:[], tarama:{ N:0, gruplar:D.taranan.slice(), adaylar:D.taranan.map(function(){ return adayAd; }), satirlar:[], veri:null } };
   var adim=[];
-  // konfigürasyonlar: dört kesin kriteri sağlayanlar, statik sehim küçükten büyüğe
-  var gecen=[];
-  for(var y=0;y<D.N;y++){
-    if(D.d1[y]===1 && !(Hk.m[y] & kesin) && Number.isFinite(D.d[y])) gecen.push(y);
-  }
-  gecen.sort(function(a, b){ return D.d[a]-D.d[b] || a-b; });
-  var secilen=gecen.slice(0, VE_MNT_PRM_XLS_KONFIG);
-  if(!secilen.length) secilen=S.sira.slice(0, VE_MNT_PRM_XLS_KONFIG).map(function(s){ return s.idx; });
-  var liste=[{ K:0, mevcut:true, tipler:M.G.map(function(){ return null; }) }];
-  secilen.forEach(function(x, i){ liste.push({ K:i+1, idx:x, tipler:D.tipler(x) }); });
-  liste.forEach(function(k, n){
+  // konfigürasyonlar: pencerenin listesi (K0 mevcut, K1…K9 sıranın ilk dokuzu)
+  _mntParamKonfig(ent, Z, c).forEach(function(k, n){
     adim.push(function(){
-      var t=O.tam(k.mevcut ? null : k.tipler), o=t ? t.o : null, uy, kr;
-      if(k.mevcut){
-        var R=veMntKatalog.hepsi(ent.mevcut.o1, ent.mevcut.o2, H.ctx).sonuc;
-        kr=_MNT_PRM_KESIN.map(function(q){ return !!(R[q] && R[q].ok); });
-        uy=(!ent.mevcut.o1 || kr.indexOf(false)>=0) ? 'Uygun değil' : 'Uygun';
-      } else {
-        var b=Hk.m[k.idx];
-        kr=bitK.map(function(x){ return !(b & x); });
-        uy=_mntPrmUygunluk(b, kesin);
-        if(uy==='Uygun' && n===1) uy='En uygun';
-      }
+      var t=O.tam(k.mevcut ? null : k.tipler), o=t ? t.o : null;
       if(o && !(E.kutle>0)) E.kutle=o.m;
       var ad=tipAd(k.tipler);
-      E.konfig[n]={ K:k.K, mevcut:!!k.mevcut, tipler:ad, uygunluk:uy, kriter:kr,
-                    d:k.mevcut ? sehim(o) : D.d[k.idx],
+      E.konfig[n]={ K:k.K, mevcut:!!k.mevcut, tipler:ad, uygunluk:k.uygunluk, kriter:k.kriter,
+                    d:k.mevcut ? sehim(o) : k.d,
                     f:o ? o.f : [], T:o ? o.T : NaN, takozTip:grupOf.map(function(gi){ return ad[gi]; }),
                     vakalar:t ? t.vakalar : [], modlar:t ? t.modlar : [] };
     });
   });
-  // tarama satırları: sağlanan kesin kriter sayısı, sonra statik sehim
+  // tarama satırları: sağlanan kesin kriter sayısı, sonra statik sehim (çözülenlerin hepsi)
   var sec=[];
   for(var x=0;x<D.N;x++){
     if(D.d1[x]!==1) continue;
@@ -1266,11 +1252,15 @@ if(typeof module!=='undefined' && module.exports){
     _MNT_PARAM_KESIT: _MNT_PARAM_KESIT, _mntPrmKesit: _mntPrmKesit, _mntPrmV5: _mntPrmV5, _mntPrmV4: _mntPrmV4,
     veMntParamKesit: veMntParamKesit, veMntParamSec: veMntParamSec, veMntParam3bSifirla: veMntParam3bSifirla,
     _mntPrmV2: _mntPrmV2, _mntPrmV3: _mntPrmV3, _mntPrmV1: _mntPrmV1, _MNT_PARAM_KAM: _MNT_PARAM_KAM,
-    _mntPrmV11: _mntPrmV11, _mntPrmV7: _mntPrmV7, _mntPrmV9: _mntPrmV9, _mntPrmV10: _mntPrmV10, _mntPrmV8: _mntPrmV8,
+    _mntPrmV11: _mntPrmV11, _mntPrmV7: _mntPrmV7, _mntPrmV9: _mntPrmV9, _mntPrmV8: _mntPrmV8,
     veMntParamCizKur: veMntParamCizKur, veMntParamRapor: veMntParamRapor, veMntParamUnut: veMntParamUnut,
     veMntParamUygula: veMntParamUygula, _mntPrmModelde: _mntPrmModelde, _mntParamMevcutTazele: _mntParamMevcutTazele,
     _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici,
-    _mntPrmKriterler: _mntPrmKriterler, _mntPrmModV: _mntPrmModV, _mntPrmDagV: _mntPrmDagV, _mntPrmYakinL: _mntPrmYakinL,
+    _mntPrmKriterler: _mntPrmKriterler, _mntPrmModV: _mntPrmModV, _mntPrmDagV: _mntPrmDagV,
+    _mntParamKonfig: _mntParamKonfig, _mntPrmSecK: _mntPrmSecK, veMntParamKSec: veMntParamKSec, _mntPrmKAdi: _mntPrmKAdi,
+    _mntParamZenginlestir: _mntParamZenginlestir, _mntPrmKisaF: _mntPrmKisaF, VE_MNT_PRM_XLS_KONFIG: VE_MNT_PRM_XLS_KONFIG,
+    _mntPrmKrAd: _mntPrmKrAd,
+    _MNT_PARAM_SECIM: _MNT_PARAM_SECIM,
     _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz,
     _mntParamExcelPlan: _mntParamExcelPlan, veMntParamExcelIndir: veMntParamExcelIndir, _mntPrmUygunluk: _mntPrmUygunluk,
     VE_MNT_PRM_XLS_TAVAN: VE_MNT_PRM_XLS_TAVAN

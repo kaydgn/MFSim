@@ -203,7 +203,7 @@ var veMntParamCiz = (function(){
       var mx = X(V.mevcut.x), my = Yo(V.mevcut.y);
       if(ici(mx, my)){
         s += '<path class="ve-pd-mev" d="M' + R(mx) + ' ' + R(my - 6.5) + 'L' + R(mx + 6.5) + ' ' + R(my) + 'L' + R(mx) + ' ' + R(my + 6.5) + 'L' + R(mx - 6.5) + ' ' + R(my) + 'Z"' + ip(V.mevcut.ip) + '/>';
-        adlar.push([mx, my, 7, 'Mevcut']);
+        adlar.push([mx, my, 7, V.mevcut.ad || 'Mevcut']);
         engel.push({ l:mx - 7, r:mx + 7, t:my - 7, b:my + 7 });
       }
     }
@@ -287,7 +287,7 @@ var veMntParamCiz = (function(){
     var uzun = W >= 520, ad = function(q){ return uzun ? q.no + ' · ' + q.ad : q.no; };
     var adG = Math.max.apply(null, K.map(function(q){ return gen(ad(q), px); })) + 14;
     var H = bas + K.length * sat + 8;
-    var Y = katman(W, H), s = svgAc(W, H, 'Bağlayıcı kısıtlar'), ara = 14, cw = (W - adG - ara - 8) / 2;
+    var Y = katman(W, H), s = svgAc(W, H, 'Bağlayıcı kriterler'), ara = 14, cw = (W - adG - ara - 8) / 2;
     var sutun = function(k, x0, x1, baslik){
       var en = Math.max(1, Math.max.apply(null, K.map(function(q){ return q[k]; })));
       var yw = gen(sayi(en, 0), px) + 8, X = olcek(0, en, x0, x1 - yw);
@@ -303,60 +303,6 @@ var veMntParamCiz = (function(){
     var dar = gen('Yalnız bunu ihlal eden', px, true) > cw - 4;
     sutun('red', adG, adG + cw, dar ? 'İhlal' : 'İhlal eden');
     sutun('tek', adG + cw + ara, W - 8, dar ? 'Yalnız bu' : 'Yalnız bunu ihlal eden');
-    return { svg:s + Y.ciz() + '</svg>', h:H };
-  }
-
-  // ── D10 · SINIR DUYARLILIĞI — sınır değişince uygun kombinasyon sayısı ────
-  // V: { panel:[{ no, ad, kisa, yon:'ust'|'alt', deger:[artan], na, sinir, xMin, xMax }] } — dar
-  // panelde başlık kısa adla.
-  // sayi(L) = na + #{ölçü ≤ L} (üst sınır) · na + #{ölçü ≥ L} (alt sınır).
-  function _say(P){
-    var v = P.deger, n = v.length;
-    var ilk = function(f){ var lo = 0, hi = n; while(lo < hi){ var m = (lo + hi) >> 1; if(f(v[m])) hi = m; else lo = m + 1; } return lo; };
-    return {
-      az: function(L){ return ilk(function(a){ return a >= L; }); },      // #{< L}
-      esit: function(L){ return ilk(function(a){ return a > L; }); },     // #{≤ L}
-      sayi: function(L){ return P.na + (P.yon === 'ust' ? ilk(function(a){ return a > L; }) : n - ilk(function(a){ return a >= L; })); }
-    };
-  }
-  function basamak(P){
-    var S = _say(P), v = P.deger, n = v.length, out = [[P.xMin, S.sayi(P.xMin)]], once = null;
-    for(var i = 0; i < n; i++){
-      var u = v[i];
-      if(u === once || !(u > P.xMin) || !(u < P.xMax)) continue;
-      once = u;
-      if(P.yon === 'ust') out.push([u, P.na + S.az(u)], [u, P.na + S.esit(u)]);
-      else out.push([u, P.na + n - S.az(u)], [u, P.na + n - S.esit(u)]);
-    }
-    out.push([P.xMax, S.sayi(P.xMax)]);
-    return out;
-  }
-  function duyarlilik(V, o){
-    var W = o.W, px = o.fs.k, ara = 14, P = V.panel;
-    var kol = Math.max(1, Math.min(P.length, Math.floor((W + ara) / (165 + ara))));
-    var pw = (W - (kol - 1) * ara) / kol, ph = pw < 230 ? 150 : 168, sira = Math.ceil(P.length / kol);
-    var H = sira * ph + (sira - 1) * 10;
-    var Y = katman(W, H), s = svgAc(W, H, 'Sınır duyarlılığı');
-    P.forEach(function(p, k){
-      var x0 = (k % kol) * (pw + ara), y0 = Math.floor(k / kol) * (ph + 10);
-      var pts = basamak(p), en = Math.max(1, Math.max.apply(null, pts.map(function(q){ return q[1]; })));
-      var Iy = ust(0, en, 3);
-      Iy.v = Iy.v.filter(function(v){ return v === Math.round(v); }); Iy.b = 0;
-      var F = { l:x0 + solPay(Iy, px) + 2, r:x0 + pw - 10, t:y0 + 32, b:y0 + ph - 30 };
-      var Ix = isaretler(p.xMin, p.xMax, Math.max(2, Math.floor((F.r - F.l) / (px * 4.5))));
-      var X = olcek(p.xMin, p.xMax, F.l, F.r), Yo = olcek(0, Iy.v[Iy.v.length - 1], F.b, F.t);
-      var bas = p.no + ' · ' + (gen(p.no + ' · ' + p.ad, px, true) <= pw - 6 || !p.kisa ? p.ad : p.kisa);
-      Y.ekle(x0 + 2, y0 + 13, bas, px, { a:'start', s:'b', kalin:true, pri:9 });
-      s += xEksen(F, Ix, X, px, Y) + yEksen(F, Iy, Yo, px, Y);
-      var d = 'M' + R(X(pts[0][0])) + ' ' + R(Yo(pts[0][1]));
-      for(var i = 1; i < pts.length; i++) d += ' L' + R(X(pts[i][0])) + ' ' + R(Yo(pts[i][1]));
-      s += '<path class="ve-pd-basamak" d="' + d + '"/>';
-      if(p.sinir >= p.xMin && p.sinir <= p.xMax){
-        var xs = X(p.sinir), n = _say(p).sayi(p.sinir);
-        s += cizgi(xs, F.t, xs, F.b, 've-pd-sinir') + '<circle class="ve-pd-n3" cx="' + R(xs) + '" cy="' + R(Yo(n)) + '" r="3.2"/>';
-        Y.ekle(xs + 5, Yo(n) - 5, sayi(n, 0), px, { a:'start', s:'b', pri:8 });
-      }
-    });
     return { svg:s + Y.ciz() + '</svg>', h:H };
   }
 
@@ -482,7 +428,7 @@ var veMntParamCiz = (function(){
     var kol = Math.max(1, Math.min(P.length, Math.floor((W + ara) / (140 + ara))));
     var pw = (W - (kol - 1) * ara) / kol, side = pw - 2, c = side / n, ph = 20 + side + 10;
     var sira = Math.ceil(P.length / kol), H = sira * ph;
-    var Y = katman(W, H), s = svgAc(W, H, 'Kısıt haritaları');
+    var Y = katman(W, H), s = svgAc(W, H, 'Kriter haritaları');
     P.forEach(function(p, k){
       var x0 = (k % kol) * (pw + ara), y0 = Math.floor(k / kol) * ph, gx = x0 + 1, gy = y0 + 20;
       s += '<rect class="ve-pd-cerceve" x="' + R(gx) + '" y="' + R(gy) + '" width="' + R(side) + '" height="' + R(side) + '"/>'
@@ -745,7 +691,7 @@ var veMntParamCiz = (function(){
     if(m){
       s += '<path class="ve-pd-mev" d="M' + R(m[0]) + ' ' + R(m[1] - 6.5) + 'L' + R(m[0] + 6.5) + ' ' + R(m[1]) + 'L' + R(m[0]) + ' ' + R(m[1] + 6.5)
         + 'L' + R(m[0] - 6.5) + ' ' + R(m[1]) + 'Z"' + ip(V.mevcut.ip) + '/>';
-      adlar.push([m[0], m[1], 7, 'Mevcut']);
+      adlar.push([m[0], m[1], 7, V.mevcut.ad || 'Mevcut']);
       engel.push({ l:m[0] - 7, r:m[0] + 7, t:m[1] - 7, b:m[1] + 7 });
     }
     if(u){
@@ -768,7 +714,7 @@ var veMntParamCiz = (function(){
 
   return {
     R:R, esc:esc, gen:gen, kutu:kutu, kesis:kesis, isaretler:isaretler, adim:adim, gosterge:gosterge,
-    pareto:pareto, modlar:modlar, baglayici:baglayici, duyarlilik:duyarlilik, basamak:basamak, anaEtki:anaEtki,
+    pareto:pareto, modlar:modlar, baglayici:baglayici, anaEtki:anaEtki,
     haritalar:haritalar, tHaritasi:tHaritasi, sinirYolu:sinirYolu, T_SINIF:T_SINIF, uc:uc, ucKamera:ucKamera,
     modSerit:modSerit, sehimT:sehimT
   };

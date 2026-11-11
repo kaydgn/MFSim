@@ -10117,7 +10117,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-pd-kose{ stroke:color-mix(in srgb, var(--text-muted) 70%, transparent); stroke-width:1; }
 .ve-pd-yakin{ stroke:var(--accent-danger); stroke-width:1.6; }
 .ve-pd-cubuk{ fill:var(--seri-1); }
-.ve-pd-basamak{ fill:none; stroke:var(--seri-1); stroke-width:1.8; stroke-linejoin:round; }
 .ve-pd-etki{ fill:none; stroke-width:1.6; stroke-linejoin:round; }
 .ve-pd-im{ fill:var(--bg-input); stroke-width:1.4; }
 .ve-pd-s1{ stroke:var(--seri-1); } .ve-pd-im.ve-pd-s1.dolu{ fill:var(--seri-1); }
@@ -10174,8 +10173,8 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-pd-yk{ fill:var(--bg-input); stroke:var(--text-secondary); stroke-width:1.3; }
 .ve-pd-ok{ stroke:var(--text-secondary); stroke-width:1.4; stroke-dasharray:4 3; }
 .ve-pd-ok-uc{ fill:var(--text-secondary); }
-/* Öneri: grup başına satır — grubun adı solda; mevcut tip üstü çizili, öneri
-   kalın; aynı ya da sabit tip düz yazı ve etiketi. */
+/* Seçili konfigürasyon: grup başına satır — grubun adı solda; K0'ın tipi üstü çizili,
+   seçilenin kalın; aynı ya da sabit tip düz yazı ve etiketi. */
 .ve-prm-og{ display:flex; flex-direction:column; margin:0 0 10px; }
 .ve-prm-og-s{
   display:grid; grid-template-columns:minmax(64px, 30%) minmax(0, 1fr); column-gap:10px;
@@ -10198,36 +10197,61 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-properties-content .ve-mnt-foy.ve-prm-kriter td.sf{ white-space:normal; }
 .ve-properties-content .ve-mnt-foy.ve-prm-kriter td.kr{ background:var(--danger-tint-8); }
 .ve-mnt-foy.ve-prm-kriter .ve-durum{ width:11px; height:11px; margin-left:3px; vertical-align:-1px; }
-/* Yakın seçenekler: sıra numarası, grup başına tip (önerininkiyle aynısı
-   soluk), amaçlar ve hüküm. */
-.ve-prm-yakin{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
-.ve-prm-yakin > li{
-  display:grid; grid-template-columns:18px minmax(0, 1fr); gap:8px;
-  padding:7px 0; border-bottom:1px solid var(--border-light);
+/* KONFİGÜRASYONLAR (kullanıcı 2026-11-10 — Excel'in Özet'i): K0 ve K1…K9 birer düğme;
+   seçili K vurgulu kenar ve zemin. Uygunluk etiketi Excel'in renk dili: En uygun koyu
+   yeşil, Uygun açık yeşil, Uygun değil renksiz; dört kesin kriter numaralı işaret. */
+.ve-prm-kl{ display:flex; flex-direction:column; gap:4px; }
+.ve-prm-k{
+  display:grid; grid-template-columns:auto minmax(0, 1fr) auto; grid-template-areas:'no ad uy' 'no o kr';
+  column-gap:8px; row-gap:3px; align-items:center; width:100%; padding:6px 8px; cursor:pointer; text-align:left;
+  font:inherit; font-size:var(--fs-tiny); color:var(--text-primary);
+  background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);
 }
-.ve-prm-yakin > li:first-child{ padding-top:0; }
-.ve-prm-yakin > li:last-child{ border-bottom:0; }
-.ve-prm-no{
-  width:18px; height:18px; display:grid; place-items:center; border:1px solid var(--border-hover);
-  border-radius:var(--radius-pill); font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary);
+.ve-prm-k:hover{ border-color:var(--border-hover); }
+.ve-prm-k[aria-selected="true"]{ border-color:var(--accent-primary); background:var(--accent-tint-8); }
+.ve-prm-k:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-prm-k-no{
+  grid-area:no; align-self:start; min-width:22px; font-weight:700; color:var(--text-heading);
   font-variant-numeric:tabular-nums;
 }
-.ve-prm-y{ min-width:0; }
-.ve-prm-y ul{ list-style:none; margin:0; padding:0; font-size:var(--fs-tiny); }
-.ve-prm-y li{ font-weight:600; color:var(--text-heading); }
-.ve-prm-y li.ayni{ font-weight:400; color:var(--text-muted); }
-.ve-prm-y-o{
-  display:flex; flex-wrap:wrap; gap:2px 10px; margin-top:3px;
-  font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums;
+.ve-prm-k-ad{ grid-area:ad; min-width:0; font-weight:600; color:var(--text-heading); }
+.ve-prm-k-ad .t{ white-space:nowrap; }
+.ve-prm-k-ad em{ font-style:normal; color:var(--text-secondary); margin-right:6px; }
+.ve-prm-k-uy{
+  grid-area:uy; justify-self:end; padding:1px 6px; white-space:nowrap; font-size:var(--fs-micro); font-weight:600;
+  color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-xs);
 }
-.ve-prm-y-boz{ color:var(--ink-danger); }
-.ve-prm-y-ok{ color:var(--ink-success); }
-.ve-prm-y-o .ve-durum{ width:11px; height:11px; margin-right:3px; vertical-align:-1px; }
-/* Seçeneğin Uygula düğmesi amaç satırının sağında, içeriği kadar. */
-.ve-prm-y-o .ve-fp-dugme{
-  flex:0 0 auto; margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:1px 8px;
+.ve-prm-k-uy[data-u="en"]{ color:var(--on-success); background:var(--accent-success); border-color:var(--accent-success); }
+.ve-prm-k-uy[data-u="uy"]{ color:var(--ink-success); background:var(--success-tint-15); border-color:transparent; }
+.ve-prm-k-o{ grid-area:o; min-width:0; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-prm-k-kr{
+  grid-area:kr; justify-self:end; display:flex; gap:6px; font-size:var(--fs-micro);
+  color:var(--text-secondary); font-variant-numeric:tabular-nums;
 }
-.ve-prm-y-o .ve-fp-dugme .mf-ico{ width:11px; height:11px; }
+.ve-prm-k-kr > span{ display:inline-flex; align-items:center; gap:2px; white-space:nowrap; }
+.ve-prm-k-kr > span[data-ok="false"]{ color:var(--ink-danger); }
+.ve-prm-k-kr .ve-durum{ width:10px; height:10px; }
+/* Kriterleri sağlayan: dördünü birden sağlayan satır kalın. */
+.ve-properties-content .ve-mnt-foy.ve-prm-eleme tr[data-k="dort"] td{ border-top:1px solid var(--border-hover); }
+/* ADAYLAR — marka marka katlanır grup (Canlı Not 106'nın markası); özetin kutusu
+   markanın bütün tiplerini alır, sayı alınan / bütün; açılışta kapalı. */
+.ve-prm-marka-l{ display:flex; flex-direction:column; gap:4px; }
+.ve-prm-hepsi{ display:inline-flex; align-items:center; gap:6px; padding:0 2px 2px; font-size:var(--fs-tiny); color:var(--text-secondary); }
+.ve-prm-marka{ background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); }
+.ve-prm-marka > summary{
+  display:flex; align-items:center; gap:8px; padding:5px 8px; cursor:pointer; list-style:none; font-size:var(--fs-tiny);
+}
+.ve-prm-marka > summary::-webkit-details-marker{ display:none; }
+.ve-prm-marka > summary:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-prm-marka-ad{ flex:1; min-width:0; font-weight:600; color:var(--text-heading); }
+.ve-prm-marka-n{ color:var(--text-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ve-prm-marka > summary .mf-ico{ flex:none; width:12px; height:12px; color:var(--text-muted); transition:transform .15s ease; }
+.ve-prm-marka[open] > summary .mf-ico{ transform:rotate(180deg); }
+.ve-prm-marka > table{ margin:0; border-top:1px solid var(--border-light); }
+@media (prefers-reduced-motion: reduce){ .ve-prm-marka > summary .mf-ico{ transition:none; } }
+/* Kriterler: rijitlik toleransının kutusu ve değeri yan yana. */
+.ve-prm-tol{ display:flex; align-items:center; gap:6px; }
+.ve-prm-tol .ve-fp-inp{ flex:1; min-width:0; }
 /* Diyagramlar: galeriyi açan liste (iki sütun). */
 .ve-prm-dg-l{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
 .ve-prm-dg{

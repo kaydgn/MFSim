@@ -41,7 +41,7 @@ describe('köşe ölçeği keskin: çerçeve 0, el değen denetim 2 px', () => {
     const kullanan = [...YORUMSUZ.matchAll(/([^{}]+)\{[^{}]*var\(--radius-pill\)[^{}]*\}/g)]
       .map((m) => m[1].trim().replace(/\s+/g, ' '));
     expect(kullanan.sort()).toEqual([
-      '.ve-fw-kl-no', '.ve-fw-radio', '.ve-fw-step-n', '.ve-fw-step-no', '.ve-prm-no',
+      '.ve-fw-kl-no', '.ve-fw-radio', '.ve-fw-step-n', '.ve-fw-step-no',
     ]);
   });
 

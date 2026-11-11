@@ -271,22 +271,41 @@ describe('TARAYICI', () => {
     expect(S.huni[S.huni.length - 1].kalan).toBe(S.uygunN);
   });
 
-  test('sıra: uygunlar uzlaşı uzaklığına göre, birincisi cephede, araları tekdüze', () => {
+  // V: en az ihlallinin ölçüsü — normalleştirilmiş ihlallerin toplamı (ikinci aşama ölçülmüşse onunki de).
+  const vOf = (D, H, x) => H.v1[x] + (D.d2[x] === 1 ? H.v2[x] : 0);
+  test('SIRA (Excel\'in kuralı): uygunlar başta, statik sehime göre (hakem); ardından en az ihlalli, eşitlikte sehim', () => {
     const it = K.tarayici(kur()); it.adim(Infinity);
-    const S = it.sonuc();
+    const S = it.sonuc(), D = it.depo(), H = K.hukumler(D, D.c);
     expect(S.uygunN).toBeGreaterThan(3);
-    expect(S.sira[0].pareto).toBe(true);
-    for (let i = 1; i < S.sira.length; i++) expect(S.sira[i].uz).toBeGreaterThanOrEqual(S.sira[i - 1].uz);
+    const uygun = [];
+    for (let x = 0; x < D.N; x++) if (D.d1[x] === 1 && D.d2[x] === 1 && H.m[x] === 0) uygun.push(x);
+    uygun.sort((a, b) => D.d[a] - D.d[b] || a - b);
+    expect(S.sira.slice(0, Math.min(uygun.length, S.sira.length)).map((r) => r.idx)).toEqual(uygun.slice(0, S.sira.length));
+    S.sira.slice(0, uygun.length).forEach((r) => expect(r.bozuk).toBe(0));
+    const tum = K.siralama(D, H), kalan = tum.slice(uygun.length);
+    expect(tum.slice(0, uygun.length)).toEqual(uygun);
+    kalan.forEach((x) => expect(H.m[x] !== 0 || D.d2[x] !== 1).toBe(true));
+    for (let i = 1; i < kalan.length; i++) {
+      const a = kalan[i - 1], b = kalan[i];
+      expect(vOf(D, H, a) < vOf(D, H, b) || (vOf(D, H, a) === vOf(D, H, b) && D.d[a] <= D.d[b])).toBe(true);
+    }
+    // tam sıralama ile ilk n aynı (sıralı ekleme ↔ sıralama)
+    expect(K.siralama(D, H, S.sira.length).slice()).toEqual(tum.slice(0, S.sira.length));
   });
 
-  test('uygun yoksa ikinci aşama en az ihlalli enIyi kombinasyonda koşar ve sıra ihlale göre', () => {
+  test('uygun yoksa ikinci aşama en az ihlalli enIyi kombinasyonda koşar; sıra en az ihlalliden, eşitlikte statik sehim', () => {
     let n2 = 0;
     const P = kur({ ctx: { fAtes: 10 }, olc2: () => { n2++; return { dIsl: [1, 1, 1], cekmeMm: 0 }; } });   // K1: 5 Hz sınırı aşılır
     const it = K.tarayici(P); it.adim(Infinity);
-    const S = it.sonuc();
+    const S = it.sonuc(), D = it.depo(), H = K.hukumler(D, D.c);
     expect(S.uygunN).toBe(0);
     expect(n2).toBe(P.enIyi);
-    for (let i = 1; i < S.sira.length; i++) expect(S.sira[i].v).toBeGreaterThanOrEqual(S.sira[i - 1].v);
+    S.sira.forEach((r) => expect(r.bozuk).toBeGreaterThan(0));
+    for (let i = 1; i < S.sira.length; i++) {
+      const a = S.sira[i - 1].idx, b = S.sira[i].idx;
+      expect(vOf(D, H, a) < vOf(D, H, b) || (vOf(D, H, a) === vOf(D, H, b) && D.d[a] <= D.d[b])).toBe(true);
+    }
+    expect(S.sira[0].v).toBe(Math.min(...S.sira.map((r) => r.v)));
   });
 
   test('ölçülemeyen kombinasyon hata sayılır, sıraya ve hunide çözülenlere girmez', () => {
