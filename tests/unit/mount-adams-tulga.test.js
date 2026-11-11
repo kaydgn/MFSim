@@ -9,9 +9,10 @@
  *      dağılımı ve k_stat bu satırla doğrulanmış sayılır. Bu sayı büyürse
  *      çözücünün ya da modelin statik tarafında bir şey bozulmuştur.
  *
- *   2. AÇIK MODEL FARKI — Adams'ta olup MFSim'de olmayan yanal (±12 mm)
- *      durdurucu. Kapatılırsa buradaki test kırmızıya döner ve defterin
- *      güncellenmesini ister.
+ *   2. YANAL DURDURUCU — Adams'ta ±12 mm (Kerb Strike satırlarından okunur);
+ *      2026-11-11'den beri (F006) örneğin iki ön takozunda da. Ön takozlar
+ *      ±12,0'de kesiliyor; arka takozların ~2 mm farkı durdurucuyla KAPANMADI
+ *      (açık fark, testte sayıyla).
  *
  *   2a. TORK YÖNÜ — Adams'ın tork momenti +X (Tx = +T_shaft), programın
  *      varsayılanının (T5, −X) tersi. 2026-11-11'den beri (F049) yön Transfer
@@ -53,6 +54,7 @@ beforeEach(() => { resetStubs(stubs); });
 // 'tork-varsayilan' = örnek, transferin dönüşü varsayılanda (krankla aynı → −X) ──
 function solve(variant) {
   const t = JSON.parse(JSON.stringify(TOPO));
+  if (variant === 'yanal-yok') t.nodes.forEach((n) => { if (n.data) delete n.data.bosY; });
   if (variant === 'tork-varsayilan') delete t.nodes.find((n) => n.type === 'mnt-transfer').data.donus;
   if (variant === 'adams') {
     const D = REF.INPUT_DELTA;
@@ -91,6 +93,7 @@ function solve(variant) {
 const KAT = solve('katalog');
 const ADA = solve('adams');
 const VARS = solve('tork-varsayilan');
+const YOK = solve('yanal-yok');
 
 // Bir satır kümesinin Tablo 1'e göre hata istatistiği
 function stats(sol, rowFilter) {
@@ -170,20 +173,45 @@ describe('1) statik taraf — Adams ile örtüşüyor ve k_dyn\'den bağımsız'
   });
 });
 
-describe('2) açık model farkı — Adams\'ta var, MFSim\'de yok', () => {
-  test('yanal durdurucu: Adams ön takozları ±12,0\'de kırpıyor, MFSim kırpmıyor', () => {
+describe('2) yanal durdurucu — Adams\'ta var, örnekte de var (F006)', () => {
+  test('örneğin iki ön takozunda 12 mm yanal boşluk, kaynağıyla', () => {
+    const on = TOPO.nodes.filter((n) => n.type === 'mnt-mount' && +n.data.bosY > 0);
+    expect(on.map((n) => n.customName).sort()).toEqual(['Sağ Ön Takoz', 'Sol Ön Takoz']);
+    on.forEach((n) => { expect(+n.data.bosY).toBe(12); expect(n.data.bosYKaynak).toMatch(/Adams/); });
+  });
+
+  test('ön takozlar Adams gibi ±12,0\'de kesiliyor; durdurucusuz 12,05–12,56', () => {
     ['Kerb Strike (L)', 'Kerb Strike (R)'].forEach((rowName) => {
       const ri = REF.ROWS.findIndex((r) => r.row === rowName);
       [2, 4].forEach((c) => {                                   // Sag_On_X, Sol_On_X
-        // Adams ~12 mm'de duruyor (dört hücrenin üçü tam 12,0, biri 11,9)
         const t = Math.abs(REF.TABLE1[ri][c][1]);
         expect(t).toBeGreaterThanOrEqual(11.85);
         expect(t).toBeLessThanOrEqual(12.05);
-        expect(Math.abs(KAT.d[ri][c][1])).toBeGreaterThan(t);          // MFSim: sınır yok, aşıyor
+        expect(Math.abs(KAT.d[ri][c][1])).toBeLessThan(12.02);     // ölçülen 12,00–12,01
+        expect(Math.abs(KAT.d[ri][c][1])).toBeGreaterThan(11.99);
+        expect(Math.abs(YOK.d[ri][c][1])).toBeGreaterThan(12.04);  // durdurucusuz: aşıyor
       });
-      [1, 3].forEach((c) => {                                   // arka takozlar
-        // Ön takozlar dibe oturunca Adams'ta yük arkaya dağılıyor → MFSim daha az
+    });
+  });
+
+  test('boşluk yalnız iki kaldırım satırını değiştiriyor', () => {
+    REF.ROWS.forEach((r, ri) => {
+      if (r.gap === 'yanal-durdurucu') return;
+      for (let c = 0; c < 5; c++) for (let a = 0; a < 3; a++) {
+        expect(KAT.d[ri][c][a]).toBeCloseTo(YOK.d[ri][c][a], 9);
+      }
+    });
+  });
+
+  test('AÇIK FARK: arka takozların yanal sehimi ~2 mm az — durdurucu açıklamıyor', () => {
+    // Adams'ta ön takozlar dibe oturunca arka ~9,7 mm; programda durdurucuyla da
+    // ~7,6 mm (durdurucusuz ~7,5). Adams'ın X sehimi de iki katı (0,8–0,9 ↔ 0,4–0,5):
+    // Adams gövdeyi düşey eksende daha çok döndürüyor. Sebep bulunursa bu test kırmızıya döner.
+    ['Kerb Strike (L)', 'Kerb Strike (R)'].forEach((rowName) => {
+      const ri = REF.ROWS.findIndex((r) => r.row === rowName);
+      [1, 3].forEach((c) => {
         expect(Math.abs(KAT.d[ri][c][1])).toBeLessThan(Math.abs(REF.TABLE1[ri][c][1]) - 1.0);
+        expect(Math.abs(KAT.d[ri][c][1]) - Math.abs(YOK.d[ri][c][1])).toBeLessThan(0.4);
       });
     });
   });

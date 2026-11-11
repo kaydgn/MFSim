@@ -1082,6 +1082,7 @@ function _mntAlan(node, key, etiket, opt){
     + '<input class="ve-fp-inp'+(zor&&bos?' ve-mnt-zor':'')+'" type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
     + ' value="'+_mntEsc(v)+'"'+(zor?' data-zorunlu':'')
     + ((opt.ph||zor) ? ' placeholder="'+_mntEsc(opt.ph||'zorunlu')+'"' : '')
+    + (opt.ipucu ? ' title="'+_mntEsc(opt.ipucu)+'"' : '')
     + ' onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></label>';
 }
 // OKUNUR DEĞER — düzenlenemez, girdiyle AYNI hizada; oyuk zemin `[readonly]`.
@@ -2035,6 +2036,10 @@ function _mntTakozTipGovde(node){
   // sınır: çözücü onu görmez.
   h+=_mntBolum('Kapasite', 'isteğe bağlı · hesaba girmez', _mntIzgara(2,
       _mntAlan(node, 'maxLoad', 'Maks. eksenel yük <u>[kg]</u>', { ph:'katalogdan' })));
+  // Yanal durdurucu — takozun yanal (Y) sehimi bu boşlukta metal-metal temasa oturur.
+  // Takoz tipinin değil bağlantının özelliği: kütüphane uygulaması dokunmaz.
+  h+=_mntBolum('Durdurucu', 'isteğe bağlı', _mntIzgara(2,
+      _mntAlan(node, 'bosY', 'Yanal boşluk <u>[mm]</u>', { ph:'yok', ipucu:d.bosYKaynak })));
   return h;
 }
 function _mntTakozKonumGovde(node, M){
@@ -4808,6 +4813,7 @@ function _mntGatherForSolver(solver, liste){
       var m=n.data||{};
       mounts.push({ id:n.id, name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
                     maxLoad:m.maxLoad,                                        // taşıma kapasitesi [kg] (opsiyonel, fiziğe girmez)
+                    bosY:m.bosY,                                              // yanal durdurucu boşluğu [mm] (opsiyonel, F006)
                     fitX:(m.fitX||null), fitY:(m.fitY||null), fitZ:(m.fitZ||null),   // opsiyonel analitik fit (x/y/z)
                     curveX:(Array.isArray(m.curveX)?m.curveX:null),                  // ya da nokta tablosu (x/y/z)
                     curveY:(Array.isArray(m.curveY)?m.curveY:null),
@@ -4894,6 +4900,9 @@ function _mntToSI(gather, g){
       // ve % kullanım 9,81 kat şaşar). Tanımsızsa alan HİÇ eklenmez.
       var ml=_mntNum(m.maxLoad,0);
       if(ml>0) mnt.fCap=ml*(g||9.81);
+      // Yanal durdurucu boşluğu [mm] → gapY [m]; boş ya da ≤ 0 → alan HİÇ eklenmez (durdurucu yok).
+      var by=_mntNum(m.bosY,0);
+      if(by>0) mnt.gapY=C.mmToM(by);
       // Nonlineer yasa → çekirdek. Eksen başına FİT (analitik) ÖNCELİKLİ: mm/N olarak
       // AYNEN geçer (çekirdek makeAxisLaw mm↔m dönüşümünü yapar). Yoksa nokta tablosu:
       // burada SI'ya (δ mm→m, f N aynı) çevrilir. Çekirdek mnt.fits/mnt.curves okur.
@@ -5539,7 +5548,8 @@ function _mntCaseIterLabel(rc, prep){
     var it=ck.newtonIters||1;
     return 'Newton '+it+' iter'+((ck.converged===false)?' · yakınsamadı':'');   // düz metin (kaçışlanıyor)
   }
-  return 'lineer'+((ck.clampCount>0)?(' · '+ck.clampCount+' durdurucu'):'');
+  var nc=(ck.clampCount||0)+(ck.clampYCount||0);
+  return 'lineer'+((nc>0)?(' · '+nc+' durdurucu'):'');
 }
 // İLERLEME EYLEM SATIRINDA (pencere kitinin çubuğu, vePencereIlerleme):
 // sayı, çözülen durum ve oran; düğme meşgul (`aria-busy` — çift tık koşan

@@ -503,6 +503,7 @@ var _GM_TAKOZ = [
   { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Künye seçimi rijitliği, kapasiteyi ve yasayı doldurur.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Üç eksen: statik ve dinamik (N/mm), dinamik/statik oranı.' },
   { k: 'kapasite', bolum: 'Kapasite', ad: 'Kapasite', not: 'Azami eksenel yük (kg).' },
+  { k: 'durdurucu', bolum: 'Durdurucu', ad: 'Durdurucu', not: 'Yanal boşluk (mm): yanal sehim bu boşlukta metal-metal temasa oturur; boşsa yanal durdurucu yok.' },
   { k: 'konum', bolum: 'Konum', ad: 'Konum', not: 'Elastik merkez x · y · z (mm); birleşik CG’ye farkı.' },
   { k: 'yer', bolum: 'Güç grubundaki yeri', ad: 'Güç grubundaki yeri', yer: 'sag', not: 'Takozun modeldeki yeri.' }
 ];

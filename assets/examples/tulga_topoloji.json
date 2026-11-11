@@ -238,7 +238,9 @@
         "kxd": "740",
         "x": "439.961",
         "y": "356.042",
-        "z": "499.855"
+        "z": "499.855",
+        "bosY": "12",
+        "bosYKaynak": "Adams Tulga Tablo 1 · Kerb Strike (L/R): ön takozların yanal sehimi ±12,0 mm"
       }
     },
     {
@@ -299,7 +301,9 @@
         "kxd": "740",
         "x": "439.961",
         "y": "-355.957",
-        "z": "499.855"
+        "z": "499.855",
+        "bosY": "12",
+        "bosYKaynak": "Adams Tulga Tablo 1 · Kerb Strike (L/R): ön takozların yanal sehimi ±12,0 mm"
       }
     },
     {
