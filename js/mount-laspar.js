@@ -15,7 +15,7 @@
 // Z'si katalogla uyumlu (40 ShA 450 ↔ TK45 451 · 55 ShA 750 ↔ TK60 701 · 70 ShA 1.150 ↔
 // TK70 1.091 N/mm). Angst+Pfister'in Bursa şirketi 2012'de LASPAR'la ortak girişim:
 // raporların çizimindeki A+P logosu bununla uyumlu; LMT-1433-00 A+P konik yatak
-// 026 S 1'in ölçüsünde (js/mount-ap.js → ESLES).
+// 026 S 1'in ölçüsünde (AP_ESI → künyede "A+P eşi").
 //
 // KAYNAK: LASPAR genel kataloğu 2018 (laspargroup.com → Kataloglarımız; "Laspar Genel
 // Katalog -2018"), anti-vibrasyon bölümü. Tablo: sertlik, en büyük yük F (N) ve W (kg),
@@ -23,7 +23,7 @@
 // Güç grubunu taşıyabilen beş aile alındı — 17 tip, 43 kod:
 //   • konik  — Endüstriyel Konik Takoz (s. 52–53): 1423 · 1436 · 1433 · 1435 · 1434 ·
 //     1881 × TK45/60/70. kz = F/S; grafiğin çizgisi orijinden tablonun noktasına
-//     (18/18, fark < %0,3).
+//     (18/18; yükte en çok %0,5, sehimde 0,01 mm).
 //   • mobil  — Üniversal Mobil Takoz (s. 34–35): 608 · 609 · 610, LMT (ayar saplamalı)
 //     ve MLMT çeşidi × TK45/55/65. Tabloda sehim YOK: kz grafiğin eğimi (çizgi çalışma
 //     aralığında doğrusal, 1,3–5,9 mm; orijinden geçmiyor) — iki çeşit aynı gövde, aynı
