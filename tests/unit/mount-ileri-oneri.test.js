@@ -162,10 +162,10 @@ describe('PENCERE — Araç ekseni yok, yön kendiliğinden (Canlı Not 121)', (
     expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
     expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
     expect(document.body.textContent).not.toMatch(/Onaylanmadı|Onayla|Diziliş önerisi/);
-    expect(kunye(n)).toMatch(/ · ileri −X · tork \+X$/);                       // Tulga: tork projede +X
+    expect(kunye(n)).toMatch(/ · ileri −X · tork \+X$/);                       // Tulga: transferin çıkışı ters (F049)
     govde('mnt-motor').data.cgx = 2000;                                           // motor şanzımanın öbür yanında
     expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(kunye(n)).toMatch(/ · ileri \+X · tork \+X$/);
+    expect(kunye(n)).toMatch(/ · ileri \+X · tork −X$/);                       // motorun önü +X'te, ters → −X
   });
 
   test('TTAR: projede yazılı +X öneriyle (−X) ayrışsa da yazılı yön', () => {

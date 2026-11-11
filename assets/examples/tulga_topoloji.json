@@ -95,7 +95,8 @@
         "iTransfer": "3.428",
         "phiFwd": "1",
         "phiRev": "1",
-        "mass": "184"
+        "mass": "184",
+        "donus": "ters"
       }
     },
     {
@@ -338,8 +339,7 @@
       "isMasterDiff": false,
       "data": {
         "matrixMode": "delta",
-        "ileri": "-x",
-        "torkYon": "+x"
+        "ileri": "-x"
       }
     },
     {

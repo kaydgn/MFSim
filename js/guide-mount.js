@@ -1150,16 +1150,15 @@ function _gmSec10(){
   h += '<p>Tahrik torku güç grubuna X ekseni etrafında bir <strong>reaksiyon momenti</strong> '
     + 'olarak etkir: T<sub>x</sub> = ±T<sub>mil</sub>. İşareti aracın gidiş yönünden değil, '
     + '<strong>krankın modeldeki dönüş yönünden</strong> ve aktarmanın dönüşü çevirip '
-    + 'çevirmediğinden gelir. Varsayılan −X’tir (projede yazılı yön önde gelir); geri viteste '
-    + 'moment kendiliğinden ters döner.</p>';
+    + 'çevirmediğinden gelir. Yön kendiliğinden belirlenir: motorun önü güç grubunun dizilişinden, '
+    + 'dönüş <strong>Transfer Kutusu</strong> penceresinin <strong>Çıkış dönüşü</strong> alanından '
+    + '(varsayılan <em>Krankla aynı</em>). Geri viteste moment kendiliğinden ters döner.</p>';
   h += _gmAlanTablo('Tork yönü', [
-    ['−X (varsayılan)', 'Krank önden bakınca saat yönünde, motorun önü −X’te, çıkış krankla aynı yönde',
-      'İleri viteste +Y tarafındaki takozlar basar'],
-    ['+X', 'Motorun önü +X’te ya da güç grubundaki aktarma (iki dişlili transfer) dönüşü çeviriyor',
-      'İleri viteste −Y tarafındaki takozlar basar']
-  ], ['Yön', 'Ne zaman', 'Etkisi']);
+    ['Motorun önü −X’te', '−X (varsayılan)', '+X'],
+    ['Motorun önü +X’te', '+X', '−X']
+  ], ['Diziliş', 'Krankla aynı', 'Krankın tersi']);
   h += _gmNot('Örneklerin ayarı',
-      'Tulga örneği ileri −X, tork yönü +X ve varsayılan kaldırım darbesiyle; BMC SİPER örneği '
+      'Tulga örneği ileri −X, transferin çıkışı krankın tersi (tork yönü +X) ve varsayılan kaldırım darbesiyle; BMC SİPER örneği '
     + 'ileri +X, tork yönü −X ve 3,5 g virajla aynı yönde kaldırım darbesiyle gelir: ikisi de '
     + 'kendi Adams analizinin yük kitabıdır.');
   return h;

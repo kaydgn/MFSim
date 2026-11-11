@@ -151,11 +151,12 @@ describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () =>
 // ters (Adams'tan RMS 17,28 mm), Siper'de (ileri +X, kaldırım 3,5 g aynı) g durumları
 // ayna. Taramanın her yük durumu, her takozda, her eksende Çözücü'nün aynısı.
 describe('TEK YOL — Çözücü\'nün yön ayarıyla (tork · ileri · kaldırım)', () => {
-  [['tulga', { torkYon: '+x' }], ['siper', { ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni' }]].forEach(([ad, yon]) => {
+  [['tulga', { ileri: '-x' }], ['siper', { ileri: '+x', kaldirimG: 3.5, kaldirimYon: 'ayni' }]].forEach(([ad, yon]) => {
     test(ad + ': mevcut tasarımın ve iki kütüphane kombinasyonunun her yük durumu Çözücü\'yle birebir', () => {
       const topo = modelKur(ad);
       const cz = topo.nodes.find((n) => n.type === 'mnt-solver').data;
       Object.keys(yon).forEach((k) => expect([k, cz[k]]).toEqual([k, yon[k]]));    // örnek varsayılanda değil
+      if (ad === 'tulga') expect(topo.nodes.find((n) => n.type === 'mnt-transfer').data.donus).toBe('ters');   // tork +X (F049)
       const Hz = P._mntParamHazirlik({ id: 'pa', type: 'mnt-parametric', data: {} });
       const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
       const A = Hz.aday;

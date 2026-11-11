@@ -542,7 +542,42 @@ function _mntIleriOnerisi(liste){
   return { ileri:(mx<sx ? '-x' : '+x'), motorX:mx, arkaX:sx, arka:s.type };
 }
 function _mntIleriOnayli(d){ return !!d && (d.ileri==='+x' || d.ileri==='-x'); }
-function _mntYonAyari(d, oneri){
+// TORK YÖNÜ TRANSFERİN DÜZENİNDEN (F049, 2026-11-11). İleri vites reaksiyonu
+// krankın dönüşünün tersidir: krank önden saat yönünde → ω motorun önünden
+// arkasına, reaksiyon motorun ÖNÜ yönünde (motorun önü −X'te → −X). Transfer
+// Kutusu'nun çıkışı krankın tersine dönüyorsa (`donus` 'ters') yön çevrilir.
+// Motorun önü dizilişten (_mntIleriOnerisi), yoksa −X. Öncelik: transferde
+// yazılı dönüş → projede yazılı eski `torkYon` (Çözücü'de seçici yokken
+// kaydedilmiş projeler) → dizilişin türettiği (dönüş krankla aynı).
+// Kapı: mount-tork-yonu.test.js · mount-adams-tulga.test.js.
+var MNT_DONUS = 'ayni';
+function _mntTorkOnerisi(liste){
+  var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes) ? nodes : []);
+  var t=null;
+  for(var i=0;i<L.length;i++){ if(L[i] && L[i].type==='mnt-transfer'){ t=L[i]; break; } }
+  var don=t && t.data && t.data.donus, yazili=(don==='ayni' || don==='ters');
+  var O=_mntIleriOnerisi(L), on=O ? O.ileri : MNT_TORK_YON;
+  var ters=yazili ? don==='ters' : MNT_DONUS==='ters';
+  return { torkYon:(ters ? (on==='+x' ? '-x' : '+x') : on), yazili:yazili, donus:(yazili ? don : MNT_DONUS), dizilis:!!O };
+}
+// Seçicinin gösterdiği dönüş: ETKİN tork yönünü veren dönüş (eski projenin
+// yazılı tork yönü dâhil — seçici başka, hesap başka yön söylemesin).
+function _mntDonusEtkin(liste){
+  var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes) ? nodes : []);
+  var T=_mntTorkOnerisi(L);
+  if(T.yazili) return T.donus;
+  var cz=null;
+  for(var i=0;i<L.length;i++){ if(L[i] && L[i].type==='mnt-solver'){ cz=L[i]; break; } }
+  var ty=cz && cz.data && cz.data.torkYon;
+  if(ty!=='+x' && ty!=='-x') return T.donus;
+  return ty===T.torkYon ? T.donus : (T.donus==='ters' ? 'ayni' : 'ters');
+}
+function _mntTorkKaynak(d, tork){
+  if(tork && tork.yazili) return 'transfer';
+  if(d && (d.torkYon==='+x' || d.torkYon==='-x')) return 'proje';
+  return (tork && tork.dizilis) ? 'dizilis' : 'varsayilan';
+}
+function _mntYonAyari(d, oneri, tork){
   d = d || {};
   var g = _mntNum(d.kaldirimG, NaN);
   var xx = function(v, vars){ return (v==='+x' || v==='-x') ? v : vars; };
@@ -550,7 +585,7 @@ function _mntYonAyari(d, oneri){
   return { ileri: xx(d.ileri, oy),
            kaldirimG: (Number.isFinite(g) && g>0) ? g : MNT_KALDIRIM_G,
            kaldirimYon: (d.kaldirimYon==='ayni' || d.kaldirimYon==='ters') ? d.kaldirimYon : MNT_KALDIRIM_YON,
-           torkYon: xx(d.torkYon, MNT_TORK_YON) };
+           torkYon: (tork && tork.yazili) ? tork.torkYon : xx(d.torkYon, tork ? tork.torkYon : MNT_TORK_YON) };
 }
 // Aracın ekseninde (ileri −X) yazılı yük n → modelin ekseni
 function _mntYonN(n, yon){
@@ -1599,8 +1634,14 @@ function _mntVitesDurumu(node){
 // ve bu yüzden zorunlu sayılır, aks payının 1'i ise gerçek bir varsayılan.
 function _mntTransferSection(node){
   var Z=_mntTorkZinciri();
+  var don=_mntDonusEtkin();
+  var donus='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Çıkış dönüşü</span>'
+    + '<select class="ve-fp-sel" id="ve-mnt-donus-'+node.id+'" onchange="veMntSetDonus(\''+node.id+'\',this.value)">'
+    + [['ayni','Krankla aynı'],['ters','Krankın tersi']].map(function(o){
+        return '<option value="'+o[0]+'"'+(don===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; }).join('')
+    + '</select></label>';
   var h=_mntBolum('Oran ve aks payı', '',
-      _mntIzgara(1, _mntAlan(node, 'iTransfer', 'Transfer oranı', { zorunlu:true }))
+      _mntIzgara(2, _mntAlan(node, 'iTransfer', 'Transfer oranı', { zorunlu:true }) + donus)
     + _mntIzgara(2,
         _mntVarsayilanAlan(node, 'phiFwd', 'Aks payı '+_mntSym('φ')+' · ileri', 1,
           'tam tepki', 'veMntSet(\''+node.id+'\',\'phiFwd\',this.value)')
@@ -2713,6 +2754,7 @@ function _mntLoadExampleFromModel(anahtar){
       // Bağlantı yüzü (JSON'daki bagX · bagY · bagZ · egSinir'in kayıttaki karşılığı)
       if(Array.isArray(c.bag) && c.bag.length===3){ n.data.bagX=c.bag[0]; n.data.bagY=c.bag[1]; n.data.bagZ=c.bag[2]; }
       if(c.egSinir>0) n.data.egSinir=c.egSinir;
+      if(kind==='mnt-transfer' && (c.donus==='ayni' || c.donus==='ters')) n.data.donus=c.donus;
       // Tork zinciri: Motor→Te; Şanzıman→vites/stall + transfer/aks payı
       // (örnekte ayrı Transfer gövdesi yok → değerler Şanzıman'da tutulur).
       if(kind==='mnt-motor'){
@@ -4752,10 +4794,11 @@ function _mntGatherForSolver(solver, liste){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  var sd=solver && solver.data, oneri=_mntIleriOnerisi(L);
+  var sd=solver && solver.data, oneri=_mntIleriOnerisi(L), tork=_mntTorkOnerisi(L);
   // ileriKaynak: yönün nereden geldiği — 'proje' (yazılı) · 'dizilis' (öneri) · 'varsayilan' (−X); rapor söyler.
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, oneri),
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(sd, oneri, tork),
            ileriOnay:_mntIleriOnayli(sd), ileriKaynak:_mntIleriOnayli(sd) ? 'proje' : (oneri ? 'dizilis' : 'varsayilan'),
+           torkKaynak:_mntTorkKaynak(sd, tork), donus:tork.donus,
            baglanti:baglanti };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
@@ -5030,7 +5073,7 @@ function _mntCozucuDurumGovde(node){
       + sayi(n[0])+sayi(n[1])+sayi(n[2])
       + '<td'+(T[0]===0 ? ' class="sf"' : '')+'>'+(T[0]===0 ? '0' : _mntS(T[0]/1000,1))+'</td></tr>';
   });
-  var Y=_mntYonAyari(node.data, _mntIleriOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
+  var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
   var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok')
     + ' · ileri '+eks(Y.ileri)+' · tork '+eks(Y.torkYon);
   return _mntCozucuYonGovde(node)
@@ -5040,7 +5083,7 @@ function _mntCozucuDurumGovde(node){
 // değeri izler. Varsayılan seçim alan yazmaz. İleri yön ve tork yönü kendiliğinden
 // (Canlı Not 121 — yukarıda F048): Araç ekseni bölümü yok, künyesi yük kitabında.
 function _mntCozucuYonGovde(node){
-  var Y=_mntYonAyari(node.data, _mntIleriOnerisi());
+  var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi());
   var secici=function(alan, etiket, deger, secenekler, degis){
     var h='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">'+etiket+'</span>'
       + '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" data-mnt-izle onchange="'+degis+'">';
@@ -5243,6 +5286,17 @@ function veMntSetYon(nodeId, key, val){
 }
 
 
+// Transfer Kutusu'nun çıkış dönüşü ('ayni' varsayılan · 'ters') — tork yönü
+// ondan türer (F049). Varsayılan seçim de YAZILIR: yazılı dönüş projedeki eski
+// tork yönünün önüne geçer (seçim bir karardır).
+function veMntSetDonus(nodeId, val){
+  if(val!=='ayni' && val!=='ters') return;
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  node.data.donus=val;
+  if(typeof saveState==='function') saveState();
+}
+
 // Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
 // seçim bir sonraki ▶ Hesapla'da uygulanır (hesap butona kilitli).
 function veMntSetSolveMode(nodeId, val){
@@ -5362,7 +5416,7 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           yon:prep.gather.yon || _mntYonAyari(),
           // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
-          ileriOnay:prep.gather.ileriOnay, ileriKaynak:prep.gather.ileriKaynak,
+          ileriOnay:prep.gather.ileriOnay, ileriKaynak:prep.gather.ileriKaynak, torkKaynak:prep.gather.torkKaynak, donus:prep.gather.donus,
           imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti, prep.gather.yon) };
   // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
   // (çekirdek sectionMoment); hüküm raporda, Statik durumda sınıra göre
@@ -5688,7 +5742,7 @@ if(typeof module!=='undefined' && module.exports){
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
-    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntIleriOnayli: _mntIleriOnayli,
+    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
     _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
     _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
     veMntSetYon: veMntSetYon,

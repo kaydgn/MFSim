@@ -1203,7 +1203,9 @@ function _mntRepYonCumle(R){
   var eks=function(v){ return v==='+x' ? '+X' : '−X'; };
   var g=Number(Y.kaldirimG); if(!(Number.isFinite(g) && g>0)) g=1.55;
   var kay=(R && R.ileriKaynak==='dizilis') ? ' (güç grubunun dizilişinden: motorun önü şanzımanın karşı yanında)' : '';
-  return '<p>Araç ekseni: ileri yön '+eks(Y.ileri)+kay+'; ileri vites tork momenti '+eks(Y.torkYon)
+  var tk=(R && (R.torkKaynak==='transfer' || R.torkKaynak==='dizilis'))
+    ? ' (motorun önü yönünde; Transfer Kutusu’nun çıkışı krank'+(R.donus==='ters' ? 'ın tersi' : 'la aynı')+' yönde döner)' : '';
+  return '<p>Araç ekseni: ileri yön '+eks(Y.ileri)+kay+'; ileri vites tork momenti '+eks(Y.torkYon)+tk
     + '; yanal bordür darbesi '+_rF(g, 2)+' g, '+(Y.kaldirimYon==='ayni' ? 'virajla aynı yönde' : 'virajın tersi yönde')+'.</p>';
 }
 // §8.5 — TÜM yük durumları (sehim matrisi) ───────────────────────────────────
