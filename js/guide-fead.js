@@ -2097,7 +2097,7 @@ function _gfSec13(){
 // dönünce o zarf çöktü (bkz. fead-model.js "MONTAJ ZARFI KALKTI") — kol
 // çalışma açısı artık kol boyu ve yay künyesiyle aynı sınıftan, gerginin
 // montaj verisinden okunan bir GİRDİ. Silmek modeli çözülemez yapardı.
-var VE_GF_MOTOR = '57RS303252';   // ISL8.9E3 375 — 700 · 2100 · 2900 RPM
+var VE_GF_MOTOR = 'motor-11';   // ISL8.9E3 375 — 700 · 2100 · 2900 RPM
 function _gfOrnekCoz(){
   if(typeof veFeadExampleNodes !== 'function' || typeof veFeadBuildSystem !== 'function'
      || typeof componentDefs === 'undefined')

@@ -87,10 +87,10 @@ function veMntBaslangicGerekli(liste){
 // KÜNYE (kullanıcı 2026-11-05, Canlı Not 28 · 29: *"'Catia Atalet Ölçümü' gibi gereksiz
 // şeyler yazmayalım"* · *"'BMC-ASR-SR' falan yazıyor. Kaldır bunları."*): satırın
 // açıklaması örneğin GÜÇ GRUBU künyesi (kaydın açıklaması; kurgu örneklerin biçimi:
-// motor · aktarma · askı). Kaynak, rapor kodu ve parça numarası satırda yazılmaz —
-// gövdenin ve takozun adındaki parça numarası da düşer (`VE_MNT_BAS_KOD`).
-var VE_MNT_BAS_KOD = /\s*[·—–-]?\s*\b\d{2}[A-Z]{2}\d{6}\b/g;
-function _mntBasKodsuz(ad){ return String(ad || '').replace(VE_MNT_BAS_KOD, '').trim(); }
+// motor · aktarma · askı). Kaynak, rapor kodu ve parça numarası satırda yazılmaz;
+// örneklerin gövde ve takoz adlarında parça numarası yok (Canlı Not 1004 — kapı
+// parca-kodu.test.js), ayıklayıcı gerekmez.
+function _mntBasKodsuz(ad){ return String(ad || '').trim(); }
 function _mntBasKunye(ex){
   return _mntBasKodsuz(String((ex && ex.description) || '').replace(/^Kaynak:\s*/, ''));
 }

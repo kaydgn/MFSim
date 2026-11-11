@@ -255,8 +255,8 @@ describe('İki taban ayrı ve farkı gerçek', () => {
 
   test('mevcut girdiler DEĞİŞMEDİ (regresyon)', () => {
     const L = cp.VE_MOUNT_LIBRARY;
-    expect([L['57RS313773'].sx, L['57RS313773'].sy, L['57RS313773'].sz]).toEqual([334, 334, 2300]);
-    expect([L['57RS313774'].sx, L['57RS313774'].sy, L['57RS313774'].sz]).toEqual([1200, 1200, 2400]);
+    expect([L['a26-a'].sx, L['a26-a'].sy, L['a26-a'].sz]).toEqual([334, 334, 2300]);
+    expect([L['a26-b'].sx, L['a26-b'].sy, L['a26-b'].sz]).toEqual([1200, 1200, 2400]);
     expect([L['amc55sha'].sx, L['amc55sha'].sy, L['amc55sha'].sz]).toEqual([1252, 1252, 640]);
     expect(L['TK050'].fits.z.comp.k0).toBe(381);
   });

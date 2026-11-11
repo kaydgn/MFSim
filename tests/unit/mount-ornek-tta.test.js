@@ -201,15 +201,15 @@ describe('YENİ KABİN — altı takoz ve rölanti föyden', () => {
     expect(+(Y.takoz[3][1] - Y.takoz[2][1]).toFixed(2)).toBe(1105.67);
     expect(+(Y.takoz[5][1] - Y.takoz[4][1]).toFixed(2)).toBe(1105.67);
     // önde yan yana iki, arkada her yanda çift; ad Y'nin işaretiyle (sağ +Y)
-    expect(takozlar().map((n) => n.customName)).toEqual(['Ön sol takoz · 57RS313774', 'Ön sağ takoz · 57RS313774',
-      'Sol ön takoz · 57RS313773', 'Sağ ön takoz · 57RS313773', 'Sol arka takoz · 57RS313773', 'Sağ arka takoz · 57RS313773']);
+    expect(takozlar().map((n) => n.customName)).toEqual(['Sol ön takoz', 'Sağ ön takoz',
+      'Sol orta takoz', 'Sağ orta takoz', 'Sol arka takoz', 'Sağ arka takoz']);
     T.forEach((d, i) => expect(/Sağ|sağ/.test(takozlar()[i].customName)).toBe(d.y > 0));
   });
-  test('rijitlik: önde 57RS313774, arkada 57RS313773 — kütüphanenin ASR-SR-116 girdileri (föy rijitlik vermiyor)', () => {
+  test('rijitlik: önde a26-b, arkada a26-a — kütüphanenin ASR-SR-116 girdileri (föy rijitlik vermiyor)', () => {
     const L = cp.VE_MOUNT_LIBRARY;
     const uc = (e) => [e.sx, e.sy, e.sz, e.dx, e.dy, e.dz];
     const tk = (n) => [n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd];
-    takozlar().forEach((n, i) => expect([n.customName, tk(n)]).toEqual([n.customName, uc(L[i < 2 ? '57RS313774-sr116' : '57RS313773-sr116'])]));
+    takozlar().forEach((n, i) => expect([n.customName, tk(n)]).toEqual([n.customName, uc(L[i < 2 ? 'asfat-b' : 'asfat-a'])]));
     expect(+TOPO.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(0.02);
   });
   test('föyün ağırlıkları, ağırlık merkezleri, ataletleri ve vitesleri örneğinkiyle aynı; rölanti föyün 800 d/dk\'sı', () => {
@@ -253,14 +253,14 @@ describe('ÜÇ NOKTA — ilk kitabın takozları (dondurulmuş): X Front Support
     expect(sol.y).toBeCloseTo(kulak('Sol arka kulak').cgy - Gi.L8, 9);
     expect([sag.z, sol.z]).toEqual([kulak('Sağ arka kulak').cgz, kulak('Sol arka kulak').cgz]);
   });
-  test('rijitlik: ön 57RS313774, arka 57RS313773 — kütüphanenin ASR-SR-116 girdileri, altı değer', () => {
+  test('rijitlik: ön a26-b, arka a26-a — kütüphanenin ASR-SR-116 girdileri, altı değer', () => {
     const L = cp.VE_MOUNT_LIBRARY;
     const uc = (e) => [e.sx, e.sy, e.sz, e.dx, e.dy, e.dz];
     const tk = (n) => [n.data.kxs, n.data.kys, n.data.kzs, n.data.kxd, n.data.kyd, n.data.kzd];
     const [on, sag, sol] = takozlar3();
-    expect(tk(on)).toEqual(uc(L['57RS313774-sr116']));
-    expect(tk(sag)).toEqual(uc(L['57RS313773-sr116']));
-    expect(tk(sol)).toEqual(uc(L['57RS313773-sr116']));
+    expect(tk(on)).toEqual(uc(L['asfat-b']));
+    expect(tk(sag)).toEqual(uc(L['asfat-a']));
+    expect(tk(sol)).toEqual(uc(L['asfat-a']));
     expect(+TOPO3.nodes.find((n) => n.type === 'mnt-solver').data.zeta).toBe(0.02);
   });
   test('gövdeler örneğinkiyle aynı; tek fark takozlar ve rölanti (700, iSCAAN)', () => {
@@ -290,7 +290,7 @@ describe('MFSİM ↔ EXCEL — statik (1 g), ilk kitabın üç takozuyla', () =>
   });
   test('rijitlikten bağımsız: A26 ve TK050 takozlarıyla düşey reaksiyonlar ±%0,5', () => {
     const baz = dusey(R3);
-    [['57RS313774', '57RS313773'], ['TK050', 'TK050']].forEach(([a, b]) => {
+    [['a26-b', 'a26-a'], ['TK050', 'TK050']].forEach(([a, b]) => {
       const Rx = coz((t) => t.nodes.filter((n) => n.type === 'mnt-mount').forEach((n, i) => {
         const e = cp.VE_MOUNT_LIBRARY[i === 0 ? a : b];
         Object.assign(n.data, { kxs: e.sx, kys: e.sy, kzs: e.sz, kxd: e.dx, kyd: e.dy, kzd: e.dz });
@@ -468,7 +468,7 @@ describe('TORK — FR20317 · iSCAAN 497-A392175-1 · ISM11 veri sayfası', () =
     expect(duz('1')).toContain('= 20 Hz');
     expect(duz('1b')).toContain('mod 3 8,73 Hz');
     expect(duz('2')).toMatch(/fateş 40 Hz .* T=%16,6/);
-    expect(duz('3')).toContain('16,16 kN (Geri · Sol arka takoz · 57RS313773)');
+    expect(duz('3')).toContain('16,16 kN (Geri · Sol arka takoz)');
     // ilk kitabın üç takozuyla (rölanti 700) yalpalama 15,47 Hz, sınır 17,5 Hz — uygundu
     expect(+R3.modes[5].f_Hz.toFixed(2)).toBe(15.47);
     expect(rep.veMntUygunluk(R3).satirlar.find((x) => x.no === '1').st).toBe('ok');

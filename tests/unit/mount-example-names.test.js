@@ -83,7 +83,7 @@ describe('denetim mekanizmasının kendisi çalışıyor mu', () => {
     expect(yanCelisiyorMu('Sağ Ön Takoz', -355.957)).toBe(true);   // ASIL HATA
     expect(yanCelisiyorMu('Sol Arka Takoz', 304.131)).toBe(true);
     expect(yanCelisiyorMu('sağ orta', -357.1)).toBe(true);         // küçük harf
-    expect(yanCelisiyorMu('Ön Sağ · 57RS313774', -50.67)).toBe(true);
+    expect(yanCelisiyorMu('Sağ Ön Takoz', -50.67)).toBe(true);
     expect(yanCelisiyorMu('Sağ Ön Takoz', 356.042)).toBe(false);
     expect(yanCelisiyorMu('Ön Takoz', 0.047)).toBe(false);
     expect(yanCelisiyorMu('Motor', NaN)).toBe(false);

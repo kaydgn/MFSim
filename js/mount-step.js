@@ -1010,7 +1010,7 @@ function _mstVs(k){
 // ── AKSESUAR — orta nokta ve kayıtlı aksesuarın kütlesi (2026-11-02) ──────
 function veMntStpAksesuar(tip){ return VE_MNT_STP_AKSESUAR.indexOf(tip) >= 0; }
 // Kayıtlı aksesuar: programın aksesuar kataloğu (js/fead-accessories.js — FEAD
-// kasnağının künyesi, anahtar BMC parça numarası), kütlesi bilinenler. Aile
+// kasnağının künyesi, anahtar modelin adından), kütlesi bilinenler. Aile
 // tipten: Alternatör ↔ alternator, Klima Kompresörü ↔ ac.
 var VE_MNT_STP_AKS_AILE = { 'mnt-alternator': 'alternator', 'mnt-ac': 'ac' };
 function _mstAksDb(){
@@ -1405,7 +1405,7 @@ function veMntStpKutle(b, kg, yog, elle){
   var aks = veMntStpAksesuar(b.tip), ak = aks ? veMntStpAks(yog, b.tip) : null;
   if(ak){
     out.kaynak = 'katalog'; out.ak = ak; out.m = ak.kg;
-    out.not = ak.ad + ' · ' + ak.key;
+    out.not = ak.ad;
     return out;
   }
   if(yog === 'dosya' && b.dosya){

@@ -435,7 +435,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Excel'in Tarama'sı ayrı: kriter sayısı → sehim). Pencerede ek kısıt (E1–E9), sürünme payı, amaç ağırlığı,
   uzlaşı ve yakın seçenek YOK — motor ölçer, pencere sıralamaya katmaz (`_mntParamCtx`; eski
   projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
-  gruplarda; 57RS'nin dört tipi (A26 · ASR-SR-116) aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
+  gruplarda; A26 ve ASFAT takozlarının dört tipi aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
   listesinde ve örneklerde durur; kapı `mount-param.test.js` → *ADAY OLMAYAN TİP*). Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
   Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
   yalnız kesin kriterleri sağlayanlarda). **Kriter 2'nin sınırı TR < %15** (kullanıcı 2026-11-11:
@@ -510,16 +510,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
   DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
   uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
-- `js/fead-engines.js` — FEAD **motor kataloğu** (24 kayıt). DOM'suz saf veri;
+- `js/fead-engines.js` — FEAD **motor kataloğu** (23 kayıt; anahtar `motor-NN`, ad modelin adı). DOM'suz saf veri;
   BMC'nin KIRPI II FEAD hesap defterinin "Motor Bilgileri" sayfasından çıkarıldı:
   dört devir sınırı, FEAD kasnak çapları, tam yük tork/güç eğrisi. Eksik alan
   `null` — sıfır yazmak olmayan bir kasnak iddia etmek olurdu.
-- `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (10 alternatör + 4 klima
-  kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
+- `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (7 alternatör + 3 klima
+  kompresörü; anahtar modelin adından). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
   maksimum) — aşağıdaki iki kapı onlarsız kurulamaz. Kütle (`kg` + `kgKaynak`,
-  üreticinin belgesinden; klima kompresöründe kavramalı; alternatörde AYNI AKIM AYNI
-  ALTERNATÖR — kullanıcı kararı, aynı adlı kayıtlar aynı kütle) Takoz'un aksesuarı
+  üreticinin belgesinden; klima kompresöründe kavramalı; AYNI MODEL TEK KAYIT — defterde
+  parça koduyla ayrılan aynı model birleşti, Canlı Not 1004) Takoz'un aksesuarı
   için; FEAD okumaz.
 - `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
   (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
@@ -832,6 +832,18 @@ MFSim tek dosya olarak indirilip kullanılıyor. Yanında `vendor/` klasörü
 olmayan bir kurulumda çalışma anında çekilen her varlık **yok** demektir; bu
 bir incelik değil, özelliğin hiç olmaması demek. Bu yüzden ağır varlıklar
 (WASM, font, KaTeX) uygulamanın İÇİNE gömülür ve **talep üzerine** açılır.
+
+### PROGRAMDA PARÇA KODU YOK
+
+Kullanıcı kararı (2026-11-11, Canlı Not 1004: *"Programda ne BMC parça kodu
+varsa, hepsini kaldır. Olmayacak kardeşim programda, OLMAYACAK."*): BMC parça
+kodu programa giren HİÇBİR dosyada yazılmaz — ne ad, ne katalog anahtarı, ne
+yorum, ne örnek. Kayıt modelin adıyla anılır (A26 takozu A · Prestolite 180A;
+motorun anahtarı sıra numarası, `motor-NN`); aynı modelin kodla ayrılmış
+satırları TEK kayıt, aynı adlı motorlar kasnak çapıyla ayrışır. Eski projenin kod anahtarları şema 10 göçüyle yeni
+anahtara geçer; göç tablosu kodun yalnız ÖZETİNİ taşır (`js/state.js` →
+`VE_PARCA_GOC`), eski kodlar yalnız testte. Donmuş arşiv (`programlar/`) kapsam
+dışı. Kapı: `parca-kodu.test.js` (→ *KAYNAK* · *GÖÇ* · *ETİKET*).
 
 ### Ortak yüzey kuralları
 

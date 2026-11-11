@@ -41,21 +41,22 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // Ad = ürün tipi + sertlik + (parça no), üreticinin kataloğundaki adla; üretici
 // kodu üreticisiyle yazılır: "Cone 38 60 ShA (AMC 137963)" — tek başına altı
 // haneli kod ekranda binliksiz sayı okunur. Proje, rapor ve not ada girmez —
-// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki 57RS
-// çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
+// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki A26 ·
+// ASR-SR-116 çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
 //
 // ── AYNI PARÇA KODU, FARKLI TAKOZ ────────────────────────────────────────────
-// 57RS313773 ve 57RS313774 kodları İKİ AYRI kaynakta, İKİ AYRI takoz için
-// geçiyor (kullanıcı teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden
-// her biri AYRI girdi olarak tutulur; hangisinin kullanılacağına kullanıcı
-// açılır listede karar verir. Girdi adı KOD + KAYNAK taşır — başka bir şey değil.
+// İki parça kodu İKİ AYRI kaynakta, İKİ AYRI takoz için geçiyor (kullanıcı
+// teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden her biri AYRI girdi
+// olarak tutulur; hangisinin kullanılacağına kullanıcı açılır listede karar verir.
+// Parça kodu programda YOK (kullanıcı 2026-11-11, Canlı Not 1004): girdi adı
+// KAYNAK + harf — aynı harf iki kaynakta aynı parça kodu.
 //
-//   kaynak       | kod        | statik x/y/z    | dinamik x/y/z
-//   -------------|------------|-----------------|-----------------
-//   A26          | 57RS313773 |  334/ 334/2300  |  435/ 435/3000
-//   A26          | 57RS313774 | 1200/1200/2400  |  950/ 950/1900
-//   ASR-SR-116   | 57RS313773 |  462/ 462/2200  |  630/ 630/3000
-//   ASR-SR-116   | 57RS313774 | 1045/1045/1800  | 1045/1045/1800
+//   kaynak       | takoz | statik x/y/z    | dinamik x/y/z
+//   -------------|-------|-----------------|-----------------
+//   A26          | A     |  334/ 334/2300  |  435/ 435/3000
+//   A26          | B     | 1200/1200/2400  |  950/ 950/1900
+//   ASR-SR-116   | A     |  462/ 462/2200  |  630/ 630/3000
+//   ASR-SR-116   | B     | 1045/1045/1800  | 1045/1045/1800
 //
 // ÖN/ARKA gibi KONUM etiketleri girdi adına KONMAZ: bir takozun ön mü arka mı
 // olduğu takozun değil, monte edildiği yerin özelliğidir — araçtan araca
@@ -68,9 +69,9 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // o dokümanın Tablo 8 (sehim) ve Tablo 11 (sönüm) sonuçları bu değerlerle
 // yeniden üretilebilir — bkz. tests/unit/mount-library-sources.test.js.
 //
-// ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar;
-// mevcut '57RS313773'/'57RS313774' anahtarları A26 girdilerinde KALIR, yeni
-// kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
+// ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar.
+// Dört girdinin anahtarı parça koduydu (Canlı Not 1004'e dek): 'a26-a' · 'a26-b' ·
+// 'asfat-a' · 'asfat-b'; eski proje açılışta göç eder (js/state.js → veParcaKoduGoc).
 //
 // ── AMC MECANOCAUCHO® KONİK TAKOZLAR ────────────────────────────────────────
 // İKİ VERİ TABANI VAR; İKİSİ DE DOĞRU, AMA AYNI ŞEY DEĞİL:
@@ -182,8 +183,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //    70 |  2500  |  2500  |  1150
 //
 // TEK TABAN — sx = dx KASITLI: kaynak statik/dinamik ayrımı yapmıyor, sertlik
-// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (57RS313774-sr116 de
-// tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
+// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (ASFAT takozu B
+// de tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
 //
 // DEĞERLER RAPORUN KENDİ MODAL SONUCUNU VERİYOR (ölçüldü): Konsept 2 = 3 konum ×
 // 2 adet LMT-1433-00 + Z'de 110 N/mm yay. Takoz konumları raporlarda YOK, ama
@@ -231,8 +232,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
 //     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
 //
-// İnternette bulunmayanlar (2026-10-19): 57RS…, TK035/040/050, LMT-1433 ve
-// "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
+// İnternette bulunmayanlar (2026-10-19): A26 · ASR-SR-116 takozları, TK035/040/050,
+// LMT-1433 ve "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
 // ── maxLoad — TAŞIMA KAPASİTESİ [kg], opsiyonel ─────────────────────────────
 // Üretici kataloğunun verdiği en büyük statik EKSENEL (basma, z) yük. Birim
 // KİLOGRAM'dır: AMC, Angst+Pfister ve benzeri kataloglar kapasiteyi kg olarak
@@ -283,37 +284,37 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 //     raporunun "Mount 1"i; TK035/040/050 = MLMT-0216-33-TK0xx (LASPAR'ın kod kuralı:
 //     "LMT/MLMT-xxxx-yy-TKnn", TKnn Shore sertliği — kullanıcı 2026-11-11). Raporların
 //     çizimindeki A+P logosu A+P'nin Bursa ortaklığından (LASPAR ile, 2012).
-//   • Diğer — 57RS… (A26): kaynak belgelerde marka yazılı değil.
+//   • Diğer — A26 · ASR-SR-116 takozları: kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
-// dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
+// A26 ve ASR-SR-116'nın dört tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
 // örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
 // mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { marka:'LASPAR', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { marka:'Diğer', aday:false, name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { marka:'Diğer', aday:false, name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { marka:'Diğer', aday:false, name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { marka:'Diğer', aday:false, name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
-  // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
-  'TK035': { marka:'LASPAR', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+  'a26-a':            { marka:'Diğer', aday:false, name:'A26 takozu A',              sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  'a26-b':            { marka:'Diğer', aday:false, name:'A26 takozu B',              sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  'asfat-a':          { marka:'Diğer', aday:false, name:'ASFAT takozu A',       sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  'asfat-b':          { marka:'Diğer', aday:false, name:'ASFAT takozu B',       sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  // TK035 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
+  'TK035': { marka:'LASPAR', name:'TK035 35 ShA', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
       z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
-  // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
-  'TK040': { marka:'LASPAR', name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+  // TK040 · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
+  'TK040': { marka:'LASPAR', name:'TK040 45 ShA', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
       z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
-  // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
-  'TK050': { marka:'LASPAR', name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+  // TK050 · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
+  'TK050': { marka:'LASPAR', name:'TK050 50 ShA', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
@@ -1916,7 +1917,7 @@ function _mntAksSecili(node){
 function _mntAksSection(node){
   var L=_mntAksKatalog(node.type), sec=_mntAksSecili(node);
   var opt=function(a){ return '<option value="'+_mntEsc(a.key)+'"'+(sec===a?' selected':'')+'>'
-    + _mntEsc(a.ad+' · '+a.key+' · '+_mntS(a.kg,1)+' kg')+'</option>'; };
+    + _mntEsc(a.ad+' · '+_mntS(a.kg,1)+' kg')+'</option>'; };
   var sel='<select class="ve-fp-sel" id="ve-mnt-aks-'+node.id+'" onchange="veMntAksUygula(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>'+L.map(opt).join('')+'</select>';
   var h=_mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kayıtlı aksesuar</span>'+sel+'</label>');

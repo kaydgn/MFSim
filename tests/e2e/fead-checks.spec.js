@@ -98,7 +98,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   const motorSec = page.locator('select[onchange*="veFeadApplyEngineLib"]');
   await expect(motorSec).toHaveCount(1);
   await expect(motorSec).toBeVisible();
-  await motorSec.selectOption('57RS303234');
+  await motorSec.selectOption('motor-10');
   await page.waitForTimeout(400);
   // Seçim sürücünün penceresini yeniden kurar — kullanıcı Çözücü'ye atılmaz.
   expect(await page.evaluate(() => window._veLastPropNodeId)).toBe(drvId);
@@ -108,7 +108,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
     return { lib: n.data.engineLib, cyl: n.data.cylinders, gov: n.data.governedRpm,
              over: n.data.overspeedRpm, crank: n.data.crankOD, fan: n.data.fanOD };
   }, solverId);
-  expect(sd.lib).toBe('57RS303234');
+  expect(sd.lib).toBe('motor-10');
   expect(sd.cyl).toBe(6);
   expect(sd.gov).toBe(2100);
   expect(sd.over).toBe(2900);
@@ -130,7 +130,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   const accSec = page.locator('select[onchange*="veFeadApplyAccModel"]');
   await expect(accSec).toHaveCount(1);
   await expect(accSec).toBeVisible();
-  await accSec.selectOption('bmc:57RS309348');
+  await accSec.selectOption('bmc:prestolite-155a');
   await page.waitForTimeout(400);
 
   const ad = await page.evaluate((id) => {
@@ -138,7 +138,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
     return { lib: n.data.accLib, opt: n.data.optimumRpm, cont: n.data.maxContRpm,
              peak: n.data.maxPeakRpm, egri: (n.data.pwrCurve || []).length };
   }, altId);
-  expect(ad.lib).toBe('57RS309348');
+  expect(ad.lib).toBe('prestolite-155a');
   expect(ad.opt).toBe(6000);
   expect(ad.cont).toBe(8000);
   expect(ad.peak).toBe(12000);
@@ -147,7 +147,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   // Klima kompresörüne de künye ver — ikinci kapı iki aksesuar bekliyor.
   const acId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-ac').id);
   await page.evaluate((id) => {
-    veFeadApplyAccModel(id, 'bmc:57RS322530');
+    veFeadApplyAccModel(id, 'bmc:valeo-tm31');
   }, acId);
   await page.waitForTimeout(300);
 
@@ -287,7 +287,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   // ── MOTOR KATALOĞU: GERÇEK SEÇİM ──────────────────────────────────────
   const motor = page.locator('#ve-fw-body select[onchange*="veFeadWizEngineLib"]');
   await expect(motor).toHaveCount(1);
-  await motor.selectOption('57RS303234');
+  await motor.selectOption('motor-10');
   await page.waitForTimeout(500);
 
   const s1 = await page.evaluate(() => {
@@ -295,7 +295,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
     return { lib: s.engineLib, cyl: s.cylinders, gov: s.governedRpm,
              over: s.overspeedRpm, crank: s.crankOD, fan: s.fanOD };
   });
-  expect(s1.lib).toBe('57RS303234');
+  expect(s1.lib).toBe('motor-10');
   expect(s1.cyl).toBe(6);
   expect(s1.gov).toBe(2100);
   expect(s1.over).toBe(2900);
@@ -339,12 +339,12 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   expect(await kunye.count()).toBe(2);                 // alternatör + klima
   // SATIR SIRASINA GÜVENİLMİYOR: hangi seçicinin hangi aksesuara ait olduğu,
   // TAŞIDIĞI SEÇENEKLERDEN okunuyor — alternatör listesinde klima künyesi yok.
-  await kunye.filter({ has: page.locator('option[value="bmc:57RS309348"]') })
-    .selectOption('bmc:57RS309348');
+  await kunye.filter({ has: page.locator('option[value="bmc:prestolite-155a"]') })
+    .selectOption('bmc:prestolite-155a');
   await page.waitForTimeout(400);
   await page.locator('#ve-fw-body select[onchange*="veFeadWizAccModel"]')
-    .filter({ has: page.locator('option[value="bmc:57RS322530"]') })
-    .selectOption('bmc:57RS322530');
+    .filter({ has: page.locator('option[value="bmc:valeo-tm31"]') })
+    .selectOption('bmc:valeo-tm31');
   await page.waitForTimeout(400);
 
   const p1 = await page.evaluate(() => {
@@ -352,7 +352,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
     return { lib: p.accLib, opt: p.optimumRpm, cont: p.maxContRpm,
              peak: p.maxPeakRpm, egri: (p.pwrCurve || []).length };
   });
-  expect(p1.lib).toBe('57RS309348');
+  expect(p1.lib).toBe('prestolite-155a');
   expect(p1.opt).toBe(6000);
   expect(p1.cont).toBe(8000);
   expect(p1.peak).toBe(12000);
@@ -401,10 +401,10 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
       over: sv && sv.data.overspeedRpm, cyl: sv && sv.data.cylinders,
     };
   });
-  expect(kanvas.accLib).toBe('57RS309348');
+  expect(kanvas.accLib).toBe('prestolite-155a');
   expect(kanvas.cont).toBe(8000);
   expect(kanvas.peak).toBe(12000);
-  expect(kanvas.engineLib).toBe('57RS303234');
+  expect(kanvas.engineLib).toBe('motor-10');
   expect(kanvas.gov).toBe(2100);
   expect(kanvas.over).toBe(2900);
   expect(kanvas.cyl).toBe(6);

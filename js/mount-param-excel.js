@@ -77,7 +77,7 @@ var veMntParamExcel = (function(){
   function temiz(ad){ return String(ad == null ? '' : ad).replace(/\s*\(ASR[^)]*\)/g, '').trim(); }
   function kok(ad){ return temiz(String(ad == null ? '' : ad).split(' · ')[0]); }
   // Sayfa adı için kısa tip: katalog numarası düşer, sertlik tireyle bitişik
-  // ("Cone 39 50 ShA (AMC 137982)" → "Cone39-50", "57RS313773 (A26)" → "57RS313773 A26").
+  // ("Cone 39 50 ShA (AMC 137982)" → "Cone39-50", "TK050 50 ShA" → "TK050-50").
   function kisa(ad){
     var s = temiz(ad), m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(s), ek = '';
     if(m){ s = m[1]; if(m[2].length <= 5) ek = m[2]; }

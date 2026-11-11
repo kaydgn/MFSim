@@ -130,7 +130,7 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
   });
   test('ilk 24 girdi yerinde; A+P kodları AMC\'nin ardında (LASPAR\'dan önce), ailenin · tipin · sertliğin sırasıyla', () => {
     const k = Object.keys(L), nLp = Object.keys(require('../../js/mount-laspar.js').KOD).length;
-    expect(k.slice(0, 2)).toEqual(['amc55sha', '57RS313773']);
+    expect(k.slice(0, 2)).toEqual(['amc55sha', 'a26-a']);
     expect(k.slice(-86 - nLp, -nLp)).toEqual(P.kodlar().map((x) => 'ap' + x));
     expect(P.kodlar().slice(0, 3)).toEqual(['1221402001', '1221402003', '1221402004']);   // 021 yumuşak · orta · sert
     const s = cp._mntLibSirali(cp.veMntGetLibraryList().filter((e) => e.builtin && e.marka === 'Angst+Pfister'));

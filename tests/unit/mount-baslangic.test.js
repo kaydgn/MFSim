@@ -202,9 +202,9 @@ describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
       r.detay.forEach((b) => b.ogeler.forEach((o) => expect(o.ad).not.toMatch(kod)));
     });
     expect(ex.asfat.specs.some((x) => x[0] === 'Kaynak' || /ASR-SR/.test(x[1]))).toBe(false);
-    expect(ex.asfat.model.mounts.map((m) => m.name)[0]).toMatch(/57RS313774/);          // model adı yerinde
-    expect(S.find((r) => r.v === 'asfat').detay[1].ogeler.map((o) => o.ad).slice(0, 2)).toEqual(['Ön Sol', 'Ön Sağ']);
-    expect(S.find((r) => r.v === 'asfat').detay[0].ogeler[0].ad).toBe('Motor — Cummins');
+    expect(ex.asfat.model.mounts.map((m) => m.name)[0]).toBe('Sol Ön Takoz');      // adda parça numarası yok (Canlı Not 1004)
+    expect(S.find((r) => r.v === 'asfat').detay[1].ogeler.map((o) => o.ad).slice(0, 2)).toEqual(['Sol Ön Takoz', 'Sağ Ön Takoz']);
+    expect(S.find((r) => r.v === 'asfat').detay[0].ogeler[0].ad).toBe('Motor — Cummins X15E3 600');
     // kurgu örneklerin künyesi aynı kalır
     expect([k.kutu, k.hafif, k.kamyon]).toEqual(['Kapalı form kıyas modeli', '2,2 L dizel · 6 ileri manuel · 3 noktalı askı',
       '7,7 L dizel · 6 ileri manuel · nonlineer takoz']);

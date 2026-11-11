@@ -303,9 +303,9 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
     expect(satir).toEqual([
-      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA (57RS326612M)'],
-      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA (57RS329001M)'],
-      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA (57RS328045)']]);
+      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA'],
+      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA'],
+      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA']]);
     expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
     // föyün numarası grubun renginde rozet
     expect([...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')].map((e) => [e.textContent, e.dataset.renk]))
@@ -554,10 +554,10 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     });
     const ek = (k) => (aday[keys.indexOf(k)].querySelector('.ve-mnt-ek') || {}).textContent;
     expect(ek('amc137731')).toBe('(AMC 137731)');
-    expect(ek('57RS313773-sr116')).toBe('(ASR-SR-116)');
+    expect(aday[keys.indexOf('asfat-a')].querySelector('.ve-mnt-ek')).toBeNull();      // ASFAT takozu A: künyesiz (Canlı Not 1004)
     expect(aday[keys.indexOf('amc55sha')].querySelector('.ve-mnt-ek')).toBeNull();     // LMT-1433-37 55 ShA: künyesiz
     const nw = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] .ve-mnt-nw, .ve-fp-kat[data-k="grup"] .ve-mnt-nw')].map((e) => e.textContent);
-    ['(ASR-SR-116)', 'AMC 137731)', 'LMT-1433-00', 'LMT-1433-37', 'Sağ/Sol', '60 ShA', 'NG 55 ShA', '45 ShA'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
+    ['AMC 137731)', 'LMT-1433-00', 'LMT-1433-37', 'Sağ/Sol', '60 ShA', 'NG 55 ShA', '45 ShA'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
     expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
     expect(P._mntParamAd('Cone 121 NG 55 ShA (AMC 137830)'))
       .toBe('Cone 121 <span class="ve-mnt-nw">NG 55 ShA</span> <span class="ve-mnt-ek">(<span class="ve-mnt-nw">AMC 137830)</span></span>');
@@ -778,7 +778,7 @@ describe('KOŞUCU', () => {
 
 describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki grafik; diyagramlar galeride', () => {
   // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon; dört kesin kriteri sağlayan var.
-  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const ADAY = ['a26-a', 'amc137731', 'bmc-mount1-55sh', 'asfat-a', 'asfat-b', 'bmc-mount1-40sh'];
   const KR = ['k1', 'k1a', 'k1b', 'k2'];
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   function kur(data) {
@@ -1252,7 +1252,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
 // katmaz (Excel'in kuralı): ASFAT'ın, altı adayla, Cone 67 50 ShA'lı kombinasyonu
 // dört kesin kriteri sağlar ve E9'a takılmaz; kapasite Excel'in Tarama'sında veridir.
 describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); pencere sıralamaya katmaz', () => {
-  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const ADAY = ['a26-a', 'amc137731', 'bmc-mount1-55sh', 'asfat-a', 'asfat-b', 'bmc-mount1-40sh'];
   const tara2 = (ctx) => {
     modelKur('asfat');
     const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
@@ -1282,8 +1282,8 @@ describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); 
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133 · Parametrik Analiz › Adaylar › Diğer:
 // dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): taramanın aday listesinde yoklar;
 // Takoz Özellikleri'nin Tip listesinde, örneklerin eşleşmesinde ve anahtarla çözümde dururlar.
-describe('ADAY OLMAYAN TİP — dört 57RS taramanın adayı değil', () => {
-  const DORT = ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116'];
+describe('ADAY OLMAYAN TİP — A26 · ASR-SR-116\'nın dört tipi taramanın adayı değil', () => {
+  const DORT = ['a26-a', 'a26-b', 'asfat-a', 'asfat-b'];
   test('kütüphanede aday:false; birleşik haritada aday değil, Tip listesinde var', () => {
     const kod = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-mount.js'), 'utf8');
     DORT.forEach((k) => expect(kod).toMatch(new RegExp("'" + k + "':\\s*\\{ marka:'Diğer', aday:false,")));

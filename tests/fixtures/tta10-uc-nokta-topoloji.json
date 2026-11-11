@@ -302,7 +302,7 @@
       "y": 409,
       "width": 50,
       "height": 46,
-      "customName": "Ön takoz · 57RS313774",
+      "customName": "Ön takoz",
       "data": {
         "x": -637.5,
         "y": 30.92,
@@ -325,7 +325,7 @@
       "y": 215,
       "width": 50,
       "height": 46,
-      "customName": "Sağ arka takoz · 57RS313773",
+      "customName": "Sağ arka takoz",
       "data": {
         "x": 588.5,
         "y": 398.6,
@@ -349,7 +349,7 @@
       "y": 611,
       "width": 50,
       "height": 46,
-      "customName": "Sol arka takoz · 57RS313773",
+      "customName": "Sol arka takoz",
       "data": {
         "x": 588.5,
         "y": -399.4,

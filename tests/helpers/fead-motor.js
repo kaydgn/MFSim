@@ -20,7 +20,7 @@
 const E = require('../../js/fead-engines.js');
 
 // ISL8.9E3 375 — rölanti 700 · governed 2100 · overspeed 2900 · 6 silindir.
-const MOTOR = '57RS303252';
+const MOTOR = 'motor-11';
 
 function motorTamamla(sd, key) {
   const e = E.veFeadEngineOf(key || MOTOR);
