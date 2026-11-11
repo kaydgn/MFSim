@@ -1,6 +1,6 @@
 ---
 name: canli-not
-description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Kullanıcı (çoğu zaman YENİ bir oturumda) "Canlı Not'u getir / Canlı Not'u aç / Canlı Not, düzenlemeler yapacağız" dediğinde İLK iş olarak çağır ve §0 Açılış'ı uygula (aynı sayfa, yeni Artifact açılmaz); Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), sayfanın "Oturum çağrısı" yorumuyla uyanınca (§1 · Oturumu çağır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Açılış, yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt, sonucun görüntüsü ve teslim buradadır.
+description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Kullanıcı (çoğu zaman YENİ bir oturumda) "Canlı Not'u getir / Canlı Not'u aç / Canlı Not, düzenlemeler yapacağız" dediğinde İLK iş olarak çağır ve §0 Açılış'ı uygula (aynı sayfa, yeni Artifact açılmaz); bir bileşene ayrılmış Canlı Not istenince ya da getirilince (§5 · Odaklı sayfa — örn. Parametrik Analiz); Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), sayfanın "Oturum çağrısı" yorumuyla uyanınca (§1 · Oturumu çağır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Açılış, yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt, sonucun görüntüsü ve teslim buradadır.
 ---
 
 # Canlı Not
@@ -30,6 +30,9 @@ ikinci HTML iskeletsiz sunulur.
 Kullanıcı 2026-11-05: *"Ben yeni session açıp, 'bana Canlı Not'u getir,
 düzenlemeler yapacağız' dediğim zaman, aynı bu yapıda, aynı bu şekilde,
 değişmeden canlı not özelliğinin o sessiona gelmesini istiyorum."*
+
+Odaklı sayfa (§5 — bir bileşene ayrılmış Canlı Not) aynı adımlarla açılır: kendi adresi,
+araç komutlarında `--odak <ad>`.
 
 **Sayfa YENİDEN KURULMAZ, yeni Artifact açılmaz:** adres sabit
 (**https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91**), notlar, cevaplar ve
@@ -370,3 +373,39 @@ değiştiğine bakar (çağrılan oturum geldi mi).
 
 **Çağrı belgesi (`oturum/cagri`, sayfa yazar — §1 · Oturumu çağır):** `{zaman, onceki,
 konu}` ya da gitmeyen çağrıda `{zaman, durum: 'hata', hata}`.
+
+## 5 · Odaklı sayfa — bir bileşene ayrılmış Canlı Not
+
+Kullanıcı 2026-11-11: *"Bu sessionumuzda seninle 'takoz çökme ve titreşim' modülünün sadece
+'parametrik analiz' bileşeni ile uğraşacağız … sadece bu bileşene ait bir 'canlı not'
+oluşturmanı istiyorum."*
+
+| Sayfa | Odak | Adres |
+|-------|------|-------|
+| MFSim Canlı Not | — | https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91 |
+| Canlı Not · Parametrik Analiz | `parametrik` | https://claude.ai/artifact/MP2etxUfqMpw2nTmcE3GXT |
+
+- **Ayrı Artifact:** kendi kaydı (`notlar` · `yayin/son` · `oturum/aktif` · `istek/guncelle`),
+  varlık deposu ve sahibi; §0–§3 aynen geçerli, adres o sayfanınki. Araç komutları
+  `--odak <ad>` alır (`hazirla` · `sayfa` · `duman` · `yayin` · `sonuc`); yerel dizinler
+  `.canli-not/<ad>/yayin` · `.canli-not/<ad>/dokum`. TEK YAZAR sayfa başına: iki sayfanın
+  sahibi ayrı oturum olabilir.
+- **Program bileşende açılır:** her açılışta (Güncelle · Yenile dâhil) taşınan proje
+  yüklendikten SONRA köprünün tarifi (`ODAKLAR`) bileşenin penceresini açar. Tarif yerindekini
+  kullanır — Takoz'daysa modüle yeniden girmez, model varsa örnek yüklemez, bileşen varsa
+  kurmaz. İlk açılışta: karşılamanın Takoz yolu → Tulga örneği → bileşen araç şeridinde Rapor'un
+  altında (çerçeve çizgisine değmeden); açılış geri alınamaz.
+- **Not numarası sayfanın aralığında** (`taban`; Parametrik Analiz 1001'den): "Canlı not N"
+  commit'i ve `assets/degisiklik/not-N.webp` iki sayfada çakışmaz; ana sayfa odakların
+  aralığını atlar.
+- **Sonucun görüntüsü** sayfanın açtığı yerden: `node tools/canli-not.js sonuc N --odak <ad>
+  [--secici …]`.
+- **Oturumu çağır** odaklı sayfada da çalışır: yorum o sayfayı izleyen oturumu uyandırır (§1).
+- **İlk yayın** (sayfa yoksa): ana daldan `hazirla --odak <ad>` → `duman --odak <ad>` (pencere
+  açılmazsa DURUR) → sayfa `Artifact publish` **url'siz** (yeni adres; `capabilities: {db: {},
+  user: {}, comments: {}, assets: {}, downloads: true}`, `icon: "pen"`) → parçalar `asset: true`
+  o adrese → `oturum/aktif` yazılır ve dökülür → `yayin --odak <ad> --ilk --parca …` →
+  `yayin/son` → `ArtifactComments watch` → tabloya adres → `Artifact open`. Sonraki her yayın
+  `url` ile (§1).
+- **Yeni odak:** çekirdeğe (`ODAKLAR`: `ad` · `baslik` · `tip` · `taban` — öbür aralıkların
+  dışında) ve köprüye (aynı adla tarif) birer kayıt. Kapı: `canli-not.test.js` → *ODAK*.

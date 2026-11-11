@@ -387,7 +387,40 @@
     return 'Claude’a gönderim kapalı.';
   }
 
+  // ODAK — bir bileşene ayrılmış Canlı Not (kullanıcı 2026-11-11: *"'takoz çökme ve
+  // titreşim' modülünün sadece 'parametrik analiz' bileşeni ile uğraşacağız … sadece bu
+  // bileşene ait bir 'canlı not' oluşturmanı istiyorum"*). Odaklı sayfa ayrı bir Artifact:
+  // kendi kaydı, varlık deposu ve sahibi var; program her açılışta o bileşende açılır
+  // (tarif köprüde: canli-not-kopru.js → ODAKLAR). `ad` şeritte, `baslik` sayfanın adı,
+  // `tip` bileşenin tipi, `taban` not numaralarının başladığı yer (aşağıda).
+  var ODAKLAR = {
+    parametrik: { ad: 'Parametrik Analiz', baslik: 'Canlı Not · Parametrik Analiz', tip: 'mnt-parametric', taban: 1000 }
+  };
+  function odakBul(ad) {
+    return ad && Object.prototype.hasOwnProperty.call(ODAKLAR, String(ad)) ? ODAKLAR[String(ad)] : null;
+  }
+  // NOT NUMARASI: her sayfa kendi kaydında en büyük + 1 verir; "Canlı not N" commit'i ve
+  // sonucun görseli (assets/degisiklik/not-N.webp) numarayla adlanır — iki sayfanın aynı
+  // numarası başka notun görselini ezerdi. Odaklı sayfa kendi aralığında (taban + 1 …
+  // taban + ARALIK), ana sayfa odakların aralığını atlar.
+  var NO_ARALIK = 1000;
+  function sonrakiNo(notlar, odak) {
+    var enBuyuk = (notlar || []).reduce(function (m, n) { return Math.max(m, (n && Number(n.no)) || 0); }, 0);
+    var o = odakBul(odak);
+    if (o) return Math.max(enBuyuk, o.taban) + 1;
+    var no = enBuyuk + 1, atladi = true;
+    while (atladi) {
+      atladi = false;
+      Object.keys(ODAKLAR).forEach(function (k) {
+        var t = ODAKLAR[k].taban;
+        if (no > t && no <= t + NO_ARALIK) { no = t + NO_ARALIK + 1; atladi = true; }
+      });
+    }
+    return no;
+  }
+
   var api = {
+    ODAKLAR: ODAKLAR, odakBul: odakBul, NO_ARALIK: NO_ARALIK, sonrakiNo: sonrakiNo,
     ISTEK_BASLIK: ISTEK_BASLIK, ISTEK_ESKI_MS: ISTEK_ESKI_MS, istekDurumu: istekDurumu, istekMetni: istekMetni,
     kilitDurumu: kilitDurumu,
     CAGRI_BASLIK: CAGRI_BASLIK, CAGRI_ESKI_MS: CAGRI_ESKI_MS, cagriDurumu: cagriDurumu, cagriMetni: cagriMetni, cagriEngeli: cagriEngeli,
