@@ -282,6 +282,78 @@ describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
   });
 });
 
+// YÖNTEM YAN YANA (Canlı Not 165, kullanıcı: *"'sönüm oranı' yazısının yanındaki 'tüm montaj'
+// ifadesini de kaldıralım. Ek olarak, çözüm modu ve sönüm oranı satırlarını yan yana verelim, (i)
+// butonu sönüm oranı yazısının yanında olsun."*). Önce: iki alan alt alta, her biri sütunun tam
+// eninde; ζ'nin adı "Sönüm oranı ζ · tüm montaj", 'i' girdinin sağında. Şimdi: tek satır iki
+// sütun, ad üstte; 'i' adın satırında, girdi sütunun tam eninde. Gerçek tarayıcıda 379 px sütunda
+// iki denetim 176 px, en uzun seçenek ("Lineer (statik rijitlik)") 102 px / 151 px iç en.
+describe('YÖNTEM YAN YANA (Canlı Not 165)', () => {
+  const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
+  const yontem = () => [...document.querySelectorAll('.ve-fp-card')]
+    .find((s) => { const b = s.querySelector(':scope > .ve-fp-sect > b'); return b && b.textContent === 'Yöntem'; });
+
+  test('"tüm montaj" yok: ad yalnız "Sönüm oranı ζ", başlığın yanında ek yok', () => {
+    kur('tulga');
+    const n = cozucu();
+    ac(n);
+    expect(document.body.textContent.toLocaleLowerCase('tr')).not.toContain('tüm montaj');
+    const l = document.querySelector('label[for="ve-mnt-zeta-' + n.id + '"]');
+    expect(l.textContent).toBe('Sönüm oranı ζ');
+    expect(yontem().querySelector('.ve-fp-sect em')).toBeNull();
+  });
+
+  test('iki denetim TEK satırda: aynı iki sütunlu ızgaranın iki hücresi, ad üstte', () => {
+    kur('tulga');
+    const n = cozucu();
+    ac(n);
+    const sec = document.getElementById('ve-mnt-solveMode-' + n.id), z = document.getElementById('ve-mnt-zeta-' + n.id);
+    const izgara = sec.closest('.ve-fp-grid');
+    expect(izgara).toBe(z.closest('.ve-fp-grid'));
+    expect(izgara.getAttribute('style')).toContain('--fp-k:2;');
+    const hucre = [...izgara.children];
+    expect(hucre.length).toBe(2);
+    expect([hucre[0].contains(sec), hucre[1].contains(z)]).toEqual([true, true]);
+    hucre.forEach((h) => expect(h.firstElementChild.classList.contains('ve-fp-l')).toBe(true));   // ad üstte
+    expect(yontem().querySelectorAll('.ve-fp-grid').length).toBe(1);
+    expect([...sec.options].map((o) => o.textContent)).toEqual(['Otomatik', 'Nonlineer (Newton)', 'Lineer (statik rijitlik)']);
+  });
+
+  test('(i) Sönüm oranı adının satırında, girdinin yanında değil; işlevi aynı (kaynak ipucu)', () => {
+    kur('tulga');
+    const n = cozucu();
+    ac(n);
+    const z = document.getElementById('ve-mnt-zeta-' + n.id);
+    const alan = z.closest('[data-mnt-vars]');
+    const ad = alan.querySelector('.ve-fp-l');
+    const i = alan.querySelector('.ve-fp-i');
+    expect(ad.contains(i)).toBe(true);
+    expect(ad.querySelector('label').contains(i)).toBe(false);               // <label> yalnız adı sarar
+    expect(z.parentElement).toBe(alan);                                      // girdi sütunun tam eninde
+    expect(alan.querySelector('.ve-fp-deger')).toBeNull();
+    expect([i.getAttribute('data-kaynak'), i.getAttribute('data-ipucu'), i.getAttribute('aria-label')])
+      .toEqual(['varsayilan', 'Varsayılan — şirket kabulü.', 'Varsayılan — şirket kabulü.']);
+  });
+
+  test('ζ yazmak Çözücü\'nün alanını değiştirir; tek kayıt, değişiklikten SONRA', () => {
+    kur('tulga');
+    const n = cozucu();
+    ac(n);
+    global.veMntSetZeta = cp.veMntSetZeta;
+    const kayit = [];
+    stubs.saveState.mockImplementation(() => kayit.push(n.data.zeta));
+    try {
+      const z = document.getElementById('ve-mnt-zeta-' + n.id);
+      z.value = '0.05'; z.dispatchEvent(new Event('change'));
+      expect(kayit).toEqual([0.05]);
+      expect(n.data.zeta).toBe(0.05);
+    } finally {
+      stubs.saveState.mockReset();
+      delete global.veMntSetZeta;
+    }
+  });
+});
+
 describe('ÖRNEKLER — iki kopya aynı ayarı taşır', () => {
   const ALANLAR = ['ileri', 'torkYon', 'kaldirimG', 'kaldirimYon'];
   test('JSON\'un Çözücü ayarı = çekirdek modelinin solver alanı (yoksa varsayılan)', () => {

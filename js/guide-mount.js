@@ -1255,7 +1255,7 @@ function _gmSec11(){
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAdimlar([
     _gmN(_GM_COZUCU, 'yontem') + ' <strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı '
-      + 'varsayılan değeriyle durur (yanındaki <em>i</em> kaynağını söyler).',
+      + 'varsayılan değeriyle durur (adının yanındaki <em>i</em> kaynağını söyler).',
     'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez; her takozun viskoz sönüm '
       + 'katsayısı ondan türer: c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>).',
     _gmN(_GM_COZUCU, 'hesapla') + ' <strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin solundaki '
