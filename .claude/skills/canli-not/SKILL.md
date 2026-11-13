@@ -263,6 +263,10 @@ Kullanıcı 2026-11-11: *"Bundan sonra her 'canlı not'a girilen notlar için ye
 etkileniyorsa, diğeri diğerini beklesinler."* Bu, çoklu ajan için kullanıcının KALICI
 açık isteğidir (Agent ya da Workflow aracı, ayrıca sorulmaz).
 
+**Ajanın modeli Sonnet 5.5, eforu yüksek** (kullanıcı 2026-11-13: *"Tüm ajanları sonnet 5.5
+yükseğe alalım. Tokenlerim çok hızlı bitiyor"*): her not ajanı `model: "sonnet"`,
+`effort: "high"` ile başlatılır.
+
 - **Oturum koordinatördür:** sahiplik, güncellik, `uygulaniyor` yazımı (aşağıda 1), notun
   ekranı (2: `goruntu --kirp` → yerel PNG; ajan yolunu alır) ve etki alanının tayini (3).
   Uygulama (4–5 ve 6'nın görsel denetimi) AJANDA; birleştirme, tam test, sonucun görüntüsü,
