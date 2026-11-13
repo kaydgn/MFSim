@@ -3316,7 +3316,18 @@ function _mntAksoModelKur(g, mp, R, durum){
     if(kb) asal={ degerler:pr.values, eksenler:pr.axes, kutu:kb.map(function(v){ return v*1000; }) };
   }
   var kisa=(typeof veMntBrief!=='undefined' && veMntBrief.modeShort) ? veMntBrief.modeShort : function(s){ return String(s||''); };
-  return { govde:govde, takoz:takoz, G:G,
+  // ASKI YAYLARI (2026-11-13): noktası (gövdeye bağlı) ve boyu — çözüm varsa statik
+  // durumunkinden, yoksa kurulumdan [mm]; çizici noktadan şasideki oturağa (L aşağı) çizer.
+  var stH=null;
+  if(R) (R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res && rc.res.perHanger) stH=rc.res.perHanger; });
+  var aski=(g.askilar||[]).map(function(a, i){
+    var x=_mntNum(a.x), y=_mntNum(a.y), z=_mntNum(a.z), ad=String(a.name||'Askı yayı');
+    var L=(stH && stH[i]) ? stH[i].L*1000 : _mntAskiStatikBoy(a);
+    if(!(L>0)) L=80;
+    return { k:'A'+(i+1), id:a.id, no:'A'+(i+1), ad:ad, x:x, y:y, z:z, L:L,
+      bilgi:['A'+(i+1)+' · '+ad, 'Konum '+_mntAksoKoord(x, y, z)+' mm', 'Boy '+_mntS(L, 1)+' mm'] };
+  });
+  return { govde:govde, takoz:takoz, aski:aski, G:G,
     cgR:(R && R.mp) ? R.mp.cg.map(function(v){ return v*1000; }) : (G ? [G.x, G.y, G.z] : [0, 0, 0]),
     q:(R && R.qStatic) ? { u:R.qStatic.slice(0, 3).map(function(v){ return v*1000; }), t:R.qStatic.slice(3, 6) } : null,
     modlar:(R && R.modes && R.modes.length) ? R.modes.map(function(md){ return { f:md.f_Hz, phi:md.phi, ad:kisa(md.label) }; }) : null,
@@ -3395,6 +3406,7 @@ function _mntAksoLejant(m, b, sec){
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true">'+(m.takozLej
         ? '<rect class="ve-ak-lj-g1" x="0.5" y="2" width="3" height="6"/><rect class="ve-ak-lj-g2" x="3.5" y="2" width="3" height="6"/><rect class="ve-ak-lj-g3" x="6.5" y="2" width="3" height="6"/>'
         : '<rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/>')+'</svg>'+(m.takozLej || 'takoz · T')+'</span>'
+    + ((m.aski||[]).length ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-aski" d="M5 9.5 V8 L2.5 7 L7.5 5.5 L2.5 4 L7.5 2.5 L5 1.5 V0.5"/></svg>askı yayı · A</span>' : '')
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik CG</span>'
     + (m.govde.some(function(g){ return g.braket && (g.levha || g.kutu); }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-br" d="M2 1.5 H4.6 V6.6 H8.8 V9 H2 Z"/></svg>braket</span>' : '')
     + (m.govde.some(function(g){ return !g.kutu && !g.levha; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
@@ -3419,7 +3431,7 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
   var G=_mntAksoGorus(kapId), b=veMntAkso.kamB(veMntAkso.kamYon(A)), on=_mntAkso3bOnAdi(A);
   // Bileşen kimlikle bulunur (sıra, silinen bir düğümle kayardı).
   var sec=null;
-  if(ek.sec!=null) m.govde.concat(m.takoz).forEach(function(x){ if(x.id!=null && String(x.id)===String(ek.sec)) sec=x; });
+  if(ek.sec!=null) m.govde.concat(m.takoz, m.aski || []).forEach(function(x){ if(x.id!=null && String(x.id)===String(ek.sec)) sec=x; });
   W=Math.max(200, Math.round(W));
   // Serbest kamera: sığdırma dönmeden bağımsız (küre), yükseklik sabit. Yazı
   // yerleri bir önceki çizimden (yapışkan yer, mount-akso.js → yerlestir).
@@ -5419,6 +5431,14 @@ function _mntAskilarSI(liste, g){
     return h;
   });
 }
+// Kurulumdan statik boy [mm] (toplayıcının biçimi: k N/mm, boylar mm, kuvvet kgf):
+// kuvvet → L0 − F·g/k, boy → montaj boyu, tasarım → tasarım konumundaki boy.
+function _mntAskiStatikBoy(a){
+  var kur=_mntAskiKurulum(a), L0=_mntNum(a.L0, NaN), k=_mntNum(a.k, NaN);
+  if(kur==='boy') return _mntNum(a.montajL, NaN);
+  if(kur==='tasarim') return _mntNum(a.tasarimL, NaN);
+  return (k>0 && L0>0) ? L0-_mntNum(a.montajF, 0)*9.81/k : NaN;
+}
 // Askının girdisi çözülebilir mi — eksik ya da tutarsız alan için kısa durum
 // cümleleri (doğrulama listesine girer).
 function _mntAskiSorunlari(askilar){
@@ -6421,7 +6441,7 @@ if(typeof module!=='undefined' && module.exports){
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     getMntAskiPropertiesHTML: getMntAskiPropertiesHTML, veMntAskiYay: veMntAskiYay, veMntAskiKurulum: veMntAskiKurulum,
-    _mntAskilarSI: _mntAskilarSI, _mntAskiSorunlari: _mntAskiSorunlari, _mntAskiOneri: _mntAskiOneri,
+    _mntAskilarSI: _mntAskilarSI, _mntAskiSorunlari: _mntAskiSorunlari, _mntAskiOneri: _mntAskiOneri, _mntAskiStatikBoy: _mntAskiStatikBoy,
     _mntMountCurveNote: _mntMountCurveNote,
     // Pencere dili (2026-10-14): imza, canlı model, kroki, durumlar, tazeleme
     _mntImza: _mntImza,

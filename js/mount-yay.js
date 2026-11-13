@@ -5,7 +5,8 @@
 // veri + EN 13906-1 bağıntıları: yay sabiti G·d⁴/(8·D³·n), gerilme düzeltme
 // katsayısı k = (w + 0,5)/(w − 0,75), kayma gerilmesi k·8FD/(πd³), ilk doğal
 // frekans 3,56·10⁵·d/(n·D²) (çelik, d · D mm, Hz). Sayılar üreticinin
-// resminden, yuvarlanmadan; anahtar (k) projeye yazılır, DEĞİŞMEZ.
+// resminden, yuvarlanmadan; anahtar (k) projeye yazılır, DEĞİŞMEZ. Parça kodu yazılmaz
+// (Canlı Not 1004): ilk kaydın eski anahtarı şema 11 göçüyle (js/state.js → VE_PARCA_GOC).
 //
 // Alanlar:
 //   k        anahtar — askı yayının `yay` alanı, DEĞİŞMEZ
@@ -21,9 +22,9 @@ var VE_MNT_YAY_G = 9.81;            // kgf → N (programın yerçekimi)
 var VE_MNT_YAY_GMOD = 78500;        // kayma modülü, sıcak şekillendirilmiş yay çeliği [N/mm²]
 var VE_MNT_YAY_IZIN = 0.56;         // blok boyunda izin verilen düzeltmesiz kayma gerilmesi / Rm (EN 13906-1 §10.1, soğuk şekillendirilmiş)
 var VE_MNT_YAY = [
-  { k: 'bmc-2k60377', ad: '2K60377 · şanzıman askı yayı', uretici: 'BMC', kaynak: 'BMC 2K60377, yayın 3',
+  { k: 'tta-aski', ad: 'TTA şanzıman askı yayı', uretici: 'BMC', kaynak: 'BMC teknik resmi, yayın 3',
     kgfmm: 5.85, kgfmmTol: 0.5, L0: 90, Lc: 63, d: 9, Do: 70, Di: 52, nt: 7, n: 5,
-    malzeme: 'BRS170582 · SAE 9262H (60SiCr7)', Rm: 1481,
+    malzeme: 'SAE 9262H (60SiCr7)', Rm: 1481,
     noktalar: [ { ad: 'ilk', L: 74, F: 93.5, tol: 8 }, { ad: 'montaj', L: 70, F: 117, tol: 10 }, { ad: 'st', L: 63, F: 158 } ] }
 ];
 

@@ -706,7 +706,7 @@ function _mntRepAskiAralik(R){
   return o;
 }
 function _mntRepAskiHal(h){ return h==='acik' ? 'açık' : (h==='blok' ? 'blok' : 'normal'); }
-// Sütun başlığı: adın parça numarasından önceki kısmı ("Sol askı yayı · 2K60377" → "Sol askı yayı")
+// Sütun başlığı: adın " · " ayracından önceki kısmı ("Sol askı yayı · arka" → "Sol askı yayı")
 function _mntRepAskiKisa(ad){ return _mntRepShort(String(ad||'askı').split(' · ')[0], 16); }
 function _mntRepAski(R){
   var A=R.askilar;
@@ -1156,6 +1156,9 @@ var _MNT_REP_AKSO_CSS =
  +'.rp-akso .ve-ak-nokta{fill:var(--vurgu)}'
  +'.rp-akso .ve-ak-t path{stroke:#fff;stroke-width:.6;stroke-linejoin:round}'
  +'.rp-akso .ve-ak-t .t-z{fill:#c7a2d3}.rp-akso .ve-ak-t .t-y{fill:#8a3ca0}.rp-akso .ve-ak-t .t-x{fill:#5d2a6d}'
+ +'.rp-akso .ve-ak-aski .a-yay{fill:none;stroke:#3d4450;stroke-width:1.1;stroke-linejoin:round}'
+ +'.rp-akso .ve-ak-aski .a-otur{fill:none;stroke:#5a6270;stroke-width:1.2}'
+ +'.rp-akso .ve-ak-aski .a-uc{fill:#fff;stroke:#3d4450;stroke-width:1}'
  +'.rp-akso .ve-ak-gam circle{fill:#fff;stroke:var(--ink);stroke-width:1.5}'
  +'.rp-akso .ve-ak-gam path{fill:var(--ink)}'
  +'.rp-akso .ve-ak-gdus{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 2}'
@@ -1181,7 +1184,7 @@ function _mntRepAkso(R){
     +'<figure class="rp-akso">'+r.svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Güç grubunun aksonometrisi: '
     +'dimetrik izdüşüm (ISO 5456-3; eksen oranı X : Y : Z = '+r.oran+'), önden-soldan-yukarıdan. '
     +'Gövdeler eşdeğer atalet kutularıyla çizilir — gizli kenar kesik çizgi, artı işaretli daire gövdenin '
-    +'ağırlık merkezi. '+_mntRepAksoBraket(m)+'Takozlar mor küp, G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
+    +'ağırlık merkezi. '+_mntRepAksoBraket(m)+'Takozlar mor küp'+((m.aski||[]).length ? ', askı yayları noktasından şasideki oturağına zikzak' : '')+', G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
     +'Z = 0 düzlemine izdüşümü, tabandaki gri alanlar gövdelerin gölgesi.</figcaption></figure>';
 }
 // Ataletsiz braketin çizimi (cp-mount.js → _mntAksoBraketLevha): şeklin yöntemi
@@ -2820,6 +2823,7 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     veMntGenerateReport: veMntGenerateReport,
     veMntUygunluk: veMntUygunluk, MNT_TR_SINIR: MNT_TR_SINIR,
+    _mntRepAski: _mntRepAski, _mntRepAskiAralik: _mntRepAskiAralik,
     veMntRaporOpts: veMntRaporOpts,
     _mntReportEnsureAssets: _mntReportEnsureAssets,
     _mntBuildReportHTML: _mntBuildReportHTML,

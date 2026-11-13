@@ -550,7 +550,7 @@ var componentDefs = {
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   // Askı Yayı (2026-11-11) — şanzımanın kuyruğunu şasiye asan ön yüklü helisel
-  // basma yayı (BMC 2K60377). Yalnız DÜŞEY kuvvet taşır; çözüme takozların
+  // basma yayı. Yalnız DÜŞEY kuvvet taşır; çözüme takozların
   // yanında ayrı eleman olarak girer (cp-mount.js _mntGatherForSolver →
   // askilar, çekirdek solveWithHangers). Çıkış portu taşıdığı gövdeye.
   'mnt-aski': {

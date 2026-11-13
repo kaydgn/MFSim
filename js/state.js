@@ -47,7 +47,7 @@ var MAX_UNDO_STEPS = 50;
 //
 // SÜRÜM 10 (2026-11-11): PARÇA KODU YOK. Katalog anahtarı parça koduydu; eski
 // anahtar yenisine göç eder (veParcaKoduGoc, aşağıda).
-var VE_SCHEMA_VERSION = 10;
+var VE_SCHEMA_VERSION = 11;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -245,7 +245,9 @@ var VE_PARCA_GOC = {
   '67d5861d':'prestolite-155a', '2cdb9d0d':'prestolite-155a', '5c98a839':'prestolite-180a', '0ac7d084':'prestolite-180a',
   'eb0ed24e':'prestolite-180a', 'ccdd1bf4':'prestolite-250a', '0bd3b31b':'prestolite-600a', 'cdb69d57':'sanden-7h15',
   'd34917a0':'asfat-a', '66f0ec09':'asfat-b', 'c514072c':'tepas-350a', 'd270ef3e':'valeo-tm21',
-  '6e4a77de':'valeo-tm31', '7ccc1639':'valeo-tm31'
+  '6e4a77de':'valeo-tm31', '7ccc1639':'valeo-tm31',
+  // şema 11 — askı yayı kataloğunun ilk anahtarı (2026-11-13; şema 10 damgalı dosyada da kalmıştı)
+  'ffea93f8':'tta-aski'
 };
 function _veFnv(s){
   var h=0x811c9dc5;
@@ -315,8 +317,9 @@ function veApplyLegacyMigrations(state) {
   if(v < 8 && typeof veFeadMigratePafta === 'function') veFeadMigratePafta(state);
   // ARAÇLAR PENCEREDE: Dönüş Yönü düğümü silinir (veri taşımıyordu).
   if(v < 9 && typeof veFeadMigrateSpinOff === 'function') veFeadMigrateSpinOff(state);
-  // PARÇA KODU: katalog anahtarı parça koduydu (yukarıda — Canlı Not 1004).
-  if(v < 10) veParcaKoduGoc(state);
+  // PARÇA KODU: katalog anahtarı parça koduydu (yukarıda — Canlı Not 1004). Şema 11:
+  // askı yayının anahtarı da; göç yalnız eski anahtarın özetini değiştirir, tekrarı zararsız.
+  if(v < 11) veParcaKoduGoc(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

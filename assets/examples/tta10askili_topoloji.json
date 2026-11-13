@@ -307,12 +307,35 @@
         "x": -636.668,
         "y": -48.971,
         "z": 293.531,
-        "kxs": 1045,
-        "kys": 1045,
-        "kzs": 1800,
-        "kxd": 1045,
-        "kyd": 1045,
-        "kzd": 1800
+        "kxs": 515,
+        "kys": 260,
+        "kzs": 242,
+        "kxd": 740,
+        "kyd": 355,
+        "kzd": 335,
+        "fitX": {
+          "form": "poly",
+          "k0": 515,
+          "c3": -3.29,
+          "c5": 0.0311
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 260,
+          "c3": -2.78,
+          "c5": 0.0269
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 387,
+            "xmax": 5.66
+          },
+          "ext": {
+            "k0": 400,
+            "c3": 2.06
+          }
+        }
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -330,12 +353,35 @@
         "x": -636.471,
         "y": 52.629,
         "z": 293.531,
-        "kxs": 1045,
-        "kys": 1045,
-        "kzs": 1800,
-        "kxd": 1045,
-        "kyd": 1045,
-        "kzd": 1800
+        "kxs": 515,
+        "kys": 260,
+        "kzs": 242,
+        "kxd": 740,
+        "kyd": 355,
+        "kzd": 335,
+        "fitX": {
+          "form": "poly",
+          "k0": 515,
+          "c3": -3.29,
+          "c5": 0.0311
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 260,
+          "c3": -2.78,
+          "c5": 0.0269
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 387,
+            "xmax": 5.66
+          },
+          "ext": {
+            "k0": 400,
+            "c3": 2.06
+          }
+        }
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -353,13 +399,14 @@
         "x": 532,
         "y": -335,
         "z": 535,
-        "kxs": 462,
-        "kys": 462,
-        "kzs": 2200,
-        "kxd": 630,
-        "kyd": 630,
-        "kzd": 3000,
-        "labelPos": "left"
+        "labelPos": "left",
+        "kxs": 1800,
+        "kys": 1210,
+        "kzs": 1150,
+        "kxd": 2880,
+        "kyd": 1936,
+        "kzd": 1840,
+        "maxLoad": 650
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -377,13 +424,14 @@
         "x": 532,
         "y": 335,
         "z": 535,
-        "kxs": 462,
-        "kys": 462,
-        "kzs": 2200,
-        "kxd": 630,
-        "kyd": 630,
-        "kzd": 3000,
-        "labelPos": "left"
+        "labelPos": "left",
+        "kxs": 1800,
+        "kys": 1210,
+        "kzs": 1150,
+        "kxd": 2880,
+        "kyd": 1936,
+        "kzd": 1840,
+        "maxLoad": 650
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -401,13 +449,14 @@
         "x": 642,
         "y": -335,
         "z": 535,
-        "kxs": 462,
-        "kys": 462,
-        "kzs": 2200,
-        "kxd": 630,
-        "kyd": 630,
-        "kzd": 3000,
-        "labelPos": "right"
+        "labelPos": "right",
+        "kxs": 1800,
+        "kys": 1210,
+        "kzs": 1150,
+        "kxd": 2880,
+        "kyd": 1936,
+        "kzd": 1840,
+        "maxLoad": 650
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -425,13 +474,14 @@
         "x": 642,
         "y": 335,
         "z": 535,
-        "kxs": 462,
-        "kys": 462,
-        "kzs": 2200,
-        "kxd": 630,
-        "kyd": 630,
-        "kzd": 3000,
-        "labelPos": "right"
+        "labelPos": "right",
+        "kxs": 1800,
+        "kys": 1210,
+        "kzs": 1150,
+        "kxd": 2880,
+        "kyd": 1936,
+        "kzd": 1840,
+        "maxLoad": 650
       },
       "mirrored": false,
       "isMasterWheel": false,
@@ -447,12 +497,12 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "customName": "Sol askı yayı · 2K60377",
+      "customName": "Sol askı yayı",
       "data": {
         "x": 1365,
         "y": -350,
         "z": 672.503,
-        "yay": "bmc-2k60377",
+        "yay": "tta-aski",
         "k": 57.39,
         "L0": 90,
         "Lc": 63,
@@ -461,7 +511,7 @@
         "n": 5,
         "Rm": 1481,
         "kurulum": "kuvvet",
-        "montajF": 50,
+        "montajF": 80,
         "labelPos": "right"
       }
     },
@@ -475,12 +525,12 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "customName": "Sağ askı yayı · 2K60377",
+      "customName": "Sağ askı yayı",
       "data": {
         "x": 1365,
         "y": 350,
         "z": 672.501,
-        "yay": "bmc-2k60377",
+        "yay": "tta-aski",
         "k": 57.39,
         "L0": 90,
         "Lc": 63,
@@ -489,7 +539,7 @@
         "n": 5,
         "Rm": 1481,
         "kurulum": "kuvvet",
-        "montajF": 50,
+        "montajF": 80,
         "labelPos": "right"
       }
     },

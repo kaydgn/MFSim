@@ -34,9 +34,12 @@ const ESKI = {
   '57RS303280': 'motor-12', '57RS303323': 'motor-13', '57RS303120': 'motor-14', '57RS303172': 'motor-15',
   '57RS303235': 'motor-16', '57RS303304': 'motor-17', '57RS303309': 'motor-18', '57RS303316': 'motor-19',
   '57RS303279': 'motor-20', '57RS303291': 'motor-21', '57RS303308': 'motor-22', '57RS303317': 'motor-23',
+  // Askı yayı kataloğu (şema 11 — kayıt şema 10'dan sonra da yazılmıştı)
+  'bmc-2k60377': 'tta-aski',
 };
-// Tablonun kendisi doğru mu: eski motor kataloğunun 24 satırı, aksesuarın 14 satırı, takozun 4 girdisi.
-const KOD = /57RS\d{4,}[A-Z]?|54100000001|55100000130/;
+// Tablonun kendisi doğru mu: eski motor kataloğunun 24 satırı, aksesuarın 14 satırı, takozun 4 girdisi,
+// askı yayının 1 girdisi (resmin ve malzeme belgesinin kodu).
+const KOD = /57RS\d{4,}[A-Z]?|54100000001|55100000130|2[Kk]60377|BRS170582/;
 
 function dosyalar(dizin, uz) {
   const out = [];
@@ -74,15 +77,16 @@ describe('GÖÇ — eski projenin anahtarı yenisine', () => {
   const E = require('../../js/fead-engines.js');
   const A = require('../../js/fead-accessories.js');
 
-  test('tablo: 42 eski anahtar, programda yalnız özetleri; her hedef bugünün kataloğunda', () => {
-    expect(Object.keys(ESKI).length).toBe(42);
-    expect(Object.keys(VE_PARCA_GOC).length).toBe(42);
+  test('tablo: 43 eski anahtar, programda yalnız özetleri; her hedef bugünün kataloğunda', () => {
+    expect(Object.keys(ESKI).length).toBe(43);
+    expect(Object.keys(VE_PARCA_GOC).length).toBe(43);
     Object.keys(ESKI).forEach((k) => expect(VE_PARCA_GOC[_veFnv(k)]).toBe(ESKI[k]));
-    const var_ = new Set([].concat(Object.keys(C.VE_MOUNT_LIBRARY), E.VE_FEAD_ENGINE_DB.map((e) => e.key), A.VE_FEAD_ACC_DB.map((a) => a.key)));
+    const var_ = new Set([].concat(Object.keys(C.VE_MOUNT_LIBRARY), E.VE_FEAD_ENGINE_DB.map((e) => e.key), A.VE_FEAD_ACC_DB.map((a) => a.key),
+      require('../../js/mount-yay.js').VE_MNT_YAY.map((y) => y.k)));
     Object.values(ESKI).forEach((v) => expect(var_.has(v)).toBe(true));
   });
 
-  test('değer, iç içe nesne, dizi, nesne anahtarı ve `bmc:` öneki; alt topoloji de; şema 10', () => {
+  test('değer, iç içe nesne, dizi, nesne anahtarı ve `bmc:` öneki; alt topoloji de; şema 11', () => {
     const eski = () => ({
       schemaVersion: 9,
       nodes: [
@@ -90,6 +94,7 @@ describe('GÖÇ — eski projenin anahtarı yenisine', () => {
         { id: 'a1', type: 'mnt-alternator', data: { aksKatalog: '57RS318932', mass: 9.8 } },
         { id: 'p1', type: 'mnt-parametric', data: { adaylar: { 't1|t2': ['57RS313773', 'amc55sha'] }, haric: ['57RS313774'] } },
         { id: 'k1', type: 'mnt-library', data: { ozel: { '57RS313773-sr116': { sx: 1 } } } },
+        { id: 'y1', type: 'mnt-aski', data: { yay: 'bmc-2k60377', k: 57.39 } },
         { id: 'f', type: 'fead-analysis', data: { subTopology: { schemaVersion: 9, nodes: [
           { id: 'alt', type: 'fead-alternator', data: { accLib: '57RS309348', accLibVer: '1.0.0' } },
           { id: 'cz', type: 'fead-solver', data: { engineLib: '57RS303315' } },
@@ -98,21 +103,32 @@ describe('GÖÇ — eski projenin anahtarı yenisine', () => {
       ],
     });
     const s = veApplyLegacyMigrations(eski());
-    expect(s.schemaVersion).toBe(10);
+    expect(s.schemaVersion).toBe(11);
     const d = (id) => s.nodes.find((n) => n.id === id).data;
     expect(d('t1')).toEqual({ libKey: 'asfat-b', customName: 'Ön · eski ad' });   // kullanıcının adı yerinde
     expect(d('a1').aksKatalog).toBe('prestolite-180a');
     expect(d('p1')).toEqual({ adaylar: { 't1|t2': ['a26-a', 'amc55sha'] }, haric: ['a26-b'] });
     expect(d('k1').ozel).toEqual({ 'asfat-a': { sx: 1 } });
+    expect(d('y1')).toEqual({ yay: 'tta-aski', k: 57.39 });
     const alt = s.nodes.find((n) => n.id === 'f').data.subTopology;
     const fd = (id) => alt.nodes.find((n) => n.id === id).data;
     expect(fd('alt').accLib).toBe('prestolite-155a');
     expect(fd('cz').engineLib).toBe('motor-11');
     expect(fd('sz').wiz).toEqual({ pulleys: [{ accLib: 'valeo-tm31' }], secim: 'bmc:sanden-7h15' });
-    expect(alt.schemaVersion).toBe(10);
+    expect(alt.schemaVersion).toBe(11);
     expect(JSON.stringify(s)).not.toMatch(KOD);
     // güncel kayıt göçe girmez; ikinci geçiş bir şey değiştirmez
     expect(veParcaKoduGoc(s)).toBe(0);
+  });
+
+  test('şema 10 damgalı kayıtta askı yayının eski anahtarı da göç eder; öteki alanlar yerinde', () => {
+    const s = veApplyLegacyMigrations({ schemaVersion: 10, nodes: [
+      { id: 'y1', type: 'mnt-aski', data: { yay: 'bmc-2k60377', montajF: 80, customName: 'Sol askı' } },
+      { id: 't1', type: 'mnt-mount', data: { libKey: 'asfat-a' } },
+    ] });
+    expect(s.schemaVersion).toBe(11);
+    expect(s.nodes.map((n) => n.data)).toEqual([{ yay: 'tta-aski', montajF: 80, customName: 'Sol askı' }, { libKey: 'asfat-a' }]);
+    expect(JSON.stringify(s)).not.toMatch(KOD);
   });
 });
 
