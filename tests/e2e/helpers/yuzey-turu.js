@@ -331,49 +331,43 @@ async function takozTuru(page, olc) {
     await olc('#ve-canvas', 'topoloji · ' + k);
   }
   // PARAMETRİK ANALİZ (Canlı Not 1001'den beri adım adım kuruluyor): önce varsayılan görünüm
-  // (Takoz yerleşimi + Tüm kombinasyonlar), sonra Özel kombinasyon — konum başına eklenen
-  // tipler ve açık arama listesi (Canlı Not 1005). Eski pencere (tarama, Sonuç, galeri)
-  // parkta: gerçek tarayıcıda mount-param-sonuc.spec.js onu yerine koyarak sınar.
+  // (Takoz yerleşimi + Tüm kombinasyonlar), sonra Özel kombinasyon — marka başlıklı seçim listesi
+  // (Canlı Not 1012): üç durumlu marka kutusu (dolu · kısmi · boş), açık markanın tip satırları, süzülmüş
+  // liste. Eski pencere (tarama, Sonuç, galeri) parkta: gerçek tarayıcıda mount-param-sonuc.spec.js onu
+  // yerine koyarak sınar.
   await page.evaluate(() => { createNode('mnt-parametric', 900, 120); });
   await pencereler(page, olc, ['mnt-parametric']);
   const ara = await page.evaluate(async () => {
     const n = nodes.find((x) => x.type === 'mnt-parametric');
     veMntParamAdayKip(n.id, 'ozel');
-    const Y = _mntParamYeni(n), S = _mntParamListeSira(Y.A), G = Y.M.G;
-    [[1, G[0].tip], [1, S[0].key], [G.length, S[S.length - 1].key]].forEach(([no, k]) => { if (k) veMntParamGrupAday(n.id, no, k, true); });
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
     await new Promise((r) => setTimeout(r, 450));
-    const kutu = document.getElementById('ve-mnt-param-ara-' + n.id + '-1');
-    if (!kutu) return null;
-    // boş kutuya odak: marka başlıklı tablo (Canlı Not 1010)
-    kutu.focus();
-    await new Promise((r) => setTimeout(r, 300));
-    const T = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
-    const baslik = T ? T.querySelectorAll('.ve-prm-ara-m').length : 0;
-    // başlıklar kapalı gelir: ilk markanın okuyla açılır, tipleri satırlanır
-    const ok = T && T.querySelector('.ve-prm-ara-ok');
-    if (ok) ok.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 300));
-    const T2 = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
-    const tablo = { baslik, tip: T2 ? T2.querySelectorAll('.ve-prm-ara-o').length : 0 };
-    return { tablo };
+    const L = (no) => document.getElementById('ve-mnt-param-sec-' + n.id + '-' + no);
+    if (!L(1)) return null;
+    // 1. grup: ilk markanın kutusu (hepsi), sonra bir satır bırakılır → kutu kısmi, satırlar açık
+    L(1).querySelector('.ve-prm-sec-m .vsig-ck').click();
+    await new Promise((r) => setTimeout(r, 200));
+    L(1).querySelectorAll('.ve-prm-sec-o')[1].click();
+    await new Promise((r) => setTimeout(r, 200));
+    // 2. grup: arama listeyi süzer
+    const inp = document.getElementById('ve-mnt-param-ara-' + n.id + '-2');
+    inp.value = 'cone'; inp.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 200));
+    return {
+      kismi: L(1).querySelectorAll('.ve-prm-sec-m .vsig-ck[aria-checked="mixed"]').length,
+      satir: L(1).querySelectorAll('.ve-prm-sec-o').length,
+      bos: L(1).querySelectorAll('.ve-prm-sec-o[aria-checked="false"]').length,
+      suzulen: L(2).querySelectorAll('.ve-prm-sec-o').length,
+      marka: L(3).querySelectorAll('.ve-prm-sec-m').length,
+    };
   });
-  expect(ara.tablo.baslik).toBeGreaterThanOrEqual(3);
-  expect(ara.tablo.tip).toBeGreaterThan(ara.tablo.baslik);
-  await olc('#ve-properties', 'mnt-parametric · Özel kombinasyon · marka tablosu');
-  const ara2 = await page.evaluate(async () => {
-    const n = nodes.find((x) => x.type === 'mnt-parametric');
-    const kutu = document.getElementById('ve-mnt-param-ara-' + n.id + '-1');
-    kutu.value = 'cone'; kutu.dispatchEvent(new Event('input', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 300));
-    const L = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
-    return { satir: document.querySelectorAll('#ve-properties .ve-prm-oz-t li').length,
-      secenek: L ? L.querySelectorAll('.ve-prm-ara-o').length : 0 };
-  });
-  Object.assign(ara, ara2);
-  // son örnek ASFAT: mevcut tipleri aday değil (Canlı Not 133) — eklenen iki aday tip ve açık liste
-  expect(ara.satir).toBeGreaterThanOrEqual(2);
-  expect(ara.secenek).toBeGreaterThan(0);
+  // son örnek ASFAT: mevcut tipleri aday değil (Canlı Not 133) — markanın tipleri seçili, biri bırakılmış
+  expect(ara).not.toBeNull();
+  expect(ara.kismi).toBe(1);
+  expect(ara.satir).toBeGreaterThan(2);
+  expect(ara.bos).toBe(1);
+  expect(ara.suzulen).toBeGreaterThan(0);
+  expect(ara.marka).toBeGreaterThanOrEqual(3);
   await olc('#ve-properties', 'mnt-parametric · Özel kombinasyon');
   // BEKLENEN TAKOZ SEHİMİ (2026-11-13): Çözücü'nün çözümüyle (Hesapla'nın çağrısı) ve 3–5 mm aralıkla —
   // alanlar açık, Analiz en düşük takoz yükü ve elenen sayısıyla.

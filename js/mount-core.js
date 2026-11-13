@@ -3581,13 +3581,15 @@ var veMountCore = (function() {
   // Bileşenlerin KÜTLESİ sunumda yok: dağılım Adams'ın beş kombinasyonunun 30 statik sehimine ve 30
   // frekansına uyduruldu. Takozlar sunumun en düşük iletilebilirlikli kombinasyonu: önde Cone 38-40,
   // ortada ve arkada Cone 39-40 (sunumun tablosu AMC'nin değerleri; doğrusal — kütüphanedeki Cone
-  // 38-40'ın eğrisi Adams'ta yok). Askı ADAMS'IN ÇÖZDÜĞÜ GİBİ tasarım konumunda ön yüksüz (tasarım
-  // boyu = serbest boy 90 mm; kullanıcı 2026-11-13: parametrik analizin HTML'i sunumun sehimlerini
-  // vermiyordu — örnek sunumun yazdığı 918,4 N'u taşıyordu): sunumun ön yükü Adams'ın sonuçlarında
-  // yok — takozların toplam yükü m·g'den yalnız yayın sehim kuvveti kadar az, kütleler yeniden
-  // uydurulsa da 918,4 N'la sehim RMS 0,53 mm (ön yüksüz 0,022). ÇERÇEVE programınki (Canlı Not 168): Adams'ın
-  // Z'si krank ekseninden (z = 0), bütün Z'ler +716,5 mm — aynı 6×6 kabinin föyündeki askı noktası yüksekliği
-  // (672,5; TTA askılı); Z = 0 düzlemi güç grubunun altında, öteki örnekler gibi. Kapı: tests/unit/mount-adams-isg.test.js.
+  // 38-40'ın eğrisi Adams'ta yok). Askı ADAMS'IN ÇÖZDÜĞÜ GİBİ: tasarım konumundaki ön yük 0
+  // (kullanıcı 2026-11-13: parametrik analizin HTML'i sunumun sehimlerini vermiyordu — örnek sunumun
+  // yazdığı 918,4 N'u taşıyordu): sunumun ön yükü Adams'ın sonuçlarında yok — takozların toplam yükü
+  // m·g'den yalnız yayın sehim kuvveti kadar az, kütleler yeniden uydurulsa da 918,4 N'la sehim RMS
+  // 0,53 mm (ön yüksüz 0,022). Yayın resmi 918,4 N'u (ilk noktası 74 mm · 93,5 kgf) ve statikte
+  // montaj noktasını (70 mm · 117 ± 10 kgf) veriyor: Askı Yayı penceresinin "Resmin ön yükü".
+  // ÇERÇEVE programınki (Canlı Not 168): Adams'ın Z'si krank ekseninden (z = 0), bütün Z'ler +716,5 mm —
+  // aynı 6×6 kabinin föyündeki askı noktası yüksekliği (672,5; TTA askılı); Z = 0 düzlemi güç grubunun
+  // altında, öteki örnekler gibi. Kapı: tests/unit/mount-adams-isg.test.js.
   const _ISG_I = function(a){ return { Ixx:a[0]*1e-6, Iyy:a[1]*1e-6, Izz:a[2]*1e-6, Ixy:0, Ixz:0, Iyz:0 }; };
   const _CONE3840 = { kstat:[1200, 780, 450], kdyn:[1440, 936, 540] };
   const _CONE3940 = { kstat:[1340, 1340, 720], kdyn:[1608, 1608, 864] };
@@ -3609,8 +3611,8 @@ var veMountCore = (function() {
       Object.assign({name:'Sağ arka takoz', pos:[1747.7,  356,   565.6]}, _CONE3940)
     ],
     askilar: [
-      {name:'Sol askı yayı', pos:[2523.3, -350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:90},
-      {name:'Sağ askı yayı', pos:[2523.3,  350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:90}
+      {name:'Sol askı yayı', pos:[2523.3, -350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0},
+      {name:'Sağ askı yayı', pos:[2523.3,  350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0}
     ],
     torque: ISG430_TORQUE,
     cozucu: { zeta:0.02 },
@@ -3945,8 +3947,8 @@ var veMountCore = (function() {
       specs: [
         ['Kütle gövdesi', String(ISG430_ASKILI_EXAMPLE.components.length)],
         ['Takoz', String(ISG430_ASKILI_EXAMPLE.mounts.length) + ' · ön 2 · orta 2 · arka 2'],
-        ['Askı yayı', String(ISG430_ASKILI_EXAMPLE.askilar.length) + ' · ' + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].k, 2) + ' N/mm · tasarım boyu '
-          + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].tasarimL) + ' mm'],
+        ['Askı yayı', String(ISG430_ASKILI_EXAMPLE.askilar.length) + ' · ' + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].k, 2) + ' N/mm · ön yük '
+          + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].onyukF) + ' kgf'],
         ['Toplam kütle', _toplamKg(ISG430_ASKILI_EXAMPLE)],
         ['Rölanti · silindir', _sayi(ISG430_TORQUE.idleRpm) + ' d/dk · ' + _sayi(ISG430_TORQUE.cylinders) + ' → f_ateş '
           + _sayi(ISG430_TORQUE.idleRpm / 60 * ISG430_TORQUE.cylinders / 2) + ' Hz'],

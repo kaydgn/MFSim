@@ -508,11 +508,12 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     expect(yan(d)).toEqual(['0 / 3', '0']);
     expect(d.querySelector('.ve-fp-durum')).toBeNull();
     expect([...d.querySelectorAll('.ve-prm-kip button[aria-pressed="true"]')].map((b) => b.dataset.kip)).toEqual(['ozel']);
-    // her grubun bloğu: numarası, adı, sayısı ve arama kutusu (adıyla)
+    // her grubun bloğu: numarası, adı, sayısı, arama kutusu (adıyla) ve seçim listesi (Canlı Not 1012: tip
+    // seçilmeyen grupta markalar kapalı — tip satırı yok)
     expect([...d.querySelectorAll('.ve-prm-oz')].map((b) => [b.dataset.no, b.querySelector('.ve-prm-oz-bas .ve-prm-oz-ad').textContent,
       b.querySelector('.ve-prm-oz-n').textContent, b.querySelector('.ve-prm-ara-k input').getAttribute('aria-label'),
-      b.querySelectorAll('.ve-prm-oz-t li').length]))
-      .toEqual(G.map((g) => [String(g.no), g.ad, 'Mevcut tip', 'Takoz ara · ' + g.ad, 0]));
+      b.querySelectorAll('.ve-prm-sec-o').length, b.querySelectorAll('.ve-prm-sec-m').length > 0]))
+      .toEqual(G.map((g) => [String(g.no), g.ad, 'Mevcut tip', 'Takoz ara · ' + g.ad, 0, true]));
     d.querySelectorAll('.ve-prm-ara-k input').forEach((i) => expect(i.getAttribute('placeholder')).toBe('Takoz ara'));
     P.veMntParamGrupAday('py', 1, A[0].key, true);
     P.veMntParamAdayKip('py', 'hepsi');
@@ -559,7 +560,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     expect([Y.say, Y.taranan, Y.N]).toEqual([[4, 0, 6], 2, 24]);
     expect(yan(d)).toEqual(['2 / 3', '24']);
     expect([...d.querySelectorAll('.ve-prm-oz-n')].map((t) => t.textContent)).toEqual(['4 tip', 'Mevcut tip', '6 tip']);
-    expect([...d.querySelectorAll('.ve-prm-oz-t')].map((u) => u.querySelectorAll('li').length)).toEqual([4, 0, 6]);
+    expect([...d.querySelectorAll('.ve-prm-sec')].map((u) => u.querySelectorAll('.ve-prm-sec-o[aria-checked="true"]').length)).toEqual([4, 0, 6]);
     // bugün aday olmayan tip, tekrar ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
     n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key, A[0].key], 'x|y': [A[1].key] };
     expect(P._mntParamYeni(n).say).toEqual([1, 0, 0]);
@@ -635,16 +636,16 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     [...A].reverse().forEach((a) => P.veMntParamGrupAday('py', 1, a.key, true));
     expect(n.data.adaylar[G[0].anahtar]).toEqual(A.map((a) => a.key));       // kayıt: kütüphane sırası
     const d = dom(P.getMntParamPropertiesHTML(n));
-    expect([...d.querySelectorAll('#ve-mnt-param-oz-py-1 li button')].map((b) => b.dataset.key)).toEqual(S.map((a) => a.key));
-    // satır: ad, kz (Tip listesinin yazımı), mevcut tip işaretli, kaldır düğmesi adıyla
-    const li = [...d.querySelectorAll('#ve-mnt-param-oz-py-1 li')];
+    // seçim listesi (Canlı Not 1012): bütün markalar açık (seçili tipleri var), satırlar Tip listesinin sırasıyla
+    const li = [...d.querySelectorAll('#ve-mnt-param-sec-py-1 .ve-prm-sec-o')];
+    expect(li.map((b) => b.dataset.key)).toEqual(S.map((a) => a.key));
+    // satır: onay kutusu (dolu), ad, kz (Tip listesinin yazımı); mevcut tip işaretli
     li.forEach((r, i) => {
+      expect([r.getAttribute('role'), r.getAttribute('aria-checked'), r.querySelector('.vsig-ck').classList.contains('on')]).toEqual(['checkbox', 'true', true]);
       expect(r.querySelector('.ve-prm-kz').textContent).toBe('kz ' + cp._mntS(S[i].e.sz, 0));
-      expect(r.querySelector('button').getAttribute('aria-label')).toBe('Kaldır · ' + S[i].name);
-      expect(r.querySelector('button .mf-ico-x')).not.toBeNull();
     });
-    const mev = (dd) => [...dd.querySelectorAll('#ve-mnt-param-oz-py-1 li')].filter((r) => r.querySelector('.ve-prm-mev'))
-      .map((r) => r.querySelector('button').dataset.key);
+    const mev = (dd) => [...dd.querySelectorAll('#ve-mnt-param-sec-py-1 .ve-prm-sec-o')].filter((r) => r.querySelector('.ve-prm-mev'))
+      .map((r) => r.dataset.key);
     // doğrusal ön takoz yasalı TK050 değil: işaret yok; tip yasasıyla uygulanınca işaretli
     expect([G[0].tip, mev(d)]).toEqual([null, []]);
     global.nodes.filter((x) => G[0].idler.includes(x.id)).forEach((x) => cp._mntLibUygula(x.data, G[0].benzer));
@@ -666,72 +667,26 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     });
   });
 
-  test('YERİNDE TAZELEME: yazınca liste açılır; ↓ ve Enter ekler — arama kutusu aynı öğe ve odakta, satırlar, sayı ve özet pencere kurulmadan değişir; tık ekler; Esc temizler; kaldır odağı yerinde bırakır', () => {
-    const n = kur('tulga', { adaylarKip: 'ozel' }), Y = P._mntParamYeni(n), G = Y.M.G, A = Y.A;
+  test('YERİNDE TAZELEME: seçim listesinin kutusu ve satırı modeli değiştirir — pencere ve çizim kurulmaz, arama kutusu aynı öğe; sayı, liste ve özet yerinde', () => {
+    const n = kur('tulga', { adaylarKip: 'ozel' }), Y = P._mntParamYeni(n), G = Y.M.G;
+    Object.keys(P._MNT_PARAM_SEC).forEach((k) => { delete P._MNT_PARAM_SEC[k]; });
     global.saveState = () => cp.veMntPencereTazele();
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
     const govde = document.querySelector('#ve-fp-panes-py'), cizim = document.querySelector('#ve-mnt-param-ak-py');
-    const kutu = document.getElementById('ve-mnt-param-ara-py-1'), liste = document.getElementById('ve-mnt-param-ara-l-py-1');
-    const sonuc = () => [...liste.querySelectorAll('.ve-prm-ara-o')];                    // tip satırları (marka başlıkları ayrı)
-    const yaz = (q) => { kutu.value = q; kutu.dispatchEvent(new Event('input', { bubbles: true })); };
-    const tus = (key) => { const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }); kutu.dispatchEvent(e); return e; };
-    const satir = (no) => [...document.querySelectorAll('#ve-mnt-param-oz-py-' + no + ' li button')].map((b) => b.dataset.key);
-    kutu.focus();
-    expect([document.activeElement === kutu, liste.hidden]).toEqual([true, false]);     // boş kutuda odak tabloyu açar (Canlı Not 1010)
-    kutu.value = ''; P.veMntParamAraKapat(kutu);
-    // yazınca: sonuçlar Tip listesinin sırasıyla, ilk tip satırı etkin
-    const bek = P._mntParamAra(P._mntParamListeSira(A), 'cone 60', []);
-    expect(bek.length).toBeGreaterThan(2);
-    yaz('cone 60');
-    expect([liste.hidden, kutu.getAttribute('aria-expanded')]).toEqual([false, 'true']);
-    expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.map((a) => a.key));
-    expect(kutu.getAttribute('aria-activedescendant')).toBe(sonuc()[0].id);
-    const sira = () => [...liste.querySelectorAll('[role="option"]')];
-    tus('ArrowDown');
-    expect(sira().filter((o) => o.getAttribute('aria-selected') === 'true').map((o) => o.dataset.key)).toEqual([bek[1].key]);
-    expect(tus('Enter').defaultPrevented).toBe(true);
-    expect(n.data.adaylar).toEqual({ [G[0].anahtar]: [bek[1].key] });
+    const kutu = document.getElementById('ve-mnt-param-ara-py-1');
+    const marka = () => [...document.querySelectorAll('#ve-mnt-param-sec-py-1 .ve-prm-sec-g')];
+    const ilk = marka()[0], ad = ilk.dataset.marka;
+    const bek = P._mntParamListeSira(Y.A).filter((a) => ((a.e && a.e.marka) || 'Diğer') === ad);
+    ilk.querySelector('.ve-prm-sec-m .vsig-ck').click();
+    expect(n.data.adaylar).toEqual({ [G[0].anahtar]: Y.A.filter((a) => bek.includes(a)).map((a) => a.key) });
     expect(document.getElementById('ve-mnt-param-ara-py-1')).toBe(kutu);                 // kutu tazelenmedi
-    expect([document.activeElement === kutu, kutu.value, liste.hidden]).toEqual([true, '', true]);
     expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);                        // pencere kurulmadı
     expect(document.querySelector('#ve-mnt-param-ak-py')).toBe(cizim);                   // çizim yerinde
-    expect(satir(1)).toEqual([bek[1].key]);
-    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe('1 tip');
-    expect(yan(document)).toEqual(['1 / 3', '1']);
-    // eklenen tip yeni aramada yok; satıra tık ekler (kayıt kütüphane sırası), odak kutuda
-    yaz('cone 60');
-    expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.filter((a, i) => i !== 1).map((a) => a.key));
-    sonuc()[0].click();
-    expect(n.data.adaylar[G[0].anahtar]).toEqual(A.filter((a) => a.key === bek[0].key || a.key === bek[1].key).map((a) => a.key));
-    expect(satir(1)).toEqual([bek[0].key, bek[1].key]);
-    expect([document.activeElement === kutu, kutu.value, liste.hidden]).toEqual([true, '', true]);
-    // ↓ boş sorguda tabloyu açar: marka başlıkları kapalı, açılınca bütün tipler (eklenenler hariç)
-    P.veMntParamAraKapat(kutu);
-    tus('ArrowDown');
-    expect(sonuc().length).toBe(0);
-    for (let i = 0; i < liste.querySelectorAll('.ve-prm-ara-m').length; i++) liste.querySelectorAll('.ve-prm-ara-ok')[i].click();
-    expect(sonuc().length).toBe(A.length - 2);
-    // Esc aramayı temizler ve listeyi kapatır; olay pencereye gitmez
-    yaz('zzz');
-    expect([sonuc().length, liste.textContent]).toEqual([0, 'Eşleşen takoz yok.']);
-    expect(tus('Enter').defaultPrevented).toBe(true);                                  // eşleşme yok: eklenmez
-    expect(satir(1).length).toBe(2);
-    expect(tus('Escape').defaultPrevented).toBe(true);
-    expect([kutu.value, liste.hidden, kutu.getAttribute('aria-expanded')]).toEqual(['', true, 'false']);
-    // odak kutudan çıkınca liste kapanır
-    yaz('cone');
-    expect(liste.hidden).toBe(false);
-    kutu.blur();
-    expect(liste.hidden).toBe(true);
-    // kaldır: satır gider; odak aynı sıradaki satırın düğmesine, satır kalmayınca arama kutusuna
-    document.querySelector('#ve-mnt-param-oz-py-1 li button').click();
-    expect(satir(1)).toEqual([bek[1].key]);
-    expect(document.activeElement).toBe(document.querySelector('#ve-mnt-param-oz-py-1 li button'));
-    document.querySelector('#ve-mnt-param-oz-py-1 li button').click();
-    expect(satir(1)).toEqual([]);
-    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe('Mevcut tip');
-    expect(document.activeElement).toBe(kutu);
-    expect(n.data).toEqual({ adaylarKip: 'ozel' });
+    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe(bek.length + ' tip');
+    expect([...marka()[0].querySelectorAll('.ve-prm-sec-o')].map((b) => b.dataset.key)).toEqual(bek.map((a) => a.key));
+    expect(yan(document)).toEqual(['1 / 3', cp._mntS(bek.length, 0)]);
+    marka()[0].querySelectorAll('.ve-prm-sec-o')[0].click();                            // satır tipi bırakır
+    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe((bek.length - 1) + ' tip');
     expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);
   });
 });
