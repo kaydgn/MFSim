@@ -243,8 +243,11 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
       global.nodes.filter((n) => n.type === 'mnt-mount').forEach((n) => {
         if (n.data.libKey) bagli++;
         const E = cp._mntKutuphaneEslesme(n), bek = E ? E.e.key : '';
-        const d = dom(cp._mntTakozTipGovde(n));
-        expect([f, n.id, d.querySelector('select').value]).toEqual([f, n.id, bek]);
+        const d = dom(cp._mntTakozTipGovde(n)), tr = d.querySelector('.mntlib-trigger');
+        // Seçici Takoz Özellikleri'ninki (Canlı Not 160): tipli takozda Marka tipin markası ve Tip o
+        // tip; tipsizde Marka Elle ve Tip satırı yok.
+        expect([f, n.id, tr ? tr.getAttribute('data-k') : '', d.querySelector('select.mntlib-marka').value])
+          .toEqual([f, n.id, bek, E ? E.e.marka : '']);
         if (bek) {
           tipli++;
           expect(d.querySelector('[id^="ve-mnt-libnot-"]').textContent).toContain(E.e.name + ' ile 6/6 değer aynı');
@@ -254,9 +257,9 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect([tipli, tipsiz, bagli]).toEqual([29, 11, 0]);                // iki 10 Ton TTA'nın on ikisi ASFAT'ın tipleri (Canlı Not 68; askılı 2026-11-11)
   });
 
-  test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince "— elle gir —"', () => {
+  test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince Elle', () => {
     tulga();
-    const t = onTakoz(), sec = () => dom(cp._mntTakozTipGovde(t)).querySelector('select').value;
+    const t = onTakoz(), sec = () => { const tr = dom(cp._mntTakozTipGovde(t)).querySelector('.mntlib-trigger'); return tr ? tr.getAttribute('data-k') : ''; };
     expect(sec()).toBe('TK050');
     t.data.kzs = '300';
     expect(sec()).toBe('');
@@ -266,7 +269,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect(sec()).toBe('');
   });
 
-  test('"— elle gir —" seçimi kütüphane BAĞINI kaldırır, değerlere dokunmaz', () => {
+  test('Elle seçimi kütüphane BAĞINI kaldırır, değerlere dokunmaz', () => {
     tulga();
     const t = onTakoz();
     t.data.libKey = 'TK050';
@@ -478,7 +481,9 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     const id = onTakoz().id;
     expect(html).toContain('id="ve-fp-panes-' + id + '"');
     expect(html).not.toContain('ve-fp-tabs');
-    expect(html).not.toMatch(/role="tabpanel"|\shidden[\s>]/);
+    expect(html).not.toMatch(/role="tabpanel"/);
+    // Gizli öğe yalnız Takoz tipinin kapalı açılır listesi (Canlı Not 160: Takoz Özellikleri'nin seçicisi)
+    expect([...dom(html).querySelectorAll('[hidden]')].filter((e) => !e.closest('.mntlib-dd'))).toEqual([]);
     expect(html).toMatch(/<div class="ve-fp-kat" data-k="konum" data-d="ok" tabindex="-1" aria-label="Konum">/);
   });
 

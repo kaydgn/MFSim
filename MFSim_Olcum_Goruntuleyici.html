@@ -4539,6 +4539,10 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .mntlib-adim[aria-disabled="true"] .mf-ico{ opacity:.35; }
 .mntlib-adim .mf-ico{ width:14px; height:14px; }
 .mntlib-sec > .mntlib-add{ grid-area:1 / 3; }
+/* Takoz penceresinin seçicisi (Canlı Not 160): Yeni takoz yok — Marka ve Tip satırı aynı genişlikte
+   (üçüncü sütun ve aralığı yok); altındaki durum satırı seçiciye yakın. */
+.mntlib-sec--takoz{ grid-template-columns:auto minmax(0,1fr); margin-bottom:6px; }
+.mntlib-sec--takoz > .mntlib-tip{ grid-area:2 / 2; }
 .mntlib-trigger{
   display:flex;align-items:center;gap:8px;width:100%;height:26px;
   padding:0 8px;cursor:pointer;text-align:left;

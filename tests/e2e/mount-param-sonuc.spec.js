@@ -231,7 +231,8 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
   const tid = await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-mount');
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
   await page.waitForTimeout(400);
-  expect(await page.evaluate((i) => document.getElementById('ve-mnt-libKey-' + i).value, tid)).toBe(uyeTip[0]);
+  // Takoz penceresinin Tip tetikleyicisi (Canlı Not 160: Takoz Özellikleri'nin seçicisi) uygulanan tipi gösterir
+  expect(await page.evaluate((i) => document.getElementById('mntlib-tr-' + i).getAttribute('data-k'), tid)).toBe(uyeTip[0]);
   await page.evaluate(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(400);

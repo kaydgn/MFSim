@@ -106,7 +106,7 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
 
 describe('Kaldırılan girdiye bağlı kayıtlı takoz', () => {
   // Kayıtlı proje takozu libKey ile bağlar; '-calc' girdileri artık yok. Değerler
-  // düğümün kendisinde: sonuç değişmez, liste "— elle gir —", not sebebi söyler.
+  // düğümün kendisinde: sonuç değişmez, Marka Elle (Tip satırı yok), not sebebi söyler.
   test('değerler yerinde, eşleşme yok, not "girdi artık yok" der', () => {
     const d = { libKey: 'amc137963-calc', kxs: 2670, kys: 1065, kzs: 1180, kxd: 4265, kyd: 1690, kzd: 1715 };
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: Object.assign({}, d) };
@@ -115,8 +115,8 @@ describe('Kaldırılan girdiye bağlı kayıtlı takoz', () => {
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();
     const h = document.createElement('div');
     h.innerHTML = cp._mntTakozTipGovde(n);
-    const sel = h.querySelector('select[id="ve-mnt-libKey-m1"]');
-    expect(sel.options[sel.selectedIndex].value).toBe('');
+    expect(h.querySelector('select[id="mntlib-marka-m1"]').value).toBe('');
+    expect(h.querySelector('.mntlib-trigger')).toBeNull();
     expect(h.querySelector('#ve-mnt-libnot-m1').textContent).toContain('Seçili kütüphane girdisi artık yok');
     expect(n.data).toEqual(d);
   });

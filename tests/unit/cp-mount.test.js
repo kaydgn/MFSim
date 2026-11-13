@@ -72,8 +72,9 @@ describe('Panel üreticileri', () => {
     const html = cp.getMntMountPropertiesHTML(node);
     expect(html).toContain('ve-mnt-x-m1');
     expect(html).toContain('ve-mnt-kzs-m1');
-    expect(html).toContain('LMT-1433-37 55 ShA');
-    expect(html).toContain("veMntApplyLib('m1'");
+    // Takoz tipi Takoz Özellikleri'nin seçicisi (Canlı Not 160): Marka listesi, sonunda Elle
+    expect(html).toContain("veMntLibMarka('m1',this.value)");
+    expect(html).toContain('<option value="" selected>Elle</option>');
   });
   test('Çözücü paneli: Hesapla + sonuç kabı', () => {
     const node = { id: 'sv', type: 'mnt-solver', def: { name: 'Takoz Çözücü' }, data: {} };
@@ -190,12 +191,15 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     const mount = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: {} };
     global.nodes = [lib, mount];
     const dd = cp.getMntMountPropertiesHTML(mount);
-    expect(dd).toContain('label="Özel takozlar"');
-    expect(dd).toContain('Kullanıcı Takoz');
+    expect(dd).toContain('<option value="Özel takozlar">Özel takozlar</option>');   // Marka listesinde (Canlı Not 160)
     cp.veMntApplyLib('m9', 'kX');
     expect(mount.data.kzs).toBe(333);
     expect(mount.data.kzd).toBe(666);
     expect(mount.data.libKey).toBe('kX');
+    const sonra = cp.getMntMountPropertiesHTML(mount);
+    expect(sonra).toContain('<option value="Özel takozlar" selected>');
+    expect(sonra).toContain('data-k="kX"');
+    expect(sonra).toContain('Kullanıcı Takoz');
   });
 
   test('veMntLibSetBuiltin gömülü takozu düzenler; fabrika sabiti mutasyona uğramaz', () => {

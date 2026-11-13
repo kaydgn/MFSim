@@ -74,8 +74,11 @@ describe('LMT-1433-00 kütüphane girdileri', () => {
   });
 
   test('kütüphane listesinde ve Takoz panelinde görünüyor', () => {
-    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: {} });
-    Object.keys(TABLE).forEach((k) => expect(html).toContain('value="' + k + '"'));
+    // Takoz penceresinin seçicisi (Canlı Not 160): tip kendi markasının Tip listesinde
+    Object.keys(TABLE).forEach((k) => {
+      const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { libKey: k } });
+      expect(html).toContain("veMntLibSelect('m1','" + k + "')");
+    });
   });
 
   test('kütüphaneden uygulanınca Takoz düğümüne yazılıyor', () => {

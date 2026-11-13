@@ -2147,10 +2147,11 @@ function _mntKutuphaneEslesme(node){
   var s=say(e);
   return { e:e, ayni:s.ayni, farkli:s.farkli, yasaKut:_mntYasaVar(e), yasaTk:_mntYasaVar(d) };
 }
+// Durum satırı Marka · Tip'in altında; Elle Marka listesinde yazdığı için satır onu tekrarlamaz.
 function _mntKutuphaneNotu(node){
   var E=_mntKutuphaneEslesme(node), d=node.data||{};
-  if(!E) return _mntNot(d.libKey ? 'Seçili kütüphane girdisi artık yok — değerler elle.'
-                                 : 'Kütüphanede eşleşen takoz yok; değerler elle.', '');
+  if(!E) return _mntNot(d.libKey ? 'Seçili kütüphane girdisi artık yok.'
+                                 : 'Kütüphanede eşleşen takoz yok.', '');
   var ad='<b>'+_mntEsc(E.e.name)+'</b>';
   var yasa=(E.yasaKut && !E.yasaTk) ? ' · kütüphanedeki nonlineer yasası bu takozda yok' : '';
   var tadi=_mntLibTahminAdi(E.e);
@@ -2178,26 +2179,20 @@ function _mntTakozTahmin(node){
 // Bunları ayrı pencereler olarak vermeye gerek yok"*). Konum föyünün
 // "Statik sehim" sütunu ve kapasitenin "Statik yük" okuması sonuçtu — kalktı
 // (sonuç yalnız raporda).
+// TAKOZ TİPİ — Takoz Özellikleri'nin SEÇİCİSİ (kullanıcı 2026-11-13, Canlı Not 160: *"Takoz
+// bileşen penceresindeki takoz seçimini tıpkı 'takoz özellikleri' bileşenindeki gibi yapalım."*):
+// Marka · Tip (aranır) · (i) · oklar AYNI üreticiden (_mntLibSecici, bağlam düğümün tipinden —
+// _mntLibTakozMu); tip seçmek tipi TAKOZA uygular (veMntApplyLib, tek geri-al adımı). Marka
+// listesinin sonunda Elle: Tip satırı yok, bağ kalkar, değerler yerinde. Seçili tip notun
+// eşleşmesinden (_mntTakozSecim): bağsız ama altı değeri bir tiple aynı takoz o tipi gösterir
+// (örneklerin takozları bağsız kaydedilmişti — ASFAT 6/6, Siper 6/6, Tulga 5/5 takoz). Seçici
+// yerinde tazelenir: değeri değişen bağsız takoz Elle'ye düşer. Kapı:
+// mount-library-dropdown.test.js → *TAKOZ PENCERESİNDE SEÇİCİ*.
 function _mntTakozTipGovde(node){
   var d=node.data||{};
-  var lib=veMntGetLibraryList();
-  // Seçili tip notun eşleşmesinden (_mntKutuphaneEslesme): bağsız ama altı
-  // değeri bir tiple aynı takoz o tipi gösterir. Örnek modellerin takozları
-  // bağsız kaydedilmişti; liste "— elle gir —" derken not tipi adlandırıyordu
-  // (ASFAT 6/6, Siper 6/6, Tulga 5/5 takoz).
-  var E=_mntKutuphaneEslesme(node), secili=E ? E.e.key : '';
-  var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(secili===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
-  var sel='<select class="ve-fp-sel" id="ve-mnt-libKey-'+node.id+'" onchange="veMntApplyLib(\''+node.id+'\',this.value)">'
-    + '<option value="">— elle gir —</option>';
-  // Takoz Özellikleri'nin Marka listesiyle aynı gruplar: katalog markaları, sonda Özel
-  // takozlar (Canlı Not 106: *"Takoz tiplerini markalarına göre kategorize edelim"*);
-  // sayaç yok (Canlı Not 65)
-  veMntLibMarkalar(lib).forEach(function(g){
-    sel+='<optgroup label="'+_mntEsc(g.ad)+'">'+g.girdiler.map(opt).join('')+'</optgroup>';
-  });
-  sel+='</select>';
+  var S=_mntTakozSecim(node);
   var h=_mntBolum('Takoz tipi', '',
-      _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kütüphane</span>'+sel+'</label>')
+      '<div id="ve-mnt-libsec-'+node.id+'" data-tazele>'+_mntLibSecici(node, S.markalar, S.grup, S.sel, { takoz:true })+'</div>'
     + '<div id="ve-mnt-libnot-'+node.id+'" data-tazele>'+_mntKutuphaneNotu(node)+'</div>');
   // Rijitlik — statik ve dinamik aynı satırda; oran türetilir.
   var f=_mntFoyAc([{ b:'Eksen', gen:'31%' }, { b:'Statik', gen:'23%' }, { b:'Dinamik', gen:'23%' },
@@ -2519,13 +2514,17 @@ function veMntSetCheck(nodeId, key, checked){
 function veMntApplyLib(nodeId, key){
   var node=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes.find(function(n){return n.id===nodeId;}) : null;
   if(!node) return;
-  // "— elle gir —": yalnız kütüphane BAĞI kalkar, değerler yerinde kalır
-  // (kullanıcı katalogdan yükleyip elle rötuşlayabilsin — motor kataloğuyla aynı).
+  // Elle (Marka listesinin sonu, Canlı Not 160): yalnız kütüphane BAĞI kalkar, değerler yerinde
+  // kalır (kullanıcı katalogdan yükleyip elle rötuşlayabilsin — motor kataloğuyla aynı).
+  // `libElle` seçimin kendisidir: değerleri bir tiple hâlâ aynı olan takoz eşleşmeyle o tipe
+  // dönmesin (_mntTakozSecim); tip uygulanınca yazıcı onu siler. Durum satırı eşleşmeyi yine yazar.
   if(!key){
-    if(node.data && node.data.libKey!==undefined){
-      delete node.data.libKey;
-      if(typeof saveState==='function') saveState();
-    }
+    if(!node.data) node.data={};
+    if(node.data.libKey===undefined && node.data.libElle) return;
+    delete node.data.libKey;
+    node.data.libElle=true;
+    if(typeof saveState==='function') saveState();
+    if(typeof showNodeProperties==='function') showNodeProperties(node);
     return;
   }
   if(!node.data) node.data={};
@@ -2549,6 +2548,7 @@ function _mntLibGirdiYaz(d, m, key){
   if(!m || !d) return false;
   d.kxs=m.sx; d.kys=m.sy; d.kzs=m.sz;
   d.kxd=m.dx; d.kyd=m.dy; d.kzd=m.dz; d.libKey=key;
+  delete d.libElle;                                 // Takoz penceresinin Elle seçimi (Canlı Not 160)
   // Taşıma kapasitesi de takoz TİPİNİN özelliğidir. Kütüphane girdisinde
   // tanımlıysa kopyalanır; tanımsızsa Takoz'daki eski değer TEMİZLENİR —
   // yoksa başka bir takoz tipine geçildiğinde önceki tipin kapasitesi sessizce
@@ -4639,7 +4639,7 @@ function _mntLibOptionRow(node, e, sel){
 }
 // Kapalı hâldeki seçici: seçili takozun adı ve kz'si + ▾ (Canlı Not 122: işaretsiz).
 function _mntLibTrigger(node, sel){
-  var h='<button type="button" class="mntlib-trigger" id="mntlib-tr-'+node.id+'"'
+  var h='<button type="button" class="mntlib-trigger" id="mntlib-tr-'+node.id+'"'+(sel ? ' data-k="'+_mntEsc(sel.key)+'"' : '')
     +' aria-haspopup="listbox" aria-expanded="false" title="Takoz listesini aç"'
     +' onclick="veMntLibDropdownToggle(\''+node.id+'\',event)">';
   if(sel){
@@ -4670,19 +4670,37 @@ function _mntLibDropdown(node, girdiler, sel){
 // (Canlı Not 105: sıkı iki satır; 106: önce marka, sonra o markanın tipleri).
 // Tipin teknik resmi varsa Tip satırında (i) düğmesi (Canlı Not 111), satırın sonunda
 // tipler arasında gezen iki ok (Canlı Not 155, _mntLibAdimHTML).
-function _mntLibSecici(node, markalar, grup, sel){
+// TAKOZ PENCERESİ de bu seçiciyi basar (Canlı Not 160, `opt.takoz`): Marka listesinin sonunda
+// Elle (değer ''; seçiliyken Tip satırı yok), Yeni takoz YOK — o kütüphanenin işi; Marka listesi
+// satırın tamamını alır. İşleyiciler aynı (veMntLibMarka · veMntLibSelect · veMntLibAdim):
+// bağlamı düğümün tipinden okurlar (_mntLibTakozMu).
+function _mntLibSecici(node, markalar, grup, sel, opt){
+  var takoz=!!(opt && opt.takoz);
   var mk='<select class="ve-fp-sel mntlib-marka" id="mntlib-marka-'+node.id+'" aria-label="Marka"'
     +' onchange="veMntLibMarka(\''+node.id+'\',this.value)">'
     + markalar.map(function(g){
         return '<option value="'+_mntEsc(g.ad)+'"'+((grup && g.ad===grup.ad)?' selected':'')+'>'+_mntEsc(g.ad)+'</option>';
-      }).join('')+'</select>';
-  return '<div class="mntlib-sec">'
-    + '<span class="mntlib-et">Marka</span>'+mk
-    + '<span class="mntlib-et">Tip</span>'
+      }).join('')
+    + (takoz ? '<option value=""'+(grup ? '' : ' selected')+'>Elle</option>' : '')+'</select>';
+  var tip=(takoz && !grup) ? '' : '<span class="mntlib-et">Tip</span>'
     + '<div class="mntlib-tip"><div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
-    + _mntLibCizimDugme(node, sel)+_mntLibAdimHTML(node, grup?grup.girdiler:[], sel)+'</div>'
-    + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
+    + _mntLibCizimDugme(node, sel)+_mntLibAdimHTML(node, grup?grup.girdiler:[], sel)+'</div>';
+  return '<div class="mntlib-sec'+(takoz ? ' mntlib-sec--takoz' : '')+'">'
+    + '<span class="mntlib-et">Marka</span>'+mk+tip
+    + (takoz ? '' : '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>')
     + '</div>';
+}
+// Seçicinin bağlamı: Takoz Özellikleri (mnt-library) pencerenin görünüm durumunu (_selKey) yazar;
+// öteki düğüm (Takoz) seçilen tipi kendi verisine uygular (Canlı Not 160).
+function _mntLibTakozMu(node){ return !!node && node.type!=='mnt-library'; }
+// Takoz penceresinin seçimi: bütün kütüphane (veMntGetLibraryList — Özel takozlar dâhil), seçili
+// tip notun eşleşmesinden; Elle seçilmişse (libElle, bağsız) ya da eşleşme yoksa grup yok.
+function _mntTakozSecim(node){
+  var d=node.data||{};
+  var markalar=veMntLibMarkalar(veMntGetLibraryList());
+  var E=(d.libElle && !d.libKey) ? null : _mntKutuphaneEslesme(node);
+  var grup=E ? (markalar.filter(function(g){ return g.ad===E.e.marka; })[0] || null) : null;
+  return { markalar:markalar, grup:grup, sel:grup ? E.e : null };
 }
 // TİPLER ARASINDA GEZİNME (kullanıcı 2026-11-11, Canlı Not 155: *"Şuraya pratik olarak takozlar
 // arasında gezebileceğimiz iki ok tuşu istiyorum, yukarı aşağı"*): Tip satırının sonunda bitişik iki
@@ -5092,6 +5110,7 @@ function _mntLibGirdileri(node){
 // Pencerenin seçimi: seçili tip (yoksa ilk özel, yoksa ilk katalog tipi), markası ve o markanın
 // tipleri Tip listesinin sırasıyla — pencere ve oklar (veMntLibAdim) AYNI listeyi okur.
 function _mntLibSecim(node){
+  if(_mntLibTakozMu(node)) return _mntTakozSecim(node);   // Takoz penceresi (Canlı Not 160)
   var d=_mntLibEnsure(node);
   var G=_mntLibGirdileri(node);
   var sel=null;
@@ -5375,8 +5394,17 @@ function veMntLibResetBuiltin(nodeId, key){
 // Açılır listede bir takoz seç → detay kartı o takozu gösterir (panel yeniden
 // çizilir; liste yeni HTML'de kapalı gelir). Başka takoza geçilince açık eğri
 // editörü kapanır (görsel durum temiz kalır).
+// Takoz penceresinde (Canlı Not 160) seçim tipi TAKOZA uygular — eski tip listesinin yolu
+// (veMntApplyLib: tek geri-al adımı, pencere yeniden kurulur); bağlı olduğu tipin satırı bir şey
+// yazmaz (liste değişmeden seçilmiş gibi).
 function veMntLibSelect(nodeId, key){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(_mntLibTakozMu(node)){
+    veMntLibDropdownClose();
+    if(!key || (node.data && node.data.libKey===key)) return;
+    veMntApplyLib(nodeId, key);
+    return;
+  }
   var d=_mntLibEnsure(node);
   d._selKey=key;
   if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
@@ -5385,7 +5413,8 @@ function veMntLibSelect(nodeId, key){
 }
 // Ok → bir önceki (yon < 0) ya da bir sonraki tip, Tip listesinin sırasıyla (Canlı Not 155,
 // _mntLibAdimHTML). Seçim listeden seçmenin AYNISI (veMntLibSelect): pencere yerinde yeniden
-// kurulur; listeden seçim gibi görünüm durumu, geri-al adımı değil. Listenin ucunda bir şey
+// kurulur; listeden seçim gibi görünüm durumu, geri-al adımı değil (Takoz penceresinde tip
+// uygulanır, tek geri-al adımı — Canlı Not 160). Listenin ucunda bir şey
 // yapmaz. Odak oktaysa yeniden kurulan okta kalır: Enter ya da art arda tık yerinden kaymadan gezer.
 function veMntLibAdim(nodeId, yon){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return false;
@@ -5404,9 +5433,19 @@ function veMntLibAdim(nodeId, yon){
 
 // Marka seç → seçili tip o markanın ilk tipine geçer (seçili tip zaten o markadaysa
 // kalır); Tip listesi o markanın tiplerini sorar. Marka SEÇİLİ TİPTEN türer —
-// ayrı bir durum tutulmaz, seçim her zaman geçerli bir tipte durur.
+// ayrı bir durum tutulmaz, seçim her zaman geçerli bir tipte durur. Takoz penceresinde
+// (Canlı Not 160) aynısı: markanın ilk tipi takoza UYGULANIR (tek geri-al adımı); Elle ('')
+// bağı kaldırır.
 function veMntLibMarka(nodeId, marka){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(_mntLibTakozMu(node)){
+    veMntLibDropdownClose();
+    if(!marka){ veMntApplyLib(nodeId, ''); return; }
+    var S=_mntTakozSecim(node), g=S.markalar.filter(function(x){ return x.ad===marka; })[0];
+    if(!g || (S.grup && S.grup.ad===g.ad)) return;
+    veMntApplyLib(nodeId, g.girdiler[0].key);
+    return;
+  }
   var d=_mntLibEnsure(node);
   var g=veMntLibMarkalar(_mntLibGirdileri(node).hepsi).filter(function(x){ return x.ad===marka; })[0];
   if(!g) return;
@@ -6887,7 +6926,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntLibOptionRow: _mntLibOptionRow,
     _mntLibTrigger: _mntLibTrigger,
     _mntLibDropdown: _mntLibDropdown,
-    _mntLibSecici: _mntLibSecici, _mntLibGirdileri: _mntLibGirdileri,
+    _mntLibSecici: _mntLibSecici, _mntLibGirdileri: _mntLibGirdileri, _mntTakozSecim: _mntTakozSecim, _mntLibTakozMu: _mntLibTakozMu,
     veMntLibMarka: veMntLibMarka, veMntLibMarkalar: veMntLibMarkalar,
     VE_MNT_LIB_MARKALAR: VE_MNT_LIB_MARKALAR, VE_MNT_LIB_MARKA_OZEL: VE_MNT_LIB_MARKA_OZEL,
     _mntLibGrafik: _mntLibGrafik, _mntLibLejant: _mntLibLejant, _mntLibEgriHTML: _mntLibEgriHTML,

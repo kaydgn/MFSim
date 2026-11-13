@@ -111,9 +111,11 @@ describe('Geriye uyum — kayıtlı projeler kopmuyor', () => {
   });
 
   test('dördü de takoz panelinin açılır listesinde görünüyor', () => {
-    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: {} });
+    // Takoz penceresinin seçicisi (Canlı Not 160): dördü Diğer markasının Tip listesinde
+    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { libKey: 'a26-a' } });
+    expect(html).toContain('<option value="Diğer" selected>');
     ['a26-a', 'a26-b', 'asfat-a', 'asfat-b']
-      .forEach((k) => expect(html).toContain('value="' + k + '"'));
+      .forEach((k) => expect(html).toContain("veMntLibSelect('m1','" + k + "')"));
   });
 });
 
