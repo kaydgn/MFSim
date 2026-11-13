@@ -114,7 +114,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield',
-  'mnt-mount', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
+  'mnt-mount', 'mnt-aski', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
   // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
@@ -269,6 +269,8 @@ function showNodeProperties(node, opt) {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);
+  } else if(node.type === 'mnt-aski') {
+    html += getMntAskiPropertiesHTML(node);
   } else if(node.type === 'mnt-library') {
     html += getMntLibraryPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {

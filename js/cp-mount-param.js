@@ -202,7 +202,7 @@ function _mntParamOlcucu(M, ctx){
     if(!st || !st.res) return null;
     var modes=prep.solveModes([st]);
     if(!modes || !modes.length) return null;
-    var fB=C.bounceFrequency(prep.mounts, prep.mp.m, prep.kBasis);
+    var fB=C.bounceFrequency(prep.dinMounts || prep.mounts, prep.mp.m, prep.kBasis);   // askı yayı dâhil (solveModes kurar)
     var K=modes.map(function(md){ return veMntKatalog.ked(md.phi, prep.M6); });
     var en=function(j){ var m=0; K.forEach(function(v){ if(v && v[j]>m) m=v[j]; }); return m; };
     return {

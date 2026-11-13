@@ -13,7 +13,8 @@
 //              tipler); Özet'in K'sı kendi bloğuna; Sonuç'un başı boş (sekmeden açılınca)
 //   KOŞUCU   — dilim dilim, ilerleme eylem satırında; eskimiş taramadan Excel üretilmez
 //   HTML     — HTML raporu (js/mount-param-html.js) Excel'in PLANINDAN: K'lar, Tarama'nın
-//              satırları ve Veri kodunun her değeri birebir; dilim dilim, çubukta "HTML"
+//              satırları ve Veri kodunun her değeri birebir; dilim dilim, çubukta "HTML";
+//              künyenin başı (araç · motor · şanzıman) programdan, Excel'in girdisinde yok (Canlı not 2008)
 const H = require('../helpers/takoz-dogrulama.js');
 const { cp, rp } = H.kur();
 // KATALOG ONAY ANINDAKİ 24 TİP: tarama testleri kütüphanenin ilk 24 girdisiyle (2026-11-10'a
@@ -304,6 +305,38 @@ describe('HTML — Excel\'in planı', () => {
     let fark = 0;
     for (let j = 0; j < ref.length; j++) if ((kod[j] === bos ? -2147483648 : kod[j]) !== ref[j]) fark++;
     expect(fark).toBe(0);
+  });
+
+  // Canlı not 2008 ("Buraya aracın ismini falan da yazalım. Yani bilgi versin kullanıcıya."): künyenin
+  // başı programın bildiğinden — tuvalin örneği (Araç: başlangıç sayfasının adı; eskimiş anahtar başka
+  // aracın adını yazmaz), 3B'nin veri sayfası (Motor modeli · Şanzıman ailesi), yoksa gövde penceresinin
+  // Katalog'u (Motor · Vites konfigürasyonu); Excel'in girdisi değişmez
+  test('aracın kimliği programdan: tuvalin örneği, 3B\'nin veri sayfası, yoksa pencerenin Katalog\'u; Excel\'in girdisinde yok', async () => {
+    const [wz, ev, mo, sz] = ['mnt-wizard', 'mnt-viewer', 'mnt-motor', 'mnt-gearbox'].map((t) => NODES.find((n) => n.type === t));
+    const yedek = [wz, ev, mo, sz].map((n) => JSON.stringify(n.data || {}));
+    global.veMntStpVs = require('../../js/mount-step.js').veMntStpVs;
+    global._mntEnginePresets = () => ({ ism385: { name: 'ISMe3 385 | FR20317' } });
+    try {
+      expect(PS._mntParamKimlik()).toEqual({ arac: null, motor: null, sanziman: null });
+      wz.data = Object.assign(wz.data || {}, { ornek: 'eski-ornek' });
+      expect(PS._mntParamKimlik().arac).toBeNull();
+      wz.data.ornek = 'tta10';
+      mo.data.enginePreset = 'ism385';
+      sz.data.gearPreset = 'allison-4000:wr';
+      expect(PS._mntParamKimlik()).toEqual({ arac: '10 Ton TTA', motor: 'ISMe3 385 | FR20317', sanziman: 'Allison 4000 · Wide Ratio (WR)' });
+      ev.data = Object.assign(ev.data || {}, { cad: { roller: [
+        { yol: ['a'], rol: 'mnt-motor', ad: 'Motor', yog: 'cummins-ism11' },
+        { yol: ['b'], rol: 'mnt-gearbox', ad: 'Şanzıman', yog: 'allison-4000?dizi=wr' }] } });
+      expect(PS._mntParamKimlik()).toEqual({ arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4000' });
+      const html = await PS.veMntParamHtmlIndir('pa'), D = veri(html);
+      expect([D.arac, D.motor, D.sanziman]).toEqual(['10 Ton TTA', 'Cummins ISM11', 'Allison 4000']);
+      expect(html).toContain('<dl class="kunye"><div><dt>Araç</dt><dd>10 Ton TTA</dd></div><div><dt>Motor</dt><dd>Cummins ISM11</dd></div>');
+      const Pl = PS._mntParamExcelPlan(ent, Hz);
+      expect(['arac', 'motor', 'sanziman'].filter((k) => k in Pl.E())).toEqual([]);
+    } finally {
+      [wz, ev, mo, sz].forEach((n, i) => { n.data = JSON.parse(yedek[i]); });
+      delete global.veMntStpVs; delete global._mntEnginePresets;
+    }
   });
 
   test('dilim dilim: çubukta HTML (Satır i / n, sonra Dosya); sürerken Excel de HTML de yok sayılır; eskimiş taramadan üretilmez', async () => {

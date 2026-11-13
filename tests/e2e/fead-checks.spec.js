@@ -71,9 +71,9 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
     ac: typeof veFeadAccList === 'function' ? veFeadAccList('fead-ac').length : -1,
     kapi: typeof veFeadChecks === 'function',
   }));
-  expect(lib.motor).toBe(24);
-  expect(lib.alt).toBe(10);
-  expect(lib.ac).toBe(4);
+  expect(lib.motor).toBe(23);
+  expect(lib.alt).toBe(7);
+  expect(lib.ac).toBe(3);
   expect(lib.kapi).toBe(true);
 
   // ── 2) SÜRÜCÜ KASNAĞIN PENCERESİ: MOTOR KATALOĞU GERÇEK SEÇİMLE ───────

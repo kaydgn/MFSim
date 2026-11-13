@@ -105,10 +105,11 @@ function veMntBaslangicOrnekler(){
     M.components.forEach(function(c){ kutle += (Number(c.mass) || 0); });
     out.push({
       key: ex.id, ad: ex.name || ex.id, arac: ex.vehicle || ex.name || ex.id,
-      govde: M.components.length, takoz: (M.mounts || []).length, kutle: kutle,
+      govde: M.components.length, takoz: (M.mounts || []).length, aski: (M.askilar || []).length, kutle: kutle,
       govdeAdlari: M.components.map(function(c){ return _mntBasKodsuz(c.name); }),
       govdeler: M.components.map(function(c){ return { ad: _mntBasKodsuz(c.name), kg: Number(c.mass) || 0 }; }),
       takozAdlari: (M.mounts || []).map(function(m){ return _mntBasKodsuz(m && m.name); }).filter(Boolean),
+      askiAdlari: (M.askilar || []).map(function(a){ return _mntBasKodsuz(a && a.name); }).filter(Boolean),
       kunye: _mntBasKunye(ex),
       kurgu: !!ex.kurgu
     });
@@ -194,12 +195,12 @@ function veMntBaslangicSayfa(){
   var n = function(x, b){ return (typeof veSayi === 'function') ? veSayi(x, b || 0) : String(Math.round(x)); };
   var satir = function(o){
     return { ey: 'ornek', v: o.key, ad: o.arac,
-             sayi: n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz',
+             sayi: n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz' + (o.aski ? ' · ' + n(o.aski) + ' askı' : ''),
              kutle: n(o.kutle) + ' kg', kunye: o.kunye,
              detay: [
                { baslik: 'Gövdeler', ogeler: o.govdeler.map(function(g){ return { ad: g.ad, deger: n(g.kg, 1) + ' kg' }; }) },
                { baslik: 'Takozlar', ogeler: o.takozAdlari.map(function(a){ return { ad: a }; }) }
-             ] };
+             ].concat(o.askiAdlari.length ? [{ baslik: 'Askı yayları', ogeler: o.askiAdlari.map(function(a){ return { ad: a }; }) }] : []) };
   };
   var gercek = ornekler.filter(function(o){ return !o.kurgu; });
   var kurgu = ornekler.filter(function(o){ return o.kurgu; });
@@ -272,7 +273,7 @@ function _mntYuklemeKartHTML(ad, kunye, ikon){
 }
 function veMntOrnekYuklemeHTML(o){
   var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
-  return _mntYuklemeKartHTML(o.arac || o.ad, n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz · ' + n(o.kutle) + ' kg', 'settings');
+  return _mntYuklemeKartHTML(o.arac || o.ad, n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz' + (o.aski ? ' · ' + n(o.aski) + ' askı' : '') + ' · ' + n(o.kutle) + ' kg', 'settings');
 }
 // Kartın oynatılışı: çubuk bekleyişin %62'sinde %86'ya, %68'de `ortada` (kurulum) ve %100,
 // %88'de kart söner. Örnek ve sihirbaz aynı zamanlamadan (Canlı Not 131 · 146).

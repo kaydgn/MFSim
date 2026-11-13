@@ -142,8 +142,12 @@ var veMntSignals = (function() {
   // kadar bastırdığı aynı şeritte üst üste görünsün.
   // Izgara: 240 logaritmik nokta + üç yönün inceltilmiş tepeleri (çekirdek
   // frfGrid). Rapor §8.13 aynı çağrıyı yapar — iki yüzey aynı ızgara, aynı tepe.
+  // Dinamik analizlerin takoz listesi: takozlar + askı yaylarının z rijitliği
+  // (R.dinMounts, cp-mount.js); takoz başına kanallar ilk N elemandan.
+  function _dinTakoz(R) { return (R && R.dinMounts) || (R && R.mounts) || []; }
+
   function _frfIzgara(C, R, M6) {
-    return C.frfGrid ? C.frfGrid(R.mounts, R.mp.cg, M6, R.damping,
+    return C.frfGrid ? C.frfGrid(_dinTakoz(R), R.mp.cg, M6, R.damping,
       { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dirs: [0, 1, 2],
         fModal: (R.modes || []).map(function(m) { return m.f_Hz; }) }) : null;
   }
@@ -160,7 +164,7 @@ var veMntSignals = (function() {
     var keys = _mountKeys(R.mounts);
     var izgara = _frfIzgara(C, R, M6);
     for(var dir = 0; dir < 3; dir++) {
-      var pts = C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
+      var pts = C.frequencyResponse(_dinTakoz(R), R.mp.cg, M6, R.damping,
         { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir, perMount: true, f: izgara });
       if(!pts || !pts.f || !pts.f.length) return null;
       if(!f) f = pts.f;
@@ -506,7 +510,7 @@ var veMntSignals = (function() {
     // R.damping kayıtlarında taşınıyor ve çekirdek onu oradan çözüyor.
     var res;
     try {
-      res = C.shockResponse(R.mounts, R.mp.cg, M6, R.damping, {
+      res = C.shockResponse(_dinTakoz(R), R.mp.cg, M6, R.damping, {
         dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81,
         useStop: true, q0: R.qStatic || null, kBasis: R.kBasis || null
       });

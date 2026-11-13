@@ -67,8 +67,7 @@ test('PALET VE PENCERE: "Motor aksesuarları" grubu; Klima Kompresörü kütlesi
   const id = await page.evaluate(() => { const n = createNode('mnt-ac', 900, 500); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
   await page.waitForSelector('#ve-mnt-aks-' + id);
   expect(await page.locator('#ve-mnt-aks-' + id + ' option').allTextContents()).toEqual([
-    '— elle gir —', 'Valeo TM21 · valeo-tm21 · 8,1 kg', 'Valeo TM31 · valeo-tm31 · 15,5 kg',
-    'Sanden 7H15 · sanden-7h15 · 6,9 kg', 'Valeo TM31 · valeo-tm31 · 15,5 kg']);
+    '— elle gir —', 'Valeo TM21 · 8,1 kg', 'Valeo TM31 · 15,5 kg', 'Sanden 7H15 · 6,9 kg']);
   const once = await page.evaluate(() => (typeof undoStack !== 'undefined' ? undoStack.length : null));
   await page.selectOption('#ve-mnt-aks-' + id, 'valeo-tm21');
   await page.waitForFunction((i) => { const n = nodes.find((x) => x.id === i); return n && n.data.mass === 8.1; }, id);
@@ -83,10 +82,10 @@ test('PALET VE PENCERE: "Motor aksesuarları" grubu; Klima Kompresörü kütlesi
   await page.evaluate(() => { if (typeof undo === 'function') undo(); });
   expect(await page.evaluate((i) => { const n = nodes.find((x) => x.id === i); return n ? [n.data.mass, n.data.aksKatalog] : null; }, id))
     .toEqual([undefined, undefined]);
-  // Alternatör: sekiz kayıt (aynı akım aynı alternatör); en uzun kaynak metniyle yerleşim
+  // Alternatör: kütlesi bilinen beş model (aynı model tek kayıt, Canlı Not 1004); en uzun kaynak metniyle yerleşim
   const al = await page.evaluate(() => { const n = createNode('mnt-alternator', 900, 650); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
   await page.waitForSelector('#ve-mnt-aks-' + al);
-  expect(await page.locator('#ve-mnt-aks-' + al + ' option').count()).toBe(9);
+  expect(await page.locator('#ve-mnt-aks-' + al + ' option').count()).toBe(6);
   await page.selectOption('#ve-mnt-aks-' + al, 'prestolite-120a');
   await page.waitForFunction((i) => { const n = nodes.find((x) => x.id === i); return n && n.data.mass === 8.16; }, al);
   await page.evaluate(Y.KAYNAK);
@@ -136,7 +135,7 @@ test('3B ROLÜ: Rol listesinin "Motor aksesuarları" grubunda dört aksesuar; al
   await page.evaluate(() => veMntWiz3bKapat());
   const kl = await page.evaluate(() => veMntWizStp().sonuc.agac.findIndex((d) => d.ad === 'Klima kompresörü'));
   const sec = page.locator('#ve-properties select[data-mw-stp-yog="' + kl + '"]');
-  await expect(sec.locator('optgroup[label="Katalog"] option')).toHaveCount(4);
+  await expect(sec.locator('optgroup[label="Katalog"] option')).toHaveCount(3);
   await sec.selectOption('valeo-tm21');
   await expect(page.locator('#ve-properties [data-mw-stp-kutle-deger="' + kl + '"]').first()).toHaveText('8,10');
   await page.evaluate(Y.KAYNAK);

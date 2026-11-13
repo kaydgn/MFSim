@@ -408,6 +408,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, aday olmaz; öteki ailelerde X · Y yok → eksik.
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
+- `js/mount-yay.js` + bileşen **Askı Yayı** (`mnt-aski`) — **şanzıman askısı** (kullanıcı 2026-11-11: *"Tamam,
+  bunu programa ekleyelim"*): ön yüklü helisel basma yayı, yalnız z ve yalnız basma; durum (normal · açık · blok,
+  k_B = 1000·k) her yük durumunda aktif kümeyle (`solveWithHangers`), ön yük birleşik ağırlık merkezinde eşdeğer yük.
+  Kurulum statik kuvvet [kgf] · statik boy · tasarım boyu; statikler tasarım boyuna bilinen kuvvetli statik dengeden
+  (`askiTasarimBoylari`). **Dinamik analizler `R.dinMounts`'tan** (takozlar + askının statik durumdaki z rijitliği;
+  sönümsüz, durdurucusuz; şokta tam yasa): askısız modal Adams'tan %1,9 sapıyor. Takoz başına çıktılar listenin ilk
+  N'i; yumuşatma askıyı ölçeklemez; duyarlılık askıyı da satırlar (Σe = ½). Rapor §8.20 (boy · kuvvet · EN 13906-1
+  gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
+  katar. Pencere SONUÇ GÖSTERMEZ. Örnek `tta10askili`. Kapı: `mount-aski.test.js` + `mount-duyarlilik.test.js`.
 - **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
   kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
   kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer
@@ -604,7 +613,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91; yeni Artifact AÇILMAZ, her yayın
   `url` ile), sahiplik kaydı (`oturum/aktif`: iki oturum aynı notu işlemez), yorum izleme,
   program ve sayfanın güncelliği (`denetle`), kuyruk. Sonucun görüntüsü
-  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz).
+  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz). **Her not kendi ajanında, paralel**
+  (kullanıcı 2026-11-11: *"Ajanlar eğer birbirinden etkileniyorsa, diğeri diğerini beklesinler"*):
+  ajan kendi çalışma kopyasında uygular ve commit eder, aynı yüzeye dokunan notlar zincirlenir;
+  birleştirme, tam test ve yayın sahibi oturumda — skill `canli-not` §2 · *Paralel ajanlar*.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
