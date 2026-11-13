@@ -931,7 +931,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile
   sarılır, yoksa Ctrl+Z modeli düğüm düğüm söker. Bir topolojinin AÇILIŞ
   durumu geri alınamaz (`veStateResetBaseline`) — modüle girip araçları almak
-  bir düzenleme değil. Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
+  bir düzenleme değil. Bileşen SİLMEK de bir adımdır (`deleteSelectedNodes` sonunda yazar;
+  yazmıyordu, Ctrl+Z bir önceki düzenlemeyi de geri alıyordu — `sil-geri-al.test.js`); bileşen
+  menüsünün işlemleri (adlandır · boyut · ad · port düzeni) ve adın menüsü kaydı değişiklikten SONRA alır — önce
+  alınan kayıt değişikliği yığına sokmuyordu (`bilesen-menusu.test.js` → *GERİ-AL KAYDI DEĞİŞİKLİKTEN SONRA*).
+  Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
   `fead-wizard.test.js` / `fead-cizim-masasi.test.js` (kurucular ve çizimde
   ekleme o mekanizmadan geçiyor mu).
 - **YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR.** Geri-al / ileri-al yığındaki
@@ -993,7 +997,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sağ) · port düzeni (portlu bileşende) · Sil (silinmez tipte kapalı, sebebi ipucunda); işlem SEÇİMİN
   tamamına, kısayolun işlevinden (`veSeciliCogalt` · `veSeciliKopyala` · `deleteSelectedNodes`). Sağ tık
   TEK bağlayıcıdan (`veNodeSagTik`): createNode ve restoreState — örnekten ve geri-al'dan gelen bileşende
-  sağ tık hiçbir şey açmıyordu. Kapı: `bilesen-menusu.test.js` + `bilesen-menusu.spec.js`.
+  sağ tık hiçbir şey açmıyordu. **Sağ tık yalnız menüyü açar** (kullanıcı 2026-11-11, Canlı Not 156:
+  *"Sağ tıklayınca sağda pencere açılıyor sanki sol tık yapmışım gibi"*): seçilmeyen bileşen seçilir ama
+  pencere açılmaz, açıksa konusu değişmez (`addToSelection(n, { pencere: false })`); pencereyi menünün Aç'ı
+  açar; kayıt turu (Ctrl+S, otomatik yedek) pencereyi seçimden değil konusundan kurar. Kapı:
+  `bilesen-menusu.test.js` + `bilesen-menusu.spec.js` + `sag-tik-pencere.test.js` +
+  `subtopology-keepview.test.js` → *KONU*.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
   olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler

@@ -3270,6 +3270,11 @@ function deleteSelectedNodes() {
   showEmptyProperties();
   updateAllConnections();
   updateNodeCount();
+  // SİLME BİR GERİ-AL ADIMIDIR (BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI): kayıt silinmiş
+  // hâlin. Yazılmıyordu — Delete, çöp kutusu ve bileşen menüsünün Sil'i yığına adım
+  // eklemiyor, Ctrl+Z silmeden ÖNCEKİ son düzenlemeyi de geri alıyordu (Tulga'da örnek
+  // yüklenip menüden Sil → Ctrl+Z: 19 bileşen → 0). Kapı: sil-geri-al.test.js.
+  if(typeof saveState === 'function') saveState();
 }
 
 // Düğüm kümesi değişti (ekle/sil/geri-yükle/düzenle): kümeden türeyen
