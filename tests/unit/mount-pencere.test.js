@@ -502,3 +502,54 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     expect(document.querySelector('.ve-fp-yurut').hasAttribute('data-is')).toBe(false);
   });
 });
+
+// KAPASİTE · DURDURUCU SATIRDA (Canlı Not 161, kullanıcı: *"Bunlar neden aşağıda ve neden sağ
+// tarafta 'isteğe bağlı · hesaba girmez' gibi garip açıklamalar var?"*). Önce: Kapasite ve
+// Durdurucu başlığının yanında alanın hesaptaki yeri yazıyordu, alan etiketinin ALTINDA yarım
+// genişlikte duruyordu. Şimdi başlığın yanında yalnız birim ya da veri; tek değerli alan föyün
+// satırında — etiket solda, girdi aynı satırın değer hücresinde.
+describe('KAPASİTE · DURDURUCU SATIRDA — başlıkta açıklama yok, alan föyün satırında (Canlı Not 161)', () => {
+  const MD = require('../../tools/metin-dili.js');
+  const sagOn = () => bul((n) => n.customName === 'Sağ Ön Takoz');
+  const ac = (t) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntMountPropertiesHTML(t) + '</div>'; };
+  const bolum = (ad) => [...document.querySelectorAll('.ve-fp-card')]
+    .find((s) => { const b = s.querySelector(':scope > .ve-fp-sect > b'); return b && b.textContent === ad; });
+
+  test('bölüm başlıklarının yanında açıklama yok: Kapasite ve Durdurucu eksiz, öteki ekler açıklama değil', () => {
+    tulga(); ac(sagOn());
+    ['Kapasite', 'Durdurucu'].forEach((ad) => expect([ad, bolum(ad).querySelector('.ve-fp-sect em')]).toEqual([ad, null]));
+    const ekler = [...document.querySelectorAll('.ve-fp-sect em')].map((e) => e.textContent);
+    expect(ekler.length).toBeGreaterThan(0);                                   // birim ekleri (Rijitlik · Konum) durur
+    ekler.forEach((e) => expect([e, MD.isaretle(e, 'arayuz')]).toEqual([e, []]));
+  });
+
+  test('alan etiketiyle AYNI satırda: etiket solda ve girdiye bağlı, üstte yığılmış etiket yok', () => {
+    tulga(); const t = sagOn(); ac(t);
+    [['maxLoad', 'Kapasite', 'Maks. eksenel yük [kg]'], ['bosY', 'Durdurucu', 'Yanal boşluk [mm]']].forEach(([k, ad, etiket]) => {
+      const b = bolum(ad), g = document.getElementById('ve-mnt-' + k + '-' + t.id);
+      expect([ad, b.contains(g), b.querySelectorAll('.ve-fp-l, .ve-fp-f').length, b.querySelectorAll('tr').length]).toEqual([ad, true, 0, 1]);
+      const tr = g.closest('tr'), l = tr.cells[0].querySelector('label');
+      expect([tr.cells.length, l.textContent, l.htmlFor, tr.cells[1].contains(g)]).toEqual([2, etiket, g.id, true]);
+      expect(g.getAttribute('inputmode')).toBe('decimal');                     // Türkçe sayı alanı
+    });
+    const bosY = document.getElementById('ve-mnt-bosY-' + t.id);
+    expect([bosY.value, bosY.title]).toEqual(['12', t.data.bosYKaynak]);       // değer ve künyesi girdide
+  });
+
+  test('yazmak bileşenin alanını değiştirir; kayıt değişiklikten SONRA ve alan başına tek adım', () => {
+    tulga(); const t = sagOn(); ac(t);
+    global.veMntSet = cp.veMntSet;
+    const kayit = [];
+    stubs.saveState.mockImplementation(() => kayit.push([t.data.maxLoad, t.data.bosY]));
+    try {
+      const g = document.getElementById('ve-mnt-maxLoad-' + t.id);
+      g.value = '650'; g.dispatchEvent(new Event('change'));
+      const y = document.getElementById('ve-mnt-bosY-' + t.id);
+      y.value = ''; y.dispatchEvent(new Event('change'));
+      expect(kayit).toEqual([['650', '12'], ['650', '']]);
+    } finally {
+      stubs.saveState.mockReset();
+      delete global.veMntSet;
+    }
+  });
+});

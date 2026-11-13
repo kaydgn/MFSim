@@ -169,7 +169,7 @@ function veCollectValidation() {
   if(scenarioRequired) {
     addItem(hasScenario, 'Senaryolar bileşeni', hasScenario ? 'mevcut' : 'eksik — zorunlu bileşen');
   } else if(hasScenario) {
-    addInfo('Senaryolar bileşeni mevcut (opsiyonel)');
+    addInfo('Senaryolar bileşeni mevcut');
   }
 
   if(hasTerminator && terminatorConnected) {
@@ -184,7 +184,7 @@ function veCollectValidation() {
     if(typeof veActiveModule !== 'undefined' && veActiveModule !== 'full-throttle') {
       addItem(hasRoad, 'Yol / Eğim bileşeni', hasRoad ? 'mevcut' : 'eksik');
     } else if(hasRoad) {
-      addInfo('Yol / Eğim bileşeni mevcut (opsiyonel)');
+      addInfo('Yol / Eğim bileşeni mevcut');
     }
     if(!hasDiff) addWarn('Diferansiyel bileşeni eksik — varsayılan oran kullanılacak');
   }

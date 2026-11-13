@@ -1265,7 +1265,7 @@ function _feadKasnakDurum(node, build){
     }).length;
     out.egr = bos
       ? _feadDurum('eksik', 'kW eksik', 'Çevrimin ' + bos + ' satırında kW yok — işletme hesabı yapılmaz.')
-      : _feadDurum('bos', 'isteğe bağlı');
+      : _feadDurum('bos', 'boş');
   }
   return out;
 }
@@ -1362,7 +1362,7 @@ function _feadKayisDurum(node){
     : (L > 0) ? _feadDurum('ok', 'tamam')
     : _feadDurum('eksik', 'boy yok', 'Sabit kipte kayış efektif boyu girilmedi — model çözülemiyor.');
   out.mal = (_feadNum(d.massPerRibKgM, 0) > 0) ? _feadDurum('ok', 'tamam')
-    : _feadDurum('bos', 'isteğe bağlı');
+    : _feadDurum('bos', 'boş');
   // TASARIM — boy ofseti ve yorulma modeli; ikisinin de kaynaklı bir
   // varsayılanı var, boş kalmaları bir sonuç doğurmuyor.
   out.tas = _feadDurum('ok', 'tamam');

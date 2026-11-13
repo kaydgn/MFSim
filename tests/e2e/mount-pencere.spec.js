@@ -168,6 +168,9 @@ test('Takoz Özellikleri: Tip satırının okları tipler arasında gezer, yerin
     return n.id;
   });
   await page.waitForSelector('#mntlib-adim-sonraki-' + id, { timeout: 10000 });
+  // Pencere sütuna 0,18 sn'lik geçişle gelir (translateX 14 px → 0): ilk ölçüm geçiş BİTİNCE —
+  // geçişin ortasında alınan ilk yer okları 1–3 px kaymış gösteriyordu (CI, #1382'den beri).
+  await page.waitForFunction(() => document.getElementById('ve-properties').getAnimations().length === 0);
   const durum = () => page.evaluate((i) => {
     const n = nodes.find((x) => x.id === i), b = document.getElementById('mntlib-adim-sonraki-' + i).getBoundingClientRect();
     const sec = document.querySelector('#mntlib-list-' + i + ' .mntlib-opt.sel');

@@ -446,16 +446,20 @@ var componentDefs = {
   // Örnek yüklenince bu bağlantılar en-yakın-gövde kuralıyla OTOMATİK kurulur
   // (cp-mount.js _mntComputeSupportLinks). Veri: node.data (mass/cg/atalet veya
   // konum/rijitlik). Panel: cp-mount.js.
+  // isMountZincir (Canlı Not 158): güç aktarma zincirinin gövdesi araç ekseninde —
+  // eşdeğer kutusu yanalda Y = 0'da, ağırlık merkezi gerçek Y'sinde (cp-mount.js
+  // _mntZincirMi; şaft, braket, PTO, pompa ve aksesuar kendi ağırlık merkezinde —
+  // şaft simetrik gövde: ağırlık merkezi yeridir, Asfat'ınki 156 mm yanda).
   'mnt-motor': {
     name: 'Motor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #1f5fd6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #1f5fd6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #1f5fd6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
-    inputs: 3, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76,
+    inputs: 3, outputs: 0, isMountBody: true, isMountZincir: true, defaultWidth: 84, defaultHeight: 76,
     portLayout: { inputs: ['left','top','bottom'] }   // ön / sağ / sol
   },
   'mnt-gearbox': {
     name: 'Şanzıman',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #1f5fd6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
-    inputs: 2, outputs: 0, isMountBody: true,
+    inputs: 2, outputs: 0, isMountBody: true, isMountZincir: true,
     portLayout: { inputs: ['top','bottom'] }   // sağ / sol
   },
   'mnt-shaft': {
@@ -474,7 +478,7 @@ var componentDefs = {
   'mnt-transfer': {
     name: 'Transfer Kutusu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #1f5fd6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #5f6873)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #5f6873)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #5f6873)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
-    inputs: 1, outputs: 0, isMountBody: true
+    inputs: 1, outputs: 0, isMountBody: true, isMountZincir: true
   },
   // ── PTO GRUBU (kuyruk mili + pompalar) ────────────────────────────────────
   // Güç grubuna CIVATALANAN yardımcı kütleler. Motor/Şanzıman gibi doğrudan

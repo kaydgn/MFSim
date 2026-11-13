@@ -506,8 +506,11 @@ function _mntRepNLNote(R){
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────
 function _mntRepGeom(R){
   var comps=(R.gather.components||[]).map(function(c){
-    return { name:c.name||'bileşen', mass:_rNum(c.mass), x:_rNum(c.cgx), y:_rNum(c.cgy), z:_rNum(c.cgz),
-             Ixx:_rNum(c.Ixx), Iyy:_rNum(c.Iyy), Izz:_rNum(c.Izz), pointMass:!!c.pointMass };
+    var o={ name:c.name||'bileşen', mass:_rNum(c.mass), x:_rNum(c.cgx), y:_rNum(c.cgy), z:_rNum(c.cgz),
+            Ixx:_rNum(c.Ixx), Iyy:_rNum(c.Iyy), Izz:_rNum(c.Izz), pointMass:!!c.pointMass };
+    // kc: eşdeğer kutunun merkezi — zincir gövdesinde (toplayıcının beyanı) yanalda 0 (Canlı Not 158)
+    if(c.zincir===true) o.kc={ x:o.x, y:0, z:o.z };
+    return o;
   }).filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
   var mounts=(R.gather.mounts||[]).map(function(m){
     return { name:m.name||'takoz', x:_rNum(m.x), y:_rNum(m.y), z:_rNum(m.z) };
@@ -2130,18 +2133,22 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
 
   // Sınır kutusu her düzlem için ayrı; ÖLÇEK üçünde ortak (px/mm aynı olsun ki
   // gövde oranları görünüşler arasında karşılaştırılabilsin).
+  // Kutu kendi merkezinde (kutuP: zincir gövdesinde yanalda 0 — Canlı Not 158); ağırlık
+  // merkezinin noktası gerçek yerinde.
+  function kutuP(it){ return (it.box && it.p.kc) || it.p; }
   function aralik(hK, vK, hI, vI){
     var P=[];
     items.forEach(function(it){
-      var dd=disp(it.p);
+      var q=kutuP(it), dd=disp(q);
       var u=(hK==='x' && it.box) ? uzat[it.ad] : null;
       var ehL=it.box ? it.box[hI]*500+(u?u.eksi:0) : 0;
       var ehR=it.box ? it.box[hI]*500+(u?u.arti:0) : 0;
       var ev=it.box ? it.box[vI]*500 : 0;
       [[0,0],[1,1]].forEach(function(k){
-        var bh=it.p[hK]+dd[hI]*scale*k[0], bv=it.p[vK]+dd[vI]*scale*k[1];
+        var bh=q[hK]+dd[hI]*scale*k[0], bv=q[vK]+dd[vI]*scale*k[1];
         P.push({h:bh-ehL, v:bv-ev}); P.push({h:bh+ehR, v:bv+ev});
       });
+      if(q!==it.p){ var dc=disp(it.p); P.push({h:it.p[hK], v:it.p[vK]}); P.push({h:it.p[hK]+dc[hI]*scale, v:it.p[vK]+dc[vI]*scale}); }
     });
     P.push({h:cgM[hK], v:cgM[vK]});
     var H2=P.map(function(q){return q.h;}), V2=P.map(function(q){return q.v;});
@@ -2189,7 +2196,7 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   s+='<text x="'+padL+'" y="13" font-size="11" fill="#5a6270">'+EK.ad+'</text>';
   // ── REFERANS (deforme olmamış) ──
   items.forEach(function(it){
-    var x=sx(it.p[horiz]), y=sy(it.p[vert]);
+    var q=kutuP(it), x=sx(q[horiz]), y=sy(q[vert]);
     if(it.tip==='t'){
       s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';   // makine: SVG koordinatı
     } else if(it.box){
@@ -2216,8 +2223,9 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
       // Ad YAZILMAZ: şekil üzerindeki metinler raporu kalabalıklaştırıyordu.
       // Hangi kutunun hangi gövde olduğu bölüm metninde (soldan sağa) verilir.
       var ye2=yariEn(it), h2=it.box[vIdx]*1000*sc;
-      s+='<g transform="rotate('+donme.toFixed(3)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+')">'   // makine: SVG koordinatı
-        +'<rect x="'+(x1-ye2[0]*sc).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+((ye2[0]+ye2[1])*sc).toFixed(1)+'" height="'+h2.toFixed(1)   // makine: SVG koordinatı
+      var kq=kutuP(it), dk=disp(kq), kx=sx(kq[horiz]+dk[hIdx]*scale), ky=sy(kq[vert]+dk[vIdx]*scale);
+      s+='<g transform="rotate('+donme.toFixed(3)+' '+kx.toFixed(1)+' '+ky.toFixed(1)+')">'   // makine: SVG koordinatı
+        +'<rect x="'+(kx-ye2[0]*sc).toFixed(1)+'" y="'+(ky-h2/2).toFixed(1)+'" width="'+((ye2[0]+ye2[1])*sc).toFixed(1)+'" height="'+h2.toFixed(1)   // makine: SVG koordinatı
         +'" rx="3" fill="rgba(36,66,95,0.13)" stroke="'+renk+'" stroke-width="1.4"/></g>';
       s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="2" fill="'+renk+'"/>';   // makine: SVG koordinatı
     } else {

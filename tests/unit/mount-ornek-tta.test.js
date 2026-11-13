@@ -491,17 +491,20 @@ describe('ZARF — hareket zarfı ve takoz sehim zarfı (rapor §8.19)', () => {
       { durum: 'Acceleration', nokta: [-1, -1, 1], govde: 'Motor — Cummins ISM' },
       { durum: 'Kerb Strike R', nokta: 'ag', govde: 'Kardan mili payı' },
       { durum: 'Reverse Torque', nokta: 'ag', govde: 'Sağ arka kulak' }]);
+    // motorun kutusu yanalda 0'da (Canlı Not 158; CG Y −0,71 mm): +Z köşesi 3,79 → 3,80
     const mo = R.zarf.govde.find((g) => g.name === 'Motor — Cummins ISM');
-    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-14.78, -18.04, -5.64], [4.95, 18.04, 3.79]]);
+    expect([mo.min.map(mm), mo.max.map(mm)]).toEqual([[-14.78, -18.04, -5.64], [4.95, 18.04, 3.8]]);
   });
   test('hakem: her gövdenin zarfı durumların q\'sundan bağımsız kinematikle (Δu + Δθ × r, kutu ataletten) aynı', () => {
     const G0 = R.mp.cg, q0 = R.qStatic;
+    // zincir gövdesinin (motor · şanzıman · transfer kutusu) kutusu yanalda 0'da — Canlı Not 158
+    const ZINCIR = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer'];
     govdeler().forEach((n) => {
       const d = n.data, c = [d.cgx, d.cgy, d.cgz].map((v) => v / 1000);
-      const p = [c];
+      const p = [c], kc = [c[0], ZINCIR.includes(n.type) ? 0 : c[1], c[2]];
       if (!d.pointMass) {
         const a = [6 * (d.Iyy + d.Izz - d.Ixx), 6 * (d.Ixx + d.Izz - d.Iyy), 6 * (d.Ixx + d.Iyy - d.Izz)].map((v) => Math.sqrt(v / d.mass) / 2);
-        [-1, 1].forEach((i) => [-1, 1].forEach((j) => [-1, 1].forEach((k) => p.push([c[0] + i * a[0], c[1] + j * a[1], c[2] + k * a[2]]))));
+        [-1, 1].forEach((i) => [-1, 1].forEach((j) => [-1, 1].forEach((k) => p.push([kc[0] + i * a[0], kc[1] + j * a[1], kc[2] + k * a[2]]))));
       }
       const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
       durumlar().forEach((rc) => {

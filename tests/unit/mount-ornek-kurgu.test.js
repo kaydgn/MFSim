@@ -178,7 +178,14 @@ describe('braket — takoz gövdeye braketle bağlı (Canlı Not 70)', () => {
       const motor = m.govde.find((x) => /Motor$/.test(x.ad));
       const br = m.govde.filter((x) => x.braket);
       expect(br.length).toBeGreaterThan(0);
-      br.forEach((b) => expect([id, b.ad, !!b.levha, b.levha && b.levha.govde, b.levha && b.levha.d >= 45]).toEqual([id, b.ad, true, motor.k, true]));
+      // ayak takozdan motorun ÇİZİLEN yüzüne: kutu yanalda 0'da (Canlı Not 158) — Hafif'in motoru
+      // (CG Y 10) sağda 60, solda 40 mm (kutu ağırlık merkezindeyken ikisi 50'ydi)
+      br.forEach((b) => {
+        expect([id, b.ad, !!b.levha, b.levha && b.levha.govde]).toEqual([id, b.ad, true, motor.k]);
+        const v = b.levha, yuz = motor.kc[v.i] - v.s * motor.kutu[v.i] / 2;
+        expect([id, b.ad, +v.d.toFixed(6), v.d >= 39]).toEqual([id, b.ad, +(v.s * (yuz - v.T[v.i])).toFixed(6), true]);
+      });
+      if (id === 'hafif') expect(br.map((b) => +b.levha.d.toFixed(1))).toEqual([60, 40]);
     });
   });
   test('kutu braketsiz (kapalı form)', () => {

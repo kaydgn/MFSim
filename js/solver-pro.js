@@ -225,9 +225,9 @@ function veSolverRunProfessional() {
     if(_scenarioRequired) {
       log('  Senaryo       : ' + (hasScenario ? '✓ Bulundu' : '✗ EKSİK — zorunlu bileşen'), hasScenario ? 'ok' : 'err');
     } else {
-      if(hasScenario) log('  Senaryo       : ✓ Bulundu (opsiyonel)', 'dim');
+      if(hasScenario) log('  Senaryo       : ✓ Bulundu', 'dim');
     }
-    if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
+    if(hasRoad) log('  Yol           : ✓ Bulundu', 'dim');
     log('  Çözücü        : ' + (hasSolver ? '✓ Bulundu' : '✗ EKSİK'), hasSolver ? 'ok' : 'err');
     logSpacer();
     

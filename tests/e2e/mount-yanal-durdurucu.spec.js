@@ -40,7 +40,9 @@ test('Durdurucu bölümü: Yanal boşluk alanı, Tulga ön takozunda 12 mm ve k�
     return { d: Math.abs(r.perMount[i].delta[1] * 1000), n: r.checks.clampYCount };
   }, id);
   const once = await kerb();
-  expect(once.d).toBeLessThan(12.02);
+  // Kaldırım 2,5 g (Canlı Not 144; önce 1,55 g): durdurucu sonlu rijit — 12 mm'yi 0,13 mm geçer, boşluk
+  // kaldırılınca sehim büyür (aşağıda).
+  expect(once.d).toBeLessThan(12.2);
   expect(once.n).toBe(2);
   await alan.fill(''); await alan.dispatchEvent('change');
   expect(await page.evaluate((nid) => nodes.find((n) => n.id === nid).data.bosY, id)).toBeFalsy();
