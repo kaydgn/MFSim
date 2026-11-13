@@ -1252,6 +1252,39 @@ describe('BRAKET — braket köşebent ya da kaide', () => {
 // iki cradle'ı ve Asfat'ın iki motor braketi eşdeğer kutu (atalet girilmiş), Tulga · Hafif ·
 // Kamyon · arka kulaklar köşebent ya da kaide. Şimdi her örneğin her braketi levha; atalet
 // çözüme ve hareket zarfına girer, çizime girmez.
+describe('ASKI BRAKETİ (Canlı Not 166) — yayların üst uçları üstlerindeki dikdörtgen prizmaya bağlı', () => {
+  const noktalar = (d) => { const v = d.replace(/[MLHVZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); return o; };
+  const KAM = [{ az: 249.3, el: 19.5 }, { az: 35, el: 28 }, { az: 300, el: 60 }];
+
+  test('yalnız askılı örnekte; her bakışta bir prizma ve her yayın üst ucu onun alt yüzünün içinde', () => {
+    const say = {};
+    TUM.forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      say[k] = (m.aski || []).length ? 'var' : 'yok';
+      KAM.forEach((kam) => ['golge', 'xray'].forEach((stil) => {
+        const r = AK.ciz(m, { W: 354, H: 326, kam, kure: true, stil, kat: { golge: true }, fs: FS }), K = AK.kamera('dim', null, AK.kamYon(kam));
+        document.body.innerHTML = r.svg;
+        const prizma = document.querySelectorAll('g.ve-ak-ab');
+        expect({ k, kam, stil, n: prizma.length }).toEqual({ k, kam, stil, n: (m.aski || []).length ? 1 : 0 });
+        if (!prizma.length) return;
+        const q = [...prizma[0].querySelectorAll('path')].flatMap((p) => noktalar(p.getAttribute('d')));
+        expect(q.length).toBeGreaterThan(7);
+        const kutu = { l: Math.min(...q.map((c) => c[0])), r: Math.max(...q.map((c) => c[0])), t: Math.min(...q.map((c) => c[1])), b: Math.max(...q.map((c) => c[1])) };
+        m.aski.forEach((a) => {
+          const p = K.P([a.x, a.y, a.z]), x = r.F.ox + p[0] * r.sc, y = r.F.oy + p[1] * r.sc;
+          expect({ k, kam, stil, a: a.k, icinde: x >= kutu.l - 0.5 && x <= kutu.r + 0.5 && y >= kutu.t - 0.5 && y <= kutu.b + 0.5 }).toEqual({ k, kam, stil, a: a.k, icinde: true });
+        });
+      }));
+    });
+    expect(say.tta10askili).toBe('var');
+    expect(say.isg430askili).toBe('var');
+    expect(say.tta10).toBe('yok');
+    expect(say.tulga).toBe('yok');
+    document.body.innerHTML = '';
+  });
+});
+
 describe('BRAKET HEP KÖŞEBENT (Canlı Not 164)', () => {
   const RO = 7.85e-6;
   const hacim = (v) => (v.i === 2 ? v.w * v.w * v.d : v.w * v.t * (2 * v.d + 0.5 * v.t));
