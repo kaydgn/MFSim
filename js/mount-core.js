@@ -1987,6 +1987,438 @@ var veMountCore = (function() {
     });
   }
 
+  // ═══════════ Kesin sönümlü modal çözüm — durum uzayı (2026-11-13) ═══════════
+  //
+  // modalDampingRatios bir İZDÜŞÜMDÜR: sönümsüz φ_r üzerine C'yi yansıtır ve
+  // modlar arası sönüm kuplajını (φ_rᵀCφ_s, r ≠ s) atar. C = Σ Aᵢᵀ·diag(cᵢ)·Aᵢ
+  // orantılı DEĞİLDİR (c = 2ζ√(k·m_pay) k ile değil √k ile ölçeklenir), yani
+  // kuplaj gerçektir. Kesin cevap ikinci dereceden özdeğer problemidir:
+  //
+  //   (λ²M + λC + K)φ = 0   ⇔   A·v = λ·v ,  A = [[0, I], [−M⁻¹K, −M⁻¹C]] ,  v = [φ; λφ]
+  //
+  //   altsönümlü mod   λ = σ ± iω_d :  ω_n = |λ| ,  ζ = −σ/|λ| ,  f_d = ω_d/2π
+  //   aşırı sönümlü    iki gerçel negatif kök λ₁, λ₂ :  ω_n = √(λ₁λ₂) ,
+  //                    ζ = −(λ₁+λ₂)/(2ω_n) ≥ 1 (aritmetik ≥ geometrik ortalama), f_d yok
+  //
+  // Sönümden bağımsız iki özdeşlik (test kilidi): iz A = −iz(M⁻¹C) → Σ 2ζ_r·ω_n,r =
+  // iz(M⁻¹C) ve det A = det(M⁻¹K) → Π ω_n,r = √(det K / det M) = Π ω_r (sönümsüz).
+  // İzdüşüm de ilkini sağlar (M-dik Φ ile Σ φᵀCφ/φᵀMφ = iz(M⁻¹C)) — iki yol aynı
+  // toplam sönümü modlara FARKLI dağıtır; fark kuplajın kendisidir.
+  //
+  // Ticari karşılığı Nastran SOL 107 / Adams Vibration'ın kompleks özdeğer çözümü.
+  // Kaynak: Tisseur & Meerbergen, "The quadratic eigenvalue problem", SIAM Review
+  // 43 (2001) — doğrusallaştırma ve geri hata; özdeğerler EISPACK balanc → orthes →
+  // hqr (Wilkinson & Reinsch, Handbook for Automatic Computation II, 1971; JAMA
+  // hqr2'nin özdeğer kısmı), özvektör ters iterasyonla (EISPACK invit kalıbı).
+  // Kapı: tests/unit/mount-kompleks-modal.test.js.
+
+  // ── Gerçel, simetrik OLMAYAN kare matrisin bütün özdeğerleri ──
+  //  1. Dengeleme (balanc): D⁻¹AD, D'nin elemanları 2'nin kuvveti — yuvarlama YOK,
+  //     satır ve sütun normları yaklaşık eşitlenir. Durum matrisinde birim blok (1)
+  //     ile M⁻¹K (~10⁴) yan yana durur; QR'ın geri hatası ε·‖A‖ olduğundan dengeleme
+  //     küçük özdeğerin bağıl doğruluğunu doğrudan büyütür.
+  //  2. Householder ile üst Hessenberg biçimi (orthes) — dik benzerlik dönüşümü.
+  //  3. Francis çift kaydırmalı QR (hqr): her adım alt köşedeki 2×2 bloğun İKİ
+  //     özdeğeriyle birlikte kaydırır, eşlenik çift gerçel aritmetikte bulunur;
+  //     10. ve 30. yinelemede istisnai kaydırma (Wilkinson · MATLAB). Alt köşegen
+  //     elemanı ε·(komşu köşegenler)'in altına inince sıfır sayılır ve problem bölünür.
+  // Kaydırma yalnız YAKINSAMAYI belirler; her adım bir benzerlik dönüşümüdür, yani
+  // doğruluk bölme eşiğinden gelir (ölçüldü: kaydırma polinomunun işareti bozulunca
+  // 12×12 durum matrisi yakınsamaz ve null döner — yanlış kök vermez).
+  // Dönüş: [{re, im}] (n adet; eşlenik çift ardışık, önce Im > 0; gerçel kökte im
+  // tam 0) | null (geçersiz girdi ya da özdeğer başına QR_ITER_SINIR yinelemede
+  // yakınsamadı — sayı uydurulmaz).
+  const QR_ITER_SINIR = 60;
+  function hessenbergQR(Ain){
+    const n = Array.isArray(Ain) ? Ain.length : 0;
+    if(!n || !Ain.every(function(r){ return Array.isArray(r) && r.length === n && r.every(Number.isFinite); })) return null;
+    const H = matCopy(Ain);
+
+    // 1. Dengeleme: satır i /f, sütun i ·f
+    let dengeli = false;
+    for(let tur=0; !dengeli && tur<100; tur++){
+      dengeli = true;
+      for(let i=0;i<n;i++){
+        let c = 0, r = 0;
+        for(let j=0;j<n;j++) if(j !== i){ c += Math.abs(H[j][i]); r += Math.abs(H[i][j]); }
+        if(!(c > 0 && r > 0)) continue;
+        const s = c + r;
+        let f = 1, g = r/2;
+        while(c < g){ f *= 2; c *= 4; }
+        g = r*2;
+        while(c > g){ f /= 2; c /= 4; }
+        if((c + r)/f < 0.95*s){
+          dengeli = false;
+          for(let j=0;j<n;j++) H[i][j] /= f;
+          for(let j=0;j<n;j++) H[j][i] *= f;
+        }
+      }
+    }
+
+    // 2. Householder ile üst Hessenberg: H ← P·H·P, P = I − u·uᵀ/h
+    const u = Array(n).fill(0);
+    for(let m=1; m<n-1; m++){
+      let olcek = 0;
+      for(let i=m;i<n;i++) olcek += Math.abs(H[i][m-1]);
+      if(olcek === 0) continue;
+      let h = 0;
+      for(let i=n-1;i>=m;i--){ u[i] = H[i][m-1]/olcek; h += u[i]*u[i]; }
+      let g = Math.sqrt(h);
+      if(u[m] > 0) g = -g;
+      h -= u[m]*g;
+      u[m] -= g;
+      for(let j=m;j<n;j++){
+        let f = 0;
+        for(let i=n-1;i>=m;i--) f += u[i]*H[i][j];
+        f /= h;
+        for(let i=m;i<n;i++) H[i][j] -= f*u[i];
+      }
+      for(let i=0;i<n;i++){
+        let f = 0;
+        for(let j=n-1;j>=m;j--) f += u[j]*H[i][j];
+        f /= h;
+        for(let j=m;j<n;j++) H[i][j] -= f*u[j];
+      }
+      H[m][m-1] = olcek*g;
+      for(let i=m+1;i<n;i++) H[i][m-1] = 0;
+    }
+
+    // 3. Francis çift kaydırmalı QR
+    const wr = Array(n).fill(0), wi = Array(n).fill(0);
+    const eps = Math.pow(2, -52);
+    let hnorm = 0;
+    for(let i=0;i<n;i++) for(let j=Math.max(i-1, 0); j<n; j++) hnorm += Math.abs(H[i][j]);
+    if(hnorm === 0) return wr.map(function(){ return { re: 0, im: 0 }; });
+    let nn = n - 1, exshift = 0, iter = 0;
+    let p = 0, q = 0, r = 0, s = 0, z = 0, w = 0, x = 0, y = 0;
+    while(nn >= 0){
+      let l = nn;                                       // tek küçük alt köşegen elemanı
+      while(l > 0){
+        s = Math.abs(H[l-1][l-1]) + Math.abs(H[l][l]);
+        if(s === 0) s = hnorm;
+        if(Math.abs(H[l][l-1]) < eps*s) break;
+        l--;
+      }
+      if(l === nn){                                     // bir kök
+        wr[nn] = H[nn][nn] + exshift; wi[nn] = 0;
+        nn--; iter = 0;
+      } else if(l === nn-1){                            // iki kök: 2×2 blok
+        w = H[nn][nn-1]*H[nn-1][nn];
+        p = (H[nn-1][nn-1] - H[nn][nn])/2;
+        q = p*p + w;
+        z = Math.sqrt(Math.abs(q));
+        x = H[nn][nn] + exshift;
+        if(q >= 0){                                     // gerçel çift (büyük kök önce, öteki Vieta'dan)
+          z = (p >= 0) ? p + z : p - z;
+          wr[nn-1] = x + z;
+          wr[nn] = (z !== 0) ? x - w/z : x + z;
+          wi[nn-1] = 0; wi[nn] = 0;
+        } else {                                        // eşlenik çift
+          wr[nn-1] = x + p; wr[nn] = x + p;
+          wi[nn-1] = z; wi[nn] = -z;
+        }
+        nn -= 2; iter = 0;
+      } else {                                          // yakınsamadı: bir çift kaydırmalı adım
+        x = H[nn][nn]; y = H[nn-1][nn-1]; w = H[nn][nn-1]*H[nn-1][nn];
+        if(iter === 10){                                // Wilkinson'ın istisnai kaydırması
+          exshift += x;
+          for(let i=0;i<=nn;i++) H[i][i] -= x;
+          s = Math.abs(H[nn][nn-1]) + Math.abs(H[nn-1][nn-2]);
+          x = y = 0.75*s;
+          w = -0.4375*s*s;
+        }
+        if(iter === 30){                                // MATLAB'ın istisnai kaydırması
+          s = (y - x)/2;
+          s = s*s + w;
+          if(s > 0){
+            s = Math.sqrt(s);
+            if(y < x) s = -s;
+            s = x - w/((y - x)/2 + s);
+            for(let i=0;i<=nn;i++) H[i][i] -= s;
+            exshift += s;
+            x = y = w = 0.964;
+          }
+        }
+        if(++iter > QR_ITER_SINIR) return null;
+        let m = nn - 2;                                 // ardışık iki küçük alt köşegen elemanı
+        while(m >= l){
+          z = H[m][m];
+          r = x - z; s = y - z;
+          p = (r*s - w)/H[m+1][m] + H[m][m+1];
+          q = H[m+1][m+1] - z - r - s;
+          r = H[m+2][m+1];
+          s = Math.abs(p) + Math.abs(q) + Math.abs(r);
+          p /= s; q /= s; r /= s;
+          if(m === l) break;
+          if(Math.abs(H[m][m-1])*(Math.abs(q) + Math.abs(r)) <
+             eps*(Math.abs(p)*(Math.abs(H[m-1][m-1]) + Math.abs(z) + Math.abs(H[m+1][m+1])))) break;
+          m--;
+        }
+        for(let i=m+2;i<=nn;i++){
+          H[i][i-2] = 0;
+          if(i > m+2) H[i][i-3] = 0;
+        }
+        for(let k=m; k<=nn-1; k++){                     // çıkıntıyı köşegen boyunca kovala
+          const sonDegil = (k !== nn-1);
+          if(k !== m){
+            p = H[k][k-1]; q = H[k+1][k-1]; r = sonDegil ? H[k+2][k-1] : 0;
+            x = Math.abs(p) + Math.abs(q) + Math.abs(r);
+            if(x === 0) continue;
+            p /= x; q /= x; r /= x;
+          }
+          s = Math.sqrt(p*p + q*q + r*r);
+          if(p < 0) s = -s;
+          if(s === 0) continue;
+          if(k !== m) H[k][k-1] = -s*x;
+          else if(l !== m) H[k][k-1] = -H[k][k-1];
+          p += s;
+          x = p/s; y = q/s; z = r/s;
+          q /= p; r /= p;
+          for(let j=k;j<n;j++){                         // satır dönüşümü
+            p = H[k][j] + q*H[k+1][j];
+            if(sonDegil){ p += r*H[k+2][j]; H[k+2][j] -= p*z; }
+            H[k][j] -= p*x;
+            H[k+1][j] -= p*y;
+          }
+          const iSon = Math.min(nn, k+3);
+          for(let i=0;i<=iSon;i++){                     // sütun dönüşümü
+            p = x*H[i][k] + y*H[i][k+1];
+            if(sonDegil){ p += z*H[i][k+2]; H[i][k+2] -= p*r; }
+            H[i][k] -= p;
+            H[i][k+1] -= p*q;
+          }
+        }
+      }
+    }
+    if(!wr.every(Number.isFinite) || !wi.every(Number.isFinite)) return null;
+    return wr.map(function(re, i){ return { re: re, im: wi[i] }; });
+  }
+
+  // ── Kesin sönümlü modlar ──
+  // M6 · C6 · K6: N×N (6 SD'de 6×6), SI; C6 null → sönümsüz. M⁻¹K ve M⁻¹C Cholesky'den
+  // (M SPD değilse — nokta kütle, ataletsiz gövde — null).
+  // ÖZVEKTÖR: (A − μI)v = b kompleks ters iterasyonla; kompleks 2N'lik sistem 4N×4N
+  // GERÇEL gömmeyle ([[A − μᵣI, μᵢI], [−μᵢI, A − μᵣI]]) solveLinear'dan geçer.
+  // μ = λ + 1e-10·max(|λ|, 10⁻⁶·‖A‖∞): tam özdeğerde LU tekilleşmesin; komşu özdeğerin
+  // bulaşma oranı adım başına 1e-10/aralık, üç adımda ihmal edilebilir. Her özdeğerin başlangıç
+  // vektörü ayrı (sabit tohumlu) — çakışık özdeğerde vektörler bağımsız çıkar.
+  // φ = v'nin yer değiştirme kısmı, en büyük genlikli bileşeni 1 (gerçel) olacak
+  // biçimde ölçeklenir (solveModal'ın normu); genlik ve faz (rad) o bileşene göre.
+  // AŞIRI SÖNÜM: gerçel kökler özvektörlerinin MAC'ıyla ikişer eşlenir (ayrışık ve
+  // orantılı sönümde iki kök AYNI φ'yi taşır); kayıt yavaş kökü (|λ| küçük — uzun
+  // süreli yanıtı o belirler) taşır, hızlısı lambda2'de. Sıfır kök (K tekil) aşırı
+  // sönüm sayılmaz: ω_n = 0, ζ tanımsız.
+  // EŞLEME: opts.modes (solveModal çıktısı) verilirse her kayıt sönümsüz moduna KÜTLE
+  // AĞIRLIKLI kompleks MAC ile bağlanır: |φ_uᵀMφ_c|² / ((φ_uᵀMφ_u)·(φ_cᴴMφ_c)) — φ
+  // öteleme (m) ile dönmeyi (rad) aynı vektörde taşır, ağırlıksız MAC birim seçimine
+  // bağlı olurdu; sönümsüz modlar M-dik olduğundan çapraz MAC sıfırdır. Atama
+  // açgözlü (en büyük MAC önce); çıktı sönümsüz modların sırasıyla (mod = indis).
+  // modes yoksa f_n artan sıra.
+  // KALİTE: artik = ‖(λ²M+λC+K)φ‖ / (|λ|²‖Mφ‖ + |λ|‖Cφ‖ + ‖Kφ‖) — Tisseur'un geri
+  // hatasından sıkı (‖Mφ‖ ≤ ‖M‖‖φ‖); aşırı sönümlü kayıtta iki kökün büyüğü.
+  // ÇAKIŞIK: λ'sı başka bir kayıtla CAKISIK_TOL içinde (modalSensitivity'nin eşiği)
+  // aynı mod cakisik işaretlenir; modes verilmişse kümenin şekilleri sönümsüz eşlerine
+  // hizalanır (aşağıda — tam çakışmada özuzayın her vektörü özvektördür).
+  // Dönüş: [{ lambda:[re,im], f_n, f_d, zeta, over, phi:[[re,im]…], genlik:[…], faz:[…],
+  //           artik, cakisik, lambda2? (aşırı sönüm), mod?, mac? }] | null
+  function complexModes(M6, C6, K6, opts){
+    const o = opts || {};
+    const N = Array.isArray(M6) ? M6.length : 0;
+    const kare = function(X){ return Array.isArray(X) && X.length === N &&
+      X.every(function(r){ return Array.isArray(r) && r.length === N && r.every(Number.isFinite); }); };
+    if(!N || !kare(M6) || !kare(K6) || (C6 && !kare(C6))) return null;
+    const C = C6 || zeros(N, N);
+    const L = cholesky(M6);
+    if(!L) return null;
+    const Lt = matT(L);
+    const minv = function(X){                             // M⁻¹X = L⁻ᵀ(L⁻¹X), sütun sütun
+      const Y = zeros(N, N);
+      for(let j=0;j<N;j++){
+        const y = solveUpper(Lt, solveLower(L, X.map(function(r){ return r[j]; })));
+        for(let i=0;i<N;i++) Y[i][j] = y[i];
+      }
+      return Y;
+    };
+    const MiK = minv(K6), MiC = minv(C), S = 2*N;
+    const A = zeros(S, S);
+    for(let i=0;i<N;i++){
+      A[i][N+i] = 1;
+      for(let j=0;j<N;j++){ A[N+i][j] = -MiK[i][j]; A[N+i][N+j] = -MiC[i][j]; }
+    }
+    const ev = hessenbergQR(A);
+    if(!ev) return null;
+    let anorm = 0;
+    A.forEach(function(r){ anorm = Math.max(anorm, r.reduce(function(t, v){ return t + Math.abs(v); }, 0)); });
+
+    // Kompleks vektör: [[re, im], …]
+    const cMatVec = function(X, z){ return X.map(function(r){
+      let re = 0, im = 0;
+      for(let j=0;j<z.length;j++){ re += r[j]*z[j][0]; im += r[j]*z[j][1]; }
+      return [re, im]; }); };
+    const cDot = function(a, b){                          // aᴴb
+      let re = 0, im = 0;
+      for(let i=0;i<a.length;i++){ re += a[i][0]*b[i][0] + a[i][1]*b[i][1]; im += a[i][0]*b[i][1] - a[i][1]*b[i][0]; }
+      return [re, im]; };
+    const cNorm = function(z){ let t = 0; z.forEach(function(c){ t += c[0]*c[0] + c[1]*c[1]; }); return Math.sqrt(t); };
+    const macM = function(a, b){
+      const Ma = cMatVec(M6, a), Mb = cMatVec(M6, b), ab = cDot(a, Mb);
+      const aa = cDot(a, Ma)[0], bb = cDot(b, Mb)[0];
+      return (aa > 0 && bb > 0) ? Math.min(1, (ab[0]*ab[0] + ab[1]*ab[1])/(aa*bb)) : NaN;   // Cauchy–Schwarz: ≤ 1, yuvarlama aşmasın
+    };
+    const olcekle = function(phi){                        // en büyük genlikli bileşen 1 + 0i
+      let kmax = -1, amax = 0;
+      phi.forEach(function(c, k){ const a = Math.hypot(c[0], c[1]); if(a > amax){ amax = a; kmax = k; } });
+      if(kmax < 0 || !Number.isFinite(amax)) return null;
+      const pr = phi[kmax][0], pi = phi[kmax][1], d = pr*pr + pi*pi;
+      return phi.map(function(c, k){ return (k === kmax) ? [1, 0]
+        : [(c[0]*pr + c[1]*pi)/d, (c[1]*pr - c[0]*pi)/d]; });
+    };
+    const tersIter = function(e, tohum){
+      const olc = Math.max(Math.hypot(e.re, e.im), 1e-6*anorm);
+      const mr = e.re + 1e-10*olc, mi = e.im;
+      const G = zeros(2*S, 2*S);
+      for(let i=0;i<S;i++){
+        for(let j=0;j<S;j++){ G[i][j] = A[i][j]; G[S+i][S+j] = A[i][j]; }
+        G[i][i] -= mr; G[S+i][S+i] -= mr;
+        G[i][S+i] = mi; G[S+i][i] = -mi;
+      }
+      let t = (Math.imul(tohum, 2654435761) + 12345) >>> 0, v = [];
+      for(let k=0;k<2*S;k++){
+        t = (Math.imul(t, 1664525) + 1013904223) >>> 0;
+        v.push((k >= S && e.im === 0) ? 0 : t/4294967296 - 0.5);
+      }
+      for(let it=0; it<3; it++){
+        const wv = solveLinear(G, v);
+        const nw = wv ? norm(wv) : NaN;
+        if(!(nw > 0) || !Number.isFinite(nw)) return null;
+        v = wv.map(function(c){ return c/nw; });
+      }
+      const phi = [];
+      for(let k=0;k<N;k++) phi.push([v[k], v[S+k]]);
+      return olcekle(phi);
+    };
+    const artikHesap = function(lr, li, phi){
+      const Mp = cMatVec(M6, phi), Cp = cMatVec(C, phi), Kp = cMatVec(K6, phi);
+      const l2r = lr*lr - li*li, l2i = 2*lr*li;
+      let rr = 0;
+      for(let i=0;i<N;i++){
+        const re = l2r*Mp[i][0] - l2i*Mp[i][1] + lr*Cp[i][0] - li*Cp[i][1] + Kp[i][0];
+        const im = l2r*Mp[i][1] + l2i*Mp[i][0] + lr*Cp[i][1] + li*Cp[i][0] + Kp[i][1];
+        rr += re*re + im*im;
+      }
+      const ab = Math.hypot(lr, li), pay = ab*ab*cNorm(Mp) + ab*cNorm(Cp) + cNorm(Kp);
+      return (pay > 0) ? Math.sqrt(rr)/pay : NaN;
+    };
+    const genlikFaz = function(k){
+      k.genlik = k.phi.map(function(c){ return Math.hypot(c[0], c[1]); });
+      k.faz = k.phi.map(function(c){ return Math.atan2(c[1], c[0]); });
+    };
+    const yakin = function(a, b){
+      const la = Math.hypot(a.lambda[0], a.lambda[1]), lb = Math.hypot(b.lambda[0], b.lambda[1]);
+      return Math.hypot(a.lambda[0] - b.lambda[0], a.lambda[1] - b.lambda[1]) <= CAKISIK_TOL*Math.max(la, lb);
+    };
+
+    const kayit = [], gercel = [];
+    let tohum = 0, bozuk = false;
+    ev.forEach(function(e){
+      if(e.im < 0 || bozuk) return;                       // eşlenik çiftin Im < 0 yarısı
+      const phi = tersIter(e, ++tohum);
+      if(!phi){ bozuk = true; return; }
+      if(e.im === 0){ gercel.push({ l: e.re, phi: phi, artik: artikHesap(e.re, 0, phi) }); return; }
+      const wn = Math.hypot(e.re, e.im), z = -e.re/wn;
+      kayit.push({ lambda: [e.re, e.im], f_n: wn/(2*Math.PI), f_d: e.im/(2*Math.PI),
+                   zeta: (z === 0) ? 0 : z, over: false, phi: phi, artik: artikHesap(e.re, e.im, phi) });
+    });
+    if(bozuk) return null;
+    // Gerçel kökler ikişer: en büyük MAC önce. İki kök de negatifse aşırı sönümlü (ζ ≥ 1
+    // aritmetik ≥ geometrik ortalamadan; yuvarlama 1'in altına itmesin); sıfır kök
+    // (K tekil — mekanizma) ω_n = 0, ζ tanımsız, aşırı sönüm DEĞİL.
+    const bos = gercel.map(function(){ return true; });
+    for(;;){
+      let en = -Infinity, a = -1, b = -1;
+      for(let i=0;i<gercel.length;i++) if(bos[i]) for(let j=i+1;j<gercel.length;j++) if(bos[j]){
+        const v = macM(gercel[i].phi, gercel[j].phi), vv = Number.isFinite(v) ? v : -1;
+        if(vv > en){ en = vv; a = i; b = j; }
+      }
+      if(a < 0) break;
+      bos[a] = false; bos[b] = false;
+      const g1 = gercel[a], g2 = gercel[b];
+      const yavas = (Math.abs(g1.l) <= Math.abs(g2.l)) ? g1 : g2, hizli = (yavas === g1) ? g2 : g1;
+      const wn = Math.sqrt(g1.l*g2.l), asiri = (g1.l < 0 && g2.l < 0), z = -(g1.l + g2.l)/(2*wn);
+      kayit.push({ lambda: [yavas.l, 0], lambda2: [hizli.l, 0], f_n: wn/(2*Math.PI), f_d: NaN,
+                   zeta: asiri ? Math.max(1, z) : ((wn > 0) ? z : NaN), over: asiri, phi: yavas.phi,
+                   artik: Math.max(yavas.artik, hizli.artik) });
+    }
+    kayit.forEach(function(k){
+      genlikFaz(k);
+      k.cakisik = kayit.some(function(b){ return b !== k && yakin(b, k); });
+    });
+    const fSira = function(k){ return Number.isFinite(k.f_n) ? k.f_n : Infinity; };
+    kayit.sort(function(a, b){ return fSira(a) - fSira(b) || 0; });
+
+    const mods = Array.isArray(o.modes) ? o.modes : null;
+    if(!mods || !mods.length) return kayit;
+    const uphi = mods.map(function(md){
+      return (md && Array.isArray(md.phi) && md.phi.length === N && md.phi.every(Number.isFinite))
+        ? md.phi.map(function(v){ return [v, 0]; }) : null; });
+    const T = uphi.map(function(u){ return kayit.map(function(k){ return u ? macM(u, k.phi) : NaN; }); });
+    const atanan = mods.map(function(){ return null; }), alindi = kayit.map(function(){ return false; });
+    for(;;){
+      let en = -Infinity, ui = -1, kj = -1;
+      for(let i=0;i<mods.length;i++) if(!atanan[i]) for(let j=0;j<kayit.length;j++) if(!alindi[j]){
+        const v = T[i][j];
+        if(Number.isFinite(v) && v > en){ en = v; ui = i; kj = j; }
+      }
+      if(ui < 0) break;
+      atanan[ui] = kayit[kj]; alindi[kj] = true;
+      kayit[kj].mod = ui; kayit[kj].mac = en;
+    }
+    const sirali = atanan.filter(Boolean);
+    kayit.forEach(function(k, j){ if(!alindi[j]){ k.mod = null; k.mac = NaN; sirali.push(k); } });
+
+    // ÇAKIŞIK KÜMEDE HİZALAMA. Tam çakışık özdeğerin özuzayındaki her vektör bir
+    // özvektördür ve ters iterasyonun verdiği taban keyfidir (simetrik kutuda MAC
+    // 0,25 · 0,59 · 0,69 — artık yine 1e-16; ölçüldü). Kümenin her şekli eşlendiği
+    // sönümsüz modun o özuzaydaki M-dik izdüşümüne çevrilir: G·a = h, G_kl = φ_kᴴMφ_l,
+    // h_k = φ_kᴴMφ_u — MAC'ı en büyük yapan seçim. Kabul: artık bozulmuyor ve şekiller
+    // ayrık kalıyor; değilse (özdeğerler yalnız YAKIN, eşit değil) taban olduğu gibi.
+    const cCoz = function(Gc, h){                          // kompleks p×p, gerçel 2p×2p gömme
+      const p = h.length, R = zeros(2*p, 2*p), b = [];
+      for(let i=0;i<p;i++){
+        b[i] = h[i][0]; b[p+i] = h[i][1];
+        for(let j=0;j<p;j++){ const g = Gc[i][j]; R[i][j] = g[0]; R[i][p+j] = -g[1]; R[p+i][j] = g[1]; R[p+i][p+j] = g[0]; }
+      }
+      const x = solveLinear(R, b);
+      return x ? x.slice(0, p).map(function(re, i){ return [re, x[p+i]]; }) : null;
+    };
+    const islendi = new Set();
+    sirali.forEach(function(k){
+      if(islendi.has(k) || k.lambda2 || k.mod === null || !uphi[k.mod]) return;
+      const kume = [k];
+      for(let i=0;i<kume.length;i++) sirali.forEach(function(b){
+        if(!b.lambda2 && b.mod !== null && uphi[b.mod] && kume.indexOf(b) < 0 && yakin(kume[i], b)) kume.push(b); });
+      kume.forEach(function(b){ islendi.add(b); });
+      if(kume.length < 2) return;
+      const taban = kume.map(function(b){ return b.phi; });
+      const Mt = taban.map(function(f){ return cMatVec(M6, f); });
+      const Gc = taban.map(function(fa){ return Mt.map(function(mb){ return cDot(fa, mb); }); });
+      const yeni = kume.map(function(b){
+        const Mu = cMatVec(M6, uphi[b.mod]);
+        const a = cCoz(Gc, taban.map(function(fa){ return cDot(fa, Mu); }));
+        const phi = a && olcekle(taban[0].map(function(_, r){
+          let re = 0, im = 0;
+          a.forEach(function(c, l){ re += c[0]*taban[l][r][0] - c[1]*taban[l][r][1]; im += c[0]*taban[l][r][1] + c[1]*taban[l][r][0]; });
+          return [re, im]; }));
+        const artik = phi ? artikHesap(b.lambda[0], b.lambda[1], phi) : NaN;
+        return (artik <= Math.max(1e-12, 10*b.artik)) ? { phi: phi, artik: artik } : null;
+      });
+      if(yeni.some(function(y){ return !y; })) return;
+      for(let a=0;a<yeni.length;a++) for(let b=a+1;b<yeni.length;b++) if(!(macM(yeni[a].phi, yeni[b].phi) < 0.99)) return;
+      kume.forEach(function(b, i){ b.phi = yeni[i].phi; b.artik = yeni[i].artik; b.mac = macM(uphi[b.mod], b.phi); genlikFaz(b); });
+    });
+    return sirali;
+  }
+
   // ── Modal enerji: genelleştirilmiş büyüklükler + gövde bazında dağılım ──
   //
   //   m_gen = φᵀMφ ,  k_gen = φᵀKφ ,  KE = ½ω²·m_gen
@@ -3235,6 +3667,7 @@ var veMountCore = (function() {
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
+    hessenbergQR, complexModes,
     modalSensitivity, modesWithSpringScale, springScaleFor,
     torqueChain, classifyMode, validateModel, collinearPoints, mechanismProblem,
     // Şablon / örnek / test
