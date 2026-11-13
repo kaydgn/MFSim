@@ -10471,6 +10471,14 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    parçanın üstündeyken satırı da aynı tonda (.ve-ak-satir, Canlı Not 48). */
 .ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td,
 .ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-satir td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
+/* TIK SEÇER (Canlı Not 163): tıkla seçilen parçanın satırı seçimin renginde — fare üstünden
+   koyu vurgu zemini ve vurgu renginde sol kenar; zorunlu ve boş hücre kendi tonunda kalır.
+   Satırın yazıları bu zeminde AA (iki tema; mount-akso.test.js → TIK SEÇER). Seçimi beyan
+   eden çizimde parça tıklanır. */
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-sec td:not(.zor){ background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input)); }
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-sec td:first-child{ box-shadow:inset 3px 0 0 var(--accent-primary); }
+.ve-mnt-akso-kap[data-tik-sec] svg.ve-mnt2d-akso [data-ak]{ cursor:pointer; }
+.ve-mnt-akso-kap[data-tik-sec].ve-ak3b-surukle svg.ve-mnt2d-akso [data-ak]{ cursor:grabbing; }
 .ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);

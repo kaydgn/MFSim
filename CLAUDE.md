@@ -254,7 +254,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
   parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
   model gölgede; perdede seçim HALKASI YOK — Canlı Not 141 · 148, kapı `mount-akso.test.js` → *PERDE*); tersi de: çizimde parçanın üstündeyken föyün satırı vurgulu
-  (kullanıcı 2026-11-06, Canlı Not 48). Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
+  (kullanıcı 2026-11-06, Canlı Not 48). **Tık SEÇER** (kullanıcı 2026-11-13, Canlı Not 163: *"tıkladığımda, sanki
+  seçmişim gibi renklensin ve aşağıdaki tabloda rengi belli olsun"*): parçaya tık perdeyi kalıcı kurar, föyün satırı
+  seçili renkte ve X girdisi odakta (G'de girdi yok); föyün satırı da seçer; boşluğa tık ve Esc bırakır, sürükleme tık
+  değil; görünüm durumu, geri-al adımı yok; tam ekran seçimi paylaşır, kabı beyan etmeyen çizim (Güç grubundaki yeri ·
+  Parametrik Analiz · sihirbazın masası) seçmez (`data-tik-sec`). Kapı: `mount-akso.test.js` → *TIK SEÇER* +
+  `mount-pencere.spec.js` → *TIK SEÇER*. Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
   tonlarında (vurgu + `--isik`): her yüzü gölgedeki zeminden ve aynı tür
   parçadan açık, iki temada. Katı çizimde takoz ve nokta kütle kutularla AYNI
   ressam sırasında (CAD gibi): kutunun arkasında kalan örtülü ve yazısız,
