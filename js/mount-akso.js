@@ -646,7 +646,13 @@ var veMntAkso = (function(){
     var xs=A.map(function(a){ return a.x; }), ys=A.map(function(a){ return a.y; }), zs=A.map(function(a){ return a.z; });
     var x0=Math.min.apply(null, xs), x1=Math.max.apply(null, xs), y0=Math.min.apply(null, ys), y1=Math.max.apply(null, ys), zb=Math.min.apply(null, zs);
     var px=Math.max(75, (x1-x0)*0.18), py=Math.max(75, (y1-y0)*0.18), T=65;
-    return { c:[(x0+x1)/2, (y0+y1)/2, zb+T/2], h:[(x1-x0)/2+px, (y1-y0)/2+py, T/2], zb:zb };
+    var cx=(x0+x1)/2, cy=(y0+y1)/2, hx=(x1-x0)/2+px, hy=(y1-y0)/2+py;
+    // Modelin kendi braketi yayların yanındaysa (ISG 430: "Askı braketi", Canlı Not 168) prizma O
+    // bileşendir — ayrı kaide ile ikinci bir braket çizilmez; ağırlık merkezi prizmanın içinde.
+    var g=(m.govde || []).filter(function(b){ return b.braket && Math.abs(b.x-cx)<=hx+150 && Math.abs(b.y-cy)<=hy+150 && b.z>=zb-50 && b.z<=zb+300; })
+      .sort(function(a, b){ return Math.hypot(a.x-cx, a.y-cy, a.z-zb)-Math.hypot(b.x-cx, b.y-cy, b.z-zb); })[0] || null;
+    var zt=g ? Math.max(zb+T, g.z+25) : zb+T;
+    return { c:[cx, cy, (zb+zt)/2], h:[hx, hy, (zt-zb)/2], zb:zb, g:g };
   }
   function kapsam(m){
     var xs=[], ys=[], zs=[0];
@@ -715,6 +721,8 @@ var veMntAkso = (function(){
     m.takoz.forEach(function(t){ nokta3.push([t.x, t.y, t.z]); });
     (m.aski || []).forEach(function(a){ nokta3.push([a.x, a.y, a.z], [a.x, a.y, a.z-a.L]); });
     var askiBr=askiBraket(m);
+    // künye: bileşenin satırları, eşdeğer levhanın ölçüsü yerine prizmanınki
+    var askiBilgi=function(l){ return (l || []).filter(function(t){ return !/^Eşdeğer /.test(t); }).concat(['Boyut '+R(askiBr.h[0]*2)+' × '+R(askiBr.h[1]*2)+' × '+R(askiBr.h[2]*2)+' mm']); };
     if(askiBr) yuzler(askiBr.c, askiBr.h).forEach(function(f){ f.pts.forEach(function(p){ nokta3.push(p); }); });
     if(m.G) nokta3.push([m.G.x, m.G.y, m.G.z]);
     // Serbest kameranın küresi MODELİN kendisinden (zemin, duvar ve cetvel
@@ -831,6 +839,11 @@ var veMntAkso = (function(){
       levhaK[g.k]={ c:[0, 1, 2].map(function(i){ return (lo[i]+hi[i])/2; }), h:[0, 1, 2].map(function(i){ return (hi[i]-lo[i])/2; }) };
       if(bagli) (takozBr[tk]=takozBr[tk]||[]).push(g);
     });
+    if(askiBr && askiBr.g && levhaP[askiBr.g.k]){
+      var abg=askiBr.g.k;
+      if(levhaT[abg]!=null) takozBr[levhaT[abg]]=(takozBr[levhaT[abg]] || []).filter(function(x){ return x.k!==abg; });
+      levhaP[abg]=[{ c:askiBr.c.slice(), h:askiBr.h.slice() }]; levhaK[abg]={ c:askiBr.c.slice(), h:askiBr.h.slice() }; levhaT[abg]=null;
+    }
     var levha2B=function(g){ var sp=[]; levhaP[g.k].forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(Ph(p)); }); }); }); return sar(sp); };
     var isaret=nok.filter(function(g){ return !levhaP[g.k] || levhaT[g.k]==null; })
       .map(function(g){ return levhaP[g.k] ? { g:g, k:g.k, p:levhaK[g.k].c, lv:true } : { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
@@ -936,7 +949,8 @@ var veMntAkso = (function(){
     // (gövdenin hafif engeli değil: küçük parça).
     var gizliT={};
     var braketCiz=function(g){
-      var xr=(stil==='xray'), h='<g class="ve-ak-g ve-ak-br '+(xr ? 'xray' : 'golge')+'"'+ak(g.k, g.bilgi)+'>';
+      var ab=!!(askiBr && askiBr.g===g), xr=(stil==='xray');
+      var h='<g class="ve-ak-g ve-ak-br'+(ab ? ' ve-ak-ab' : '')+' '+(xr ? 'xray' : 'golge')+'"'+ak(g.k, ab ? askiBilgi(g.bilgi) : g.bilgi)+'>';
       levhaSira(g.levha, levhaP[g.k], K.d).forEach(function(q){
         yuzler(q.c, q.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){ h+='<path class="'+(xr ? 'f-cam' : yuzSinif(f))+'" d="M'+yol(f.pts, Ph)+' Z"/>'; });
       });
@@ -1026,11 +1040,11 @@ var veMntAkso = (function(){
     });
     // ASKI BRAKETİ: yayların üstündeki dikdörtgen prizma (alt yüzü yayların üst uçlarında); yaylardan
     // sonra çizilir, üstten bakışta onları örter. Yazısız; künyesi ipucunda.
-    if(askiBr){
-      var abx=(stil==='xray'), abh='<g class="ve-ak-g ve-ak-br ve-ak-ab '+(abx ? 'xray' : 'golge')+'"'+bilgiAttr(['Askı braketi', 'Yay üst uçları', 'Boyut '+R(askiBr.h[0]*2)+' × '+R(askiBr.h[1]*2)+' × '+R(askiBr.h[2]*2)+' mm'])+'>';
-      yuzler(askiBr.c, askiBr.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){ abh+='<path class="'+(abx ? 'f-cam' : yuzSinif(f))+'" d="M'+yol(f.pts)+' Z"/>'; });
+    if(askiBr && !askiBr.g){
+      var abx=(stil==='xray'), abh='<g class="ve-ak-g ve-ak-br ve-ak-ab '+(abx ? 'xray' : 'golge')+'"'+bilgiAttr(askiBilgi(['Askı braketi']))+'>';
+      yuzler(askiBr.c, askiBr.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){ abh+='<path class="'+(abx ? 'f-cam' : yuzSinif(f))+'" d="M'+yol(f.pts, Ph)+' Z"/>'; });
       govdeSvg+=abh+'</g>';
-      var abp=[]; yuzler(askiBr.c, askiBr.h).forEach(function(f){ f.pts.forEach(function(p){ abp.push(P(p)); }); });
+      var abp=[]; yuzler(askiBr.c, askiBr.h).forEach(function(f){ f.pts.forEach(function(p){ abp.push(Ph(p)); }); });
       var abk=sar(abp); abk.a=0.3; engel.push(abk);
     }
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
@@ -1390,7 +1404,7 @@ var veMntAkso = (function(){
   return {
     IZ:IZ, ANA_PAY:ANA_PAY, EL_SINIR:EL_SINIR, kamera:kamera, kamYon:kamYon, kamAci:kamAci, kamB:kamB, bakisAdi:bakisAdi, yuzler:yuzler, ciz:ciz, hareketIci:hareketIci,
     modDelta:modDelta, modOlcek:modOlcek, cokmeDelta:cokmeDelta, yerlestir:yerlestir, tahmin:tahmin, koord:koord,
-    ICICE_ENAZ:ICICE_ENAZ, kutuParcala:kutuParcala, kutuSirala:kutuSirala, levhaParca:levhaParca
+    ICICE_ENAZ:ICICE_ENAZ, kutuParcala:kutuParcala, kutuSirala:kutuSirala, levhaParca:levhaParca, askiBraket:askiBraket
   };
 })();
 
