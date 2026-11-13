@@ -52,14 +52,33 @@ const sehim = (R) => statik(R).perMount.map((m) => m.delta[2] * 1000);
 // Adams'ın sırası FL FR ML MR RL RR; "Left" tablonun +y'si → programın Sağ takozu
 const ayna = (d) => [d[1], d[0], d[3], d[2], d[5], d[4]];
 const rms = (l) => Math.sqrt(l.reduce((s, v) => s + v * v, 0) / l.length);
+// ÇERÇEVE (Canlı Not 168): Adams'ın Z'si krank ekseninden; örnek programın çerçevesinde, Z'ler +716,5 mm
+// (aynı 6×6 kabinin föyündeki askı noktası 672,5). Ötelemenin çözüme etkisi yok.
+const DZ = 716.5;
+const cerceve = (p) => [p[0], p[1], +(p[2] + DZ).toFixed(3)];
+
+describe('ÇERÇEVE — Z = 0 düzlemi güç grubunun altında', () => {
+  test('her takoz, askı yayının iki ucu ve her gövdenin ağırlık merkezi Z > 0; askı noktası TTA föyününkiyle aynı', () => {
+    const t = H.ornek('isg430askili');
+    const z = [];
+    t.nodes.forEach((n) => {
+      if (n.type === 'mnt-mount') z.push(['takoz', n.customName, n.data.z]);
+      if (n.type === 'mnt-aski') z.push(['askı', n.customName, n.data.z], ['oturak', n.customName, n.data.z - n.data.tasarimL]);
+      if (n.data && n.data.mass > 0) z.push(['gövde', n.customName, n.data.cgz]);
+    });
+    expect(z.filter((r) => !(r[2] > 0))).toEqual([]);
+    const tta = core.getMountExample('tta10askili').model.askilar.map((a) => a.pos[2]);
+    t.nodes.filter((n) => n.type === 'mnt-aski').forEach((n, i) => expect(n.data.z).toBeCloseTo(tta[i], 1));
+  });
+});
 
 describe('ÖRNEK — sunumun girdisi', () => {
   test('konumlar, yay noktası, ataletler, toplam kütle; takozlar sunumun en düşük TR\'li kombinasyonu', () => {
     const t = H.ornek('isg430askili');
     const tak = t.nodes.filter((n) => n.type === 'mnt-mount');
-    expect(tak.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.takoz);
+    expect(tak.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.takoz.map(cerceve));
     const as = t.nodes.filter((n) => n.type === 'mnt-aski');
-    expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.yay.ust);
+    expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.yay.ust.map(cerceve));
     // Adams'ın çözdüğü gibi tasarım konumunda ön yüksüz (tasarım boyu = serbest boy); sunumun
     // yazdığı ön yük PD'de: k(L0 − PD) = 918,4 N (resmin yayı; k 57,39 ↔ sunum 57,4)
     as.forEach((n) => {

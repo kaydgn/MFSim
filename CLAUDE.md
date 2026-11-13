@@ -450,9 +450,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   N'i; yumuşatma askıyı ölçeklemez; duyarlılık askıyı da satırlar (Σe = ½). Rapor §8.20 (boy · kuvvet · EN 13906-1
   gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
   katar. Pencere SONUÇ GÖSTERMEZ. Görünümler · Güç grubundaki yeri · raporun aksonometrisi askıyı noktasından
-  oturağına zikzakla çizer (yazısız). **Yayların üst uçları, üstlerindeki dikdörtgen prizma bir askı braketine bağlıdır** (kullanıcı 2026-11-13, Canlı Not 166 · 167: *"braketi alt tarafa yapmışsın, öyle olmayacak"* — referans görselde braket yayların üstünde; alt yüzü yayların üst uçlarında, uçların her yanında pay; `askiBraket`); kapı `mount-akso.test.js` → *ASKI BRAKETİ*. Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
+  oturağına zikzakla çizer (yazısız). **Yayların üst uçları, üstlerindeki dikdörtgen prizma bir askı braketine bağlıdır** (kullanıcı 2026-11-13, Canlı Not 166 · 167: *"braketi alt tarafa yapmışsın, öyle olmayacak"* — referans görselde braket yayların üstünde; alt yüzü yayların üst uçlarında, uçların her yanında pay; `askiBraket`); modelin kendi braketi yayların yanındaysa prizma O bileşendir, ayrı kaidesi çizilmez (Canlı Not 169: *"bu yukarıda görünen küp ne? … kaldır onu"*); kapı `mount-akso.test.js` → *ASKI BRAKETİ*. Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
   taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Örnek `isg430askili`:
-  Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); bileşen kütleleri sunumda
+  Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); Z'si programın çerçevesinde —
+  Adams'ınki krank ekseninden, bütün Z'ler +716,5 mm, Z = 0 güç grubunun altında (Canlı Not 168; kapı
+  `mount-adams-isg.test.js` → *ÇERÇEVE*); bileşen kütleleri sunumda
   yok, Adams'ın 60 sonucuna uydurma; askı ADAMS'IN ÇÖZDÜĞÜ GİBİ ön yüksüz (tasarım boyu = serbest boy; sunumun 918,4 N'u
   Adams'ın sonuçlarında yok — örnek onu taşırken Parametrik Analiz'in HTML'i sunumun sehimlerini vermiyordu); Adams'ın
   Left'i konum tablosunun +y'si (programın Sağ'ı). Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
