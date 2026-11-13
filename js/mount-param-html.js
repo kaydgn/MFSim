@@ -125,7 +125,7 @@ var veMntParamHtml = (function(){
   var CSS = [
     ':root{color-scheme:light;--kagit:#ffffff;--zemin:#f3f5f8;--ink:#1b2430;--soluk:#5a6573;--cizgi:#d6dbe2;',
     '  --cizgi-koyu:#aab3bf;--vurgu:#1d5fa6;--vurgu-zemin:#e7f0fa;--iyi:#1c6e3b;--iyi-zemin:#dcefe3;--kotu:#b42318;',
-    "  --radius-sm:2px;--yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;",
+    "  --radius-sm:2px;--sutun:68px;--bosluk:56px;--yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;",
     '  --fs-kucuk:12px;--fs-govde:13px;--fs-h2:15px;--fs-h1:18px;}',
     '*{box-sizing:border-box}',
     'body{margin:0;background:var(--zemin);color:var(--ink);font-family:var(--yuz);font-size:var(--fs-govde);line-height:1.45;',
@@ -203,15 +203,17 @@ var veMntParamHtml = (function(){
     '  border-left:1px solid var(--cizgi);margin:0 0 4px}',
     '.izgara div{flex:1 1 150px;padding:6px 10px;border-right:1px solid var(--cizgi);border-bottom:1px solid var(--cizgi)}',
     'th.grup{text-align:center}',
-    'th.ayir,td.ayir{border-left:1px solid var(--cizgi)}',
     'table.izg th,table.izg td{border:1px solid var(--cizgi);padding:6px 12px}',
-    'table.izg td{min-width:68px}',
+    'table.izg td{min-width:var(--sutun);background:var(--kagit)}',
     'table.izg thead th{background:var(--zemin)}',
     'table.izg th.grup{text-align:center}',
-    'table.izg th.ayir,table.izg td.ayir{border-left:2px solid var(--cizgi-koyu)}',
     'table.izg .yuk{position:sticky;left:0;z-index:1;background:var(--zemin);font-weight:600;border-right:2px solid var(--cizgi-koyu)}',
     'table.izg tbody tr:hover td{background:var(--vurgu-zemin)}',
     'table.izg tbody tr:hover td.yuk{background:var(--zemin)}',
+    // Sehim: takozların blokları arasında bir sütunluk boşluk (Canlı not 2009) — çizgisiz ve zeminsiz:
+    // kap da çerçevesiz ve zeminsiz, aralıkta sayfa görünür; her blok kendi ızgarasıyla
+    'table.izg td.bosluk,table.izg tbody tr:hover td.bosluk{min-width:var(--bosluk);padding:0;border:0;background:none}',
+    '.kap.bloklu{border:0;background:none}',
     '.kap.dar{max-width:560px}',
     '.izgara b{display:block;font-weight:500;color:var(--soluk);font-size:var(--fs-kucuk)}',
     '.tipler{color:var(--soluk);margin:-4px 0 12px}',
@@ -513,12 +515,19 @@ var veMntParamHtml = (function(){
       if(c.tur === 'K') oz.unshift(['Uygunluk', esc(V.konfig[c.n].u || '—')]);
       V.kriter.forEach(function(q, j){ oz.push(['<span title="' + esc(q.s) + '">' + esc(q.ad) + '</span>', tik(kb & (1 << j))]); });
       h += '<div class="izgara">' + oz.map(function(x){ return '<div><b>' + x[0] + '</b>' + x[1] + '</div>'; }).join('') + '</div>';
-      h += '<h3>Sehim [mm]</h3><div class="kap"><table class="izg"><thead><tr><th class="sol yuk" rowspan="2">Yük durumu</th>'
-        + V.takozlar.map(function(t, m){ return '<th colspan="3" class="grup ayir" title="' + esc(tt[m] || '') + '">' + esc(t.ad) + '</th>'; }).join('')
-        + '</tr><tr>' + V.takozlar.map(function(){ return '<th class="ayir">X</th><th>Y</th><th>Z</th>'; }).join('') + '</tr></thead><tbody>';
+      // Her takozun X · Y · Z bloğu bir sonrakinden bir sütunluk boşlukla ayrık (Canlı not 2009: "Her
+      // takoz çiftini ayır … Arada bir sütun kadar boşluk olsun."): iki başlık satırında ve her yük
+      // durumunda; Yük durumu ile ilk takoz arasında boşluk yok
+      var BOSLUK = '<td class="bosluk"></td>';
+      h += '<h3>Sehim [mm]</h3><div class="kap bloklu"><table class="izg"><thead><tr><th class="sol yuk" rowspan="2">Yük durumu</th>'
+        + V.takozlar.map(function(t, m){ return (m ? BOSLUK : '') + '<th colspan="3" class="grup" title="' + esc(tt[m] || '') + '">' + esc(t.ad) + '</th>'; }).join('')
+        + '</tr><tr>' + V.takozlar.map(function(t, m){ return (m ? BOSLUK : '') + '<th>X</th><th>Y</th><th>Z</th>'; }).join('') + '</tr></thead><tbody>';
       vaka.forEach(function(va, q){
         h += '<tr><td class="sol yuk">' + esc(va) + '</td>';
-        for(var m = 0; m < V.takozlar.length; m++) for(var a = 0; a < 3; a++) h += '<td' + (a ? '' : ' class="ayir"') + '>' + s(deger(q, m, a), 2) + '</td>';
+        for(var m = 0; m < V.takozlar.length; m++){
+          if(m) h += BOSLUK;
+          for(var a = 0; a < 3; a++) h += '<td>' + s(deger(q, m, a), 2) + '</td>';
+        }
         h += '</tr>';
       });
       h += '</tbody></table></div><h3>Modlar</h3><div class="kap dar"><table class="izg"><thead><tr><th class="sol">Mod</th>'
