@@ -414,12 +414,14 @@ function _mntParamEleme(node, A){
 }
 // Bölümün durumu yalnız aralıktan (çözümden bağımsız — ÇÖZÜMDEN BAĞIMSIZ): boş uç eksik bandına
 // girer (kullanıcıya sorulur); geçersiz aralık bölümde işaretli, sebebi bölümün notunda.
+// Bandın satırı YALNIZ DURUM, tek satır (Canlı Not 1009: *"Alt satıra inmesin, bir satırda
+// halledelim"*) — eskiden ardından sonucu da yazıyordu (": aday tipler elenmez"), satır ikiye iniyordu.
 function _mntParamSehimDurumu(Y){
   if(!Y.M.tak.length) return null;
-  var d=Y.E.aralik.d, sonuc=': aday tipler elenmez.';
-  if(d==='bos') return _mntDurum('eksik', 'eksik', 'Aralık boş'+sonuc);
-  if(d==='alt') return _mntDurum('eksik', 'eksik', 'En az boş'+sonuc);
-  if(d==='ust') return _mntDurum('eksik', 'eksik', 'En çok boş'+sonuc);
+  var d=Y.E.aralik.d;
+  if(d==='bos') return _mntDurum('eksik', 'eksik', 'Aralık boş.');
+  if(d==='alt') return _mntDurum('eksik', 'eksik', 'En az boş.');
+  if(d==='ust') return _mntDurum('eksik', 'eksik', 'En çok boş.');
   if(d!=='tamam') return _mntDurum('eksik', 'geçersiz', '', '', false);
   return _mntDurum('ok', '');
 }
