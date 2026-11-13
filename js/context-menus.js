@@ -6,7 +6,8 @@
 // alt · sol · sağ) · port düzeni (portlu bileşende) · Sil. Seçili değilse bileşen seçilir; Çoğalt,
 // Kopyala, Boyut, Ad ve Sil SEÇİMİN TAMAMINA uygulanır (kısayollarla aynı işlev). Menü her açılışta
 // durumdan kurulur (seçili boyut ve ad konumu basılı; silinmez tipte Sil kapalı, sebebi ipucunda).
-// Kapı: bilesen-menusu.test.js.
+// Sağ tık bileşen penceresini AÇMAZ ve konusunu DEĞİŞTİRMEZ (Canlı Not 156); pencereyi Aç açar.
+// Kapı: bilesen-menusu.test.js + sag-tik-pencere.test.js.
 // ============================================================================
 var nodeContextMenu = null;
 var nodeContextTarget = null;
@@ -103,10 +104,11 @@ function showNodeContextMenu(e, node) {
   hidePortContextMenu();
   if(typeof hideLabelContextMenu === 'function') hideLabelContextMenu();
   if(!nodeContextMenu || !nodeContextMenu.isConnected) createNodeContextMenu();
-  // Seçili değilse bileşen seçilir; seçimin içindeyse seçim korunur (işlem seçime uygulanır)
+  // Seçili değilse bileşen seçilir; seçimin içindeyse seçim korunur (işlem seçime uygulanır).
+  // Sağ tık yalnız menüyü açar: pencere ne açılır ne konusunu değiştirir (Canlı Not 156) — açan Aç.
   if(typeof selectedNodes !== 'undefined' && selectedNodes.indexOf(node) < 0 && typeof clearSelection === 'function'){
     clearSelection();
-    if(typeof addToSelection === 'function') addToSelection(node);
+    if(typeof addToSelection === 'function') addToSelection(node, { pencere: false });
   }
   nodeContextTarget = node;
   nodeContextMenu.innerHTML = veBilesenMenuHTML(node, _veBmSecim(node));
@@ -144,8 +146,9 @@ function veBilesenMenuEylem(eylem, node){
       if(node.type === 'mount-analysis' && typeof veMntOpenEditor === 'function'){ veMntOpenEditor(node.id); return true; }
       if(node.type === 'fead-analysis' && typeof veFeadOpenEditor === 'function'){ veFeadOpenEditor(node.id); return true; }
       if(typeof veTekTikEylem === 'function' && veTekTikEylem(node)) return true;
-      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+      // Önce konu, sonra açılış (çift tıkın sırası): sütunu açan çağrı konuyu kadrajda tutar.
       if(typeof showNodeProperties === 'function') showNodeProperties(node);
+      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
       return true;
     case 'adlandir': return veBilesenAdDuzenle(node);
     case 'cogalt': return (typeof veSeciliCogalt === 'function') ? veSeciliCogalt() : false;

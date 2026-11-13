@@ -45,17 +45,20 @@ function updatePortStatus(nodeId) {
   if(inPort) inPort.classList.toggle('connected', hasInput);
 }
 
-function addToSelection(node) {
+// opt.pencere === false: seçim değişir, PENCERE DEĞİŞMEZ — sağ tık (kullanıcı 2026-11-11, Canlı
+// Not 156: "Sağ tıklayınca sağda pencere açılıyor sanki sol tık yapmışım gibi"). Bileşen menüsü
+// seçime uygulanır; pencere kapalıysa kapalı, açıksa konusuyla kalır. Sol tık, Ctrl+tık ve
+// sürükleme içeriği eskisi gibi değiştirir. Kapı: sag-tik-pencere.test.js.
+function addToSelection(node, opt) {
   if(selectedNodes.indexOf(node) === -1) {
     selectedNodes.push(node);
   }
   var el = document.getElementById(node.id);
   if(el) el.classList.add('selected');
-  
-  if(selectedNodes.length === 1) {
-    showNodeProperties(node);
-  } else {
-    showMultipleSelection();
+
+  if(!(opt && opt.pencere === false)) {
+    if(selectedNodes.length === 1) showNodeProperties(node);
+    else showMultipleSelection();
   }
   // KUTUSUZ DÜĞÜMLERİN "seçili" İŞARETİ. Yukarıdaki `classList.add` bir kutu
   // varsayıyor; FEAD kasnaklarının kanvasta kutusu YOK, o yüzden onlarda

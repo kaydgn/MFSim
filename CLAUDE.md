@@ -993,7 +993,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sağ) · port düzeni (portlu bileşende) · Sil (silinmez tipte kapalı, sebebi ipucunda); işlem SEÇİMİN
   tamamına, kısayolun işlevinden (`veSeciliCogalt` · `veSeciliKopyala` · `deleteSelectedNodes`). Sağ tık
   TEK bağlayıcıdan (`veNodeSagTik`): createNode ve restoreState — örnekten ve geri-al'dan gelen bileşende
-  sağ tık hiçbir şey açmıyordu. Kapı: `bilesen-menusu.test.js` + `bilesen-menusu.spec.js`.
+  sağ tık hiçbir şey açmıyordu. **Sağ tık yalnız menüyü açar** (kullanıcı 2026-11-11, Canlı Not 156:
+  *"Sağ tıklayınca sağda pencere açılıyor sanki sol tık yapmışım gibi"*): seçilmeyen bileşen seçilir ama
+  pencere açılmaz, açıksa konusu değişmez (`addToSelection(n, { pencere: false })`); pencereyi menünün Aç'ı
+  açar; kayıt turu (Ctrl+S, otomatik yedek) pencereyi seçimden değil konusundan kurar. Kapı:
+  `bilesen-menusu.test.js` + `bilesen-menusu.spec.js` + `sag-tik-pencere.test.js` +
+  `subtopology-keepview.test.js` → *KONU*.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
   olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler
