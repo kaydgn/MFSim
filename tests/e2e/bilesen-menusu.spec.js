@@ -74,5 +74,45 @@ test('BİLEŞEN MENÜSÜ: sağ tık menüyü açar ve seçer; Büyük büyütür
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => nodes.length)).toBe(once);
+  // Ctrl+Z YALNIZ silmeyi geri alır: silmeden önceki adlandırma yerinde (silme bir geri-al
+  // adımı — eskiden yığına yazılmıyordu, Ctrl+Z adlandırmayı da geri alıyordu)
+  await expect(page.locator('#' + m.id + ' .ve-node-label')).toHaveText('Ana motor');
+  expect(hatalar).toEqual([]);
+});
+
+// SAĞ TIK PENCEREYİ SÜRMEZ (kullanıcı 2026-11-11, Canlı Not 156: "Sağ tıklayınca sağda pencere
+// açılıyor sanki sol tık yapmışım gibi"). Eski hâl: Çözücü açıkken Motor'a sağ tık pencereyi
+// Motor'a çeviriyordu. Birim tarafı: tests/unit/sag-tik-pencere.test.js.
+test('SAĞ TIK PENCEREYİ SÜRMEZ: kapalı pencere kapalı, açık pencere konusunda; Aç açar, sol tık değiştirir', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  const menu = page.locator('#ve-node-context-menu');
+  const baslik = page.locator('#ve-properties-title');
+  // pencere kapalı: sağ tık yalnız menüyü açar
+  let m = await kutu(page, 'Motor');
+  await page.mouse.click(m.x, m.y, { button: 'right' });
+  await expect(menu).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator('#ve-properties-overlay')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  // Çözücü çift tıkla açık; Motor'a sağ tık pencereyi Çözücü'de bırakır, menü Motor'a uygulanır
+  const c = await kutu(page, 'Çözücü');
+  await page.mouse.dblclick(c.x, c.y);
+  await expect(baslik).toHaveText('Çözücü');
+  m = await kutu(page, 'Motor');
+  await page.mouse.click(m.x, m.y, { button: 'right' });
+  await expect(menu).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(baslik).toHaveText('Çözücü');
+  expect(await page.evaluate(() => selectedNodes.map((n) => n.id))).toEqual([m.id]);
+  // menünün Aç'ı Motor'un penceresini açar
+  await menu.locator('[data-action="ac"]').click();
+  await expect(baslik).toHaveText('Motor');
+  // sol tık eskisi gibi: açık pencerede içeriği yerinde değiştirir
+  const c2 = await kutu(page, 'Çözücü');
+  await page.mouse.click(c2.x, c2.y);
+  await expect(baslik).toHaveText('Çözücü');
   expect(hatalar).toEqual([]);
 });

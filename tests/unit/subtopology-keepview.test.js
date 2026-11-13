@@ -219,6 +219,58 @@ describe('veSaveActiveTabStateKeepView — açık özellik penceresi korunur', (
     expect(addToSelection).toHaveBeenCalledWith(viewer);
     expect(veTogglePropertiesPanel).not.toHaveBeenCalledWith(true);
   });
+
+  /**
+   * KONU (Canlı Not 156): pencerenin konusu seçimden AYRI olabilir — sağ tık seçer ama
+   * pencereyi değiştirmez, boşluğa tık seçimi boşaltır ama pencere kalır. Tur pencereyi
+   * seçimden kursaydı Ctrl+S sağ tıklanan bileşeni pencereye getirirdi; seçim boşken
+   * pencere "Özellikler"e boşalıyordu (gerçek tarayıcıda ölçüldü, Tulga, Çözücü açık).
+   */
+  describe('KONU — pencere konusuyla geri kurulur, seçim ayrıca', () => {
+    const cozucu = { id: 'comp-20', type: 'mnt-solver' };
+    const param = { id: 'comp-28', type: 'mnt-parametric' };
+    afterEach(() => { delete global.veMufettisKonusu; });
+
+    test('sağ tıklanan seçili, pencere Çözücü’de: seçim geri gelir, pencere Çözücü’de kalır', () => {
+      global.nodes = [cozucu, param];
+      global.selectedNodes = [param];
+      global.veMufettisKonusu = jest.fn(() => cozucu);
+      global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+      veSaveActiveTabStateKeepView();
+
+      expect(addToSelection).toHaveBeenCalledWith(param, { pencere: false });
+      expect(showNodeProperties).toHaveBeenCalledWith(cozucu, { kip: 'tam' });
+      expect(showNodeProperties).not.toHaveBeenCalledWith(param);
+      expect(veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    });
+
+    test('seçim boşken pencere boşalmaz: konusu geri kurulur, seçime dokunulmaz', () => {
+      global.nodes = [cozucu, param];
+      global.selectedNodes = [];
+      global.veMufettisKonusu = jest.fn(() => cozucu);
+      global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+      veSaveActiveTabStateKeepView();
+
+      expect(addToSelection).not.toHaveBeenCalled();
+      expect(showNodeProperties).toHaveBeenCalledWith(cozucu, { kip: 'tam' });
+      expect(veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    });
+
+    test('konu seçimin kendisiyse yol eskisi: tek seçim, tek kurulum', () => {
+      global.nodes = [cozucu];
+      global.selectedNodes = [cozucu];
+      global.veMufettisKonusu = jest.fn(() => cozucu);
+      global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+      veSaveActiveTabStateKeepView();
+
+      expect(addToSelection.mock.calls).toEqual([[cozucu]]);
+      expect(showNodeProperties).not.toHaveBeenCalled();             // addToSelection kurar
+      expect(veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    });
+  });
 });
 
 describe('veSaveActiveTabState (TERMINAL) — davranış değişmedi', () => {

@@ -145,10 +145,13 @@ function veSaveActiveTabState() {
 var _veSubtopoNavRestoring = false;
 function veSubtopoNavRestoring() { return _veSubtopoNavRestoring; }
 
-// Açık özellik penceresini (tek seçili düğüm + görünürlük) yakalar; tur sonunda
-// AYNI düğümün panelini sessizce geri açan bir fonksiyon döndürür.
+// Açık özellik penceresini (tek seçili düğüm + görünürlük + pencerenin KONUSU) yakalar;
+// tur sonunda seçimi ve AYNI konunun panelini sessizce geri açan bir fonksiyon döndürür.
+// Konu seçimden ayrı olabilir — sağ tık seçer ama pencereyi değiştirmez (Canlı Not 156),
+// boşluğa tık seçimi boşaltır ama pencere kalır: pencere seçimden kurulsaydı tur onu
+// sağ tıklanan bileşene geçirir ya da boşaltırdı (ölçüldü: Ctrl+S'te "Özellikler").
 function _veCaptureOpenPanel() {
-  var nodeId = null, wasOpen = false;
+  var nodeId = null, konuId = null, kart = false, wasOpen = false;
   try {
     if(typeof selectedNodes !== 'undefined' && selectedNodes && selectedNodes.length === 1 && selectedNodes[0]) {
       nodeId = selectedNodes[0].id;
@@ -157,16 +160,30 @@ function _veCaptureOpenPanel() {
       var ov = document.getElementById('ve-properties-overlay');
       wasOpen = !!(ov && ov.classList && ov.classList.contains('visible'));
     }
+    var konu = (wasOpen && typeof veMufettisKonusu === 'function') ? veMufettisKonusu() : null;
+    if(konu) {
+      konuId = konu.id;
+      kart = (typeof _veMufettisKart !== 'undefined') && !!_veMufettisKart;
+    }
   } catch(e) {}
   return function _veRestoreOpenPanel() {
-    if(!nodeId) return;
+    if(!nodeId && !konuId) return;
     try {
       // Düğüm nesneleri veLoadTabState ile YENİDEN oluşturulur → id ile bul.
-      var n = (typeof nodes !== 'undefined' && nodes) ? nodes.find(function(x){ return x && x.id === nodeId; }) : null;
-      if(!n) return;                                  // düğüm silinmiş → sessizce geç
-      if(typeof clearSelection === 'function') clearSelection();
-      if(typeof addToSelection === 'function') addToSelection(n);   // → showNodeProperties
-      else if(typeof showNodeProperties === 'function') showNodeProperties(n);
+      var bul = function(id) {
+        return (id && typeof nodes !== 'undefined' && nodes) ? nodes.find(function(x){ return x && x.id === id; }) : null;
+      };
+      var n = bul(nodeId), k = bul(konuId);
+      if(!n && !k) return;                            // düğüm silinmiş → sessizce geç
+      var ayri = !!(k && k !== n);                    // pencerenin konusu seçimden ayrı
+      if(n) {
+        if(typeof clearSelection === 'function') clearSelection();
+        if(typeof addToSelection === 'function') {
+          if(ayri) addToSelection(n, { pencere: false });
+          else addToSelection(n);                     // → showNodeProperties
+        } else if(!ayri && typeof showNodeProperties === 'function') showNodeProperties(n);
+      }
+      if(ayri && typeof showNodeProperties === 'function') showNodeProperties(k, { kip: kart ? 'kart' : 'tam' });
       if(wasOpen && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
     } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] panel geri yükleme:', e && e.message); }
   };
