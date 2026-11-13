@@ -403,7 +403,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   NR yasası), CR H-takozda AMC-EO'nun 9 NR kodunun medyanı (`DIN_MEDYAN`); işaretli, çözülür,
   taramaya aday olmaz; statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
   ölçülmüş benzeri yok → eksik. Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --ap`).
-  Programdaki LMT-1433-00 ve "Mount 1" LASPAR'ın (aşağıda); 1433'ün A+P eşi (026 S 1, flanş) LASPAR'ın
+  Programdaki LMT-1433-00 ve LMT-1433-20 (FEA raporunun "Mount 1"i, Canlı Not 2011) LASPAR'ın (aşağıda); 1433'ün A+P eşi (026 S 1, flanş) LASPAR'ın
   künyesinde. Kapı: `mount-ap.test.js`.
 - `js/mount-laspar.js` + `assets/takoz/lp/` — **LASPAR takoz veritabanı** (kullanıcı 2026-11-11:
   *"Bu takozların marka-model vs bulup, bu markadan başka ne takoz bulabiliyorsan ekleyebilir misin?"*):
