@@ -3793,10 +3793,15 @@ function _mnt2DGather(liste){
     .filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
   var mounts=g.mounts.map(function(m){ return {id:m.id, name:m.name, x:num(m.x), y:num(m.y), z:num(m.z)}; })
     .filter(function(m){ return Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z); });
+  // Askı yayı: noktası ve kurulumdan statik boyu [mm] (çizim noktadan oturağına iner)
+  var askilar=(g.askilar||[]).map(function(a){
+      var L=_mntAskiStatikBoy(a);
+      return {id:a.id, name:a.name, x:num(a.x), y:num(a.y), z:num(a.z), L:(L>0 ? L : 80)}; })
+    .filter(function(a){ return Number.isFinite(a.x)&&Number.isFinite(a.y)&&Number.isFinite(a.z); });
   var mSum=0,sx=0,sy=0,sz=0;
   comps.forEach(function(c){ if(c.mass>0){ mSum+=c.mass; sx+=c.mass*c.x; sy+=c.mass*c.y; sz+=c.mass*c.z; } });
   var cg=mSum>0?{x:sx/mSum,y:sy/mSum,z:sz/mSum,m:mSum}:null;
-  return { comps:comps, mounts:mounts, cg:cg };
+  return { comps:comps, mounts:mounts, askilar:askilar, cg:cg };
 }
 // SVG metin/işaret yardımcıları — akademik, tek renkli (tema uyumlu) görünüm.
 // Yüz KAPSAYICIDAN miras (tek yüz, 2026-09-23): çizim arayüzün içinde Inter,
@@ -4204,6 +4209,42 @@ function _mnt2DFigure(o){
       if(!sade) items.push({cx:mx, cy:my, mr:mR, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:FS.etiket, bold:false});
     });
   });
+  // ASKI YAYI (2026-11-13): yandan ve önden noktasından şasideki oturağına düşey zikzak (boy
+  // L), üstten noktası halkayla; aynı piksele düşen sol ve sağ askı takozlar gibi yelpazelenir.
+  // Tık askıyı seçer (sihirbazın Şanzıman askısı adımı). Kapı: mount-wizard-aski.test.js → 2B.
+  var apts=(o.askilar||[]).map(function(a, ai){ var av=(o.vKey==='y'?a.y:a.z); return {a:a, ai:ai, cx:o.px(hval(a)), cy:o.pyFn(av)}; });
+  apts.forEach(function(p0, i){ if(p0._grp) return; var grp=[p0]; p0._grp=1;
+    apts.forEach(function(b, j){ if(j<=i || b._grp) return;
+      if(Math.abs(p0.cx-b.cx)<COIN && Math.abs(p0.cy-b.cy)<COIN){ grp.push(b); b._grp=1; } });
+    grp.forEach(function(pt, k){
+      var a=pt.a, ax=pt.cx+(grp.length>1?(k-(grp.length-1)/2)*19:0), ay=pt.cy, sec=seciliMi('aski', pt.ai);
+      var renk=sec ? 'var(--accent-primary)' : _MNT2D_C_MOUNT, cizgi=sec ? 1.8 : 1.3, g='';
+      var info=['Askı yayı — '+(a.name||'Askı yayı'), 'Konum  ('+veSayi(_mnt2DR(a.x))+'; '+veSayi(_mnt2DR(a.y))+'; '+veSayi(_mnt2DR(a.z))+') mm',
+        'Boy  '+veSayi(a.L, 1)+' mm'];
+      var kutu={ l:ax-6*iK, r:ax+6*iK, t:ay-6*iK, b:ay+6*iK };
+      if(o.vKey==='z'){
+        var by=o.pyFn(a.z-a.L), Ln=by-ay, w=4.5*iK;
+        if(Ln>6){
+          var n=6, u0=ay+Ln*0.14, u1=by-Ln*0.14, pts=[[ax, ay]];
+          for(var q=0;q<=n;q++) pts.push([ax+((q===0||q===n) ? 0 : (q%2 ? w : -w)), u0+(u1-u0)*q/n]);
+          pts.push([ax, by]);
+          g+='<polyline points="'+pts.map(function(pp){ return _mnt2DR(pp[0])+','+_mnt2DR(pp[1]); }).join(' ')+'" fill="none" stroke="'+renk+'" stroke-width="'+cizgi+'" stroke-linejoin="round"/>'
+           + '<line x1="'+_mnt2DR(ax-7*iK)+'" y1="'+_mnt2DR(by)+'" x2="'+_mnt2DR(ax+7*iK)+'" y2="'+_mnt2DR(by)+'" stroke="var(--text-secondary)" stroke-width="1.6"/>';
+          kutu={ l:ax-7*iK-1, r:ax+7*iK+1, t:ay-4*iK, b:by+2 };
+        }
+        g+='<circle cx="'+_mnt2DR(ax)+'" cy="'+_mnt2DR(ay)+'" r="'+_mnt2DR(2.6*iK)+'" fill="var(--bg-input)" stroke="'+renk+'" stroke-width="1.3"/>';
+      } else {
+        g+='<circle cx="'+_mnt2DR(ax)+'" cy="'+_mnt2DR(ay)+'" r="'+_mnt2DR(5*iK)+'" fill="var(--bg-input)" stroke="'+renk+'" stroke-width="'+cizgi+'"/>'
+         + '<circle cx="'+_mnt2DR(ax)+'" cy="'+_mnt2DR(ay)+'" r="'+_mnt2DR(1.6*iK)+'" fill="'+renk+'"/>';
+      }
+      if(sec) svg+=halka(ax, ay, 11*iK);
+      svg+='<g class="ve-mnt2d-aski"'+_mnt2DInfoAttr(info)+secAttr('aski', pt.ai)+'>'+g
+        + '<rect x="'+_mnt2DR(kutu.l)+'" y="'+_mnt2DR(kutu.t)+'" width="'+_mnt2DR(kutu.r-kutu.l)+'" height="'+_mnt2DR(kutu.b-kutu.t)+'" fill="transparent"/></g>';
+      engel.push(kutu);
+      if(!sade) items.push({cx:ax, cy:ay, mr:8*iK, above:true, text:(o.askiLabelFn ? o.askiLabelFn(a) : (a.name||'Askı yayı')),
+        color:'var(--text-secondary)', size:FS.etiket, bold:false});
+    });
+  });
   // bileşen CG (içi boş daire, kütleye göre boyut)
   o.comps.forEach(function(c, ci){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
     var info=[c.name||'Bileşen', 'CG  ('+veSayi(_mnt2DR(c.x))+'; '+veSayi(_mnt2DR(c.y))+'; '+veSayi(_mnt2DR(c.z))+') mm'];
@@ -4270,14 +4311,15 @@ var VE_MNT2B_IC = { sol:56, sag:12, ust:30, alt:38 };   // panelin içinde çer�
 var VE_MNT2B_ARA = 20, VE_MNT2B_ISARET = 22, VE_MNT2B_DAR = 0.36;
 function veMnt2BSayfa(veri, W, H, opt){
   opt=opt||{};
-  var comps=(veri&&veri.comps)||[], mounts=(veri&&veri.mounts)||[], cg=(veri&&veri.cg)||null;
-  if(!comps.length && !mounts.length) return null;
+  var comps=(veri&&veri.comps)||[], mounts=(veri&&veri.mounts)||[], cg=(veri&&veri.cg)||null, askilar=(veri&&veri.askilar)||[];
+  if(!comps.length && !mounts.length && !askilar.length) return null;
   var pay=opt.pay||{ sol:12, sag:12, ust:12, alt:12 };
   // kapsam: işaretler, gövdelerin kutusu, referans düzlemleri (y = 0, z = 0)
   var R={ x:[Infinity, -Infinity], y:[0, 0], z:[0, 0] };
   function ek(a, v){ if(isFinite(v)){ R[a][0]=Math.min(R[a][0], v); R[a][1]=Math.max(R[a][1], v); } }
   function nokta(p){ ek('x', p.x); ek('y', p.y); ek('z', p.z); }
   mounts.forEach(nokta); comps.forEach(nokta); if(cg) nokta(cg);
+  askilar.forEach(function(a){ nokta(a); ek('z', a.z-a.L); });
   comps.forEach(function(c){ if(!c.kutu) return;
     ek('x', c.x-c.kutu[0]/2); ek('x', c.x+c.kutu[0]/2); ek('y', c.y-c.kutu[1]/2); ek('y', c.y+c.kutu[1]/2);
     ek('z', c.z-c.kutu[2]/2); ek('z', c.z+c.kutu[2]/2); });
@@ -4324,7 +4366,8 @@ function veMnt2BSayfa(veri, W, H, opt){
           plotTop:p.t, plotH:p.b-p.t, plotL:IC.sol, plotR:IC.sag, px:px, pyFn:py, hKey:G.h, vKey:G.v,
           hMin:K[G.h]-(p.cx-p.l)/K.s, hMax:K[G.h]+(p.r-p.cx)/K.s,
           vMin:K[G.v]-(p.b-p.cy)/K.s, vMax:K[G.v]+(p.cy-p.t)/K.s,
-          mounts:mounts, comps:comps, cg:cg, cr:cr, compAbove:true, refV:0, refLabel:G.refLabel,
+          mounts:mounts, comps:comps, cg:cg, cr:cr, compAbove:true, refV:0, refLabel:G.refLabel, askilar:askilar,
+          askiLabelFn:function(a){ return kisa(a.name||'Askı yayı'); },
           axis:{ hLabel:G.hLabel, vLabel:G.vLabel }, yalin:true, izgarasiz:true, kirp:kirp,
           engel:[_mnt2DYaziKutu(bx, by, G.ad, 'end', FSb, true)],
           secili:opt.secili||null, secim:!!opt.secim,

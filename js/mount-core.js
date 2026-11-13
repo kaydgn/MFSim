@@ -2524,6 +2524,43 @@ var veMountCore = (function() {
     ]
   });
 
+  // ── 6×6 ISG 430 — ŞANZIMAN ASKILI (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer
+  // misin?"*): Adams sunumunun modeli — takoz konumları ve rijitlikleri, askı yaylarının noktaları,
+  // yay sabiti ve ön yükü, motor · şanzıman · braket ataletleri, toplam kütle 1.560,5 kg sunumdan.
+  // Bileşenlerin KÜTLESİ sunumda yok: dağılım Adams'ın beş kombinasyonunun 30 statik sehimine ve 30
+  // frekansına uyduruldu (ön yüksüz yayla — Adams'ın sonuçları ön yüksüz bir yayınki). Takozlar
+  // sunumun en düşük iletilebilirlikli kombinasyonu: önde Cone 38-40, ortada ve arkada Cone 39-40
+  // (sunumun tablosu AMC'nin değerleri). Askı sunumun ön yüküyle: tasarım konumunda 918,4 N
+  // (tasarım boyu 74 mm). Kapı: tests/unit/mount-adams-isg.test.js.
+  const _ISG_I = function(a){ return { Ixx:a[0]*1e-6, Iyy:a[1]*1e-6, Izz:a[2]*1e-6, Ixy:0, Ixz:0, Iyz:0 }; };
+  const _CONE3840 = { kstat:[1200, 780, 450], kdyn:[1440, 936, 540] };
+  const _CONE3940 = { kstat:[1340, 1340, 720], kdyn:[1608, 1608, 864] };
+  const ISG430_TORQUE = { idleRpm:700, cylinders:6 };
+  const ISG430_ASKILI_EXAMPLE = {
+    g: 9.81,
+    components: [
+      Object.assign({name:'Motor — ISG 430', mass:1002.0, cg:[1042.3, -11.6, -43], pointMass:false, kind:'mnt-motor'}, _ISG_I([4.75e7, 1.33e8, 1.14e8])),
+      Object.assign({name:'Şanzıman', mass:524.3, cg:[2154.4, -42.9, -302.4], pointMass:false, kind:'mnt-gearbox'}, _ISG_I([1.21e7, 3.37e7, 3.15e7])),
+      Object.assign({name:'Askı braketi', mass:8.1, cg:[2516.3, 4.5, 29], pointMass:false, kind:'mnt-bracket'}, _ISG_I([4.11e5, 2.40e4, 4.17e5])),
+      {name:'Şaft', mass:26.1, cg:[2699.6, 0, -219.55], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft'}
+    ],
+    mounts: [
+      Object.assign({name:'Sol ön takoz',   pos:[ 457.1,  -50.8, -419.9]}, _CONE3840),
+      Object.assign({name:'Sağ ön takoz',   pos:[ 457.1,   50.8, -419.9]}, _CONE3840),
+      Object.assign({name:'Sol orta takoz', pos:[1637.7, -356,   -150.9]}, _CONE3940),
+      Object.assign({name:'Sağ orta takoz', pos:[1637.7,  356,   -150.9]}, _CONE3940),
+      Object.assign({name:'Sol arka takoz', pos:[1747.7, -356,   -150.9]}, _CONE3940),
+      Object.assign({name:'Sağ arka takoz', pos:[1747.7,  356,   -150.9]}, _CONE3940)
+    ],
+    askilar: [
+      {name:'Sol askı yayı', pos:[2523.3, -350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:74},
+      {name:'Sağ askı yayı', pos:[2523.3,  350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:74}
+    ],
+    torque: ISG430_TORQUE,
+    cozucu: { zeta:0.02 },
+    loadCases: defaultLoadCases()
+  };
+
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
   // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
   // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
@@ -2842,6 +2879,36 @@ var veMountCore = (function() {
       ],
       topology: 'assets/examples/tta10askili_topoloji.json',
       model: TTA10_ASKILI_EXAMPLE
+    },
+    isg430askili: {
+      id: 'isg430askili',
+      name: '6×6 ISG 430 Takoz Analizi — şanzıman askılı',
+      vehicle: '6×6 ISG 430 askılı',
+      subtitle: '4 kütle · 6 takoz · 2 askı yayı',
+      description: 'ISG 430 · ' + _sayi(ISG430_TORQUE.cylinders) + ' silindir · şanzıman askılı',
+      specs: [
+        ['Kütle gövdesi', String(ISG430_ASKILI_EXAMPLE.components.length)],
+        ['Takoz', String(ISG430_ASKILI_EXAMPLE.mounts.length) + ' · ön 2 · orta 2 · arka 2'],
+        ['Askı yayı', String(ISG430_ASKILI_EXAMPLE.askilar.length) + ' · ' + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].k, 2) + ' N/mm · tasarım boyu '
+          + _sayi(ISG430_ASKILI_EXAMPLE.askilar[0].tasarimL) + ' mm'],
+        ['Toplam kütle', _toplamKg(ISG430_ASKILI_EXAMPLE)],
+        ['Rölanti · silindir', _sayi(ISG430_TORQUE.idleRpm) + ' d/dk · ' + _sayi(ISG430_TORQUE.cylinders) + ' → f_ateş '
+          + _sayi(ISG430_TORQUE.idleRpm / 60 * ISG430_TORQUE.cylinders / 2) + ' Hz'],
+        ['Takoz statik (Z)', (function(){
+          var z = ISG430_ASKILI_EXAMPLE.mounts.map(function(m){ return m.kstat[2]; });
+          return _aralik(z) + ' N/mm';
+        })()]
+      ],
+      tools: [
+        {type:'mnt-library',    at:[1005, 90]},
+        {type:'mnt-solver',     at:[1110, 90]},
+        {type:'mnt-wizard',     at:[1215, 90]},
+        {type:'mnt-report',     at:[1320, 90]},
+        {type:'mnt-2dview',     at:[1005,250]},
+        {type:'mnt-viewer',     at:[1110,250]}
+      ],
+      topology: 'assets/examples/isg430askili_topoloji.json',
+      model: ISG430_ASKILI_EXAMPLE
     },
     kutu: {
       id: 'kutu', kurgu: true,

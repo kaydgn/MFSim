@@ -123,7 +123,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
   *"Zaten aşağıda yazıyor"*; kapı `mount-wizard.test.js` → *TUVALDEKİ MODEL KARTI YOK*); Örnek alanının kartı
   BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de kaldıralım."*; kapı
-  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **İlk hâl** —
+  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **Şanzıman askısı Takozlar adımında** (kullanıcı 2026-11-13:
+  *"Programa 'askılı' seçeneğini entegre eder misin?"*): Askısız · Askılı; askılıda yaylar (ilk seçimde sol ve sağ),
+  bağlantı noktası, katalog yayı ya da k · L0 · Lc, kurulum ve karşılığı — Askı Yayı bileşeninin alanları; denetim
+  Çözücü'nün kapısı (`_mntAskiSorunlari`); askı ile takozun seçimi birbirini bırakır; masa 3B'de ve 2B'de çizer (2B:
+  yandan · önden zikzak, üstten halka); Modeli kur Askı Yayı bileşenlerini kurar ve günceller. Ayrı adımın talimatı
+  kullanıcının kararını bekliyor (talimat metni tabana yalnız onun kararıyla). Kapı: `mount-wizard-aski.test.js`. **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
@@ -427,8 +432,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
   katar. Pencere SONUÇ GÖSTERMEZ. Görünümler · Güç grubundaki yeri · raporun aksonometrisi askıyı noktasından
   oturağına zikzakla çizer (yazısız). Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
-  taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Kapı:
-  `mount-aski.test.js` + `mount-aski-secim.test.js` + `mount-duyarlilik.test.js`.
+  taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Örnek `isg430askili`:
+  Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); bileşen kütleleri sunumda
+  yok, Adams'ın 60 sonucuna uydurma; askı sunumun ön yüküyle. Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
+  `mount-duyarlilik.test.js` + `mount-adams-isg.test.js` (fikstür `tests/fixtures/adams-isg430.js`).
 - **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
   kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
   kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer
