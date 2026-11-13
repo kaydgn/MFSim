@@ -2733,14 +2733,7 @@ function _mwMasaHTML(k, c){
   }
   // 3B'nin göstergesi modelden (braket · nokta kütle var mı): çizimle _mwMasaCiz doldurur
   // düz görünüşte gövde eşdeğer kutusunun çerçevesiyle (Canlı Not 79)
-  var lejant = (tur === 'figur' && !uc)
-    ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-kutu"></i>Gövde</span>'
-      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
-      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde CG</span>'
-      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
-      + (_mwAskilar(_mwState).length ? '<span class="ve-fw-lj"><svg class="ve-mw-lj-ak" viewBox="0 0 10 10" aria-hidden="true">'
-        + '<path class="ve-ak-lj-aski" d="M5 0.5 V2 L2 3.2 L8 4.6 L2 6 L8 7.4 L5 8.4 V9.5"/></svg>Askı yayı</span>' : '')
-    : '';
+  var lejant = (tur === 'figur' && !uc) ? _mw2BLejantHTML(null) : '';
   return '<div class="ve-fw-masa" id="ve-mw-masa" data-adim="' + k + '" data-tur="' + tur + '"'
     + (tur === 'figur' ? (uc ? ' data-gorunus="3b"' : ' data-gorunus="2b" data-gezin="1" tabindex="0"') : '') + '>'
     + '<div class="ve-fw-masa-cizim" id="ve-mw-masa-cizim"></div>'
@@ -2757,6 +2750,17 @@ function _mwAksoDugumler(st){
     if(n.rol === 'takoz' || n.rol === 'aski') return _mwVar(d.x) && _mwVar(d.y) && _mwVar(d.z);
     return _mwVar(d.cgx) && _mwVar(d.cgy) && _mwVar(d.cgz) && _mwNum(d.mass) > 0;
   }).map(function(n){ n.id = 'mw:' + n.key; return n; });
+}
+// 2B göstergesi: braketin çerçevesi (levhanın parçaları, Canlı Not 164) varsa Braket da
+function _mw2BLejantHTML(veri){
+  var br = !!(veri && (veri.comps || []).some(function(c){ return c.parca; }));
+  return '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-kutu"></i>Gövde</span>'
+    + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
+    + (br ? '<span class="ve-fw-lj"><svg class="ve-mw-lj-ak" viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-br" d="M2 1.5 H4.6 V6.6 H8.8 V9 H2 Z"/></svg>Braket</span>' : '')
+    + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde CG</span>'
+    + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
+    + (_mwAskilar(_mwState).length ? '<span class="ve-fw-lj"><svg class="ve-mw-lj-ak" viewBox="0 0 10 10" aria-hidden="true">'
+      + '<path class="ve-ak-lj-aski" d="M5 0.5 V2 L2 3.2 L8 4.6 L2 6 L8 7.4 L5 8.4 V9.5"/></svg>Askı yayı</span>' : '');
 }
 // 3B göstergesi — masanın dilinde (cümle düzeni), çizimin renkleriyle.
 function _mwAksoLejantHTML(m){
@@ -2849,6 +2853,8 @@ function _mwMasaCiz(c){
   var r = (typeof veMnt2BSayfa === 'function')
     ? veMnt2BSayfa(f.veri, o.w, o.h, { kamera:_mwGor[_mwGorAnahtar()] || null, secili:f.secili, secim:true, pay:_mwMasaPay(o, k), kimlik:'ve-mw2b' }) : null;
   _mw2BSon = r;
+  var lej2 = document.getElementById('ve-mw-masa-lej');
+  if(lej2) lej2.innerHTML = _mw2BLejantHTML(r ? f.veri : null);
   if(!r){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
       ? 'Model boş. ' + veYon('Örnek ya da STEP dosyası seçin.')
