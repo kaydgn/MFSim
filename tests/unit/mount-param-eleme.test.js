@@ -244,7 +244,7 @@ describe('PENCERE — beklenen takoz sehimi', () => {
     expect(P._mntParamYeni(n).A.map((a) => a.key)).toContain(e.key);
   });
 
-  test('ÖZEL KOMBİNASYON: elenen tip aramada yok, sayılmaz, eklenmez; kayıtta kalır ve aralık değişince geri gelir', () => {
+  test('ÖZEL KOMBİNASYON: elenen tip listede ve aramada yok, sayılmaz, eklenmez; kayıtta kalır ve aralık değişince geri gelir', () => {
     const { n, T } = cozKur('tulga', { adaylarKip: 'ozel', sehim: { alt: 3, ust: 5 } });
     const Y = P._mntParamYeni(n), G = Y.M.G;
     const elenen = Y.E.elenen[0].key, kalan = Y.A.map((a) => a.key);
@@ -259,7 +259,11 @@ describe('PENCERE — beklenen takoz sehimi', () => {
     expect(n.data.adaylar[G[0].anahtar]).toEqual(sira);                                 // elenen kayıtta kaldı
     expect(P._mntParamYeni(n).say).toEqual([2, 0, 0]);
     const d = dom(P.getMntParamPropertiesHTML(n));
-    expect([...d.querySelectorAll('#ve-mnt-param-oz-pe-1 li button')].map((b) => b.dataset.key).sort()).toEqual([kalan[0], kalan[1]].sort());
+    // seçim listesi (Canlı Not 1012): seçili satırlar yalnız kalan tipler; elenen tipin satırı yok
+    const L = d.querySelector('#ve-mnt-param-sec-pe-1');
+    expect([...L.querySelectorAll('.ve-prm-sec-o[aria-checked="true"]')].map((b) => b.dataset.key).sort()).toEqual([kalan[0], kalan[1]].sort());
+    expect([...L.querySelectorAll('.ve-prm-sec-o')].every((b) => kalan.includes(b.dataset.key))).toBe(true);
+    expect(L.querySelector('[data-key="' + elenen + '"]')).toBeNull();
     expect(d.querySelector('#ve-mnt-param-oz-n-pe-1').textContent).toBe('2 tip');
     delete n.data.sehim;                                                                // aralık yok: geri gelir
     expect(P._mntParamYeni(n).say).toEqual([3, 0, 0]);
