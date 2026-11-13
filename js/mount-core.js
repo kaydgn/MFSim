@@ -3210,31 +3210,6 @@ var veMountCore = (function() {
     return problems;
   }
 
-  // ═══════════════════ Çözücü ayarı — geçici rejim (Canlı Not 3002) ═══════════════════
-  // Statik denge ayarı solveCaseNL'in yanında (STATIK_VARSAYILAN · statikAyar). Geçici rejim:
-  // şokta Newmark ortalama ivme, periyot başına 40 adım, adım başına en çok 20 Newton. Aralık
-  // dışı sayı sınıra kırpılır, tanınmayan seçenek varsayılana düşer. Kapı: mount-cozucu-ayar.test.js.
-  const GECICI_ENTEGRATORLER = ['newmark-ort', 'newmark-dogrusal', 'hht', 'gen-alfa'];
-  const GECICI_VARSAYILAN = { entegrator:'newmark-ort', alfa:-0.05, rhoInf:0.8, adimPeriyot:40,
-                              newtonTol:NL_RTOL, newtonMaxIter:SHOCK_NEWTON_MAXITER };
-  function _ayarSayi(v, vars, alt, ust, tam){
-    const n = Number(v);
-    if(v === null || v === undefined || v === '' || !Number.isFinite(n)) return vars;
-    const k = Math.min(ust, Math.max(alt, n));
-    return tam ? Math.round(k) : k;
-  }
-  function geciciAyar(ham){
-    const h = ham || {}, V = GECICI_VARSAYILAN;
-    return {
-      entegrator: GECICI_ENTEGRATORLER.indexOf(h.entegrator) >= 0 ? h.entegrator : V.entegrator,
-      alfa: _ayarSayi(h.alfa, V.alfa, -1/3, 0),
-      rhoInf: _ayarSayi(h.rhoInf, V.rhoInf, 0, 1),
-      adimPeriyot: _ayarSayi(h.adimPeriyot, V.adimPeriyot, 4, 400, true),
-      newtonTol: _ayarSayi(h.newtonTol, V.newtonTol, 1e-14, 1e-2),
-      newtonMaxIter: _ayarSayi(h.newtonMaxIter, V.newtonMaxIter, 1, 200, true)
-    };
-  }
-
   // ═══════════════════ Varsayılan yük durumu şablonu (SPEC 4.4) ═══════════════════
 
   // Katsayılar şirket yük kitabından düzenlenebilir; başlangıç temsili.
@@ -4282,8 +4257,6 @@ var veMountCore = (function() {
     mountHasCurve, anyCurve, lawCatalogMismatch,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
-    // Çözücü ayarı — statik denge ve geçici rejim
-    GECICI_VARSAYILAN, geciciAyar,
     // Sabitler
     TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO, DEFAULT_ZETA
   };
