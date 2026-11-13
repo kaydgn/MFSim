@@ -842,6 +842,12 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
 - **Kalıp açıklama yuvası taşımaz.** Bir üretici (kit, kabuk, kart) `not`,
   `alt` ya da `aciklama` alanı açarsa her kullanan onu doldurur: başlangıç
   kitinin beş yuvası iki modülde 15 açıklama üretti.
+- **Bölüm başlığının yanında açıklama YOK** (kullanıcı 2026-11-13, Canlı Not 161:
+  *"neden sağ tarafta 'isteğe bağlı · hesaba girmez' gibi garip açıklamalar var?"*):
+  başlığın yanında yalnız birim ya da veri; alanın hesaptaki yeri (isteğe bağlı ·
+  opsiyonel · hesaba girmez) sözlüğün `aciklama` işareti. Takoz penceresinin tek
+  değerli alanı föyün satırında, etiket solda (`_mntSatirFoy`). Kapı:
+  `metin-dili.test.js` + `mount-pencere.test.js` → *KAPASİTE · DURDURUCU SATIRDA*.
 - **TEK İSTİSNA — Takoz Başlangıç Sihirbazı'nın TALİMAT bölümü** (kullanıcı
   2026-11-09, Canlı Not 93: *"talimatları yazalım … Kullanıcıya referans olur.
   Adım eksikliklerini de ekleyelim"*): adım listesinin altında açık adımın 3–4

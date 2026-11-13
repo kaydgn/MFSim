@@ -43,7 +43,13 @@ describe('sözlük — aday işaretleri', () => {
     ['Kasnakları çizime sürükleyin, sonra tablodan sıralayın.', 'tarif'],
     ['Kayış yolu henüz boş ve model kurulunca her şey çizimde değişir.', 'uzun'],
     // numaralı başlıktan sonraki vurgu yine vurgudur
-    ['2) DİRENÇ KUVVETLERİ: eğim kuvveti ASLA ihmal edilmez', 'gelistirme']
+    ['2) DİRENÇ KUVVETLERİ: eğim kuvveti ASLA ihmal edilmez', 'gelistirme'],
+    // alanın hesaptaki yeri — bölüm başlığının yanındaki ek (Canlı Not 161)
+    ['isteğe bağlı · hesaba girmez', 'aciklama'],
+    ['İsteğe bağlı', 'aciklama'],
+    ['Senaryolar bileşeni mevcut (opsiyonel)', 'aciklama'],
+    ['Kapasite zorunlu değildir', 'aciklama'],
+    ['fiziğe girmez', 'aciklama']
   ])('%p → %s', (metin, isaret) => {
     expect(T.isaretle(metin, 'arayuz')).toContain(isaret);
   });
@@ -57,7 +63,9 @@ describe('sözlük — aday işaretleri', () => {
     'Kayış boyu serbest — tıkla: sabit', 'Yön gülü — sürükle: taşı · çift tık: varsayılan yer',
     'Tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Esc: kapat',
     // tire ile bağlı bileşik terim emir kipi değildir
-    'Boş hücrede son değer (örnekle-ve-tut)'
+    'Boş hücrede son değer (örnekle-ve-tut)',
+    // şimdiki zaman bir modelin durumudur, genel kural değil
+    'Atalet sıfırdan büyük olmalı; hesaba girmiyor.', 'katalogdan', 'yok'
   ])('%p işaretlenmez', (metin) => {
     expect(T.isaretle(metin, 'arayuz')).toEqual([]);
   });
@@ -69,6 +77,9 @@ describe('sözlük — aday işaretleri', () => {
     expect(T.isaretle('Gerginlik açıklık boyunca sabit kabul edilmiş ve sürtünme katsayısı Gates kalibrasyonundandır.', 'belge')).toEqual([]);
     expect(T.isaretle('Kol çalışma açısını program seçmez.', 'kilavuz')).toEqual(['gerekce']);
     expect(T.isaretle('Bu bir SEÇİCİ değil, bir KAPIDIR', 'belge')).toEqual(['gelistirme']);
+    // alanın hesaptaki yeri kılavuzun açıklaması, belgenin mühendislik hükmüdür
+    expect(T.isaretle('Hesaba girmez', 'kilavuz')).toEqual([]);
+    expect(T.isaretle('Statik sehim hesaba katılmaz (§8.5–§8.6).', 'belge')).toEqual([]);
   });
 });
 

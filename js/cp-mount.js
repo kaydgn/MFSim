@@ -1188,9 +1188,11 @@ function _mntDurumKutu(ic, d){
 // ── FÖY TABLOSU — eksen başına bir satır: girdi ve ondan türetilen yan yana ─
 // `ve-izgara`: veri ızgarası kuralı (kullanıcı kararı 13·B) — girdi dinlenmede
 // kutusuz, fare üstünde ve yazarken kutulu. Sütun oranı `<colgroup>`da VERİ.
+// Hiçbir sütun başlık (`b`) taşımıyorsa başlık satırı yok (_mntSatirFoy).
 function _mntFoyAc(sutunlar, aria, sinif){
   var h='<table class="ve-mnt-foy ve-izgara'+(sinif?' '+sinif:'')+'"'+(aria?' aria-label="'+_mntEsc(aria)+'"':'')+'><colgroup>';
   sutunlar.forEach(function(c){ h+='<col'+(c.gen?' style="width:'+c.gen+'"':'')+'>'; });
+  if(!sutunlar.some(function(c){ return c.b!=null; })) return h+'</colgroup><tbody>';
   h+='</colgroup><thead><tr>';
   sutunlar.forEach(function(c){
     h+='<th'+(c.sinif?' class="'+c.sinif+'"':'')+(c.ipucu?' title="'+_mntEsc(c.ipucu)+'"':'')+'>'+c.b+'</th>';
@@ -1205,7 +1207,25 @@ function _mntFoyGir(node, key, aria, opt){
   return '<td class="gir'+(zor&&bos?' zor':'')+(opt.tahmin?' tah" title="Tahmini':'')+'"><input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
     + ' value="'+_mntEsc(v)+'"'+(zor?' data-zorunlu':'')
     + ((opt.ph||zor) ? ' placeholder="'+_mntEsc(opt.ph||'zorunlu')+'"' : '')
+    + (opt.ipucu ? ' title="'+_mntEsc(opt.ipucu)+'"' : '')
     + ' aria-label="'+_mntEsc(aria)+(opt.tahmin?' · tahmini':'')+'" onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></td>';
+}
+// FÖYÜN SATIRI — ad hücresi + değer hücreleri (_mntFoyGir · _mntFoyCoz). `icin`: adın
+// bağlı olduğu girdinin kimliği (ada tık girdiye gider).
+function _mntFoySatir(ad, hucreler, icin){
+  return '<tr><td>'+(icin ? '<label for="'+icin+'">'+ad+'</label>' : ad)+'</td>'+hucreler+'</tr>';
+}
+// TEK DEĞERLİ ALAN SATIRDA (Canlı Not 161: *"Bunlar neden aşağıda"*): etiket solda,
+// girdi değer sütununda — Rijitlik föyünün satırıyla aynı yükseklik, kıl çizgi ve sağa
+// yaslı rakam; başlık satırı yok, bölümü başlığı adlandırır. Kimlik ve yazıcı alanınki
+// (`ve-mnt-<alan>-<düğüm>` · veMntSet). alanlar: [{ key, etiket, aria, opt }] — `opt`
+// _mntFoyGir'inki (ph · ipucu · zorunlu).
+function _mntSatirFoy(node, alanlar, aria){
+  var h=_mntFoyAc([{ gen:'77%' }, { gen:'23%' }], aria, 've-mnt-foy--satir');
+  alanlar.forEach(function(a){
+    h+=_mntFoySatir(a.etiket, _mntFoyGir(node, a.key, a.aria, a.opt), 've-mnt-'+a.key+'-'+node.id);
+  });
+  return h+_MNT_FOY_KAPA;
 }
 // Türetilen hücre — oyuk zemin; kimlik verilirse yerinde tazelenir.
 function _mntFoyCoz(ic, opt){
@@ -1511,7 +1531,7 @@ function _mntEngineSection(node){
   f+='<tr><td>Maks. güç [kW]</td>'+_mntFoyGir(node, 'Pmax', 'Maks. güç', { ph:'156.6' })+_mntFoyGir(node, 'PmaxRpm', 'Maks. güçte devir', { ph:'2300' })+'</tr>';
   f+='<tr><td>Rölanti</td><td class="sf">—</td>'+_mntFoyGir(node, 'idleRpm', 'Rölanti devri', { zorunlu:true })+'</tr>';
   f+='<tr><td>Silindir sayısı</td>'+_mntFoyGir(node, 'cylinders', 'Silindir sayısı', { zorunlu:true })+'<td class="sf">—</td></tr>';
-  h+=_mntBolum('Motor noktaları', P ? 'katalogdan dolar' : '', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Motor noktaları', '', f+_MNT_FOY_KAPA);
   h+=_mntBolum('Tork zinciri', '', _mntZincirHTML(node.id));
   var fa=_mntAtesleme(d);
   h+=_mntBolum('Ateşleme', 'f = (N/60)·(z/2)',
@@ -1734,7 +1754,7 @@ function _mntGearboxSection(node){
       + _mntFoyCoz(tmil[v[0]]!=null ? _mntS(tmil[v[0]],0) : '—', { ay:true, id:'ve-mnt-tmil-'+v[0]+'-'+node.id })+'</tr>';
   });
   var h=_mntSanzimanKatalogHTML(node);
-  h+=_mntBolum('Vites oranları', 'ileri tork: 1. vites · geri tork: geri', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Vites oranları', '', f+_MNT_FOY_KAPA);
   h+=_mntBolum('Konvertör', '',
       _mntIzgara(2, _mntAlan(node, 'Rstall', 'Stall oranı', { zorunlu:true })
                   + _mntOku('İleri mil torku <u>[N·m]</u>', Z.ileri!=null ? _mntS(Z.ileri,0) : '—', { id:'ve-mnt-tileri-'+node.id })));
@@ -2182,13 +2202,15 @@ function _mntTakozTipGovde(node){
   h+=_mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA);
   h+='<div id="ve-mnt-yasa-'+node.id+'" data-tazele>'+_mntMountCurveNote(node)+'</div>';
   // Kapasite hesabın GİRDİSİ DEĞİL, raporun kapasite kullanımını ölçtüğü
-  // sınır: çözücü onu görmez.
-  h+=_mntBolum('Kapasite', 'isteğe bağlı · hesaba girmez', _mntIzgara(2,
-      _mntAlan(node, 'maxLoad', 'Maks. eksenel yük <u>[kg]</u>', { ph:'katalogdan' })));
+  // sınır: çözücü onu görmez. Başlığın yanında açıklama YOK (Canlı Not 161: *"neden sağ
+  // tarafta 'isteğe bağlı · hesaba girmez' gibi garip açıklamalar var?"*) — açıklama
+  // kılavuzda; alan föyün satırında (_mntSatirFoy).
+  h+=_mntBolum('Kapasite', '', _mntSatirFoy(node,
+      [{ key:'maxLoad', etiket:'Maks. eksenel yük <u>[kg]</u>', aria:'Maks. eksenel yük', opt:{ ph:'katalogdan' } }], 'Kapasite'));
   // Yanal durdurucu — takozun yanal (Y) sehimi bu boşlukta metal-metal temasa oturur.
   // Takoz tipinin değil bağlantının özelliği: kütüphane uygulaması dokunmaz.
-  h+=_mntBolum('Durdurucu', 'isteğe bağlı', _mntIzgara(2,
-      _mntAlan(node, 'bosY', 'Yanal boşluk <u>[mm]</u>', { ph:'yok', ipucu:d.bosYKaynak })));
+  h+=_mntBolum('Durdurucu', '', _mntSatirFoy(node,
+      [{ key:'bosY', etiket:'Yanal boşluk <u>[mm]</u>', aria:'Yanal boşluk', opt:{ ph:'yok', ipucu:d.bosYKaynak } }], 'Durdurucu'));
   return h;
 }
 function _mntTakozKonumGovde(node, M){
@@ -6645,6 +6667,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntDugum: _mntDugum, _mntPencereKabuk: _mntPencereKabuk, _mntPencereHTML: _mntPencereHTML,
     _mntBolum: _mntBolum, _mntIzgara: _mntIzgara, _mntOku: _mntOku,
     _mntFoyAc: _mntFoyAc, _MNT_FOY_KAPA: _MNT_FOY_KAPA,
+    _mntFoyGir: _mntFoyGir, _mntFoySatir: _mntFoySatir, _mntSatirFoy: _mntSatirFoy, veMntSet: veMntSet,
     VE_MNT_ARAC_TIPLERI: VE_MNT_ARAC_TIPLERI,
     _mntAracGaranti: _mntAracGaranti,
     veMntKanvasBos: veMntKanvasBos,

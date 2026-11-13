@@ -305,7 +305,7 @@ describe('SÜRÜCÜ — motor ve çevrim DEPODAN (2026-09-28)', () => {
 describe('GÜÇ EĞRİSİ — sessiz sıfır yakalanıyor', () => {
   test('çevrim kW taşıyorsa eğri isteğe bağlı', () => {
     ornek();
-    expect(durum('ex-A_C').egr).toEqual({ d: 'bos', yazi: 'isteğe bağlı' });
+    expect(durum('ex-A_C').egr).toEqual({ d: 'bos', yazi: 'boş' });     // durum yazısı, açıklama değil (Canlı Not 161)
   });
 
   test('bir çevrim satırında kW yok ve eğri yok → EKSİK; köprü o satıra 0 kW yazıyor', () => {
