@@ -391,6 +391,9 @@ test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüy
         if ([[-3, 0], [3, 0], [0, -3], [0, 3]].some(([dx, dy]) => kahin(X + dx, Y + dy) !== k)) continue;
         t.piksel++;
         const u = document.elementFromPoint(sb.left + X, sb.top + Y), g = u && u.closest ? u.closest('g.ve-ak-g') : null;
+        // braketin köşebendi/kaidesi kutuların önünde çizilir (Canlı Not 164): ışın oracle'ı yalnız kutuları bilir
+        const br = g && C.m.govde.some((v) => v.braket && v.k === g.getAttribute('data-ak'));
+        if (br) { t.piksel--; continue; }
         if (!g || g.getAttribute('data-ak') !== k) t.yanlis++;
       }
       veMntWizRender();

@@ -676,7 +676,9 @@ test('Görünümler: kutunun arkasındaki takoz örtülü — tarayıcının isa
           const p = [t.x, t.y, t.z], pp = K.P(p), q = [c.F.ox + pp[0] * c.F.sc, c.F.oy + pp[1] * c.F.sc];
           if (kenarda(q)) return null;
           const pt = sv.createSVGPoint(); pt.x = q[0]; pt.y = q[1]; const s = pt.matrixTransform(M);
-          const e = document.elementFromPoint(s.x, s.y);
+          // yazılar (G · çip etiketleri) isabeti örtmez: kutuyu/takozu etiketin ALTINDAKİ çizim belirler (Canlı Not 164:
+          // braketin kenar payı değişince Asfat'ta G'nin yazısı T1'in noktasına düşüyordu)
+          const e = document.elementsFromPoint(s.x, s.y).find((x) => x.tagName.toLowerCase() !== 'text');
           return { k: t.k, sakli: sakli(p), govde: !!(e && e.closest('.ve-ak-hareket g.ve-ak-g')), yazi: !!sv.querySelector('.ve-ak-cip[data-ak="' + t.k + '"]') };
         }).filter(Boolean);
       }, [az, el]);
