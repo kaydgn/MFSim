@@ -419,6 +419,9 @@ var _GM_PENCERE_UST = [
 
 var _GM_COZUCU = [
   { k: 'yontem', bolum: 'Yöntem', ad: 'Yöntem', not: 'Çözüm modu ve sönüm oranı ζ.' },
+  { k: 'statik', bolum: 'Nonlineer çözüm', ad: 'Statik denge', not: 'Çözüm tekniği, doğrusal arama, yük artımı; altında Yakınsama ve Temas.' },
+  { k: 'dinamik', bolum: 'Modal', ad: 'Dinamik', not: 'Rijitlik tabanı; altında frekans yanıtının taraması.' },
+  { k: 'gecici', bolum: 'Zaman entegrasyonu', ad: 'Geçici rejim', not: 'Entegratör ve adımı; altında Newton yinelemesi.' },
   { k: 'hesapla', metin: 'Hesapla', ad: 'Hesapla', yer: 'sag', not: 'Bütün yük durumlarını ve modları çözer.' },
   { k: 'not', s: '.ve-fp-solve-not', ad: 'Durum notu', not: 'Toplam kütle, gövde ve takoz sayısı, son hesabın durumu.' }
 ];
@@ -1269,7 +1272,12 @@ function _gmSec11(){
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi (' + _gmS('cozucu') + '). Pencere '
     + 'sonucu göstermez — sonuç Sonuçlar sayfasında ve raporda (' + _gmB('rapor') + ').</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
-    [_gmN(_GM_COZUCU, 'yontem') + ' Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır']
+    [_gmN(_GM_COZUCU, 'yontem') + ' Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır'],
+    [_gmN(_GM_COZUCU, 'statik') + ' Statik denge', 'Nonlineer çözüm · Yakınsama · Temas',
+      'Çözüm tekniği yalnız eğrili takozda; temas her modelde'],
+    [_gmN(_GM_COZUCU, 'dinamik') + ' Dinamik', 'Modal · Frekans yanıtı',
+      'Rijitlik tabanı modal, frekans yanıtı, şok, sönüm ve duyarlılıkta ortak'],
+    [_gmN(_GM_COZUCU, 'gecici') + ' Geçici rejim', 'Zaman entegrasyonu · Newton yinelemesi', 'Şok darbesinin zaman çözümü']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAdimlar([
     _gmN(_GM_COZUCU, 'yontem') + ' <strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı '
@@ -1281,6 +1289,31 @@ function _gmSec11(){
     _gmN(_GM_COZUCU, 'not') + ' Hesapla’nın solundaki not toplam kütleyi, gövde ve takoz sayısını ve son '
       + 'hesabın güncel olup olmadığını söyler; sonucu <strong>Rapor</strong> bileşeninden okuyun.'
   ]);
+  h += _gmH3('Sayısal yöntemler', 'sayisal');
+  h += '<p>Her ayarın varsayılanı programın bugünkü çözümünü verir; değiştirilen ayar adının yanındaki '
+    + '<em>i</em>’de “Girilen değer” olarak görünür. Kullanılan ayarların tamamı raporun §8 girişindeki '
+    + '<strong>Sayısal çözüm ayarları</strong> tablosunda yazılıdır.</p>';
+  h += _gmAlanTablo('Statik denge', [
+    ['Çözüm tekniği', '<strong>Tam Newton–Raphson</strong>: her iterasyonda tanjant rijitlik, kuadratik yakınsama. '
+      + '<strong>Değiştirilmiş Newton–Raphson</strong>: tanjant artımın başında kurulur, doğrusal yakınsama. '
+      + '<strong>BFGS</strong>: ters tanjantın quasi-Newton güncellemesi', 'Yalnız eğrili ya da fitli takozda'],
+    ['Doğrusal arama', 'Adım artığı büyütürse yarılanır (geri izleme)', 'Sertleşen yasada Newton’un taşmasını önler'],
+    ['Artım sayısı · en çok bölme', 'Yük N eşit artımda uygulanır; yakınsamayan artım ikiye bölünür', 'Asimptotlu yasada ve durdurucu temasında'],
+    ['Kuvvet · moment · yer değiştirme toleransı', 'Kuvvet ve moment artığı ayrı ölçülür (N ile N·m karışmaz); '
+      + 'yer değiştirme ölçütü isteğe bağlı', 'Parametrik taramada hız ile doğruluk dengesi'],
+    ['Temas rijitliği oranı · aktif küme turu', 'Durdurucu ceza rijitliği k<sub>temas</sub> = oran·k; temas eden takozlar '
+      + 'aktif küme yinelemesiyle bulunur', 'Her modelde']
+  ], ['Ayar', 'Ne yapar', 'Ne zaman etkili']);
+  h += _gmAlanTablo('Dinamik ve geçici rejim', [
+    ['Rijitlik tabanı', '<strong>Dinamik</strong>: k<sub>din</sub> (eğrili takozda statik dengedeki tanjant × k<sub>din</sub>/k<sub>stat</sub>). '
+      + '<strong>Statik</strong>: k<sub>stat</sub>', 'Modal, frekans yanıtı, şok, sönüm ve duyarlılık birlikte'],
+    ['f<sub>min</sub> · f<sub>maks</sub> · nokta sayısı · tepe inceltme', 'Logaritmik tarama; inceltme rezonans tepelerini '
+      + 'altın oranla bulur', 'Sonuçlar ile raporun §8.13’ü aynı ızgarada'],
+    ['Entegratör', '<strong>Newmark ortalama ivme</strong>: koşulsuz kararlı, sayısal sönüm yok. <strong>Newmark doğrusal ivme</strong>: '
+      + 'koşullu kararlı, adım kendiliğinden sınıra iner. <strong>HHT-α</strong>: α ile yüksek frekansı söndürür. '
+      + '<strong>Genelleştirilmiş-α</strong>: ρ<sub>∞</sub> ile yüksek frekans sönümü, düşük frekansta en az bozulma', 'Şok darbesi'],
+    ['Adım / periyot · Newton yinelemesi', 'Adım en hızlı modun ve darbenin periyoduna göre; eğrili takozda her adımda Newton', 'Şok darbesi']
+  ], ['Ayar', 'Ne yapar', 'Ne zaman etkili']);
   h += _gmUyari('Çekme, durdurucu ve yakınsamama raporda bir hükümdür',
       'Raporun yük durumu tabloları <strong>çekme</strong> (bir takoz çekiye giriyor), '
     + '<strong>durdurucu teması</strong> ve <strong>doğrusal aralık aşımı</strong> işaretlerini, '

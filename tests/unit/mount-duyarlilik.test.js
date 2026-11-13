@@ -328,7 +328,7 @@ describe('pencereler duyarlılığı göstermez — yalnız rapor §8.17', () =>
     const { s, Rx } = kurHafif();
     expect(Rx.sensitivity).toHaveLength(6);
     const cz = dom(cp.getMntSolverPropertiesHTML(s));
-    expect(kategoriler(cz)).toEqual(['Ayarlar']);   // pencere gerçekten kuruldu (yük kitabı yok — Canlı Not 3001)
+    expect(kategoriler(cz)).toEqual(['Ayarlar', 'Statik denge', 'Dinamik', 'Geçici rejim']);   // pencere gerçekten kuruldu (Canlı Not 3001 · 3002)
     expect(bolumler(cz)).not.toContain('Kaldıraçlar');
     const n = global.nodes.find((x) => x.customName === 'Sol Motor Takozu');
     const tk = dom(cp.getMntMountPropertiesHTML(n));

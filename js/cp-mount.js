@@ -5997,6 +5997,20 @@ function _mntZetaDefault(){
   return (C && C.DEFAULT_ZETA>0) ? C.DEFAULT_ZETA : 0.02;
 }
 // Çözücü düğümünden geçerli ζ (girilmemiş/geçersiz → varsayılan).
+// ── ÇÖZÜCÜ AYARI (kullanıcı 2026-11-13, Canlı Not 3002: *"Bu çözücü bileşeni, programın girdileri
+// ve matematiği çözerken kullandığı sayısal yöntemleri, farklı çözüm yöntemlerini vs belirleyecek"*) ──
+// Düğümde `data.cozucu = { statik, modal, frf, gecici }` — yalnız VARSAYILANDAN farklı alanlar
+// yazılır. Varsayılan ve aralığın TEK kaynağı çekirdek (statikAyar · modalAyar · frfAyar ·
+// geciciAyar): çözülmüş ayar hazırlığa, imzaya, çözüme (R.cozucu), Sonuçlar'a ve rapora AYNI
+// nesne olarak gider. Varsayılan ayar bugünkü çözümü birebir verir.
+var MNT_COZUCU_GRUP=['statik', 'modal', 'frf', 'gecici'];
+function _mntCozucuAyar(solver){
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null, c=(solver && solver.data && solver.data.cozucu) || {};
+  var coz=function(f, ham){ return (C && typeof C[f]==='function') ? C[f](ham||{}) : {}; };
+  return { statik:coz('statikAyar', c.statik), modal:coz('modalAyar', c.modal), frf:coz('frfAyar', c.frf), gecici:coz('geciciAyar', c.gecici) };
+}
+// Grubun varsayılanı (çekirdeğin çözücüsü boş girdiyle)
+function _mntCozucuVarsayilan(grup){ return _mntCozucuAyar({ data:{} })[grup] || {}; }
 function _mntZetaOf(solver){
   var v = solver && solver.data ? solver.data.zeta : undefined;
   var z = _mntNum(v, NaN);
@@ -6032,7 +6046,8 @@ function _mntImza(si, torque, sd, bag, yon){
     c:(si.components||[]).map(function(c){ return [c.id||'', c.mass, c.cg, c.pointMass?0:c.I, c.pointMass?1:0]; }),
     m:(si.mounts||[]).map(function(m){ return [m.id||'', m.pos, m.kstat, m.kdyn, m.fCap||0, m.fits||0, m.curves||0]; }),
     t:Object.keys(t).sort().map(function(k){ return [k, _mntNum(t[k], null)]; }),
-    s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)],
+    s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS),
+       JSON.stringify(_mntCozucuAyar({ data:d }))],
     y:(function(Y){ return [Y.ileri, Y.kaldirimG, Y.kaldirimYon, Y.torkYon]; })(yon || _mntYonAyari(d))
   };
   // Askı yayları yalnız varsa imzaya girer: askısız modelin imzası değişmez.
@@ -6317,6 +6332,98 @@ function _mntCozucuAyarGovde(node){
   return h;
 }
 
+// ── ÇÖZÜCÜ AYARLARININ ALANLARI (Canlı Not 3002) ─────────────────────────────
+// Kimlik `ve-mnt-coz-<grup>-<alan>-<düğüm>`, yazıcı veMntSetCozucu. Sayı alanı
+// varsayılanlı alanın dili (değer alanın kendisi, 'i' kaynağı adın yanında); seçici
+// modeli izler (`data-mnt-izle`: yerinde tazelemede kurulmaz). Değer hep ÇÖZÜLMÜŞ ayardan.
+function _mntCozId(node, grup, alan){ return 've-mnt-coz-'+grup+'-'+alan+'-'+node.id; }
+function _mntCozElle(node, grup, alan){
+  var c=(node.data && node.data.cozucu && node.data.cozucu[grup]) || {};
+  return c[alan]!==undefined;
+}
+function _mntCozSayi(node, grup, alan, etiket, kaynak){
+  var A=_mntCozucuAyar(node)[grup] || {}, V=_mntCozucuVarsayilan(grup), elle=_mntCozElle(node, grup, alan), id=_mntCozId(node, grup, alan);
+  var t=elle ? 'Girilen değer · varsayılan '+_mntS(V[alan]) : 'Varsayılan — '+kaynak+'.';
+  var inp='<input class="ve-fp-inp" type="text" inputmode="decimal" id="'+id+'" value="'+_mntEsc(A[alan]==null ? '' : String(A[alan]))+'"'
+    + ' onchange="veMntSetCozucu(\''+node.id+'\',\''+grup+'\',\''+alan+'\',this.value)">';
+  var i='<button type="button" class="ve-fp-i" data-kaynak="'+(elle?'elle':'varsayilan')+'" data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button>';
+  return '<div class="ve-fp-f" data-mnt-vars="'+id+'" data-kaynak="'+(elle?'elle':'varsayilan')+'">'
+    + '<span class="ve-fp-l"><label for="'+id+'">'+etiket+'</label>'+i+'</span>'+inp+'</div>';
+}
+function _mntCozDeger(x){ return x===true ? 'acik' : x===false ? 'kapali' : String(x); }
+function _mntCozSecim(node, grup, alan, etiket, secenekler){
+  var A=_mntCozucuAyar(node)[grup] || {}, id=_mntCozId(node, grup, alan), v=_mntCozDeger(A[alan]);
+  var h='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">'+etiket+'</span>'
+    + '<select class="ve-fp-sel" id="'+id+'" data-mnt-izle onchange="veMntSetCozucu(\''+node.id+'\',\''+grup+'\',\''+alan+'\',this.value)">';
+  secenekler.forEach(function(o){
+    var d=_mntCozDeger(o[0]);
+    h+='<option value="'+_mntEsc(d)+'"'+(d===v ? ' selected' : '')+'>'+_mntEsc(o[1])+'</option>';
+  });
+  return h+'</select></label>';
+}
+// Tolerans: on katlar — yazım programın üstel yazıcısıyla (1e-9)
+function _mntCozOnKat(a, b, kapali){
+  var o=kapali ? [[0, 'Kapalı']] : [];
+  for(var e=a; e<=b; e++){ var v=Number('1e-'+e); o.push([v, veSayiUstel(v, 0)]); }
+  return o;
+}
+var MNT_COZ_YONTEM=[['newton', 'Tam Newton–Raphson'], ['modnewton', 'Değiştirilmiş Newton–Raphson'], ['bfgs', 'BFGS']];
+var MNT_COZ_ACIK=[[true, 'Açık'], [false, 'Kapalı']];
+var MNT_COZ_ENTEGRATOR=[['newmark-ort', 'Newmark · ortalama ivme'], ['newmark-dogrusal', 'Newmark · doğrusal ivme'],
+                        ['hht', 'HHT-α'], ['gen-alfa', 'Genelleştirilmiş-α']];
+var MNT_COZ_TABAN=[['dinamik', 'Dinamik rijitlik'], ['statik', 'Statik rijitlik']];
+// STATİK DENGE — nonlineer çözümün tekniği, yük artımı, yakınsama ölçütü ve temas (durdurucu).
+// Lineer modelde (eğri yok) yalnız temas çalışır: denge tek çözümdür.
+function _mntCozucuStatikGovde(node){
+  return _mntBolum('Nonlineer çözüm', '',
+      _mntIzgara(2, _mntCozSecim(node, 'statik', 'yontem', 'Çözüm tekniği', MNT_COZ_YONTEM)
+        + _mntCozSecim(node, 'statik', 'arama', 'Doğrusal arama', [[true, 'Geri izleme'], [false, 'Kapalı']])
+        + _mntCozSayi(node, 'statik', 'artim', 'Artım sayısı', 'çözücü')
+        + _mntCozSayi(node, 'statik', 'kesme', 'En çok bölme', 'çözücü')))
+    + _mntBolum('Yakınsama', '',
+      _mntIzgara(2, _mntCozSecim(node, 'statik', 'tolF', 'Kuvvet toleransı', _mntCozOnKat(4, 12))
+        + _mntCozSecim(node, 'statik', 'tolM', 'Moment toleransı', _mntCozOnKat(4, 12))
+        + _mntCozSecim(node, 'statik', 'tolU', 'Yer değiştirme toleransı', _mntCozOnKat(4, 12, true))
+        + _mntCozSayi(node, 'statik', 'maxIter', 'En çok iterasyon', 'çözücü')))
+    + _mntBolum('Temas', '',
+      _mntIzgara(2, _mntCozSayi(node, 'statik', 'stiffRatio', 'Temas rijitliği oranı', 'çözücü')
+        + _mntCozSayi(node, 'statik', 'aktifTur', 'Aktif küme turu', 'çözücü')));
+}
+// DİNAMİK — modalın rijitlik tabanı (frekans yanıtı, şok, sönüm ve duyarlılık aynı tabandan)
+// ve frekans yanıtının taraması.
+function _mntCozucuDinamikGovde(node){
+  return _mntBolum('Modal', '',
+      _mntIzgara(2, _mntCozSecim(node, 'modal', 'taban', 'Rijitlik tabanı', MNT_COZ_TABAN)))
+    + _mntBolum('Frekans yanıtı', '',
+      _mntIzgara(2, _mntCozSayi(node, 'frf', 'fMin', _mntSym('f<sub>min</sub>')+' <u>[Hz]</u>', 'çözücü')
+        + _mntCozSayi(node, 'frf', 'fMax', _mntSym('f<sub>maks</sub>')+' <u>[Hz]</u>', 'çözücü')
+        + _mntCozSayi(node, 'frf', 'nPts', 'Nokta sayısı', 'çözücü')
+        + _mntCozSecim(node, 'frf', 'incelt', 'Tepe inceltme', MNT_COZ_ACIK)));
+}
+// GEÇİCİ REJİM — zaman entegratörü (genelleştirilmiş-α ailesi), parametresi ve adım boyu;
+// adım içi Newton yinelemesi (eğrili takoz ya da durdurucu temasında).
+function _mntCozucuGeciciParam(node){
+  var e=(_mntCozucuAyar(node).gecici || {}).entegrator, ic='';
+  if(e==='hht') ic=_mntCozSayi(node, 'gecici', 'alfa', _mntSym('α'), 'çözücü');
+  else if(e==='gen-alfa') ic=_mntCozSayi(node, 'gecici', 'rhoInf', _mntSym('ρ<sub>∞</sub>'), 'çözücü');
+  return '<div id="ve-mnt-coz-param-'+node.id+'" data-tazele>'+ic+'</div>';
+}
+function _mntCozucuGeciciGovde(node){
+  return _mntBolum('Zaman entegrasyonu', '',
+      _mntIzgara(2, _mntCozSecim(node, 'gecici', 'entegrator', 'Entegratör', MNT_COZ_ENTEGRATOR)
+        + _mntCozucuGeciciParam(node)
+        + _mntCozSayi(node, 'gecici', 'adimPeriyot', 'Adım / periyot', 'çözücü')))
+    + _mntBolum('Newton yinelemesi', '',
+      _mntIzgara(2, _mntCozSecim(node, 'gecici', 'newtonTol', 'Tolerans', _mntCozOnKat(4, 12))
+        + _mntCozSayi(node, 'gecici', 'newtonMaxIter', 'En çok iterasyon', 'çözücü')));
+}
+// Grubun durumu: girilen alan var mı
+function _mntCozGrupDurum(node, gruplar){
+  var c=(node.data && node.data.cozucu) || {};
+  var elle=gruplar.some(function(g){ return c[g] && Object.keys(c[g]).length; });
+  return _mntDurum('ok', elle ? 'elle' : 'varsayılan');
+}
+
 // Kategori durumları — yöntem seçiminden. Ön denetim (çekirdeğin validateModel'i)
 // sağ sütunun cevabında; son hesabın durumu eylemin notunda.
 function _mntCozucuDurumlari(node){
@@ -6332,7 +6439,10 @@ function getMntSolverPropertiesHTML(node){
   if(!node.data.solveMode) node.data.solveMode='auto';
   var D=_mntCozucuDurumlari(node);
   var kategoriler=[
-    { k:'ayar', ad:'Ayarlar', govde:_mntCozucuAyarGovde(node), durum:D.ayar }
+    { k:'ayar', ad:'Ayarlar', govde:_mntCozucuAyarGovde(node), durum:D.ayar },
+    { k:'statik', ad:'Statik denge', govde:_mntCozucuStatikGovde(node), durum:_mntCozGrupDurum(node, ['statik']) },
+    { k:'dinamik', ad:'Dinamik', govde:_mntCozucuDinamikGovde(node), durum:_mntCozGrupDurum(node, ['modal', 'frf']) },
+    { k:'gecici', ad:'Geçici rejim', govde:_mntCozucuGeciciGovde(node), durum:_mntCozGrupDurum(node, ['gecici']) }
   ];
   // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (ön denetim) → eylem →
   // eylemin notu (son hesabın hazırlığı). Uygunluk yok — sonuç raporda.
@@ -6497,6 +6607,28 @@ function veMntSetSolveMode(nodeId, val){
 // Sönüm oranı ζ (0 < ζ < 1). Boş/geçersiz → alan silinir, çözümde varsayılan
 // (MNT_DEFAULT_ZETA) kullanılır. Yeniden çizme YOK — sonuç korunur; değer bir
 // sonraki ▶ Hesapla'da uygulanır (çözüm modu ile aynı davranış).
+// Çözücü ayarının yazıcısı: değer çekirdeğin çözücüsünden geçer — aralık dışı değer sınıra,
+// tanınmayan seçenek varsayılana; varsayılana eşit ya da boş alan SİLİNİR (aynı fizik, alan
+// yazılmaz). Seçici değerleri: 'acik' · 'kapali' → mantıksal. Kayıt değişiklikten SONRA.
+function veMntSetCozucu(nodeId, grup, alan, val){
+  if(MNT_COZUCU_GRUP.indexOf(grup)<0) return;
+  var node=_mntDugum(nodeId); if(!node) return;
+  if(!node.data) node.data={};
+  var c=Object.assign({}, node.data.cozucu||{}), g=Object.assign({}, c[grup]||{});
+  var s=(typeof val==='string') ? val.trim() : val;
+  if(s==='' || s==null) delete g[alan];
+  else if(s==='acik' || s==='kapali') g[alan]=(s==='acik');
+  else if(typeof s==='string' && /^[a-z][a-z-]*$/.test(s)) g[alan]=s;
+  else { var v=_mntNum(s, NaN); if(Number.isFinite(v)) g[alan]=v; else delete g[alan]; }
+  c[grup]=g;
+  var coz=_mntCozucuAyar({ data:{ cozucu:c } })[grup], vars=_mntCozucuVarsayilan(grup);
+  if(g[alan]!==undefined){
+    if(coz[alan]===vars[alan]) delete g[alan]; else g[alan]=coz[alan];
+  }
+  if(Object.keys(g).length) c[grup]=g; else delete c[grup];
+  if(Object.keys(c).length) node.data.cozucu=c; else delete node.data.cozucu;
+  if(typeof saveState==='function') saveState();
+}
 function veMntSetZeta(nodeId, val){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
@@ -6545,12 +6677,17 @@ function _mntPrepareFrom(gather, solver){
   }
   var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer mi
   var Kstat=C.buildK(mounts,mp.cg,false);
+  // Çözücü'nün sayısal ayarı (Canlı Not 3002) — çekirdeğin çözücülerinden geçmiş, TEK nesne:
+  // statik denge (Newton türü, artım, yakınsama, temas), modal taban, frekans yanıtı ve
+  // geçici rejim. Çözüme R.cozucu olarak yazılır; Sonuçlar ve rapor oradan okur.
+  var ayar=_mntCozucuAyar(solver);
+  var statikOpt=function(onIter){ return Object.assign({}, ayar.statik, { useStop:true, onIter:onIter }); };
   // Çözücünün kendi yolu, takoz listesiyle: askılı çözüm (çekirdek solveWithHangers)
   // takozların ardına askı yaylarını ekleyip bunu çağırır.
   var cozBase=function(ms, lc, onIter){
     return solvedNL
-      ? C.solveCaseNL(ms, mp.cg, mp.m, si.g, lc, {useStop:true, onIter:onIter})
-      : C.solveCaseStop(ms===mounts ? Kstat : C.buildK(ms, mp.cg, false), ms, mp.cg, mp.m, si.g, lc, {useStop:true});
+      ? C.solveCaseNL(ms, mp.cg, mp.m, si.g, lc, statikOpt(onIter))
+      : C.solveCaseStop(ms===mounts ? Kstat : C.buildK(ms, mp.cg, false), ms, mp.cg, mp.m, si.g, lc, statikOpt(null));
   };
   // Askı yayları: statik montaj (kuvvet · boy) tasarım boyuna çevrilir — yay
   // statik dengede o kuvveti taşır. Tasarım boyu verilenler o dengede yaydır.
@@ -6568,7 +6705,7 @@ function _mntPrepareFrom(gather, solver){
     }
   }
   var prep={
-    C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts, askilar:askilar, cozBase:cozBase,
+    C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts, askilar:askilar, cozBase:cozBase, ayar:ayar,
     solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
     zeta:_mntZetaOf(solver),               // şirket kabulü — tüm montaja tek değer
     loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque, gather.yon),
@@ -6584,8 +6721,8 @@ function _mntPrepareFrom(gather, solver){
     var res = askilar.length
       ? C.solveWithHangers(function(ms, l2){ return cozBase(ms, l2, onIter); }, mounts, mp.cg, mp.m, si.g, lc, askilar)
       : solvedNL
-      ? C.solveCaseNL(mounts, mp.cg, mp.m, si.g, lc, {useStop:true, onIter:onIter})
-      : C.solveCaseStop(Kstat, mounts, mp.cg, mp.m, si.g, lc, {useStop:true});
+      ? C.solveCaseNL(mounts, mp.cg, mp.m, si.g, lc, statikOpt(onIter))
+      : C.solveCaseStop(Kstat, mounts, mp.cg, mp.m, si.g, lc, statikOpt(null));
     return res ? {name:lc.name, loadCase:lc, res:res}
                : {name:lc.name, loadCase:lc, res:null, error:'K matrisi tekil (kinematik serbestlik olabilir).'};
   };
@@ -6607,17 +6744,25 @@ function _mntPrepareFrom(gather, solver){
       var durum=(st && st.res && st.res.perHanger) ? st.res.perHanger.map(function(p){ return p.durum; }) : null;
       ms=mounts.concat(C.askiTakozlari(askilar, durum));
     }
-    prep.dinMounts=ms;
+    // RİJİTLİK TABANI (Çözücü'nün modal ayarı, Canlı Not 3002): 'statik' tabanda dinamik
+    // analizlerin takozları k_din yerine k_stat taşır (dinamik/statik oranı 1) — modal, frekans
+    // yanıtı, şok, sönüm ve duyarlılık AYNI tabandan (R.dinMounts). Raporun rijitlik tabloları
+    // takozun kendi değerlerini (R.mounts) yazar.
+    var tabanStatik=(ayar.modal && ayar.modal.taban)==='statik';
+    var statikle=function(L){ return L.map(function(m){ return Object.assign({}, m, { kdyn:(m.kstat||[0,0,0]).slice() }); }); };
+    var msT=tabanStatik ? statikle(ms) : ms, mountsT=tabanStatik ? statikle(mounts) : mounts;
+    prep.dinMounts=msT;
     if(solvedNL){
       var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
-      prep.Kmodal=C.buildKtangentDyn(ms, mp.cg, qStat);
+      prep.Kmodal=C.buildKtangentDyn(msT, mp.cg, qStat);
       // Sönüm de AYNI tabandan: c = 2ζ√(k·m) içindeki k, modal frekansı üreten
       // dinamik tanjant olmalı. Nominal k_dyn kullanılırsa sertleşen takozda
       // ζ_mod = φᵀCφ/(2ωφᵀMφ) sistematik olarak kayar (√(k_dyn/k_tan) kadar).
-      prep.kBasis=(typeof C.mountTangentKdyn==='function') ? C.mountTangentKdyn(mounts, mp.cg, qStat) : null;
+      prep.kBasis=(typeof C.mountTangentKdyn==='function') ? C.mountTangentKdyn(mountsT, mp.cg, qStat) : null;
     } else {
-      prep.Kmodal=C.buildK(ms, mp.cg, true);
-      prep.kBasis=null;                        // lineerde tanjant == nominal k_dyn
+      prep.Kmodal=C.buildK(msT, mp.cg, true);
+      // lineerde tanjant == nominal k_din; statik tabanda açıkça k_stat
+      prep.kBasis=tabanStatik ? mountsT.map(function(m){ return m.kdyn.slice(); }) : null;
     }
     return C.solveModal(prep.Kmodal, M6, mounts, mp.cg);
   };
@@ -6705,7 +6850,9 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   if(prep.askilar && prep.askilar.length){
     R.askilar=prep.askilar;
     R.dinMounts=prep.dinMounts || prep.mounts;
-  }
+  } else if(prep.dinMounts && prep.dinMounts!==prep.mounts) R.dinMounts=prep.dinMounts;   // statik taban
+  // Çözücü'nün sayısal ayarı — çözümün hangi yöntemle üretildiği (Sonuçlar ve rapor okur)
+  R.cozucu=prep.ayar || _mntCozucuAyar(prep.solver);
   // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
   // (çekirdek sectionMoment, askının kuvveti dâhil); hüküm raporda, Statik durumda sınıra göre
   R.baglanti=_mntBaglantiMomenti(prep, allCases, designCases);
@@ -6742,6 +6889,12 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
     if(R.damping && C.buildCdamp && C.modalDampingRatios){
       R.C6 = C.buildCdamp(prep.mounts, prep.mp.cg, R.damping);
       R.modalDamping = C.modalDampingRatios(modes, prep.M6, R.C6);
+      // KESİN SÖNÜMLÜ MODLAR (Canlı Not 3002) — durum uzayında kompleks özdeğer: (λ²M + λC + K)φ = 0.
+      // İzdüşüm (modalDamping) orantısız sönümde yaklaşıktır; kesin ζ ve f_d buradan. Sıra
+      // sönümsüz modlarınki (MAC eşlemesi). Çözümü bağlamaz: patlarsa alan yok.
+      if(typeof C.complexModes==='function'){
+        try { R.kompleksModlar = C.complexModes(prep.M6, R.C6, prep.Kmodal, { modes:modes }); } catch(e){ R.kompleksModlar=null; }
+      }
     }
     if(C.modalEnergy) R.modalEnergy = C.modalEnergy(modes, prep.M6, prep.Kmodal, prep.si.components, prep.mp.cg);
     // Takoz ve eksen başına frekans duyarlılığı — modları üreten AYNI taban
@@ -7050,7 +7203,8 @@ if(typeof module!=='undefined' && module.exports){
     getMntLibraryPropertiesHTML: getMntLibraryPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
     veMntSetSolveMode: veMntSetSolveMode,
-    veMntSetZeta: veMntSetZeta,
+    veMntSetZeta: veMntSetZeta, veMntSetCozucu: veMntSetCozucu, _mntCozucuAyar: _mntCozucuAyar,
+    MNT_COZ_YONTEM: MNT_COZ_YONTEM, MNT_COZ_ENTEGRATOR: MNT_COZ_ENTEGRATOR, MNT_COZ_TABAN: MNT_COZ_TABAN,
     _mntZetaDefault: _mntZetaDefault,
     _mntZetaOf: _mntZetaOf,
     veMntApplyEnginePreset: veMntApplyEnginePreset,

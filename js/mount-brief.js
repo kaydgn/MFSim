@@ -904,6 +904,23 @@ var veMntBrief = (function() {
         paras.push('⚠ ' + b('Newton iterasyonu bazı zaman adımlarında yakınsamadı') +   // metin: yorumun uyarı işareti (ekranda ikona döner)
           '; eğri sayısal olarak güvenilmez.');
       }
+      // Koşullu kararlı entegratör (Newmark doğrusal ivme): adım kendiliğinden küçülür; bütçe
+      // yetmezse çözüm kararsız kalır — ikisi de SÖYLENİR (Çözücü'nün ayarı, Canlı Not 3002).
+      if(meta.kararli === false) {
+        paras.push('⚠ ' + b('Zaman entegrasyonu kararsız kaldı') +   // metin: yorumun uyarı işareti (ekranda ikona döner)
+          '; eğri sayısal olarak güvenilmez.');
+      } else if(meta.dtKisit && isFinite(meta.dt)) {
+        paras.push('Kararlılık için zaman adımı ' + b(na(meta.dt * 1000) + ' ms') + ' oldu.');
+      }
+      // Enerji dengesi: sayısal kazanç ya da kayıp sınırı aşarsa (kaba adım + sert temas) eğri
+      // güvenilmez — sessiz kalmaz (çekirdek GECICI_ENERJI_SINIR).
+      var en = meta.enerji;
+      var enSinir = (typeof veMountCore !== 'undefined' && veMountCore && veMountCore.GECICI_ENERJI_SINIR) || 0.05;
+      if(en && Math.max(en.kazanc || 0, en.kayip || 0) > enSinir) {
+        var kaz = (en.kazanc || 0) >= (en.kayip || 0);
+        paras.push('⚠ ' + b('Enerji dengesi %' + na(100 * Math.max(en.kazanc || 0, en.kayip || 0)) + ' sapıyor') +   // metin: yorumun uyarı işareti (ekranda ikona döner)
+          ' (sayısal enerji ' + (kaz ? 'kazancı' : 'kaybı') + '); eğri sayısal olarak güvenilmez.');
+      }
     }
 
     // ── Takoz kuvvetleri ──
