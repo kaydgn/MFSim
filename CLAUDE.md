@@ -469,7 +469,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Tüm kombinasyonlar** varsayılan (her grupta bütün aday tipler) · **Özel kombinasyon** (`node.data.adaylarKip
   = 'ozel'`; konum başına ARAMA kutusu — sorgunun her sözcüğü adda ya da markada, harf katlaması Takoz
   Özellikleri'ninki (`_mntLibNorm`); tık ya da Enter ekler, Esc temizler; kutu yerinde tazelenmez, odak ve
-  imleç kalır; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
+  imleç kalır; **kutuya tık ya da odak (boş kutu dâhil) MARKA BAŞLIKLI TABLOYU açar** (kullanıcı 2026-11-13, Canlı Not
+  1010: *"ön takozlar için tüm AMC modellerini seçmek istiyorum"*): başlık = marka · tip sayısı · Hepsini ekle (n) /
+  Hepsini çıkar (n), açık markanın tipleri (boş kutuda başlıklar kapalı, okla açılır); sorgu süzer, n sorguyu taşıyan aday tiplerin sayısı; başlığın eylemi TEK
+  geri-al adımı, elenen tip girmez (`veMntParamGrupMarka`); kapı `mount-param-marka.test.js`; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
   silinmez; tipi eklenmeyen grup mevcut tipinde). **Aday tip kütüphanenin ÇÖZÜLEBİLEN her tipi**
   (kullanıcı 2026-11-13, Canlı Not 1008: *"takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"*):
   `aday:false` dışında altı rijitliği tam olan, tahminli tip DE; liste her kurulumda haritadan TÜRER

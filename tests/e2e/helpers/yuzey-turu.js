@@ -345,12 +345,32 @@ async function takozTuru(page, olc) {
     await new Promise((r) => setTimeout(r, 450));
     const kutu = document.getElementById('ve-mnt-param-ara-' + n.id + '-1');
     if (!kutu) return null;
-    kutu.focus(); kutu.value = 'cone'; kutu.dispatchEvent(new Event('input', { bubbles: true }));
+    // boş kutuya odak: marka başlıklı tablo (Canlı Not 1010)
+    kutu.focus();
+    await new Promise((r) => setTimeout(r, 300));
+    const T = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
+    const baslik = T ? T.querySelectorAll('.ve-prm-ara-m').length : 0;
+    // başlıklar kapalı gelir: ilk markanın okuyla açılır, tipleri satırlanır
+    const ok = T && T.querySelector('.ve-prm-ara-ok');
+    if (ok) ok.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 300));
+    const T2 = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
+    const tablo = { baslik, tip: T2 ? T2.querySelectorAll('.ve-prm-ara-o').length : 0 };
+    return { tablo };
+  });
+  expect(ara.tablo.baslik).toBeGreaterThanOrEqual(3);
+  expect(ara.tablo.tip).toBeGreaterThan(ara.tablo.baslik);
+  await olc('#ve-properties', 'mnt-parametric · Özel kombinasyon · marka tablosu');
+  const ara2 = await page.evaluate(async () => {
+    const n = nodes.find((x) => x.type === 'mnt-parametric');
+    const kutu = document.getElementById('ve-mnt-param-ara-' + n.id + '-1');
+    kutu.value = 'cone'; kutu.dispatchEvent(new Event('input', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 300));
     const L = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
     return { satir: document.querySelectorAll('#ve-properties .ve-prm-oz-t li').length,
       secenek: L ? L.querySelectorAll('.ve-prm-ara-o').length : 0 };
   });
+  Object.assign(ara, ara2);
   // son örnek ASFAT: mevcut tipleri aday değil (Canlı Not 133) — eklenen iki aday tip ve açık liste
   expect(ara.satir).toBeGreaterThanOrEqual(2);
   expect(ara.secenek).toBeGreaterThan(0);

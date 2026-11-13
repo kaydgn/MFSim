@@ -550,7 +550,7 @@ var _GM_PARAM_ADAY = [
     not: 'Tüm kombinasyonlar: her grupta bütün aday tipler. Özel kombinasyon: grup başına eklenen tipler.' },
   { k: 'sayi', s: '.ve-prm-oz-n', ad: 'Tip sayısı', yer: 'sag', not: 'Grupta denenecek tip sayısı; tip eklenmeyen grup mevcut tipinde.' },
   { k: 'ara', s: '.ve-prm-ara-k', ad: 'Takoz ara', yer: 'ic-sag',
-    not: 'Sözcükler tipin adında ve markasında aranır; satıra tık ya da Enter tipi gruba ekler, Esc aramayı temizler.' },
+    not: 'Tık marka başlıklı tabloyu açar; sözcükler tipin adında ve markasında aranır. Tip satırı tipi, marka başlığı markanın hepsini ekler; Esc aramayı temizler.' },
   { k: 'tip', s: '.ve-prm-oz-s', ad: 'Eklenen tip', yer: 'alt', not: 'Ad ve kz; çarpı tipi gruptan çıkarır.' },
   { k: 'mevcut', s: '.ve-prm-mev', ad: 'Mevcut', yer: 'sag', not: 'Grubun bugünkü tipi.' }
 ];
@@ -1760,7 +1760,9 @@ function _gmSec17(){
   h += '<p><strong>Adaylar</strong> taramanın tiplerini belirler '
     + '(' + _gmS('parametrik-aday') + '): <strong>Tüm kombinasyonlar</strong> (varsayılan) her grupta bütün '
     + 'aday tipleri dener; <strong>Özel kombinasyon</strong> seçilince her grubun tipleri arama kutusundan '
-    + 'eklenir — yazılan sözcükler tipin adında ve markasında aranır, satıra tık ya da Enter tipi gruba ekler. '
+    + 'eklenir — arama kutusuna tıklayınca marka başlıklı tablo açılır (başlıklar okla açılır); yazılan sözcükler tipin adında ve markasında aranır, '
+    + 'tip satırının tıkı tipi, marka başlığındaki <strong>Hepsini ekle</strong> markanın bütün aday tiplerini (örneğin ön takozlar için '
+    + 'bütün AMC modellerini) gruba ekler; hepsi grupta olan markanın başlığı <strong>Hepsini çıkar</strong> olur. '
     + 'Tip eklenmeyen grup mevcut tipinde kalır. Takoz Özellikleri’nde eklenen ya da rijitliği tamamlanan '
     + 'tip kendiliğinden aday olur. <strong>Analiz</strong> kütüphanenin tip sayılarını, en düşük takoz '
     + 'yükünü, elenen tip sayısını, taranan grup ve kombinasyon sayısını yazar.</p>';
@@ -1780,7 +1782,7 @@ function _gmSec17(){
       'Çözücü’nün güncel çözümüyle: en düşük takoz yükünde sehimi aralığın dışında kalan tip elenir. Çözüm '
       + 'yoksa ya da model hesaptan sonra değiştiyse alanlar kapalı, eleme yok'],
     ['Adaylar', 'Kip (Tüm kombinasyonlar · Özel kombinasyon); özelde grup başına numara, ad, tip sayısı, '
-      + 'arama kutusu ve eklenen tipler (ad, kz, kaldır)',
+      + 'arama kutusu (marka başlıklı tablo: Hepsini ekle) ve eklenen tipler (ad, kz, kaldır)',
       'Aday: altı rijitliği tam kütüphane tipi, tahmini rijitlikli tip de. Tip eklenmeyen grup mevcut tipinde kalır'],
     ['Analiz', 'Kayıtlı takoz, aday tip (ölçülü ve tahmini rijitlik), rijitlik eksik, aday değil, en düşük takoz yükü, '
       + 'elenen, taranan grup, kombinasyon',

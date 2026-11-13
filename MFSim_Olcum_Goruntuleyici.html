@@ -10389,7 +10389,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 .ve-prm-ara-l{
   position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:var(--z-menu);
-  max-height:240px; overflow-y:auto; padding:4px; box-sizing:border-box;
+  max-height:320px; overflow-y:auto; padding:0 4px 4px; box-sizing:border-box;
   background:var(--bg-secondary); border:1px solid var(--border-color);
   border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
 }
@@ -10398,9 +10398,21 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   display:flex; align-items:baseline; gap:8px; padding:5px 8px; cursor:pointer;
   border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--text-primary);
 }
-.ve-prm-ara-o[aria-selected="true"]{ background:var(--bg-tertiary); }
+.ve-prm-ara-o[aria-selected="true"],
+.ve-prm-ara-m[aria-selected="true"]{ background:var(--bg-tertiary); }
+/* Marka başlığı: tabloyu kaydırırken üstte kalır; eylemi sağda. */
+.ve-prm-ara-m{
+  position:sticky; top:0; z-index:1; display:flex; align-items:baseline; gap:8px; padding:5px 8px; cursor:pointer;
+  border-bottom:1px solid var(--border-light); background:var(--bg-secondary);
+  font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);
+}
+.ve-prm-ara-m .ve-prm-kz{ font-weight:400; }
+.ve-prm-ara-ok{ flex:none; display:inline-flex; align-items:center; align-self:center; margin:-4px 0 -4px -4px; padding:4px; border-radius:var(--radius-sm); color:var(--text-muted); }
+.ve-prm-ara-ok:hover{ background:var(--bg-tertiary); color:var(--text-heading); }
+.ve-prm-ara-ok .mf-ico{ width:12px; height:12px; }
+.ve-prm-ara-h{ flex:none; font-weight:600; color:var(--ink-accent); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .ve-prm-ara-yok{ padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); }
-.ve-prm-oz-t{ list-style:none; margin:0; padding:0; }
+.ve-prm-oz-t{ list-style:none; margin:0; padding:0; max-height:208px; overflow-y:auto; }
 .ve-prm-oz-s{
   display:flex; align-items:center; gap:8px; min-height:26px; padding:2px 0 2px 8px; box-sizing:border-box;
   border-bottom:1px solid var(--border-light); font-size:var(--fs-tiny);
