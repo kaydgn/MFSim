@@ -263,6 +263,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kutular katı çizimde PARÇALANIR** (küçükten büyüğün içi çıkar, 12 mm'den ince dilim
   atılır) ve kutuların sırası AYIRAN EKSENDEN (kullanıcı 2026-11-05, Canlı Not 40:
   *"kutular birbirinin içine giriyor"* — Asfat'ta Top PTO şanzımanın içindeydi).
+  **Zincir gövdeleri Y=0'da** (kullanıcı 2026-11-13, Canlı Not 158: *"Ağırlık merkezi Y ekseninde
+  kayabiliyor ama modeller kaymıyor"*): Motor · Şanzıman · Transfer Kutusu'nun
+  (`isMountZincir`) eşdeğer kutusu yanalda 0'da, ağırlık merkezinin işareti gerçek Y'sinde (şaft
+  simetrik gövde, ağırlık merkezinde — Asfat'ınki 156 mm yanda);
+  bütün Takoz görüntüleyicileri, braketin ayağı ve hareket zarfının köşeleri aynı kutudan. Kapı:
+  `mount-akso.test.js` → *ZİNCİR Y=0* + `mount-zarf.test.js` → *ZİNCİR Y=0*.
   Sihirbazın masasında her yazı **çerçeveli ÇİP** (`o.balon`; kullanıcı 2026-11-06,
   Canlı Not 41: *"uzayan çubuklar … tüm yazılar çerçeveli değil"*): parçanın görünen
   yerinden KISA kırık kılavuz, çip çipe binmez, kılavuz kesişmez; sürüklerken çip

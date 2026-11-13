@@ -7,6 +7,8 @@
  * gövdenin eşdeğer kutusunun sekiz köşesi (köşegen atalet, §8.16'nın kutusu).
  *
  *   · EL HESABI — saf öteleme, saf dönme, referansın çıkarılması, nokta kütle.
+ *   · ZİNCİR Y=0 — zincir gövdesinin kutusu yanalda 0'da (kc, Canlı Not 158): köşeler
+ *     Y = 0'a göre simetrik, ağırlık merkezinin noktası gerçek yerinde.
  *   · KABUK — R.zarf yük durumları + vitesler + tasarım koşullarından; Statik
  *     çözülemezse zarf yok; rapor §8.19 bölümü ve kritik özetin satırı.
  * TTA örneğinin sayıları: tests/unit/mount-ornek-tta.test.js → ZARF.
@@ -87,6 +89,43 @@ function model(veri) {
   cp._mntForgetResults();
   return cp._mntComputeResults('s1');
 }
+
+// ZİNCİR Y=0 (kullanıcı 2026-11-13, Canlı Not 158: *"Ağırlık merkezi Y ekseninde kayabiliyor ama
+// modeller kaymıyor"*): motor · şanzıman · transfer kutusunun eşdeğer kutusu yanalda 0'da —
+// zarfın sekiz köşesi kutunun merkezinin (kc) çevresinde, ağırlık merkezinin noktası gerçek yerinde.
+// Çizimin kapısı: mount-akso.test.js → ZİNCİR Y=0.
+describe('ZİNCİR Y=0 — zincir gövdesinin köşeleri yanalda 0\'a göre simetrik', () => {
+  test('el hesabı (saf yalpa θx = 0,01): kc ile köşeler Y ±0,3 → Δz ±0,003 (simetrik); kc\'siz Y 0,1 ± 0,3 → −0,002 / +0,004', () => {
+    const q = [durum('r', [0, 0, 0, 0.01, 0, 0])], G = [0, 0, 0], q0 = [0, 0, 0, 0, 0, 0];
+    const Z = core.motionEnvelope([Object.assign(govde('motor', [0, 0.1, 0]), { kc: [0, 0, 0] })], q, G, q0).govde[0];
+    expect([Z.min[2], Z.max[2]].map((v) => +v.toFixed(12))).toEqual([-0.003, 0.003]);
+    expect([Z.minAt[2].nokta[1], Z.maxAt[2].nokta[1]]).toEqual([-1, 1]);       // uçlar −Y ve +Y köşesi
+    const Z0 = core.motionEnvelope([govde('motor', [0, 0.1, 0])], q, G, q0).govde[0];
+    expect([Z0.min[2], Z0.max[2]].map((v) => +v.toFixed(12))).toEqual([-0.002, 0.004]);
+    // ağırlık merkezi kc'den bağımsız: nokta kütlede köşe yok, kc etkisiz (Δz = θx · 0,1)
+    const N = core.motionEnvelope([Object.assign(govde('n', [0, 0.1, 0], true), { kc: [0, 0, 0] })], q, G, q0).govde[0];
+    expect([N.min[2], N.max[2]].map((v) => +v.toFixed(12))).toEqual([0.001, 0.001]);
+  });
+  test('kabuk: motor (zincir) SI\'da kc = [x; 0; z], pompa kc taşımaz; R.zarf o köşelerden (bağımsız kinematik)', () => {
+    const R = model({ cgy: 100 });
+    expect([R.components[0].name, R.components[0].cg, R.components[0].kc]).toEqual(['Motor', [0, 0.1, 0.5], [0, 0, 0.5]]);
+    expect(R.components[1].kc).toBeUndefined();
+    const k = core.equivalentBox(600, [[50, 0, 0], [0, 90, 0], [0, 0, 80]], false), G0 = R.mp.cg, q0 = R.qStatic;
+    const P = [[0, 0.1, 0.5]];
+    [-1, 1].forEach((i) => [-1, 1].forEach((j) => [-1, 1].forEach((l) => P.push([i * k[0] / 2, j * k[1] / 2, 0.5 + l * k[2] / 2]))));
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    R.allCases.concat(R.gearCases, R.designCases).filter((c) => c.res).forEach((rc) => {
+      const u = [0, 1, 2].map((i) => rc.res.q[i] - q0[i]), t = [3, 4, 5].map((i) => rc.res.q[i] - q0[i]);
+      P.forEach((p) => {
+        const r = [p[0] - G0[0], p[1] - G0[1], p[2] - G0[2]];
+        [u[0] + t[1] * r[2] - t[2] * r[1], u[1] + t[2] * r[0] - t[0] * r[2], u[2] + t[0] * r[1] - t[1] * r[0]]
+          .forEach((v, i) => { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v); });
+      });
+    });
+    const z = R.zarf.govde[0];
+    [0, 1, 2].forEach((i) => { expect(z.min[i]).toBeCloseTo(lo[i], 12); expect(z.max[i]).toBeCloseTo(hi[i], 12); });
+  });
+});
 
 describe('KABUK — R.zarf ve rapor §8.19', () => {
   test('zarf yük durumları + vitesler + tasarım koşullarından; Statik referans', () => {

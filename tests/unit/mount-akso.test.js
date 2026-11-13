@@ -37,6 +37,8 @@
  *     2026-11-05, Canlı Not 36): takozdan gövdenin yüzüne, kesit kütleden
  *     (kütle korunur); takozuyla birlikte çizilir, nokta yok; atalet girilmiş
  *     braket eşdeğer kutusuyla; erimde takoz yoksa nokta kalır
+ *   · ZİNCİR Y=0 — motor · şanzıman · transfer kutusunun kutusu yanalda 0'da
+ *     (Canlı Not 158), ağırlık merkezi gerçek yerinde; bütün görüntüleyiciler aynı kutudan
  */
 const fs = require('fs');
 const path = require('path');
@@ -201,9 +203,10 @@ describe('FİZİK — serbest cisim ve mod şekli', () => {
       const donme = Math.max(...md.phi.slice(3).map(Math.abs)) * s * 180 / Math.PI;
       let oteleme = 0;
       m.govde.forEach((g) => {
-        const h = g.kutu ? g.kutu.map((v) => v / 2) : [0, 0, 0];
+        // kutunun köşeleri kutunun merkezinden (kc — zincir gövdesinde yanalda 0, Canlı Not 158)
+        const h = g.kutu ? g.kutu.map((v) => v / 2) : [0, 0, 0], o = g.kutu ? g.kc : [g.x, g.y, g.z];
         [-1, 1].forEach((a) => [-1, 1].forEach((b) => [-1, 1].forEach((c) => {
-          const d = AK.modDelta(md.phi, m.cgR, [g.x + a * h[0], g.y + b * h[1], g.z + c * h[2]], s);
+          const d = AK.modDelta(md.phi, m.cgR, [o[0] + a * h[0], o[1] + b * h[1], o[2] + c * h[2]], s);
           oteleme = Math.max(oteleme, ...d.map(Math.abs));
         })));
       });
@@ -953,7 +956,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
 // Siper 729, Asfat 1.562 işaret arkada kaldığı hâlde görünüyordu (Asfat'ın
 // dört takozu eşdeğer kutunun içinde). Gerçek tarayıcı: mount-pencere.spec.js.
 describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtülü', () => {
-  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ k: g.k, c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
+  // çizilen kutu: merkezi kc (zincir gövdesinde yanalda 0 — Canlı Not 158)
+  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ k: g.k, c: g.kc, h: g.kutu.map((v) => v / 2) }));
   const icinde = (p, b, e) => [0, 1, 2].every((i) => Math.abs(p[i] - b.c[i]) < b.h[i] - e);
   const orter = (p, b, w, e) => {
     let t0 = 0, t1 = Infinity;
@@ -998,9 +1002,11 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
           const ix = sira.findIndex((e) => e.getAttribute('data-ak') === s.k && !e.matches('g.ve-ak-g'));
           const pp = K.P(s.p), q = [r.F.ox + pp[0] * r.F.sc, r.F.oy + pp[1] * r.F.sc];
           let ustte = true, belirsiz = false;
+          // kenarın 0,6 px'i içinde DIŞTAN da belirsiz: 10 Ton TTA'nın PTO'su alttan iki bakışta
+          // şanzımanın alt kenarının 0,01 px dışına düşer (kutu yanalda 0'da — Canlı Not 158)
           for (let j = ix + 1; j < sira.length; j++) {
             if (kendi[sira[j].getAttribute('data-ak')] === s.k) continue;
-            (yuz[j] || []).forEach((P) => { if (icte(q, P)) { if (kenarda(q, P, 0.6)) belirsiz = true; else ustte = false; } });
+            (yuz[j] || []).forEach((P) => { if (kenarda(q, P, 0.6)) belirsiz = true; else if (icte(q, P)) ustte = false; });
           }
           if (ustte && belirsiz) return;
           const gizli = sakli(s.p, B.concat(LV.filter((q) => q.takoz !== s.k)), K);
@@ -1177,11 +1183,15 @@ describe('BRAKET — ataletsiz braket köşebent ya da kaide', () => {
       const v = g.levha, kutle = v.i === 2 ? RO * v.w * v.w * v.d : RO * v.w * v.t * (2 * v.d + 0.5 * v.t);
       expect({ k: g.k, kutle: +kutle.toFixed(6) }).toEqual({ k: g.k, kutle: g.m });
       // ayak takozdan gövdenin yüzüne: d = takozdan o yöndeki ilk yüz
-      const h = m.govde.find((x) => x.k === v.govde), yuz = h[['x', 'y', 'z'][v.i]] - v.s * h.kutu[v.i] / 2;
+      // gövdenin ÇİZİLEN yüzü: kutunun merkezi kc (zincir gövdesinde yanalda 0 — Canlı Not 158)
+      const h = m.govde.find((x) => x.k === v.govde), yuz = h.kc[v.i] - v.s * h.kutu[v.i] / 2;
       expect({ k: g.k, d: +v.d.toFixed(6) }).toEqual({ k: g.k, d: +(v.s * (yuz - v.T[v.i])).toFixed(6) });
     });
-    // veri 0,02 mm içinde simetrik (motorun CG'si y 0,05; T2 356,042 · T4 −355,957)
-    ['d', 't', 'w', 'h'].forEach((a) => expect(Math.abs(br.g6.levha[a] - br.g7.levha[a])).toBeLessThan(0.02));
+    // veri 0,1 mm içinde simetrik (motorun kutusu yanalda 0; T2 356,042 · T4 −355,957)
+    ['d', 't', 'w', 'h'].forEach((a) => expect(Math.abs(br.g6.levha[a] - br.g7.levha[a])).toBeLessThan(0.1));
+    // arka çift de: transfer kutusu yanalda 0'da (Canlı Not 158) — ağırlık merkezinde (Y 54,4)
+    // ayaklar 110,7 ve 217,8 mm'ydi; şimdi 165,1 · 163,4 (T3 305,87 · T5 −304,13)
+    expect([+br.g4.levha.d.toFixed(1), +br.g5.levha.d.toFixed(1)]).toEqual([165.1, 163.4]);
     expect(br.g8.bilgi[3]).toMatch(/^Eşdeğer kaide \d+ × \d+ × \d+ mm · çelik$/);
     expect(br.g6.bilgi[3]).toMatch(/^Eşdeğer köşebent \d+ × \d+ × \d+ mm · çelik$/);
   });
@@ -1422,7 +1432,8 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
   Object.keys(EKLER).forEach((k) => { JSONLAR[k] = JSON.parse(fs.readFileSync(path.join(KOK, 'assets/examples', EKLER[k]), 'utf8')); });
   const HEPSI = ['tulga', 'siper', 'asfat', 'tta10', 'hafif', 'kamyon', 'kutu'];
   const KAM = [{ az: 249.3, el: 19.5 }].concat([0, 45, 90, 135, 180, 225, 270, 315].map((az) => ({ az, el: 25 })));
-  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ g, c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
+  // çizilen kutu: merkezi kc (zincir gövdesinde yanalda 0 — Canlı Not 158)
+  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ g, c: g.kc, h: g.kutu.map((v) => v / 2) }));
   const lohi = (q) => ({ lo: q.c.map((v, i) => v - q.h[i]), hi: q.c.map((v, i) => v + q.h[i]) });
   const ortHacim = (a, b) => { const A = lohi(a), B = lohi(b); return [0, 1, 2].reduce((t, i) => t * Math.max(0, Math.min(A.hi[i], B.hi[i]) - Math.max(A.lo[i], B.lo[i])), 1); };
   const icte = (q, P) => { let a = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if (((yi > q[1]) !== (yj > q[1])) && (q[0] < (xj - xi) * (q[1] - yi) / (yj - yi) + xi)) a = !a; } return a; };
@@ -1625,5 +1636,135 @@ describe('GRUBUN RENGİ — takozun küpü ve çipi', () => {
     // renk dışında aynı çizim: sınıflar silinince svg eskisinin aynısı, yazı yerleri aynı
     expect(r.svg.replace(/ ve-ak-renkli ve-ak-renk-\d/g, '')).toBe(r0.svg);
     expect(JSON.stringify(r.yer)).toBe(JSON.stringify(r0.yer));
+  });
+});
+
+// ZİNCİR Y=0 (kullanıcı 2026-11-13, Canlı Not 158: *"motor-şanzıman-transfer kutusu ve diğer bağlı
+// olan bileşenler, Y ekseninde hep 0 noktasında oluyor … Ağırlık merkezi Y ekseninde kayabiliyor ama
+// modeller kaymıyor"*). Önce: eşdeğer kutu ağırlık merkezindeydi — Tulga'da şanzımanın kutusu
+// 40,8, transfer kutusununki 54,4 mm yana kayıktı (motor 0,05). Şimdi motor · şanzıman · transfer
+// kutusu (componentDefs.isMountZincir) kutusu yanalda 0'da; ağırlık merkezi (x-ışınının işareti,
+// föy, bilgi, çözüm) gerçek yerinde; şaft, braket, PTO, pompa ve aksesuar kendi ağırlık merkezinde
+// (şaft simetrik gövde — Asfat'ın şaftı 156 mm yanda, kutusu orada). Bütün
+// görüntüleyiciler aynı kutudan: Görünümler · Güç grubundaki yeri · sihirbazın masası (3B · 2B) ·
+// raporun illüstrasyonu ve mod şekilleri; hareket zarfının köşeleri mount-zarf.test.js → ZİNCİR Y=0.
+describe('ZİNCİR Y=0 — motor · şanzıman · transfer kutusu araç ekseninde (Canlı Not 158)', () => {
+  const ZINCIR = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer'];
+  const div = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d; };
+  const noktalar = (d) => { const v = d.replace(/[MLHVZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); return o; };
+
+  test('tip kendini beyan eder: üç zincir tipi — şaft, braket, PTO, pompa, PTO Toplam ve aksesuar değil', () => {
+    expect(Object.keys(componentDefs).filter((k) => componentDefs[k].isMountZincir).sort()).toEqual(ZINCIR.slice().sort());
+    ['mnt-shaft', 'mnt-bracket', 'mnt-pto', 'mnt-pump', 'mnt-pto-group', 'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield']
+      .forEach((t) => expect({ t, z: !!componentDefs[t].isMountZincir, govde: !!componentDefs[t].isMountBody }).toEqual({ t, z: false, govde: true }));
+  });
+
+  test('Tulga: üç gövdenin kutusu yanalda 0, ağırlık merkezi gerçek Y\'sinde (0,05 · 40,8 · 54,4 mm); bilgi, föy ve G gerçek CG\'den', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), z = m.govde.filter((g) => g.kutu);
+    expect(z.map((g) => [g.ad, g.kc[1], +g.y.toFixed(2)])).toEqual([['Motor', 0, 0.05], ['Şanzıman', 0, 40.82], ['Transfer Kutusu', 0, 54.42]]);
+    z.forEach((g) => expect([g.kc[0], g.kc[2]]).toEqual([g.x, g.z]));
+    expect(z.map((g) => g.bilgi[2])).toEqual(['CG (125; 0; 550) mm', 'CG (815; 41; 365) mm', 'CG (1.431; 54; 202) mm']);
+    const P = cp._mnt2DPencereVeri();
+    expect(P.veri.comps.slice(0, 3).map((c) => +c.y.toFixed(2))).toEqual([0.05, 40.82, 54.42]);   // İşaretler föyü
+    // birleşik CG kütle ağırlıklı ortalama — kutu çözüme girmez
+    const gv = global.nodes.filter((n) => componentDefs[n.type].isMountBody).map((n) => n.data), M = gv.reduce((a, d) => a + +d.mass, 0);
+    expect(m.G.y).toBeCloseTo(gv.reduce((a, d) => a + d.mass * d.cgy, 0) / M, 6);
+    // sihirbazın masası (düğüm listesinden) aynı kurucu
+    expect(cp._mntAksoModel(cp.veMntAksoListeVeri(global.nodes)).govde.filter((g) => g.kutu).map((g) => g.kc[1])).toEqual([0, 0, 0]);
+  });
+
+  test('bütün örnekler: zincir tipinin kutusu (x; 0; z), ötekiler (braket, PTO, pompa, aksesuar) ağırlık merkezinde', () => {
+    const say = { zincir: 0, oteki: 0 };
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      cp._mntAksoModel().govde.forEach((g) => {
+        const n = global.nodes.find((x) => x.id === g.id), z = ZINCIR.includes(n.type);
+        expect({ k, ad: g.ad, kc: g.kc }).toEqual({ k, ad: g.ad, kc: [g.x, z ? 0 : g.y, g.z] });
+        if (g.kutu) say[z ? 'zincir' : 'oteki']++;
+      });
+    });
+    // kutulu: Tulga 3 · Siper 2 · Asfat 2 · TTA 2 zincir; Siper'in iki cradle'ı, Asfat'ın şaftı
+    // (CG Y 156), iki braketi ve iki PTO grubu ağırlık merkezinde
+    expect(say).toEqual({ zincir: 9, oteki: 7 });
+  });
+
+  test('tipsiz kayıt (örnek kaydı): kind, o da yoksa ad — braket her zaman kazanır', () => {
+    // Siper'in kaydında kind yok: Motor (CG Y 4,9) ve Şanzıman (11,2) adıyla zincir, cradle değil
+    const s = cp.veMntAksoOrnekModel(core.getMountExample('siper').model);
+    expect(s.govde.map((g) => [g.ad, g.kc[1]])).toEqual([['Motor', 0], ['Şanzıman', 0], ['Şaft payı', 0], ['Sol cradle', -274.782], ['Sağ cradle', 318.791]]);
+    // Hafif'in kaydında kind var: "Sağ motor braketi" braket
+    const h = cp.veMntAksoOrnekModel(core.getMountExample('hafif').model);
+    expect(h.govde.map((g) => [g.ad, g.kc[1]])).toEqual([['Motor', 0], ['Şanzıman', 0], ['Alternatör + klima', 235], ['Sağ motor braketi', 315], ['Sol motor braketi', -295]]);
+    const Z = cp._mntZincirMi;
+    ['Motor', 'Motor — Cummins ISM', 'Şanzıman + Retarder — Allison 4700', 'ŞANZIMAN', 'Transfer Kutusu', 'Gearbox']
+      .forEach((ad) => expect({ ad, z: Z({ name: ad }) }).toEqual({ ad, z: true }));
+    ['Sağ motor braketi', 'Motor Bracket', 'Sol cradle', 'Motor PTO', 'Top PTO Grubu', 'Direksiyon pompası', 'Alternatör', 'Isı Sacı', 'Klima kompresörü', 'Kutu', 'Şaft payı', 'Kardan mili payı', 'Şaft']
+      .forEach((ad) => expect({ ad, z: Z({ name: ad }) }).toEqual({ ad, z: false }));
+    // tip addan önce: kind · tip; toplayıcının beyanı (zincir) hepsinden önce
+    expect([Z({ name: 'Kutu', kind: 'mnt-motor' }), Z({ name: 'Motor', kind: 'mnt-bracket' }), Z({ name: 'Motor', tip: 'mnt-pump' }), Z({ name: 'Pompa', tip: 'mnt-gearbox', zincir: false })])
+      .toEqual([true, false, false, false]);
+    // atalet girilmiş braket adıyla braket: kutusu ağırlık merkezinde
+    const b = cp.veMntAksoOrnekModel({ components: [{ name: 'Motor braketi', mass: 40, cg: [700, -300, 700], Ixx: 0.3, Iyy: 4.4, Izz: 4.2 }], mounts: [] });
+    expect([b.govde[0].braket, !!b.govde[0].kutu, b.govde[0].kc]).toEqual([true, true, [700, -300, 700]]);
+  });
+
+  test('Görünümler: kutunun izdüşümü kc\'de; x-ışınında (raporun illüstrasyonu) ağırlık merkezinin işareti gerçek yerinde', () => {
+    yukle('tulga');
+    const R = coz(), m = cp.veMntAksoCozumModel(R), O = rep._MNT_REP_AKSO_O, r = AK.ciz(m, O), K = AK.kamera(O.iz, O.b);
+    const P = (p) => { const q = K.P(p); return [r.F.ox + q[0] * r.sc, r.F.oy + q[1] * r.sc]; };
+    const d = div(r.svg);
+    const ayrik = m.govde.filter((g) => g.kutu).map((g) => {
+      const pts = [...d.querySelectorAll(`g.ve-ak-g[data-ak="${g.k}"] path`)].flatMap((p) => noktalar(p.getAttribute('d')));
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]), orta = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+      const kc = P(g.kc), cg = P([g.x, g.y, g.z]), am = d.querySelector(`g.ve-ak-amk[data-ak="${g.k}"] circle`);
+      expect({ ad: g.ad, kutu: Math.hypot(orta[0] - kc[0], orta[1] - kc[1]) < 0.15 }).toEqual({ ad: g.ad, kutu: true });
+      expect({ ad: g.ad, isaret: Math.hypot(+am.getAttribute('cx') - cg[0], +am.getAttribute('cy') - cg[1]) < 0.1 }).toEqual({ ad: g.ad, isaret: true });
+      return +Math.hypot(cg[0] - kc[0], cg[1] - kc[1]).toFixed(1);
+    });
+    expect(ayrik[0]).toBeLessThan(0.1);                                  // motor: CG Y 0,05
+    expect(ayrik[1]).toBeGreaterThan(3); expect(ayrik[2]).toBeGreaterThan(ayrik[1]);   // şanzıman · transfer kutusu: işaret kutunun ortasında değil
+    // pencerenin katı çizimi de aynı kutudan: kc kaldırılınca (kutu ağırlık merkezinde) çizim değişir
+    const o = { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS };
+    const mk = cp._mntAksoModel(), eski = JSON.parse(JSON.stringify(mk));
+    eski.govde.forEach((g) => { delete g.kc; });
+    expect(AK.ciz(mk, o).svg).not.toBe(AK.ciz(eski, o).svg);
+  });
+
+  test('2B sayfası (sihirbazın masası): çerçeve kutunun merkezinde Y = 0, daire ağırlık merkezinde — üstten ve önden', () => {
+    yukle('tulga');
+    const v = cp._mnt2DGather(), r = cp.veMnt2BSayfa(v, 1000, 700, {}), K = r.kamera, EKS = { x: 0, y: 1, z: 2 };
+    const kutulu = v.comps.filter((c) => c.kutu);
+    expect(kutulu.map((c) => [c.name, c.kc])).toEqual(kutulu.map((c) => [c.name, [c.x, 0, c.z]]));
+    ['ust', 'on'].forEach((g) => {
+      const G = cp.VE_MNT2D_GORUNUS[g], p = r.paneller.find((x) => x.g === g);
+      const px = (h) => p.cx + (h - K[G.h]) * K.s, py = (w) => p.cy - (w - K[G.v]) * K.s;
+      const d = div(r.svg).querySelector(`[data-mnt2b="${g}"]`);
+      const rect = [...d.querySelectorAll('.ve-mnt2d-kutu > rect')], daire = [...d.querySelectorAll('circle[stroke="var(--accent-warning)"]')];
+      expect([rect.length, daire.length]).toEqual([kutulu.length, v.comps.length]);
+      kutulu.forEach((c, i) => {
+        const cx = +rect[i].getAttribute('x') + +rect[i].getAttribute('width') / 2, cy = +rect[i].getAttribute('y') + +rect[i].getAttribute('height') / 2;
+        expect({ g, ad: c.name, cerceve: Math.hypot(cx - px(c.kc[EKS[G.h]]), cy - py(c.kc[EKS[G.v]])) < 0.15 }).toEqual({ g, ad: c.name, cerceve: true });
+        const j = v.comps.indexOf(c);
+        expect({ g, ad: c.name, daire: Math.hypot(+daire[j].getAttribute('cx') - px(c[G.h]), +daire[j].getAttribute('cy') - py(c[G.v])) < 0.15 }).toEqual({ g, ad: c.name, daire: true });
+      });
+    });
+  });
+
+  test('raporun mod şekli (§8.16): zincir gövdesinin kutusu kc\'de, noktası ağırlık merkezinde; braket kc taşımaz', () => {
+    yukle('tulga');
+    const R = coz(), geom = rep._mntRepGeom(R);
+    expect(geom.comps.map((c) => (c.kc ? c.kc.y : null))).toEqual([0, 0, 0, null, null, null, null, null]);
+    const cgM = { x: R.mp.cg[0] * 1000, y: R.mp.cg[1] * 1000, z: R.mp.cg[2] * 1000 };
+    const svg = rep._mntRepModeFigure(geom, cgM, [0, 0, 0, 0, 0, 0], 'xy', 'z0', 1, null);
+    // takozların referans kareleri ölçeği ve ofseti verir (üstten: düşey eksen Y, yukarı)
+    const kare = [...svg.matchAll(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="none" stroke="#c9ced6"/g)].map((q) => +q[2] + 4);
+    const T = geom.mounts, ys = T.map((t) => t.y), i0 = ys.indexOf(Math.max(...ys)), i1 = ys.indexOf(Math.min(...ys));
+    const sc = (kare[i1] - kare[i0]) / (T[i0].y - T[i1].y), Y = (y) => kare[i0] - (y - T[i0].y) * sc;
+    const ref = [...svg.matchAll(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="3" fill="none" stroke="#d3d8de"/g)].map((q) => +q[2] + +q[4] / 2);
+    expect(ref.map((y) => Math.abs(y - Y(0)) < 0.2)).toEqual([true, true, true]);
+    const nokta = [...svg.matchAll(/<circle cx="(-?[\d.]+)" cy="(-?[\d.]+)" r="2" fill/g)].map((q) => +q[2]);
+    expect(nokta.map((y, i) => Math.abs(y - Y(geom.comps[i].y)) < 0.2)).toEqual([true, true, true]);
+    expect(Math.abs(nokta[2] - ref[2])).toBeGreaterThan(5);           // transfer kutusu: nokta kutunun ortasında değil
   });
 });

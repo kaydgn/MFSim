@@ -43,7 +43,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // MODEL (m):
-//   govde : [{ k, no, ad, m [kg], x, y, z [mm], kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır],
+//   govde : [{ k, no, ad, m [kg], x, y, z [mm] (ağırlık merkezi), kc?:[x,y,z] mm (eşdeğer kutunun
+//            merkezi — zincir gövdesinde y = 0; yoksa x · y · z), kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır],
 //            braket, levha:{ takoz:k, govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } | null }
 //   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır],
 //            renk? (1–4: Parametrik Analiz'de grubun rengi — küp ve çip `ve-ak-renk-N`, --seri-N) }]
@@ -612,8 +613,8 @@ var veMntAkso = (function(){
   function modOlcek(m, phi){
     var c=m.cgR, pts=[];
     m.govde.forEach(function(b){
-      var h=b.kutu ? b.kutu.map(function(v){ return v/2; }) : [0, 0, 0];
-      [-1, 1].forEach(function(i){ [-1, 1].forEach(function(j){ [-1, 1].forEach(function(k){ pts.push([b.x+i*h[0], b.y+j*h[1], b.z+k*h[2]]); }); }); });
+      var h=b.kutu ? b.kutu.map(function(v){ return v/2; }) : [0, 0, 0], c=b.kutu ? kutuMerkez(b) : [b.x, b.y, b.z];
+      [-1, 1].forEach(function(i){ [-1, 1].forEach(function(j){ [-1, 1].forEach(function(k){ pts.push([c[0]+i*h[0], c[1]+j*h[1], c[2]+k*h[2]]); }); }); });
     });
     m.takoz.forEach(function(t){ pts.push([t.x, t.y, t.z]); });
     (m.aski || []).forEach(function(a){ pts.push([a.x, a.y, a.z]); });
@@ -625,6 +626,11 @@ var veMntAkso = (function(){
     var s=Math.min(sT, sR);
     return isFinite(s) ? s : 0;
   }
+  // EŞDEĞER KUTUNUN MERKEZİ (model: g.kc; kullanıcı 2026-11-13, Canlı Not 158): zincir
+  // gövdesinde (motor · şanzıman · transfer kutusu · şaft) yanalda 0, öteki gövdede ağırlık
+  // merkezi. Kutu, gölgesi, sırası, parçalanması ve yazısının dayanağı oradan; ağırlık
+  // merkezinin işareti (x-ışını) ve bilgisi g.x · g.y · g.z'de. kc'siz model birebir eski.
+  function kutuMerkez(g){ return (g.kc && g.kc.length===3) ? g.kc.slice() : [g.x, g.y, g.z]; }
   // Statik denge: q = [u (mm), θ (rad)] — çözümün qStatic'i.
   function cokmeDelta(m, p, n){
     var u=m.q.u, t=m.q.t, c=m.cgR, r=[p[0]-c[0], p[1]-c[1], p[2]-c[2]];
@@ -634,7 +640,7 @@ var veMntAkso = (function(){
   function kapsam(m){
     var xs=[], ys=[], zs=[0];
     m.govde.forEach(function(g){
-      if(g.kutu) [0, 1, 2].forEach(function(i){ var c=[g.x, g.y, g.z][i], h=g.kutu[i]/2; [xs, ys, zs][i].push(c-h, c+h); });
+      if(g.kutu){ var k=kutuMerkez(g); [0, 1, 2].forEach(function(i){ var c=k[i], h=g.kutu[i]/2; [xs, ys, zs][i].push(c-h, c+h); }); }
       else { xs.push(g.x); ys.push(g.y); zs.push(g.z); }
     });
     m.takoz.forEach(function(t){ xs.push(t.x); ys.push(t.y); zs.push(t.z); });
@@ -676,7 +682,7 @@ var veMntAkso = (function(){
     // uzaklaşırken 0,75'te durur. G, gövde CG'si ve nokta kütle işarettir, √yakın kalır.
     // Kapı: mount-akso.test.js → *TAKOZ MODELLE BÜYÜR*.
     var tk=(o.isaret>0 ? o.isaret : 1)*(o.kure ? Math.max(0.75, o.yakin || 1) : 1);
-    var kut=m.govde.filter(function(g){ return g.kutu; }).map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:g.kutu.map(function(v){ return v/2; }) }; });
+    var kut=m.govde.filter(function(g){ return g.kutu; }).map(function(g){ return { g:g, c:kutuMerkez(g), h:g.kutu.map(function(v){ return v/2; }) }; });
     var nok=m.govde.filter(function(g){ return !g.kutu; });
     var Kp=kapsam(m);
     // Izgara adımı: güç grubu 2,6 m'den uzunsa 500, değilse 250 mm.
@@ -928,7 +934,8 @@ var veMntAkso = (function(){
           t:Math.min.apply(null, pd.map(function(v){ return v[1]; })), b:Math.max.apply(null, pd.map(function(v){ return v[1]; })) }); }
       engel.push(kk);
       if(stil==='xray'){
-        var am=Ph(q.c);
+        // ağırlık merkezinin işareti gerçek yerinde — kutunun merkezinde değil (zincir gövdesi, Canlı Not 158)
+        var am=Ph([g.x, g.y, g.z]);
         var ar=2.6*ik, ac=4.5*ik;
         koy(g.k, '<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="'+R(ar)+'"/><path d="M'+R(am[0]-ac)+' '+R(am[1])+' H'+R(am[0]+ac)+' M'+R(am[0])+' '+R(am[1]-ac)+' V'+R(am[1]+ac)+'"/></g>');
         // Gövdenin CG işareti bir veri işaretidir: yazı onu örtmez (raporun
