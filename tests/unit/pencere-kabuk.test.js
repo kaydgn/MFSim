@@ -438,9 +438,11 @@ describe('ÇÖZÜMDEN BAĞIMSIZ — Takoz penceresi sonuç göstermez', () => {
     TAKOZ_TIP.forEach((t) => { sonra[t] = takozPencere(t); });
     expect(TAKOZ_TIP.filter((t) => sade(once[t]) !== sade(sonra[t]))).toEqual([]);
     // Hazırlık işareti yalnız eylemi çözüme bağlı iki pencerede ve çözümle
-    // gerçekten değişiyor (işaret her şeyi bağışlayan bir kaçış değil).
+    // gerçekten değişiyor (işaret her şeyi bağışlayan bir kaçış değil). Üçüncüsü
+    // Parametrik Analiz'in elemesi (kullanıcı 2026-11-13: beklenen takoz sehimi
+    // Çözücü'nün çözümünden — en düşük takoz yükü ve eleme; mount-param-eleme.test.js).
     const isaretli = TAKOZ_TIP.filter((t) => sonra[t].querySelector(HAZIRLIK));
-    expect(isaretli.sort()).toEqual(['mnt-report', 'mnt-solver']);
+    expect(isaretli.sort()).toEqual(['mnt-parametric', 'mnt-report', 'mnt-solver']);
     isaretli.forEach((t) => expect(once[t].innerHTML).not.toBe(sonra[t].innerHTML));
   });
 

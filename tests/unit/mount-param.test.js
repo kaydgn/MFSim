@@ -321,7 +321,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
 
   test('YERLEŞİM: Tulga’nın üç grubu Excel’in sütunları; çizim güç grubunun aksonometrisi, takozun çipi ve rengi grubunki', () => {
     const n = kur('tulga'), d = dom(P.getMntParamPropertiesHTML(n));
-    expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Beklenen takoz sehimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
     expect(satir).toEqual([
       ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA'],
@@ -467,8 +467,10 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
   // ANALİZ (Canlı Not 1008: "programda kayıtlı olan takoz sayısını vs yazalım. Kullanıcı bilgilensin"):
   // okunur alanlar — kayıtlı takoz · aday tip · ölçülü ve tahmini rijitlik · rijitlik eksik · aday değil
   // (kütüphanenin sınıfları, bağımsız hakemle) · taranan grup · kombinasyon; binlik noktalı Türkçe sayı.
+  // Çözümsüz: eleme yok — en düşük takoz yükü ve elenen boş (eleme: mount-param-eleme.test.js).
   test('ANALİZ (Canlı Not 1008): kayıtlı takoz, aday tip, ölçülü ve tahmini rijitlik, rijitlik eksik, aday değil — kütüphanenin sınıfları; okunur, Türkçe sayı', () => {
     kutuphaneyle(TAM_KUTUPHANE, () => {
+      cp._veMntLast = null;
       const n = kur('tulga'), L = Object.values(cp.veMntGetLibraryMap()), d = dom(P.getMntParamPropertiesHTML(n));
       const aday = L.filter((e) => e.aday !== false && tam6(e)), tah = aday.filter((e) => (e.tahmin || []).length).length;
       const bek = [['Kayıtlı takoz', L.length], ['Aday tip', aday.length], ['Ölçülü rijitlik', aday.length - tah],
@@ -479,12 +481,12 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
       bek.forEach(([, v]) => expect(v).toBeGreaterThan(0));
       const G = P._mntParamYeni(n).M.G.length;
       expect(Object.entries(analiz(d))).toEqual(bek.map(([k, v]) => [k, binlik(v)])
-        .concat([['Taranan grup', G + ' / ' + G], ['Kombinasyon', binlik(aday.length ** G)]]));
+        .concat([['En düşük takoz yükü [kg]', '—'], ['Elenen', '—'], ['Taranan grup', G + ' / ' + G], ['Kombinasyon', binlik(aday.length ** G)]]));
       expect(analiz(d)['Kombinasyon']).toMatch(/^\d{1,3}(\.\d{3})+$/);
       // okunur alanlar; bölüm bütünüyle yerinde tazelenir
       const sec = d.querySelector('#ve-mnt-param-ozet-py');
       expect(sec.hasAttribute('data-tazele')).toBe(true);
-      expect([...sec.querySelectorAll('input')].map((i) => i.readOnly)).toEqual(Array(8).fill(true));
+      expect([...sec.querySelectorAll('input')].map((i) => i.readOnly)).toEqual(Array(10).fill(true));
     });
   });
 
@@ -649,7 +651,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     [{}, { adaylarKip: 'ozel' }].forEach((data) => {
       n.data = data;
       const d = dom(P.getMntParamPropertiesHTML(n));
-      expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
+      expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Beklenen takoz sehimi', 'Adaylar']);
       expect(d.querySelector('.ve-prm-ak')).toBeNull();
       expect(d.querySelectorAll('.ve-fp-main table, .ve-fp-main input, .ve-fp-main button').length).toBe(0);
       expect(d.textContent.match(/Takoz yok/g).length).toBe(1);

@@ -462,8 +462,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (kullanıcı 2026-11-13, Canlı Not 1008: *"takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"*):
   `aday:false` dışında altı rijitliği tam olan, tahminli tip DE; liste her kurulumda haritadan TÜRER
   (gömülü · değiştirilmiş · özel tip) — eklenen ya da Takoz Özellikleri'nde tamamlanan tip kendiliğinden
-  aday (`_mntParamTipSinif`). Sağda **Analiz**: kayıtlı takoz · aday tip · ölçülü · tahmini rijitlik ·
-  rijitlik eksik · aday değil (aynı sınıftan, `_mntParamKutuphane`) · taranan grup · kombinasyon (grupların
+  aday (`_mntParamTipSinif`). **Beklenen takoz sehimi ELER** (kullanıcı 2026-11-13: *"o aralık değerden
+  dışında kalan takozlar otomatik olarak elensin"*; bölüm Takoz yerleşimi ile Adaylar arasında, En az · En
+  çok [mm], `node.data.sehim` = { alt, ust }): Çözücü'nün çözümü Statik durumun EN DÜŞÜK TAKOZ YÜKÜNÜ (yalnız
+  takozlar) ve kütüphanenin her aday tipinin o yükteki statik sehimini taşır (`R.tipSehim`, bellekte; tipin
+  z yasasından, Lineer modda k_z; Çözücü penceresi göstermez); sehimi aralığın dışındaki tip aday listesinden
+  düşer — Tüm kombinasyonlar, Özel kombinasyonun araması ve sayılar aynı listeden; elenen tip özelin
+  kaydında kalır. Kapasite kullanılmaz. Eleme yalnız çözüm GÜNCELKEN (`veMntSonucDurumu`) ve 0 < en az < en
+  çok iken: çözüm yoksa ya da eskiyse alanlar kapalı (sebebi notta), boş aralık eksik bandında sorulur; alanlar
+  yerinde tazelenmez, kapalılıkları çözümü izler (`data-mnt-izle`). Kapı: `mount-param-eleme.test.js` (→ *GİZLİ
+  HESAP* · *PENCERE* · *AYAR* · *YERİNDE*). Sağda **Analiz**: kayıtlı takoz · aday tip · ölçülü · tahmini
+  rijitlik (üçü elemeden sonra) · rijitlik eksik · aday değil (aynı sınıftan, `_mntParamKutuphane`) · en düşük
+  takoz yükü · elenen · taranan grup · kombinasyon (grupların
   tip sayılarının çarpımı; ÜST SINIRI YOK — kullanıcı 2026-11-13: *"program sonsuz sayıda iterasyon
   yapabilmeli"*). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
@@ -1173,7 +1183,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Özellikleri'nin **Öneri**'si — çözücü değil KABA ön seçim (rijit gövde, bütün takozlar
   aynı tip; eşit rijitlikte yük dağılımı, dikey frekans), Parametrik Analiz'in
   varsayılan sınırlarıyla (E4 · E1–E2 · E3 · Kriter 1), seçili markanın ilk beşi; satır
-  tipi seçer, çözümden bağımsız. Kapı: `mount-oneri.test.js`.
+  tipi seçer, çözümden bağımsız. Kapı: `mount-oneri.test.js`. **ÜÇÜNCÜ İSTİSNA** (kullanıcı
+  2026-11-13: *"Çözücü bileşeninden … ilk önce girdilere göre çözmesini istesin"*): Parametrik
+  Analiz'in **Beklenen takoz sehimi** ve **Analiz**'i — elemenin girdisi Çözücü'nün çözümünden (en
+  düşük takoz yükü, elenen tip sayısı); iki bölüm `data-cozum-durumu` taşır. Kapı:
+  `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ* + `mount-param-eleme.test.js`.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
   kalır ve tuvalde İŞARETLENMEZ — kutu öteki bileşenler gibi (kullanıcı 2026-11-11, Canlı Not

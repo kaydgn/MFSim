@@ -300,16 +300,20 @@ function _mntParamOlcucu(M, ctx){
 // aralarında kombinasyon yapılıp … çözdürülecek"*; Excel'i: Tulga_takoz_konfigurasyonlari):
 //   TAKOZ YERLEŞİMİ  modelin takozları yerlerine göre gruplanır (tek takoz · sağ/sol çift —
 //                    veMntKatalog.gruplar); plan görünüşü (ön solda, sağ üstte) ve föy
+//   BEKLENEN TAKOZ SEHİMİ  en az · en çok [mm] (kullanıcı 2026-11-13); referans yükteki sehimi
+//                    aralığın dışında kalan aday tip ELENİR — çözüm güncelken (_mntParamEleme)
 //   ADAYLAR          iki kip (Canlı Not 1005): Tüm kombinasyonlar (varsayılan — her grupta bütün
 //                    aday tipler) · Özel kombinasyon (yer başına aranarak eklenen tipler)
 //   Kombinasyon = grupların tip sayılarının çarpımı; özelde tipi eklenmeyen grup mevcut tipinde
 //   kalır. Kip node.data.adaylarKip'te (yalnız 'ozel' yazılır); özelin seçimi node.data.adaylar'da:
-//   { grubun anahtarı: [tip anahtarı] } (kütüphane sırası) — kip değişince silinmez.
+//   { grubun anahtarı: [tip anahtarı] } (kütüphane sırası) — kip değişince silinmez; aralık
+//   node.data.sehim'de: { alt, ust } (makine biçimi, mm).
 function getMntParamPropertiesHTML(node){
   if(!node.data) node.data={};
   var Y=_mntParamYeni(node);
   return _mntPencereKabuk(node, [
     { k:'yerlesim', ad:'Takoz yerleşimi', govde:_mntParamYerlesimHTML(node, Y) },
+    { k:'sehim', ad:'Beklenen takoz sehimi', govde:_mntParamSehimHTML(node, Y), durum:_mntParamSehimDurumu(Y) },
     { k:'aday', ad:'Adaylar', govde:_mntParamAdaylarHTML(node, Y) }
   ], _mntParamYeniYanHTML(node, Y));
 }
@@ -345,29 +349,100 @@ var VE_MNT_PARAM_ADAY_KIP = [['hepsi', 'Tüm kombinasyonlar'], ['ozel', 'Özel k
 function _mntParamAdayKip(node){
   return (node && node.data && node.data.adaylarKip==='ozel') ? 'ozel' : 'hepsi';
 }
-// Pencerenin bütün girdisi: model, gruplar, aday tipler, kütüphanenin sayıları (K), kip, özelin
-// seçimi ve kombinasyon. `say` grup başına denenecek tip sayısı (0: grup mevcut tipinde). Seçimden
-// bugün olmayan grup, aday olmayan tip ve tekrar düşer (model ya da kütüphane değişmiş olabilir).
-// Kombinasyonun üst sınırı YOK (kullanıcı 2026-11-13: *"Bu limiti kaldıralım"*; eskiden 200.000).
+// Pencerenin bütün girdisi: model, gruplar, aday tipler (`Atum` elemeden önce, `A` sonra),
+// kütüphanenin sayıları (K), eleme (E), kip, özelin seçimi ve kombinasyon. `say` grup başına
+// denenecek tip sayısı (0: grup mevcut tipinde). Seçimden bugün olmayan grup, aday olmayan tip ve
+// tekrar düşer (model ya da kütüphane değişmiş olabilir); elenen tip kayıtta kalır (`ham`: aralık
+// değişince geri gelir) ama sayılmaz. Kombinasyonun üst sınırı YOK (kullanıcı 2026-11-13: *"Bu
+// limiti kaldıralım"*; eskiden 200.000).
 function _mntParamYeni(node){
-  var M=_mntParamModel(), A=_mntParamAdayTipler(M), K=_mntParamKutuphane(M), kip=_mntParamAdayKip(node);
-  var ham=(node && node.data && node.data.adaylar) || {};
-  var var_={};
-  A.forEach(function(a){ var_[a.key]=true; });
-  var sec={};
+  var M=_mntParamModel(), Atum=_mntParamAdayTipler(M), K=_mntParamKutuphane(M), kip=_mntParamAdayKip(node);
+  var E=_mntParamEleme(node, Atum), A=E.kalan;
+  var kayit=(node && node.data && node.data.adaylar) || {};
+  var tum={}, kal={};
+  Atum.forEach(function(a){ tum[a.key]=true; });
+  A.forEach(function(a){ kal[a.key]=true; });
+  var ham={}, sec={};
   M.G.forEach(function(g){
     var gor={};
-    var l=(Array.isArray(ham[g.anahtar]) ? ham[g.anahtar] : []).filter(function(k){
-      if(!var_[k] || gor[k]) return false;
+    var l=(Array.isArray(kayit[g.anahtar]) ? kayit[g.anahtar] : []).filter(function(k){
+      if(!tum[k] || gor[k]) return false;
       gor[k]=true; return true;
     });
+    if(l.length) ham[g.anahtar]=l;
+    l=l.filter(function(k){ return kal[k]; });
     if(l.length) sec[g.anahtar]=l;
   });
   var say=M.G.map(function(g){ return kip==='ozel' ? (sec[g.anahtar] || []).length : A.length; });
   var taranan=say.filter(function(s){ return s>0; }).length;
   var N=taranan ? say.reduce(function(p, s){ return p*(s || 1); }, 1) : 0;
   var eksik=!M.tak.length ? 'Takoz yok' : !A.length ? 'Aday tip yok' : '';
-  return { M:M, A:A, K:K, kip:kip, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
+  return { M:M, A:A, Atum:Atum, K:K, E:E, kip:kip, ham:ham, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
+}
+
+// ELEME — BEKLENEN TAKOZ SEHİMİ (kullanıcı 2026-11-13: *"Tam parametrik analiz çalışmadan önce,
+// program kullanıcıdan 'Çözücü' bileşeninden ilk önce girdilere göre çözmesini istesin … Kullanıcı o
+// aralık değeri girdiğinde, o aralık değerden dışında kalan takozlar otomatik olarak elensin."*; δ'nın
+// adı programda sehim — kullanıcı kararları S1·C · S2·C). Çözücü'nün çözümü her aday tipin EN
+// DÜŞÜK TAKOZ YÜKÜNDEKİ statik sehimini taşır (cp-mount.js → R.tipSehim · veMntTipSehim); sehimi
+// [en az, en çok] dışındaki tip aday listesinden düşer — Tüm kombinasyonlar, Özel kombinasyonun araması
+// ve sayılar aynı listeden. Kapasite kullanılmaz. Eleme yalnız çözüm GÜNCELKEN ve aralık geçerliyken
+// (0 < en az < en çok): çözüm yoksa ya da eskiyse alanlar kapalı, adaylar elenmez.
+// Aralık (yalnız node.data): d ∈ bos · alt · ust (o uç boş) · sifir · sira · tamam.
+function _mntParamSehimAraligi(node){
+  var c=(node && node.data && node.data.sehim) || {};
+  var alt=_mntNum(c.alt, NaN), ust=_mntNum(c.ust, NaN), a=Number.isFinite(alt), u=Number.isFinite(ust);
+  var d=(!a && !u) ? 'bos' : !a ? 'alt' : !u ? 'ust' : !(alt>0 && ust>0) ? 'sifir' : !(alt<ust) ? 'sira' : 'tamam';
+  return { alt:alt, ust:ust, d:d };
+}
+// Eleme: cozum ∈ yok · eski (çözüm) · yuksuz (en düşük takoz yükü ≤ 0) · tamam; aktif (aralık
+// geçerli ve çözüm tamam) iken her adayın sehimi `sehim`de, elenen ve kalan listeler.
+function _mntParamEleme(node, A){
+  var Ar=_mntParamSehimAraligi(node);
+  var S=(typeof veMntSonucDurumu==='function') ? veMntSonucDurumu() : { durum:'yok', R:null };
+  var guncel=S.durum==='guncel' && !!S.R, T=guncel ? (S.R.tipSehim || null) : null;
+  var cozum=(!guncel && S.R) ? 'eski' : !T ? 'yok' : !(T.F>0) ? 'yuksuz' : 'tamam';
+  var E={ aralik:Ar, cozum:cozum, T:T, aktif:false, elenen:[], kalan:A };
+  if(cozum!=='tamam' || Ar.d!=='tamam') return E;
+  E.aktif=true;
+  E.kalan=[];
+  A.forEach(function(a){
+    a.sehim=(typeof veMntTipSehim==='function') ? veMntTipSehim(T, a.e) : NaN;
+    (a.sehim>=Ar.alt && a.sehim<=Ar.ust ? E.kalan : E.elenen).push(a);
+  });
+  return E;
+}
+// Bölümün durumu yalnız aralıktan (çözümden bağımsız — ÇÖZÜMDEN BAĞIMSIZ): boş uç eksik bandına
+// girer (kullanıcıya sorulur); geçersiz aralık bölümde işaretli, sebebi bölümün notunda.
+function _mntParamSehimDurumu(Y){
+  if(!Y.M.tak.length) return null;
+  var d=Y.E.aralik.d, sonuc=': aday tipler elenmez.';
+  if(d==='bos') return _mntDurum('eksik', 'eksik', 'Aralık boş'+sonuc);
+  if(d==='alt') return _mntDurum('eksik', 'eksik', 'En az boş'+sonuc);
+  if(d==='ust') return _mntDurum('eksik', 'eksik', 'En çok boş'+sonuc);
+  if(d!=='tamam') return _mntDurum('eksik', 'geçersiz', '', '', false);
+  return _mntDurum('ok', '');
+}
+// Bölüm: iki sayı alanı (en az · en çok) ve notu. Alanlar YERİNDE TAZELENMEZ (yazarken odak ve imleç
+// kalır); kapalılıkları ve değerleri çözümü izler (`data-mnt-izle` — veMntPencereTazele). Not ve
+// kapalılık çözüme bağlı: bölüm `data-cozum-durumu` taşır.
+function _mntParamSehimHTML(node, Y){
+  if(!Y.M.tak.length) return _mntBolum('Beklenen takoz sehimi', '', '');      // durum sağ sütunda, bir kez
+  var E=Y.E, kapali=E.cozum!=='tamam', notId='ve-mnt-param-sehim-not-'+node.id;
+  var c=(node.data && node.data.sehim) || {};
+  var alan=function(uc, etiket){
+    return '<label class="ve-fp-f"><span class="ve-fp-l">'+etiket+' <u>[mm]</u></span>'
+      + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-mnt-param-sehim-'+uc+'-'+node.id+'" data-mnt-izle'
+      + ' value="'+_mntEsc(c[uc]!=null ? c[uc] : '')+'"'+(kapali ? ' disabled aria-describedby="'+notId+'"' : '')
+      + ' onchange="veMntParamSehim(\''+node.id+'\',\''+uc+'\',this.value)"></label>';
+  };
+  var not=E.cozum==='yok' ? '<b>Model çözülmedi.</b> '+veYon('Çözücü penceresinde Hesapla ile çözün.')
+    : E.cozum==='eski' ? '<b>Model son hesaptan sonra değişti.</b> '+veYon('Çözücü penceresinde Hesapla ile yeniden çözün.')
+    : E.cozum==='yuksuz' ? '<b>'+_mntEsc(E.T.ad || 'Takoz')+' statik durumda yük taşımıyor.</b>' : '';
+  var d=E.aralik.d;
+  if(d==='sifir' || d==='sira') not+=(not ? ' ' : '')+'<b>'+(d==='sifir' ? 'Sınır sıfırdan büyük olmalı.' : 'En az, en çoktan küçük olmalı.')+'</b>';
+  return _mntBolum('Beklenen takoz sehimi', '', _mntIzgara(2, alan('alt', 'En az')+alan('ust', 'En çok'))
+    + '<div id="'+notId+'" data-tazele>'+(not ? _mntNot(not, 'warn') : '')+'</div>', { cozum:true });
 }
 
 // YERLEŞİMİN ÇİZİMİ (Canlı Not 1003: *"daha güzel yapalım. Çok sade olmuş."*) — güç grubunun
@@ -426,9 +501,11 @@ function _mntParamYerlesimHTML(node, Y){
 // Özelde her grubun bloğu: numara (plan ve föyle aynı), ad, denenecek tip sayısı (tipi eklenmeyen
 // grup "Mevcut tip"), arama kutusu, eklenen tiplerin satırları (ad · kz · kaldır). Sayı ve satırlar
 // yerinde tazelenir (`data-tazele`); arama kutusu TAZELENMEZ — ekleyince odak ve imleç kutuda kalır.
+// Bölümün yapısı (kip, grupların blokları) elemeden bağımsız: elenen tip yalnız sayıdan ve
+// listelerden düşer; başlıktaki sayı (aday tip, elemeden sonra) yerinde tazelenir.
 function _mntParamAdaylarHTML(node, Y){
-  var G=Y.M.G, A=Y.A;
-  if(!G.length || !A.length) return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', '');   // durum sağ sütunda, bir kez
+  var G=Y.M.G, A=Y.A, em={ emId:'ve-mnt-param-aday-em-'+node.id };
+  if(!G.length || !Y.Atum.length) return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', '', em);   // durum sağ sütunda, bir kez
   var h='<div class="ve-prm-kip" role="group" aria-label="Adaylar">'+VE_MNT_PARAM_ADAY_KIP.map(function(k){
     return '<button type="button" data-kip="'+k[0]+'" aria-pressed="'+(k[0]===Y.kip)+'"'
       + ' onclick="veMntParamAdayKip(\''+node.id+'\',\''+k[0]+'\')">'+k[1]+'</button>';
@@ -437,7 +514,7 @@ function _mntParamAdaylarHTML(node, Y){
     var S=_mntParamListeSira(A);
     h+='<div class="ve-prm-oz-l">'+G.map(function(g){ return _mntParamOzelHTML(node, Y, g, S); }).join('')+'</div>';
   }
-  return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', h);
+  return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', h, em);
 }
 function _mntParamOzelHTML(node, Y, g, S){
   var id=node.id+'-'+g.no, lid='ve-mnt-param-ara-l-'+id, n=(Y.sec[g.anahtar] || []).length;
@@ -478,17 +555,23 @@ function _mntParamListeSira(A){
 }
 
 // Sağ sütun: kütüphanenin sayıları (Canlı Not 1008: *"programda kayıtlı olan takoz sayısını vs
-// yazalım. Kullanıcı bilgilensin"*) — kayıtlı tip, aday tip ve ikiye ayrımı (ölçülü · tahmini
-// rijitlik), aday olmayanlar (rijitlik eksik · aday değil); taranan grup ve kombinasyon; eksik
-// varsa durumu. Sayılar haritadan, her kurulumda.
+// yazalım. Kullanıcı bilgilensin"*) — kayıtlı tip; aday tip ve ikiye ayrımı (ölçülü · tahmini
+// rijitlik) ELEMEDEN SONRA; aday olmayanlar (rijitlik eksik · aday değil); en düşük takoz yükü
+// (çözümden; ipucunda takozun adı) ve elenen (eleme yoksa —): kayıtlı = aday + elenen + rijitlik
+// eksik + aday değil. Taranan grup ve kombinasyon; eksik varsa durumu. Sayılar haritadan ve son
+// çözümden, her kurulumda — bölüm çözüme bağlı (`data-cozum-durumu`).
 function _mntParamYeniYanHTML(node, Y){
-  var K=Y.K, n=function(v){ return _mntS(v, 0); };
+  var K=Y.K, E=Y.E, n=function(v){ return _mntS(v, 0); };
+  var tah=Y.A.filter(function(a){ return _mntParamTipSinif(a.e)==='tahmini'; }).length;
+  var yuk=E.T ? _mntOku('En düşük takoz yükü <u>[kg]</u>', _mntS(E.T.yuk, 1), { ipucu:E.T.ad || '' })
+    : _mntOku('En düşük takoz yükü <u>[kg]</u>', '—');
   var ozet=_mntBolum('Analiz', '', _mntIzgara(2,
-      _mntOku('Kayıtlı takoz', n(K.kayitli)) + _mntOku('Aday tip', n(K.aday))
-    + _mntOku('Ölçülü rijitlik', n(K.olculu)) + _mntOku('Tahmini rijitlik', n(K.tahmini))
+      _mntOku('Kayıtlı takoz', n(K.kayitli)) + _mntOku('Aday tip', n(Y.A.length))
+    + _mntOku('Ölçülü rijitlik', n(Y.A.length-tah)) + _mntOku('Tahmini rijitlik', n(tah))
     + _mntOku('Rijitlik eksik', n(K.eksik)) + _mntOku('Aday değil', n(K.disi))
+    + yuk + _mntOku('Elenen', E.aktif ? n(E.elenen.length) : '—')
     + _mntOku('Taranan grup', Y.taranan+' / '+Y.M.G.length) + _mntOku('Kombinasyon', n(Y.N))),
-    { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
+    { id:'ve-mnt-param-ozet-'+node.id, tazele:true, cozum:true });
   var yon=Y.eksik ? _mntParamEksikYonu(Y.eksik) : '';
   return ozet+'<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'
     + (Y.eksik ? _mntDurumKutu('<b>'+Y.eksik+'</b>'+(yon ? '. '+yon : ''), 'warn') : '')+'</div>';
@@ -511,13 +594,15 @@ function veMntParamAdayKip(nodeId, kip){
 // boşalan grup ve alan silinir; aday olmayan tip ve olmayan grup yazılmaz. Değişmeyen seçim geri-al
 // yığınına adım düşürmez. Pencere yerinde tazelenir (saveState → veMntPencereTazele): grubun sayısı,
 // satırları ve özet. Dönüş: seçim değişti mi.
+// Elenen tip eklenmez ama kayıtta kalır (aralık değişince geri gelir).
 function veMntParamGrupAday(nodeId, no, key, dahil){
   var n=_mntParamDugum(nodeId); if(!n) return false;
   var Y=_mntParamYeni(n), g=Y.M.G[no-1]; if(!g) return false;
-  var eski=Y.sec[g.anahtar] || [];
+  if(dahil && !Y.A.some(function(a){ return a.key===key; })) return false;
+  var eski=Y.ham[g.anahtar] || [];
   var l=eski.filter(function(k){ return k!==key; });
   if(dahil) l.push(key);
-  var yeni=Y.A.filter(function(a){ return l.indexOf(a.key)>=0; }).map(function(a){ return a.key; });
+  var yeni=Y.Atum.filter(function(a){ return l.indexOf(a.key)>=0; }).map(function(a){ return a.key; });
   if(yeni.join('\u0001')===eski.join('\u0001')) return false;
   var s=Object.assign({}, n.data.adaylar || {});
   if(yeni.length) s[g.anahtar]=yeni; else delete s[g.anahtar];
@@ -535,6 +620,20 @@ function veMntParamOzelKaldir(b){
   var ul=kok.querySelector('.ve-prm-oz-t'), D=ul ? ul.querySelectorAll('button') : [];
   var hedef=D[Math.min(i, D.length-1)] || kok.querySelector('.ve-prm-ara-k input');
   if(hedef && hedef.focus) hedef.focus({ preventScroll:true });
+}
+
+// Beklenen takoz sehiminin ucu (`alt` · `ust`, mm): sayı makine biçiminde yazılır; boş ya da sayı
+// olmayan değer ucu siler, iki uç da boşsa alan silinir. Geçerlilik (0 < en az < en çok) pencerenin
+// durumu — yazılan değer silinmez. Değişmeyen değer geri-al yığınına adım düşürmez; pencere yerinde
+// tazelenir (saveState → veMntPencereTazele). Dönüş: değer değişti mi.
+function veMntParamSehim(nodeId, uc, val){
+  var n=_mntParamDugum(nodeId); if(!n || (uc!=='alt' && uc!=='ust')) return false;
+  var c=Object.assign({}, n.data.sehim || {}), eski=c[uc], v=_mntNum(val, NaN);
+  if(String(val==null ? '' : val).trim()!=='' && Number.isFinite(v)) c[uc]=v; else delete c[uc];
+  if(c[uc]===eski) return false;
+  if(Object.keys(c).length) n.data.sehim=c; else delete n.data.sehim;
+  if(typeof saveState==='function') saveState();
+  return true;
 }
 
 // ARAMA (Canlı Not 1005: *"Hani istediği kadar seçebilir, aratarak devam edecek sadece"*). Saf:
@@ -1042,6 +1141,8 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntParamPropertiesHTML: getMntParamPropertiesHTML, _mntParamEskiPencereHTML: _mntParamEskiPencereHTML,
     _mntParamYeni: _mntParamYeni, _mntParamAdayTipler: _mntParamAdayTipler, veMntParamGrupAday: veMntParamGrupAday,
+    _mntParamEleme: _mntParamEleme, _mntParamSehimAraligi: _mntParamSehimAraligi, _mntParamSehimDurumu: _mntParamSehimDurumu,
+    _mntParamSehimHTML: _mntParamSehimHTML, veMntParamSehim: veMntParamSehim,
     _mntParamTipSinif: _mntParamTipSinif, _mntParamKutuphane: _mntParamKutuphane, _mntParamYeniYanHTML: _mntParamYeniYanHTML,
     _mntParamAksoVeri: _mntParamAksoVeri, _mntParamRenk: _mntParamRenk,
     VE_MNT_PARAM_ADAY_KIP: VE_MNT_PARAM_ADAY_KIP, _mntParamAdayKip: _mntParamAdayKip, veMntParamAdayKip: veMntParamAdayKip,
