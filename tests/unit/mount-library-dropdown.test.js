@@ -554,3 +554,195 @@ describe('ÖZET — markaların takoz sayıları, Takoz tipinin üstünde (Canl�
     expect(S[S.length - 1].takoz).toBe(sayi(katalog + 1));
   });
 });
+
+// TAKOZ PENCERESİNDE SEÇİCİ (kullanıcı 2026-11-13, Canlı Not 160: *"Takoz bileşen penceresindeki
+// takoz seçimini tıpkı 'takoz özellikleri' bileşenindeki gibi yapalım."*): Takoz penceresinin Takoz
+// tipi bölümü tek uzun yerel listeydi ("— elle gir —", Cone 00 …); şimdi Takoz Özellikleri'nin
+// seçicisi — Marka · Tip (aranır) · (i) · oklar, AYNI üreticiden ve AYNI işleyicilerle. Fark yalnız
+// bağlamda: tip seçmek tipi TAKOZA uygular (tek geri-al adımı; Takoz Özellikleri'nde görünüm durumu),
+// Marka listesinin sonunda Elle (bağı kaldırır, değerler yerinde, Tip satırı yok), Yeni takoz yok.
+describe('TAKOZ PENCERESİNDE SEÇİCİ (Canlı Not 160)', () => {
+  const L = () => cp.veMntGetLibraryMap();
+  const takoz = (data) => ({ id: 'tk1', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: Object.assign({}, data) });
+  const degerler = (k) => { const e = L()[k]; return { kxs: e.sx, kys: e.sy, kzs: e.sz, kxd: e.dx, kyd: e.dy, kzd: e.dz }; };
+  // Takoz penceresini gerçek DOM'a basar; showNodeProperties pencereyi aynı yere yeniden kurar
+  function takozPanel(node) {
+    global.nodes = [node];
+    document.body.innerHTML = '<div id="host">' + cp.getMntMountPropertiesHTML(node) + '</div>';
+    ['veMntLibSelect', 'veMntLibDropdownToggle', 'veMntLibFilter', 'veMntLibSearchKey', 'veMntLibAdim', 'veMntLibMarka']
+      .forEach((fn) => { window[fn] = cp[fn]; });
+    stubs.showNodeProperties.mockImplementation((n) => {
+      document.getElementById('host').innerHTML = cp.getMntMountPropertiesHTML(n);
+    });
+    return document.getElementById('host');
+  }
+  const sec = () => document.querySelector('#host .mntlib-sec');
+  const tr = () => document.getElementById('mntlib-tr-tk1');
+  const marka = () => document.getElementById('mntlib-marka-tk1');
+  const ok = (yon) => document.getElementById('mntlib-adim-' + (yon < 0 ? 'onceki' : 'sonraki') + '-tk1');
+  const siraAnahtar = (id) => Array.from(document.querySelectorAll('#mntlib-list-' + id + ' .mntlib-opt'))
+    .map((o) => new RegExp("veMntLibSelect\\('" + id + "','([^']+)'\\)").exec(o.getAttribute('onclick'))[1]);
+  const sinif = (el) => Array.from(el.children).map((c) => c.classList[0]);
+  afterEach(() => stubs.showNodeProperties.mockReset());
+
+  test('Takoz tipi Takoz Özellikleri\'nin seçicisi: Marka listesi, Tip tetikleyicisi, (i), oklar — aynı sınıflar, aynı satırlar; yerel tip listesi yok', () => {
+    mountPanel(libNode([], 'amc137982'));
+    const libSec = sec(), libTip = libSec.querySelector('.mntlib-tip');
+    const libTr = libTip.querySelector('.mntlib-trigger').outerHTML.replace(/lib1/g, 'X');
+    const libSira = siraAnahtar('lib1');
+    const libMarka = Array.from(document.getElementById('mntlib-marka-lib1').options).map((o) => o.value);
+    const libSinif = [sinif(libSec), sinif(libTip)];
+    takozPanel(takoz({ libKey: 'amc137982' }));
+    const s = sec();
+    expect(document.querySelector('#host select[id^="ve-mnt-libKey-"]')).toBeNull();      // eski yerel liste kalktı
+    expect(document.querySelectorAll('#host optgroup')).toHaveLength(0);
+    expect(s.closest('.ve-fp-card').querySelector('.ve-fp-sect > b').textContent).toBe('Takoz tipi');
+    expect(s.classList.contains('mntlib-sec--takoz')).toBe(true);
+    expect(sinif(s)).toEqual(['mntlib-et', 've-fp-sel', 'mntlib-et', 'mntlib-tip']);          // Yeni takoz YOK
+    expect(libSinif[0]).toEqual(['mntlib-et', 've-fp-sel', 'mntlib-et', 'mntlib-tip', 'mntlib-add']);
+    expect([s.children[0].textContent, s.children[2].textContent]).toEqual(['Marka', 'Tip']);
+    expect(marka().classList.contains('mntlib-marka')).toBe(true);
+    const tip = s.querySelector('.mntlib-tip');
+    expect(sinif(tip)).toEqual(libSinif[1]);                                                   // tetikleyici · (i) · oklar
+    expect(sinif(tip)).toEqual(['mntlib-picker', 'mntlib-bilgi', 'mntlib-adimlar']);
+    expect(tr().outerHTML.replace(/tk1/g, 'X')).toBe(libTr);                                   // aynı üretici
+    expect(tr().getAttribute('data-k')).toBe('amc137982');
+    expect(siraAnahtar('tk1')).toEqual(libSira);                                               // markanın tipleri, aynı sıra
+    // Marka listesi Takoz Özellikleri'ninki, sonunda Elle
+    expect(Array.from(marka().options).map((o) => o.value)).toEqual(libMarka.concat(['']));
+    expect(marka().options[marka().options.length - 1].textContent).toBe('Elle');
+    expect(marka().value).toBe('AMC Mecanocaucho');
+  });
+
+  test('listeden tip seçmek tipi takoza UYGULAR: rijitlik, bağ; tek geri-al adımı, pencere yeniden kurulur', () => {
+    const node = takoz(Object.assign({ libKey: 'TK040' }, degerler('TK040')));
+    takozPanel(node);
+    expect(marka().value).toBe('LASPAR');
+    const satir = Array.from(document.querySelectorAll('#mntlib-list-tk1 .mntlib-opt')).find((o) => /^TK050 /.test(o.textContent));
+    satir.click();
+    expect(node.data.libKey).toBe('TK050');
+    expect(node.data).toMatchObject(degerler('TK050'));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    expect(stubs.showNodeProperties).toHaveBeenCalledWith(node);
+    expect(tr().getAttribute('data-k')).toBe('TK050');
+    expect(document.getElementById('mntlib-dd-tk1').hidden).toBe(true);
+    // Bağlı tipin satırı bir şey yazmaz
+    resetStubs(stubs);
+    document.querySelector('#mntlib-list-tk1 .mntlib-opt.sel').click();
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    // Aramada Enter da aynı yoldan
+    tr().click();
+    document.getElementById('mntlib-q-tk1').value = 'TK035';
+    cp.veMntLibFilter('tk1');
+    cp.veMntLibSearchKey({ key: 'Enter', preventDefault() {} }, 'tk1');
+    expect(node.data.libKey).toBe('TK035');
+    expect(node.data).toMatchObject(degerler('TK035'));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+  });
+
+  test('oklar listenin sırasıyla komşu tipi UYGULAR (tek geri-al adımı); odak okta kalır; uçta ok kapalı', () => {
+    const node = takoz({ libKey: 'amc137982' });
+    takozPanel(node);
+    const sira = siraAnahtar('tk1'), i = sira.indexOf('amc137982');
+    expect(i).toBeGreaterThan(0);
+    const eski = ok(1);
+    eski.focus();
+    eski.click();
+    expect(node.data.libKey).toBe(sira[i + 1]);
+    expect(node.data).toMatchObject(degerler(sira[i + 1]));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    expect(ok(1)).not.toBe(eski);                                     // pencere yeniden kuruldu
+    expect(document.activeElement).toBe(ok(1));
+    ok(-1).click();
+    ok(-1).click();
+    expect(node.data.libKey).toBe(sira[i - 1]);
+    expect(stubs.saveState).toHaveBeenCalledTimes(3);
+    // Listenin ucunda ok kapalı ve bir şey yazmaz
+    node.data = { libKey: sira[0] };
+    resetStubs(stubs);
+    takozPanel(node);
+    expect([ok(-1).getAttribute('aria-disabled'), ok(-1).title]).toEqual(['true', 'İlk tip seçili.']);
+    ok(-1).click();
+    expect(node.data.libKey).toBe(sira[0]);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  test('Marka seçmek o markanın ilk tipini uygular (tek geri-al adımı); aynı marka bir şey yazmaz', () => {
+    const node = takoz(Object.assign({ libKey: 'TK040' }, degerler('TK040')));
+    takozPanel(node);
+    cp.veMntLibMarka('tk1', 'LASPAR');
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    marka().value = 'AMC Mecanocaucho';
+    marka().dispatchEvent(new Event('change'));
+    expect(node.data.libKey).toBe('amc137007');                       // listenin ilki: Cone 00 45 ShA (Canlı Not 134)
+    expect(node.data).toMatchObject(degerler('amc137007'));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    expect(marka().value).toBe('AMC Mecanocaucho');
+  });
+
+  test('Elle bağı kaldırır, değerler yerinde ve düzenlenebilir; Tip satırı yok; değeri tiple aynı takoz Elle\'de kalır', () => {
+    const node = takoz(Object.assign({ libKey: 'TK040' }, degerler('TK040')));
+    takozPanel(node);
+    marka().value = '';
+    marka().dispatchEvent(new Event('change'));
+    expect(node.data.libKey).toBeUndefined();
+    expect(node.data.libElle).toBe(true);
+    expect(node.data).toMatchObject(degerler('TK040'));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    expect(marka().value).toBe('');
+    expect(sinif(sec())).toEqual(['mntlib-et', 've-fp-sel']);
+    expect(tr()).toBeNull();
+    ['kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd'].forEach((k) => {
+      const inp = document.getElementById('ve-mnt-' + k + '-tk1');
+      expect([inp.readOnly, inp.disabled, inp.getAttribute('onchange')]).toEqual([false, false, "veMntSet('tk1','" + k + "',this.value)"]);
+    });
+    // Durum satırı eşleşmeyi yine söyler; seçim Elle'de kalır (eşleşme TK040'a döndürmez)
+    expect(document.getElementById('ve-mnt-libnot-tk1').textContent).toContain('TK040 45 ShA ile 6/6 değer aynı');
+    expect(cp._mntTakozSecim(node).grup).toBeNull();
+    // Elle'yken Elle bir şey yazmaz; tip seçmek Elle'yi siler
+    resetStubs(stubs);
+    cp.veMntLibMarka('tk1', '');
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    marka().value = 'LASPAR';
+    marka().dispatchEvent(new Event('change'));
+    expect(node.data.libElle).toBeUndefined();
+    expect(node.data.libKey).toBe(siraAnahtar('tk1')[0]);
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+  });
+
+  test('eşleşmeyen takozda Marka Elle; bağsız ama altı değeri bir tiple aynı takoz o tipi gösterir; değer değişince seçici YERİNDE Elle\'ye düşer', () => {
+    takozPanel(takoz({ kxs: 1, kys: 2, kzs: 3, kxd: 4, kyd: 5, kzd: 6 }));
+    expect(marka().value).toBe('');
+    expect(tr()).toBeNull();
+    const node = takoz(degerler('TK050'));
+    global.nodes = [node];
+    document.body.innerHTML = '<div class="ve-properties-content"><div id="host">' + cp.getMntMountPropertiesHTML(node) + '</div></div>';
+    expect([marka().value, tr().getAttribute('data-k')]).toEqual(['LASPAR', 'TK050']);
+    node.data.kzs = 300;
+    cp.veMntPencereTazele();
+    expect([marka().value, tr()]).toEqual(['', null]);
+    expect(document.getElementById('ve-mnt-libnot-tk1').textContent).toBe('Kütüphanede eşleşen takoz yok.');
+  });
+
+  test('teknik resmi olan tipte (i) Tip satırında, olmayanda yok — Takoz Özellikleri\'nin düğmesi', () => {
+    takozPanel(takoz({ libKey: 'amc137982' }));
+    const b = document.querySelector('#host .mntlib-tip > button.mntlib-bilgi');
+    expect(b.getAttribute('data-amc')).toBeTruthy();
+    expect(b.getAttribute('onclick')).toBe('veMntLibCizimAc(this)');
+    expect(b.id).toBe('mntlib-bilgi-tk1');
+    takozPanel(takoz({ libKey: 'TK040' }));
+    expect(document.querySelector('#host .mntlib-bilgi')).toBeNull();
+    expect(sinif(document.querySelector('#host .mntlib-tip'))).toEqual(['mntlib-picker', 'mntlib-adimlar']);
+  });
+
+  test('Takoz Özellikleri\'nin seçimi değişmedi: tip seçmek görünüm durumu (geri-al adımı yok), Elle yok', () => {
+    const lib = libNode([], 'TK040');
+    mountPanel(lib);
+    expect(document.getElementById('mntlib-marka-lib1').querySelector('option[value=""]')).toBeNull();
+    cp.veMntLibSelect('lib1', 'TK050');
+    cp.veMntLibMarka('lib1', 'AMC Mecanocaucho');
+    cp.veMntLibAdim('lib1', 1);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(Object.keys(lib.data).sort()).toEqual(['_selKey', 'mounts']);
+  });
+});

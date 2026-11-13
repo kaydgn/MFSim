@@ -500,7 +500,7 @@ var _GM_SANZ = [
 ];
 
 var _GM_TAKOZ = [
-  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Künye seçimi rijitliği, kapasiteyi ve yasayı doldurur.' },
+  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka ve tip; seçilen tip rijitliği, kapasiteyi ve yasayı doldurur.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Üç eksen: statik ve dinamik (N/mm), dinamik/statik oranı.' },
   { k: 'kapasite', bolum: 'Kapasite', ad: 'Kapasite', not: 'Azami eksenel yük (kg).' },
   { k: 'durdurucu', bolum: 'Durdurucu', ad: 'Durdurucu', not: 'Yanal boşluk (mm): yanal sehim bu boşlukta metal-metal temasa oturur; boşsa yanal durdurucu yok.' },
@@ -1020,9 +1020,12 @@ function _gmSec8(){
   h += _gmSahne('takoz', _gmPencere('mnt-mount'), 'Takoz penceresi, örneğin bir takozu.', null, _GM_TAKOZ);
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
-    _gmN(_GM_TAKOZ, 'tip') + ' <strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum hariç bütün '
-      + 'alanlar dolar (' + _gmB('kutuphane') + '). Altındaki durum satırı değerlerin kaçının künyeyle aynı '
-      + 'kaldığını söyler. Altı rijitliği bir künyeyle birebir aynı olan takozda liste o künyeyi gösterir.',
+    _gmN(_GM_TAKOZ, 'tip') + ' <strong>Takoz tipi</strong> bölümünde önce <strong>Marka</strong>, sonra '
+      + '<strong>Tip</strong> seçin — konum hariç bütün alanlar dolar. Seçici Takoz Özellikleri’ninkidir ('
+      + _gmB('kutuphane') + '): Tip listesinde arama, teknik resmi olan tipte (i), <strong>Önceki tip</strong> · '
+      + '<strong>Sonraki tip</strong> okları; her seçim tipi takoza uygular. Altındaki durum satırı değerlerin '
+      + 'kaçının tiple aynı kaldığını söyler. Altı rijitliği bir tiple birebir aynı olan takozda seçici o tipi '
+      + 'gösterir. Marka listesinin <strong>Elle</strong>’si tip bağını kaldırır, değerler yerinde kalır.',
     _gmN(_GM_TAKOZ, 'konum') + ' <strong>Konum</strong> föyüne takozun x / y / z koordinatını yazın (mm, modelin '
       + 'ortak çerçevesinde).',
     'Künye kütüphanede yoksa ' + _gmN(_GM_TAKOZ, 'rijitlik') + ' <strong>Rijitlik</strong> föyüne üç eksenin '

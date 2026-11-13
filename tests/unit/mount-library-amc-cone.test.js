@@ -262,10 +262,12 @@ describe('İki taban ayrı ve farkı gerçek', () => {
   });
 
   test('hepsi Takoz panelinin kütüphane listesinde görünüyor', () => {
-    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: {} });
-    Object.keys(CATALOG).concat([NNP])
-      .forEach((k) => expect(html).toContain('value="' + k + '"'));
-    expect(html).not.toContain('-calc"');
+    // Takoz penceresinin seçicisi (Canlı Not 160): tip kendi markasının Tip listesinde
+    Object.keys(CATALOG).concat([NNP]).forEach((k) => {
+      const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { libKey: k } });
+      expect(html).toContain("veMntLibSelect('m1','" + k + "')");
+      expect(html).not.toContain("-calc')");
+    });
   });
 
   test('kütüphaneden uygulanınca Takoz düğümüne doğru rijitlikler yazılıyor', () => {
