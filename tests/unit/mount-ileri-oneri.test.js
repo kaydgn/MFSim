@@ -150,29 +150,26 @@ describe('ETKİN YÖN — onaysız modelde öneri, onaylıda onay', () => {
 
 describe('PENCERE — Araç ekseni yok, yön kendiliğinden (Canlı Not 121)', () => {
   const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
-  const kunye = (n) => document.querySelector('#ve-mnt-cdur-' + n.id + ' .ve-fp-sect em').textContent;
+  // Etkin yön çözümün kitabının (yük durumları) yönüdür; künyesi yük kitabının başlığındaydı,
+  // kitap Çözücü'den çıkınca (Canlı Not 3001) raporda (RAPOR, aşağıda).
+  const yon = (n) => { const Y = cp._mntGatherForSolver(n).yon; return Y.ileri + ' · ' + Y.torkYon; };
 
-  test('bölüm, seçici ve onay yok; etkin yön yük kitabının başlığında, gövde taşınınca yerinde izler', () => {
+  test('bölüm, seçici ve onay yok; etkin yön dizilişten, gövde taşınınca izler', () => {
     kur(ornek('tulga'));
     const n = cozucu();
     delete n.data.ileri;
     ac(n);
-    const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
-    expect(bolumler).toEqual(['Yük kitabı']);                                  // kaldırım darbesi standart (Canlı Not 144)
     expect(document.getElementById('ve-mnt-ileri-' + n.id)).toBeNull();
     expect(document.getElementById('ve-mnt-torkYon-' + n.id)).toBeNull();
     expect(document.body.textContent).not.toMatch(/Onaylanmadı|Onayla|Diziliş önerisi/);
-    expect(kunye(n)).toMatch(/ · ileri −X · tork \+X$/);                       // Tulga: transferin çıkışı ters (F049)
+    expect(yon(n)).toBe('-x · +x');                                              // Tulga: transferin çıkışı ters (F049)
     govde('mnt-motor').data.cgx = 2000;                                           // motor şanzımanın öbür yanında
-    expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(kunye(n)).toMatch(/ · ileri \+X · tork −X$/);                       // motorun önü +X'te, ters → −X
+    expect(yon(n)).toBe('+x · -x');                                              // motorun önü +X'te, ters → −X
   });
 
   test('TTAR: projede yazılı +X öneriyle (−X) ayrışsa da yazılı yön', () => {
     kur(ornek('siper'));
-    const n = cozucu();
-    ac(n);
-    expect(kunye(n)).toMatch(/ · ileri \+X · tork −X$/);
+    expect(yon(cozucu())).toBe('+x · -x');
   });
 });
 

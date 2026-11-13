@@ -145,7 +145,7 @@ describe('ŞEKİLLER — programdan, işaretli', () => {
   test('sahne programın KENDİ üreticisinden — pencerenin bölüm adları ve düğmeleri', () => {
     const sahne = SEKIL.map((f) => (f.querySelector(':scope > .gk-sahne') || { textContent: '' }).textContent);
     const hepsi = sahne.join(' ');
-    ['Yük kitabı', 'Hesapla', 'Raporu oluştur ve indir',
+    ['Çözüm modu', 'Hesapla', 'Raporu oluştur ve indir',
       'Takoz tipi', 'Rijitlik', 'Güç grubundaki yeri'].forEach((ad) => {
       expect(hepsi).toContain(ad);
     });

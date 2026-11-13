@@ -386,7 +386,7 @@ var _GM_BASLANGIC = [
 var _GM_TUVAL = [
   { k: 'motor', ad: 'Motor', not: 'Kütle gövdesi. Şasi çerçevesindeki öteki kutular da gövdedir: Şanzıman, Şaft payı, cradle’lar.' },
   { k: 'takoz', ad: 'Takozlar', not: 'Her biri konumu ve rijitliğiyle; altı takoz.', yer: 'sag' },
-  { k: 'cozucu', ad: 'Çözücü', not: 'Yük kitabı, yöntem ve Hesapla.' },
+  { k: 'cozucu', ad: 'Çözücü', not: 'Sayısal yöntem ve Hesapla.' },
   { k: 'sihirbaz', ad: 'Başlangıç Sihirbazı', not: 'Çift tıkla Takoz Başlangıç Sihirbazı’nı açar.' },
   { k: 'rapor', ad: 'Rapor', not: 'Çevrimdışı HTML rapor.' },
   { k: 'gorunumler', ad: 'Görünümler', not: 'Modelin aksonometrik çizimi.' },
@@ -418,7 +418,6 @@ var _GM_PENCERE_UST = [
 ];
 
 var _GM_COZUCU = [
-  { k: 'kitap', bolum: 'Yük kitabı', ad: 'Yük kitabı', not: 'Çözülecek yük durumları: ivme n ve tork T.' },
   { k: 'yontem', bolum: 'Yöntem', ad: 'Yöntem', not: 'Çözüm modu ve sönüm oranı ζ.' },
   { k: 'hesapla', metin: 'Hesapla', ad: 'Hesapla', yer: 'sag', not: 'Bütün yük durumlarını ve modları çözer.' },
   { k: 'not', s: '.ve-fp-solve-not', ad: 'Durum notu', not: 'Toplam kütle, gövde ve takoz sayısı, son hesabın durumu.' }
@@ -876,7 +875,7 @@ function _gmSec5(){
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4 (' + _gmB('takoz') + ')'],
     ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
       + 'yasası', _gmB('kutuphane')],
-    ['<strong>Çözücü</strong>', 'Yük kitabı, çözüm modu, sönüm, şok', 'Tuvalde bir tane (' + _gmB('cozucu') + ')'],
+    ['<strong>Çözücü</strong>', 'Sayısal yöntem: çözüm modu, sönüm', 'Tuvalde bir tane (' + _gmB('cozucu') + ')'],
     ['<strong>Başlangıç Sihirbazı</strong>', 'Takoz Başlangıç Sihirbazı’nı açar; penceresi yoktur', _gmB('sihirbaz')],
     ['<strong>Görünümler</strong>', 'Modelin aksonometrik çizimi ve işaretlerin föyü', 'Hesaba girmez'],
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
@@ -1182,8 +1181,8 @@ function _gmSec10(){
   var h = _gmH2('m10');
   h += '<p>Bir yük durumu iki şeyden oluşur: bir <strong>ivme vektörü</strong> (g cinsinden, '
     + 'x/y/z) ve bir <strong>tork</strong> (N·m, x/y/z). Program bunlardan güç grubuna etki '
-    + 'eden kuvvet ve momenti kurar, sonra sehimi çözer. Çözülecek durumların listesi Çözücü’nün '
-    + _gmN(_GM_COZUCU, 'kitap') + ' <strong>Yük kitabı</strong> bölümündedir (' + _gmS('cozucu') + ').</p>';
+    + 'eden kuvvet ve momenti kurar, sonra sehimi çözer. Durumlar standarttır (aşağıdaki tablo); '
+    + 'sonuçları raporun yük durumu tablolarındadır (' + _gmB('rapor') + ').</p>';
   h += _gmTablo('Standart yük durumları (ileri yön −X)',
     ['Durum', 'İvme n = [x, y, z]', 'Ne anlatıyor'],
     [
@@ -1194,7 +1193,7 @@ function _gmSec10(){
       ['Cornering L / R', '[0, ±0,6, −1]', 'Yanal viraj'],
       ['Brake in Turn L / R', '[−0,4, ±0,4, −1]', 'Virajda fren'],
       ['Pothole Braking', '[−3, 0, −3,5]', 'Çukurda fren'],
-      ['Kerb Strike L / R', '[0, ∓1,55, −1]', 'Yanal kaldırım darbesi (varsayılan: virajın tersi yönde)'],
+      ['Kerb Strike L / R', '[0, ∓2,5, −1]', 'Yanal kaldırım darbesi (varsayılan: virajın tersi yönde)'],
       ['Max Rebound', '[0, 0, +1]', 'Düşey geri sıçrama'],
       ['Forward / Reverse Torque', '[0, 0, −1] + T', 'Tahrik tepki torku']
     ], ['l', 'c', 'l']);
@@ -1212,19 +1211,17 @@ function _gmSec10(){
     + '(kasnak tarafı) şanzımanın — yoksa transfer kutusunun — karşı yanındadır ve araç o yana gider; '
     + 'motor ile şanzıman aynı X’teyse −X. Araç +X’e gidiyorsa program boyuna ve yanal bileşenleri '
     + 'çevirir (n<sub>x</sub> → −n<sub>x</sub>, n<sub>y</sub> → −n<sub>y</sub>; düşey aynı). Etkin yön '
-    + 'Çözücü’nün <strong>Yük kitabı</strong> başlığında ' + _gmNS('cozucu', _GM_COZUCU, 'kitap') + ' ve raporda '
-    + 'yazılıdır. Projede yazılı yön (örnekler) dizilişin önünde gelir.</p>';
+    + 'raporda yazılıdır. Projede yazılı yön (örnekler) dizilişin önünde gelir.</p>';
   h += _gmAlanTablo('İleri yönün etkisi', [
     ['Fren · hızlanma · viraj · kaldırım', 'n<sub>x</sub> ve n<sub>y</sub> çevrilir',
-      'Yük kitabının sütunlarında görünür'],
+      'Raporun yük durumu tablolarında'],
     ['Tasarım yük durumları ve ivme süpürmeleri', 'Aynı çeviri', 'Rapor ve Sonuçlar'],
     ['Tork durumları', 'Değişmez — tork yönü ayrıdır', _gmB('tork-yonu')]
   ], ['Ne', 'Nasıl', 'Nerede görünür']);
   h += _gmH3('Kaldırım darbesi', 'kaldirim');
   h += '<p>Kerb Strike L / R tekerleğin kaldırıma yandan çarpmasıdır. Standart değer 2,5 g, '
     + '<em>virajın tersi</em> yönde (Kerb Strike L, Cornering Left’in ters işaretinde) — Tulga örneğinin '
-    + 'yük kitabı. Değer Çözücü’nün <strong>Yük kitabı</strong>nda ' + _gmNS('cozucu', _GM_COZUCU, 'kitap')
-    + ' Kerb Strike satırlarında görünür; şok darbesi de standarttır: 3 g tepe, 20 ms yarım sinüs.</p>';
+    + 'yük kitabı. Şok darbesi de standarttır: 3 g tepe, 20 ms yarım sinüs.</p>';
   h += _gmH3('Tork yönü', 'tork-yonu');
   h += '<p>Tahrik torku güç grubuna X ekseni etrafında bir <strong>reaksiyon momenti</strong> '
     + 'olarak etkir: T<sub>x</sub> = ±T<sub>mil</sub>. İşareti aracın gidiş yönünden değil, '
@@ -1249,8 +1246,6 @@ function _gmSec11(){
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi (' + _gmS('cozucu') + '). Pencere '
     + 'sonucu göstermez — sonuç Sonuçlar sayfasında ve raporda (' + _gmB('rapor') + ').</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
-    [_gmN(_GM_COZUCU, 'kitap') + ' Yük kitabı', 'Çözülecek durumlar, ivme (n) ve tork (T)',
-      'Modelin girdisinden; tork durumları tork girildiyse'],
     [_gmN(_GM_COZUCU, 'yontem') + ' Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAdimlar([
@@ -2026,7 +2021,6 @@ function _gmEkA(){
       ['Kuvvet–sehim eğrisi', 'Takoz Özellikleri', '<strong>Kuvvet–sehim</strong> (takozda <strong>Rijitlik</strong>’in altındaki not)'],
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Kuvvet–sehim</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
-      ['Yük durumları; kaldırım ve şok darbesi standart, ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Yük kitabı</strong>'],
       ['Takoz grupları', 'Parametrik Analiz', '<strong>Takoz yerleşimi</strong>'],
       ['Beklenen takoz sehimi (eleme)', 'Parametrik Analiz', '<strong>Beklenen takoz sehimi</strong>'],
       ['Aday tipler: tüm ya da özel kombinasyon', 'Parametrik Analiz', '<strong>Adaylar</strong>'],
