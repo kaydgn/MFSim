@@ -45,7 +45,7 @@
 // MODEL (m):
 //   govde : [{ k, no, ad, m [kg], x, y, z [mm] (ağırlık merkezi), kc?:[x,y,z] mm (eşdeğer kutunun
 //            merkezi — zincir gövdesinde y = 0; yoksa x · y · z), kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır],
-//            braket, levha:{ takoz:k, govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } | null }
+//            braket, levha:{ takoz:k|null (serbest), govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } — braketin çizimi (kutusu null) }
 //   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır],
 //            renk? (1–4: Parametrik Analiz'de grubun rengi — küp ve çip `ve-ak-renk-N`, --seri-N) }]
 //   aski  : [{ k, no, ad, x, y, z, L [mm], bilgi:[satır] }] (ops.) — askı yayının noktası ve boyu
@@ -804,29 +804,35 @@ var veMntAkso = (function(){
     // yerine katılır, ayrı işaret değildir.
     // levhaK: parçaların sarıcı kutusu — yazının yeri ve örtülme sınaması (CG
     // gövdenin yüzünde olabilir: Tulga'nın ön kaidesi motorun alt yüzünde)
+    // SERBEST levha (takozu yok — Siper'in cradle'ları; Canlı Not 164) kendi başına bir
+    // işaret: ressam sırasında parçalarının ortasıyla, küp payı olmadan.
     var levhaP={}, levhaK={}, takozBr={}, levhaT={};
     nok.forEach(function(g){
-      if(!(g.levha && m.takoz.some(function(t){ return t.k===g.levha.takoz; }))) return;
-      var pp=levhaP[g.k]=levhaParca(g.levha, hm), lo=[Infinity, Infinity, Infinity], hi=[-Infinity, -Infinity, -Infinity];
-      levhaT[g.k]=g.levha.takoz;
+      if(!g.levha) return;
+      var tk=g.levha.takoz, bagli=tk!=null && m.takoz.some(function(t){ return t.k===tk; });
+      var pp=levhaP[g.k]=levhaParca(g.levha, bagli ? hm : 0), lo=[Infinity, Infinity, Infinity], hi=[-Infinity, -Infinity, -Infinity];
+      levhaT[g.k]=bagli ? tk : null;
       pp.forEach(function(q){ for(var i=0;i<3;i++){ lo[i]=Math.min(lo[i], q.c[i]-q.h[i]); hi[i]=Math.max(hi[i], q.c[i]+q.h[i]); } });
       levhaK[g.k]={ c:[0, 1, 2].map(function(i){ return (lo[i]+hi[i])/2; }), h:[0, 1, 2].map(function(i){ return (hi[i]-lo[i])/2; }) };
-      (takozBr[g.levha.takoz]=takozBr[g.levha.takoz]||[]).push(g);
+      if(bagli) (takozBr[tk]=takozBr[tk]||[]).push(g);
     });
     var levha2B=function(g){ var sp=[]; levhaP[g.k].forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(Ph(p)); }); }); }); return sar(sp); };
-    var isaret=nok.filter(function(g){ return !levhaP[g.k]; }).map(function(g){ return { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
+    var isaret=nok.filter(function(g){ return !levhaP[g.k] || levhaT[g.k]==null; })
+      .map(function(g){ return levhaP[g.k] ? { g:g, k:g.k, p:levhaK[g.k].c, lv:true } : { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
       .concat(m.takoz.map(function(t){ return { t:t, k:t.k, p:[t.x, t.y, t.z], br:takozBr[t.k] || [] }; }));
     var liste;
     if(kati){
       var kb=kutSira.map(function(q){ return kutu2B(q.c, q.h); });
       isaret.forEach(function(s){
-        var r=3.6*ik, q2=P(s.p), iz=s.g ? { l:q2[0]-r, t:q2[1]-r, r:q2[0]+r, b:q2[1]+r } : kutu2B(s.p, [hm, hm, hm]);
+        var r=3.6*ik, q2=P(s.p), iz=s.lv ? levha2B(s.g) : (s.g ? { l:q2[0]-r, t:q2[1]-r, r:q2[0]+r, b:q2[1]+r } : kutu2B(s.p, [hm, hm, hm]));
         (s.br || []).forEach(function(g){ var k2=levha2B(g); iz={ l:Math.min(iz.l, k2.l), t:Math.min(iz.t, k2.t), r:Math.max(iz.r, k2.r), b:Math.max(iz.b, k2.b) }; });
         var lo=-1, hi=kutSira.length, taban=0, d=K.derin(s.p);
         // başka takozun braketi de örter (10 Ton TTA'nın arka çiftinde arkadaki
-        // takoz öndekinin kaidesinin ardında kalır; Canlı Not 68) — kendi braketi değil
-        s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); })
-          || Object.keys(levhaP).some(function(gk){ return levhaT[gk]!==s.k && levhaP[gk].some(function(q){ return kutuOrter(K, s.p, q, false); }); });
+        // takoz öndekinin kaidesinin ardında kalır; Canlı Not 68) — kendi braketi değil;
+        // örten levhanın sahibi (takozu ya da serbest levhanın kendisi) `orten`de
+        s.orten=Object.keys(levhaP).filter(function(gk){ return gk!==s.k && levhaT[gk]!==s.k && levhaP[gk].some(function(q){ return kutuOrter(K, s.p, q, false); }); })
+          .map(function(gk){ return levhaT[gk]!=null ? levhaT[gk] : gk; });
+        s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); }) || s.orten.length>0;
         kutSira.forEach(function(q, j){
           if(K.derin(q.c)<d) taban++;
           if(!ortusur(iz, kb[j])) return;
@@ -860,10 +866,48 @@ var veMntAkso = (function(){
         else if(!orn.every(function(p){ return ortulu(p, q); })) gorN[k].push(null);
       });
       Object.keys(gorN).forEach(function(k){ if(!gorN[k].length) gizliK[k]=true; });
+      // LEVHA ↔ KÜP (Canlı Not 164): başka takozun braketinin (ya da serbest levhanın) parçası
+      // takozun küpünün önündeyse küp ondan ÖNCE, arkasındaysa SONRA — ayıran eksenden (onArka);
+      // tek köşebent iki takozun üstünde olabilir (Asfat: T5'inki T3'ün de üstünde). Noktası
+      // örtülen (orten) küp levhanın sahibinin diliminden geç değil. Küpün ÖZÜ (yarı boy):
+      // ayak küpün üstüne en çok kanadın %40'ı kalkar, tam küp ayağa girebilir. Yalnız
+      // izdüşümleri gerçekten örtüşen çift (dışbükey çokgenler) sıralanır.
+      var sahipP=function(o){ return o.lv ? levhaP[o.k] : (o.br || []).reduce(function(a, g){ return a.concat(levhaP[g.k]); }, []); };
+      var kose2B=function(q){ var o=[]; [-1, 1].forEach(function(a){ [-1, 1].forEach(function(b){ [-1, 1].forEach(function(c){
+        o.push(P([q.c[0]+a*q.h[0], q.c[1]+b*q.h[1], q.c[2]+c*q.h[2]])); }); }); }); return disbukey(o); };
+      var ayir=function(X, Y){
+        for(var i=0;i<X.length;i++){
+          var p=X[i], q=X[(i+1)%X.length], n=[q[1]-p[1], p[0]-q[0]], a=[Infinity, -Infinity], c=[Infinity, -Infinity];
+          X.forEach(function(v){ var d=v[0]*n[0]+v[1]*n[1]; a=[Math.min(a[0], d), Math.max(a[1], d)]; });
+          Y.forEach(function(v){ var d=v[0]*n[0]+v[1]*n[1]; c=[Math.min(c[0], d), Math.max(c[1], d)]; });
+          if(a[1]<=c[0]+1e-9 || c[1]<=a[0]+1e-9) return true;
+        }
+        return false;
+      };
+      var once=[], sahipler=isaret.map(function(o){ return { o:o, pp:sahipP(o).map(function(q){ return { q:q, p:kose2B(q) }; }) }; })
+        .filter(function(x){ return x.pp.length; });
+      isaret.forEach(function(u){
+        if(!u.t) return;
+        var ku={ c:u.p, h:[hm/2, hm/2, hm/2] }, pu=kose2B(ku);
+        sahipler.forEach(function(x){
+          var o=x.o;
+          if(o===u) return;
+          var r=(u.orten.indexOf(o.k)>=0) ? -1 : 0;
+          x.pp.forEach(function(z){ if(!r && z.p.length>2 && pu.length>2 && !ayir(pu, z.p) && !ayir(z.p, pu)) r=onArka(K, ku, z.q); });
+          if(r<0){ if(u.yer>o.yer) u.yer=o.yer; once.push([u, o]); }
+          else if(r>0) once.push([o, u]);
+        });
+      });
       liste=[];
       for(var j=0;j<=kutSira.length;j++){
-        isaret.filter(function(s){ return s.yer===j; }).sort(function(a, c){ return K.derin(a.p)-K.derin(c.p); })
-          .forEach(function(s){ liste.push(s); });
+        // dilim: önce-sonra kısıtı, kalanı derinlikten (uzaktan yakına)
+        var dilim=isaret.filter(function(s){ return s.yer===j; });
+        while(dilim.length){
+          var aday=dilim.filter(function(s){ return !once.some(function(e){ return e[1]===s && dilim.indexOf(e[0])>=0; }); });
+          if(!aday.length) aday=dilim;
+          var s0=aday.reduce(function(a, c){ return K.derin(c.p)<K.derin(a.p) ? c : a; });
+          liste.push(s0); dilim.splice(dilim.indexOf(s0), 1);
+        }
         if(j<kutSira.length) liste.push({ q:kutSira[j] });
       }
     } else {
@@ -884,15 +928,16 @@ var veMntAkso = (function(){
       koy(g.k, h+'</g>');
       var kb2=levha2B(g); kb2.a=sec(g.k) ? 1 : 0.3;
       if(balon) polG.push({ k:g.k, P:[[kb2.l, kb2.t], [kb2.r, kb2.t], [kb2.r, kb2.b], [kb2.l, kb2.b]], l:kb2.l, t:kb2.t, r:kb2.r, b:kb2.b });
-      if(!gizliT[g.levha.takoz] || sec(g.k)) engel.push(kb2);
+      if(!(levhaT[g.k]!=null ? gizliT[levhaT[g.k]] : gizliK[g.k]) || sec(g.k)) engel.push(kb2);
       if(xr){
         var am=Ph([g.x, g.y, g.z]), ar=2.2*ik, ac=3.8*ik;
         koy(g.k, '<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="'+R(ar)+'"/><path d="M'+R(am[0]-ac)+' '+R(am[1])+' H'+R(am[0]+ac)+' M'+R(am[0])+' '+R(am[1]-ac)+' V'+R(am[1]+ac)+'"/></g>');
-        engel.push({ l:am[0]-4*ik, t:am[1]-4*ik, r:am[0]+4*ik, b:am[1]+4*ik });
+        engel.push({ l:am[0]-5*ik, t:am[1]-5*ik, r:am[0]+5*ik, b:am[1]+5*ik });   // gövdenin CG işaretiyle aynı pay
       }
     };
     liste.forEach(function(it){
       if(it.t) gizliT[it.t.k]=!!it.gizli;
+      if(it.lv){ braketCiz(it.g); return; }
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
         // Seçili nokta kütle büyür: aydınlık dolgusu (CSS) 2,4·ik'lik noktada

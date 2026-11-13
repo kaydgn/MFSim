@@ -1190,11 +1190,12 @@ function _mntRepAkso(R){
     +'ağırlık merkezi. '+_mntRepAksoBraket(m)+'Takozlar mor küp'+((m.aski||[]).length ? ', askı yayları noktasından şasideki oturağına zikzak' : '')+', G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
     +'Z = 0 düzlemine izdüşümü, tabandaki gri alanlar gövdelerin gölgesi.</figcaption></figure>';
 }
-// Ataletsiz braketin çizimi (cp-mount.js → _mntAksoBraketLevha): şeklin yöntemi
+// Braketin çizimi (cp-mount.js → _mntAksoBraketLevha; Canlı Not 164: her braket, atalet
+// girilmiş olan da): şeklin yöntemi
 function _mntRepAksoBraket(m){
   var lv=null; (m.govde||[]).forEach(function(g){ if(!lv && g.levha) lv=g.levha; });
   if(!lv) return '';
-  return 'Ataletsiz braketler eşdeğer çelik köşebent ya da kaide: ayağı takozda, kanadı gövdenin yüzünde; '
+  return 'Braketler eşdeğer çelik köşebent ya da kaide: ayağı takozda, kanadı gövdenin yüzünde; '
     +'kesiti kütleden (ρ = '+_rF(lv.ro*1e9, 0)+' kg/m³). ';
 }
 

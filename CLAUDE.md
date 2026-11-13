@@ -279,6 +279,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   simetrik gövde, ağırlık merkezinde — Asfat'ınki 156 mm yanda);
   bütün Takoz görüntüleyicileri, braketin ayağı ve hareket zarfının köşeleri aynı kutudan. Kapı:
   `mount-akso.test.js` → *ZİNCİR Y=0* + `mount-zarf.test.js` → *ZİNCİR Y=0*.
+  **Braket HER görüntüleyicide köşebent ya da kaide, nokta ve kutu DEĞİL** (kullanıcı 2026-11-13,
+  Canlı Not 164: *"görselleştirmesi tüm örneklerde aynı değil … ön taraftaki braket nokta halinde
+  görünüyor"*; `_mntAksoBraketLevha`): atalet girilmiş braket de; takozun 20 mm'den yakın yüzü hedef
+  değil, erimde takoz yoksa levha braketin ağırlık merkezinde; atalet çözüme ve zarfa girer. Kapı:
+  `mount-akso.test.js` → *BRAKET HEP KÖŞEBENT*.
   Sihirbazın masasında her yazı **çerçeveli ÇİP** (`o.balon`; kullanıcı 2026-11-06,
   Canlı Not 41: *"uzayan çubuklar … tüm yazılar çerçeveli değil"*): parçanın görünen
   yerinden KISA kırık kılavuz, çip çipe binmez, kılavuz kesişmez; sürüklerken çip
