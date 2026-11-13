@@ -4430,7 +4430,8 @@ function _mntLibDropdown(node, girdiler, sel){
 }
 // SEÇİCİ — Marka listesi, onun altında seçili markanın tipleri ve Yeni takoz
 // (Canlı Not 105: sıkı iki satır; 106: önce marka, sonra o markanın tipleri).
-// Tipin teknik resmi varsa Tip satırının sonunda (i) düğmesi (Canlı Not 111).
+// Tipin teknik resmi varsa Tip satırında (i) düğmesi (Canlı Not 111), satırın sonunda
+// tipler arasında gezen iki ok (Canlı Not 155, _mntLibAdimHTML).
 function _mntLibSecici(node, markalar, grup, sel){
   var mk='<select class="ve-fp-sel mntlib-marka" id="mntlib-marka-'+node.id+'" aria-label="Marka"'
     +' onchange="veMntLibMarka(\''+node.id+'\',this.value)">'
@@ -4441,9 +4442,35 @@ function _mntLibSecici(node, markalar, grup, sel){
     + '<span class="mntlib-et">Marka</span>'+mk
     + '<span class="mntlib-et">Tip</span>'
     + '<div class="mntlib-tip"><div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
-    + _mntLibCizimDugme(node, sel)+'</div>'
+    + _mntLibCizimDugme(node, sel)+_mntLibAdimHTML(node, grup?grup.girdiler:[], sel)+'</div>'
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
+}
+// TİPLER ARASINDA GEZİNME (kullanıcı 2026-11-11, Canlı Not 155: *"Şuraya pratik olarak takozlar
+// arasında gezebileceğimiz iki ok tuşu istiyorum, yukarı aşağı"*): Tip satırının sonunda bitişik iki
+// ok — Önceki tip · Sonraki tip, Tip listesinin sırasıyla (seçili markanın tipleri, _mntLibSirali).
+// Adım listeden seçmenin AYNISI (veMntLibAdim → veMntLibSelect). Listenin ucunda ok kapalı
+// (aria-disabled: odak okta kalır), sebebi ipucunda; tek tipli markada ok yok. (i) okların SOLUNDA:
+// teknik resmi olmayan tipe (LASPAR'ın ilk on tipinden yedisi) geçince (i) kalkar ve oklar
+// yerinde kalır — oklar (i)'nin solunda olsaydı (i) gelince 32 px kayar, art arda ikinci tık
+// (i)'ye düşerdi. Kapı: mount-library-dropdown.test.js → *OKLAR*.
+function _mntLibAdimId(nodeId, yon){ return 'mntlib-adim-'+(yon<0 ? 'onceki' : 'sonraki')+'-'+nodeId; }
+function _mntLibSira(girdiler, sel){
+  for(var i=0; sel && i<girdiler.length; i++){ if(girdiler[i].key===sel.key) return i; }
+  return -1;
+}
+function _mntLibAdimHTML(node, girdiler, sel){
+  var i=_mntLibSira(girdiler||[], sel);
+  if(i<0 || girdiler.length<2) return '';
+  function ok(yon, ad, ikon, sebep){
+    return '<button type="button" class="mntlib-adim" id="'+_mntLibAdimId(node.id, yon)+'" aria-label="'+ad+'"'
+      + (sebep ? ' aria-disabled="true" title="'+sebep+'"' : ' title="'+ad+'"')
+      + ' onclick="veMntLibAdim(\''+node.id+'\','+yon+')">'+veIkon(ikon)+'</button>';
+  }
+  return '<span class="mntlib-adimlar">'
+    + ok(-1, 'Önceki tip', 'arrow-up', i===0 ? 'İlk tip seçili.' : '')
+    + ok(1, 'Sonraki tip', 'arrow-down', i===girdiler.length-1 ? 'Son tip seçili.' : '')
+    + '</span>';
 }
 // Kütüphane girdisinin eksenleri — takozun KENDİ eksenleri (radyal/eksenel);
 // uygulanınca takozun kxs…kzd alanlarına aynı sırayla kopyalanır.
@@ -4698,7 +4725,13 @@ function _mntLibCizimDugme(node, e){
     + ' aria-label="Teknik resim" title="Teknik resim" aria-haspopup="dialog"'
     + ' onclick="veMntLibCizimAc(this)">'+veIkon('info')+'</button>';
 }
-// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner.
+// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner. TEKNİK RESİM
+// KÜÇÜK AÇILIR (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+// Ufak gelsin. Göz yoruyor."*): uzun kenarı en çok VE_MNT_CIZIM_AZAMI CSS px, oranı korunur,
+// pencere resmin ölçüsünde (resimler 640 px genişlikte, boyları 307–1336 px; önce ekranın
+// boyunu dolduruyordu). Son değişikliklerin görseli dosyanın ölçüsünde kalır (Canlı Not 53).
+// Kapı: mount-amc.test.js → *TEKNİK RESİM* (→ *KÜÇÜK*).
+var VE_MNT_CIZIM_AZAMI = 480;
 function veMntLibCizimAc(dugme){
   if(!dugme) return false;
   var a=dugme.getAttribute('data-amc'), p=dugme.getAttribute('data-ap');
@@ -4708,7 +4741,7 @@ function veMntLibCizimAc(dugme){
       : l ? (_MNT_LP ? _MNT_LP.kunye(l) : null)
       : le ? (_MNT_LP ? _MNT_LP.kunyeEski(le) : null) : null;
   if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
-  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
+  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme, azami:VE_MNT_CIZIM_AZAMI });
 }
 // KAYNAK (i)'DE (kullanıcı 2026-11-11, Canlı Not 139: *"Kaynak kısmını kaldıralım. Kaynağı 'ürün
 // ailesi' satırına bir (i) butonu koyarak belirtelim. Kullanıcı fare ile bunun üstüne geldiğinde
@@ -4818,7 +4851,9 @@ function _mntLibGirdileri(node){
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
   return { custom:custom, builtins:builtins, hepsi:custom.concat(builtins) };
 }
-function getMntLibraryPropertiesHTML(node){
+// Pencerenin seçimi: seçili tip (yoksa ilk özel, yoksa ilk katalog tipi), markası ve o markanın
+// tipleri Tip listesinin sırasıyla — pencere ve oklar (veMntLibAdim) AYNI listeyi okur.
+function _mntLibSecim(node){
   var d=_mntLibEnsure(node);
   var G=_mntLibGirdileri(node);
   var sel=null;
@@ -4826,6 +4861,11 @@ function getMntLibraryPropertiesHTML(node){
   if(!sel) sel=G.custom[0]||G.builtins[0]||null;
   var markalar=veMntLibMarkalar(G.hepsi);
   var grup=(sel && markalar.filter(function(g){ return g.ad===sel.marka; })[0]) || markalar[0] || null;
+  return { G:G, sel:sel, markalar:markalar, grup:grup };
+}
+function getMntLibraryPropertiesHTML(node){
+  var S=_mntLibSecim(node);
+  var sel=S.sel, markalar=S.markalar, grup=S.grup;
   var secici=_mntLibSecici(node, markalar, grup, sel);
   if(!sel){
     return _mntPencereKabuk(node, [
@@ -5067,6 +5107,24 @@ function veMntLibSelect(nodeId, key){
   if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
   veMntLibDropdownClose();                 // dış-tık/Escape dinleyicileri sökülsün
   if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Ok → bir önceki (yon < 0) ya da bir sonraki tip, Tip listesinin sırasıyla (Canlı Not 155,
+// _mntLibAdimHTML). Seçim listeden seçmenin AYNISI (veMntLibSelect): pencere yerinde yeniden
+// kurulur; listeden seçim gibi görünüm durumu, geri-al adımı değil. Listenin ucunda bir şey
+// yapmaz. Odak oktaysa yeniden kurulan okta kalır: Enter ya da art arda tık yerinden kaymadan gezer.
+function veMntLibAdim(nodeId, yon){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return false;
+  var S=_mntLibSecim(node), L=S.grup ? S.grup.girdiler : [];
+  var i=_mntLibSira(L, S.sel), j=i+(yon<0 ? -1 : 1);
+  if(i<0 || j<0 || j>=L.length) return false;
+  var id=_mntLibAdimId(nodeId, yon);
+  var odak=typeof document!=='undefined' && !!document.activeElement && document.activeElement.id===id;
+  veMntLibSelect(nodeId, L[j].key);
+  if(odak){
+    var b=document.getElementById(id);
+    if(b) try{ b.focus({ preventScroll:true }); }catch(_e){}
+  }
+  return true;
 }
 
 // Marka seç → seçili tip o markanın ilk tipine geçer (seçili tip zaten o markadaysa
@@ -6427,7 +6485,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
     _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, _mntLibLpKunyeHTML: _mntLibLpKunyeHTML,
-    veMntLibCizimAc: veMntLibCizimAc,
+    veMntLibCizimAc: veMntLibCizimAc, VE_MNT_CIZIM_AZAMI: VE_MNT_CIZIM_AZAMI,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,
@@ -6440,6 +6498,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibSetBuiltin: veMntLibSetBuiltin,
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     veMntLibSelect: veMntLibSelect,
+    veMntLibAdim: veMntLibAdim, _mntLibAdimHTML: _mntLibAdimHTML, _mntLibSecim: _mntLibSecim,
     veMntLibDropdownToggle: veMntLibDropdownToggle,
     veMntLibDropdownClose: veMntLibDropdownClose,
     veMntLibFilter: veMntLibFilter,

@@ -541,13 +541,12 @@ var componentDefs = {
     inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, isMountAksesuar: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['bottom'], outputs: ['left'] }
   },
-  // TAKOZ SİMGESİ (Canlı Not 149: *"Bir sürü takoz teknik resmimiz var artık, oralardan
-  // … referans alarak güzel bir resim"*): konik takozun KESİTİ, LASPAR 1433'ün teknik
-  // resminden — üst kapak, iç koni, iki kauçuk yarısı (yeşil), dış manşon ve flanş, taban,
-  // eksen çizgisi. Zemin taraması simgede yok: tuval onu kutunun dışında çizer.
+  // TAKOZ SİMGESİ (Canlı Not 157, 149'un kesit çiziminin yerine: *"Çok teknik olmuş. Böyle
+  // daha tatlı, daha şekilsel olabilir."*): yandan tombul takoz — saplamalı kapak, üst üste iki
+  // yumuşak kauçuk rulo (yeşil, parıltılı), delikli taban flanşı; kesit, eksen ve tarama yok.
   'mnt-mount': {
     name: 'Takoz',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M23 22 L41 22 L47 71 Q45 82 38.5 81 Q32.5 80 31 70 Z" fill="var(--accent-success, #1a7f37)"/><path d="M77 22 L59 22 L53 71 Q55 82 61.5 81 Q67.5 80 69 70 Z" fill="var(--accent-success, #1a7f37)"/><path d="M41 19 L59 19 L54 78 L46 78 Z" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="4" stroke-linejoin="round"/><path d="M5 44 H24 L32.5 85 H67.5 L76 44 H95" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="4.5" stroke-linejoin="round"/><rect x="17" y="11" width="66" height="8" fill="var(--text-secondary, #535c67)"/><rect x="29" y="85" width="42" height="6" fill="var(--text-secondary, #535c67)"/><line x1="50" y1="3" x2="50" y2="97" stroke="var(--text-muted, #5f6873)" stroke-width="2.5" stroke-dasharray="12 4 3 4"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="43" y="6" width="14" height="16" rx="4" fill="var(--text-secondary, #535c67)"/><g fill="var(--accent-success, #1a7f37)" opacity="0.85"><path d="M27 51 H73 A14 14 0 0 1 73 79 H27 A14 14 0 0 1 27 51 Z"/><path d="M31 27 H69 A13.5 13.5 0 0 1 69 54 H31 A13.5 13.5 0 0 1 31 27 Z"/></g><g fill="none" stroke="var(--on-success, #ffffff)" stroke-linecap="round"><path d="M24 53 H76" stroke-opacity=".45" stroke-width="4.5"/><path d="M28 34.5 H40 M24 59 H34" stroke-opacity=".65" stroke-width="5.5"/></g><rect x="25" y="17" width="50" height="12" rx="6" fill="var(--text-secondary, #535c67)"/><rect x="6" y="77" width="88" height="15" rx="7.5" fill="var(--text-secondary, #535c67)"/><circle cx="18" cy="84.5" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/><circle cx="82" cy="84.5" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/></svg>',
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   // Askı Yayı (2026-11-11) — şanzımanın kuyruğunu şasiye asan ön yüklü helisel

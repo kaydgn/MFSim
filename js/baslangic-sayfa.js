@@ -322,7 +322,9 @@ function _veBasDegAc(el, v){
 // sığdırılır). Kapatan ✕ · Esc · perdeye tık; odak küçük görsele döner.
 // Küçük görseli olmayan çağıran (Takoz Özellikleri'nin (i) düğmesi, Canlı Not 111)
 // aynı pencereyi veBasResimGoster ile adres ve adıyla açar — pencerenin ikinci
-// bir yazımı kurulmaz.
+// bir yazımı kurulmaz. Çağıran görselin ÜST SINIRINI verebilir (`azami`, Canlı Not
+// 154: teknik resim küçük açılır): uzun kenar en çok o kadar, oran korunur, pencere
+// görselin ölçüsünde; sınırsız çağıran (son değişikliklerin görseli) dosyanın ölçüsünde.
 var _veBasResim = null;        // { perde, dugme }
 function veBasResimAc(dugme){
   if(typeof document === 'undefined' || !dugme) return false;
@@ -334,15 +336,18 @@ function veBasResimAc(dugme){
     y: kucuk.naturalHeight || (kucuk.getAttribute('height') | 0) * 2
   });
 }
-// o: { src, ad, odak (kapanınca odak dönen öğe), g · y (dosyanın ölçüsü; yoksa görsel kendi ölçüsünde açılır) }
+// o: { src, ad, odak (kapanınca odak dönen öğe), g · y (dosyanın ölçüsü; yoksa görsel kendi ölçüsünde açılır),
+//      azami (CSS px; varsa görselin uzun kenarı en çok bu kadar — CSS: [data-azami]) }
 function veBasResimGoster(o){
   if(typeof document === 'undefined' || !o || !o.src) return false;
   veBasResimKapat();
   var ad = o.ad || '';
+  var az = o.azami > 0 ? Math.round(o.azami) : 0;
   var perde = document.createElement('div');
   perde.id = 've-bas-buyuk-perde';
   perde.className = 've-bas-buyuk-perde';
-  perde.innerHTML = '<div class="ve-bas-buyuk-pencere" role="dialog" aria-modal="true" aria-labelledby="ve-bas-buyuk-baslik">'
+  perde.innerHTML = '<div class="ve-bas-buyuk-pencere"' + (az ? ' data-azami="' + az + '" style="--ve-bas-azami:' + az + 'px"' : '')
+    + ' role="dialog" aria-modal="true" aria-labelledby="ve-bas-buyuk-baslik">'
     + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-image"></span>'
     + '<b id="ve-bas-buyuk-baslik">' + veBasEsc(ad) + '</b></span>'
     + '<button type="button" class="ve-settings-close" aria-label="Kapat" title="Kapat (Esc)"><span class="mf-ico mf-ico-x"></span></button></div>'

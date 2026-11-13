@@ -436,3 +436,123 @@ describe('2B SAYFASI (Canlı Not 137)', () => {
   });
 });
 
+
+// BOŞLUĞA TIK SEÇİMİ BIRAKIR (kullanıcı 2026-11-11, Canlı Not 153: *"Kütle gövdeleri ve Takozlar
+// kısmında bileşene tıkladıktan sonra, boş yere tıkladığımda tıklamamdan vaz geçemiyorum. Yani kalıyor
+// öyle."*). Önce: masada işaretsiz yere tık hiçbir şey yapmıyordu — seçili gövde perdenin üstünde, kalan
+// model gölgede kalıyordu; adım her çizimde ilk satırı yeniden seçtiği için seçimsiz hâl de yoktu. Şimdi
+// 3B'de ve 2B'de boşluğa tık seçimi bırakır: perde ve halka kalkar, liste yerinde, Seçili gövde · Seçili
+// takoz bölümü çekilir; işarete tık yine seçer, sürükleme (imleç geri dönse de) ne seçer ne bırakır.
+// Gerçek fare: tests/e2e/mount-sihirbaz.spec.js → BOŞLUĞA TIK.
+describe('BOŞLUĞA TIK SEÇİMİ BIRAKIR (Canlı Not 153)', () => {
+  beforeAll(() => { global.veMntAkso = require('../../js/mount-akso.js'); });
+  afterAll(() => { delete global.veMntAkso; });
+  const GOVDE = W.VE_MW_STEPS.findIndex((s) => s.key === 'govde');
+  const TAKOZ = W.VE_MW_STEPS.findIndex((s) => s.key === 'takoz');
+  // basış → (hareketler) → bırakış. Noktanın öğesi (elementFromPoint — jsdom'da yok) her olayda
+  // yeniden bulunur: döndürmenin bitişi çizimi yeniden kurar ve tarayıcıda nokta YENİ çizimin öğesini
+  // verir — olayın eski hedefi belgeden düşmüştür, ona bakan bir sınama dönen çizimi hiç ölçmezdi.
+  const tik = (hedef, yol = []) => {
+    document.elementFromPoint = () => hedef();
+    try {
+      const ev = (t, [x, y]) => hedef().dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+      const bas = [200, 200];
+      ev('pointerdown', bas);
+      yol.forEach((p) => ev('pointermove', p));
+      ev('pointerup', yol.length ? yol[yol.length - 1] : bas);
+    } finally { delete document.elementFromPoint; }
+  };
+  const secili = () => [...document.querySelectorAll('#ve-mw-liste .ve-fw-kl.on')].map((b) => b.getAttribute('data-mw-satir'));
+  const kartlar = () => [...document.querySelectorAll('#ve-mw-yan .ve-fw-card-h')].map((h) => h.textContent);
+  const ak = () => document.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso');
+  const ikiB = () => document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2b');
+
+  test('3B: işarete tık seçer; çizimin boşluğuna tık bırakır — perde kalkar, Seçili gövde çekilir, liste kalır', () => {
+    tulga();
+    W.veMntWizGoto(GOVDE);
+    const st = W.veMntWizState();
+    const sanz = st.govdeler.find((g) => g.type === 'mnt-gearbox');
+    expect(secili()).toEqual([st.govdeler[0].key]);                                     // adım ilk satırı seçer (değişmedi)
+    const k = cp._mntAksoCizim[W.VE_MW_AKSO].m.govde.find((g) => g.id === 'mw:' + sanz.key).k;
+    tik(() => ak().querySelector('[data-ak="' + k + '"]'));
+    expect(secili()).toEqual([sanz.key]);
+    expect(kartlar()).toEqual(['Kütle gövdeleri', 'Seçili gövde']);
+    expect(ak().querySelector('g.ve-ak-odak [data-sec]').getAttribute('data-ak')).toBe(k);
+    // çizimin zemini: işaret yok → seçim bırakılır
+    tik(() => ak().querySelector(':scope > rect.ve-ak-zem'));
+    expect(secili()).toEqual([]);
+    expect(kartlar()).toEqual(['Kütle gövdeleri']);
+    expect(document.querySelectorAll('#ve-mw-liste .ve-fw-kl')).toHaveLength(st.govdeler.length);
+    expect(document.getElementById(W.VE_MW_AKSO).getAttribute('data-perde')).toBe('0');
+    expect(ak().querySelector('[data-sec], rect.ve-ak-perde, g.ve-ak-odak')).toBeNull();
+    // bırakılan seçim yeniden çizimde ve adım dönüşünde ilk satıra dönmez
+    W.veMntWizRender();
+    W.veMntWizGoto(TAKOZ); W.veMntWizGoto(GOVDE);
+    expect(secili()).toEqual([]);
+    // çizimin dışı bırakmaz: gösterge, durum çipi
+    tik(() => ak().querySelector('[data-ak="' + k + '"]'));
+    tik(() => document.getElementById('ve-mw-masa-lej'));
+    tik(() => document.querySelector('#ve-mw-live .ve-fw-damga'));
+    expect(secili()).toEqual([sanz.key]);
+    // takoz adımında da: ilk takoz seçili, boşluğa tık bırakır
+    W.veMntWizGoto(TAKOZ);
+    expect(secili()).toEqual([st.takozlar[0].key]);
+    tik(() => ak());
+    expect(secili()).toEqual([]);
+    expect(kartlar()).toEqual(['Takozlar']);
+    expect(ak().querySelector('[data-sec]')).toBeNull();
+    // seçimsiz adımda (özet) boşluk bir şey yapmaz
+    W.veMntWizGoto(OZET);
+    expect(W._mwMasaBirak()).toBe(false);
+  });
+
+  test('3B: sürükleme döndürür, seçimi oynatmaz — imleç basılan yere dönse de', () => {
+    tulga();
+    W.veMntWizGoto(GOVDE);
+    const st = W.veMntWizState();
+    const az0 = cp.VE_MNT_AKSO3B.az;
+    tik(() => ak().querySelector(':scope > rect.ve-ak-zem'), [[230, 210], [201, 200]]);
+    expect(cp.VE_MNT_AKSO3B.az).not.toBe(az0);                                         // döndü
+    expect(secili()).toEqual([st.govdeler[0].key]);
+    // çizicinin eşiğinde (|dx| + |dy| = 3) çizim döner: tık değil
+    tik(() => ak().querySelector(':scope > rect.ve-ak-zem'), [[202, 201]]);
+    expect(secili()).toEqual([st.govdeler[0].key]);
+    // eşiğin altı tıktır
+    tik(() => ak().querySelector(':scope > rect.ve-ak-zem'), [[201, 201]]);
+    expect(secili()).toEqual([]);
+    cp.veMntAksoAyar(W.VE_MW_AKSO, 'sifirla');
+  });
+
+  test('2B: işarete tık seçer; boşluğa tık bırakır — halka kalkar; sürükleme kaydırır, seçimi oynatmaz', () => {
+    tulga();
+    W.veMntWizGoto(GOVDE);
+    W.veMntWizGorunus('2b');
+    const st = W.veMntWizState();
+    const konumlu = st.govdeler.filter((g) => [g.cgx, g.cgy, g.cgz].every((v) => v !== '' && v != null && Number.isFinite(Number(v))));
+    expect(konumlu.length).toBeGreaterThan(2);
+    const halka = () => ikiB().querySelectorAll('circle[stroke-width="2.2"], rect[stroke-width="1.6"]').length;
+    tik(() => ikiB().querySelector('[data-mnt2b="yan"] [data-mnt-sec="govde:1"]:not(.ve-mnt2d-kutu) circle'));
+    expect(secili()).toEqual([konumlu[1].key]);
+    expect(halka()).toBeGreaterThan(0);
+    tik(() => ikiB().querySelector('[data-mnt2b="on"] rect.ve-mnt2b-cerceve'));            // panelin boş alanı
+    expect(secili()).toEqual([]);
+    expect(kartlar()).toEqual(['Kütle gövdeleri']);
+    expect(halka()).toBe(0);
+    // sürükleme kaydırır (kamera yazılır), seçim yerinde; imleç basılan yere dönse de
+    tik(() => ikiB().querySelector('[data-mnt2b="yan"] [data-mnt-sec="govde:1"]:not(.ve-mnt2d-kutu) circle'));
+    tik(() => ikiB(), [[240, 220], [201, 200]]);
+    W._mw2BYenile(true);
+    expect(W._mw2BKameraGetir()).not.toBeNull();
+    expect(secili()).toEqual([konumlu[1].key]);
+    // takoz adımında da
+    W.veMntWizGoto(TAKOZ);
+    expect(secili()).toEqual([st.takozlar[0].key]);
+    tik(() => ikiB());
+    expect(secili()).toEqual([]);
+    expect(kartlar()).toEqual(['Takozlar']);
+    tik(() => ikiB().querySelector('[data-mnt2b="ust"] [data-mnt-sec="takoz:2"]'));
+    expect(secili()).toEqual([st.takozlar[2].key]);
+    W.veMntWizGorunus('3b');
+  });
+});
+

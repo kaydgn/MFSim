@@ -114,10 +114,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   masanın görünüşü 3B · **2B**: Yandan · Önden · Üstten TEK sayfada, ortak ölçek ve merkezle (X sütunu,
   Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
   görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
-  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
-  Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
+  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); **masada boşluğa tık
+  seçimi BIRAKIR**, 3B'de ve 2B'de (kullanıcı 2026-11-11, Canlı Not 153: *"boş yere tıkladığımda tıklamamdan vaz
+  geçemiyorum"*): perde kalkar, Seçili gövde · Seçili takoz bölümü çekilir, liste kalır; sürükleme tık değil
+  (`_mwMasaBirak`; kapı `mount-sihirbaz-doku.test.js` · `mount-sihirbaz.spec.js` → *BOŞLUĞA TIK*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
-  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
+  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
+  *"Zaten aşağıda yazıyor"*; kapı `mount-wizard.test.js` → *TUVALDEKİ MODEL KARTI YOK*); Örnek alanının kartı
+  BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de kaldıralım."*; kapı
+  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
@@ -378,14 +384,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
-  (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  (i) düğmesiyle pencere ailesinin penceresinde, KÜÇÜK: uzun kenarı en çok 480 px, oranı korunur,
+  pencere resmin ölçüsünde (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+  Ufak gelsin."*; son değişikliklerin görseli dosyanın ölçüsünde kalır; kapı `mount-amc.test.js` →
+  *TEKNİK RESİM* · *KÜÇÜK*); `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
   (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
-  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
+  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil); Tip satırının SONUNDA Önceki tip · Sonraki tip okları listenin sırasıyla gezer — listeden seçmenin aynısı, uçta ok kapalı (sebebi ipucunda), (i) okların solunda: (i) gelip gidince oklar yerinde (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu"*). **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
-  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* · *İŞARETSİZ* +
+  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* · *İŞARETSİZ* · *OKLAR* +
   `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` → *AMC KAPASİTESİ*.
 - `js/mount-ap.js` + `assets/takoz/ap/` — **Angst+Pfister APSOvib® takoz veritabanı** (kullanıcı
   2026-11-10: *"kayıtlı olan Angst-Pfister takozlarını da araştır"*): konik · HD konik · H-takoz ·

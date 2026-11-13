@@ -507,7 +507,7 @@ var _GM_TAKOZ = [
 ];
 
 var _GM_KUTUPHANE = [
-  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir.' },
+  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir, oklar listede gezer.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
   { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
@@ -541,7 +541,7 @@ var _GM_SIHIRBAZ = [
   { k: 'durum', ad: 'Çözülebilirlik', not: 'Çözülüyor ya da Çözülemiyor; toplam kütle, takoz sayısı.' },
   { k: 'gorunus', ad: '3B · 2B', not: 'Önizlemenin bakışı.', yer: 'sag' },
   { k: 'step', ad: 'STEP’ten başla', not: 'Modeli STEP dosyasından doldurur.', yer: 'sag' },
-  { k: 'ornek', ad: 'Örnekten doldur', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
+  { k: 'ornek', ad: 'Örnek', not: 'Kayıtlı örneklerden biri; oklar listede gezer.', yer: 'sag' },
   { k: 'ileri', ad: 'İleri', not: 'Sonraki adım; son adımda Modeli kur.', yer: 'sol-orta' },
   { k: 'kapat', ad: 'Kapat', not: 'Sihirbazı kapatır; tuval değişmez.', yer: 'sol-orta' },
   { k: 'talimat', ad: 'Talimat', not: 'Açık adımda yapılacaklar, sırayla.', cerceve: false, yer: 'sag-dis' },
@@ -1067,9 +1067,10 @@ function _gmSec9(){
     + 'değil.</p>';
   h += _gmSahne('kutuphane', _gmPencere('mnt-library'), 'Takoz Özellikleri penceresi.', null, _GM_KUTUPHANE);
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
-    ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi ve <strong>Yeni takoz</strong>; özel '
-      + 'tipte ad alanı ve <strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler '
-      + 'seçili tipin adını başlıklarında taşır'],
+    ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi, <strong>Önceki tip</strong> · '
+      + '<strong>Sonraki tip</strong> okları ve <strong>Yeni takoz</strong>; özel tipte ad alanı ve '
+      + '<strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler seçili tipin adını '
+      + 'başlıklarında taşır. Oklar listenin sırasıyla gezer; ilk tipte yukarı, son tipte aşağı ok kapalıdır'],
     ['Öneri', 'Seçili markanın modele uyan ilk beş tipi: en yüklü takozda kapasite payı, statik sehim '
       + '<span class="ve-fp-sym">δ</span>, dikey frekans <span class="ve-fp-sym">f<sub>z</sub></span>; satıra tık tipi seçer',
       'Kaba ön seçimdir: model rijit gövde, bütün takozlar aynı tip, yük kütleden ve takoz konumlarından '
@@ -1364,7 +1365,7 @@ function _gmSec15(){
   ], ['Adım', 'Ne girilir', 'Not']);
   h += _gmAdimlar([
     'Başlangıç sayfasında <strong>Sihirbazla kur</strong>’a basın.',
-    'İlk adımda modelin kaynağını seçin: ' + _gmN(_GM_SIHIRBAZ, 'ornek') + ' <strong>Örnekten doldur</strong> '
+    'İlk adımda modelin kaynağını seçin: ' + _gmN(_GM_SIHIRBAZ, 'ornek') + ' <strong>Örnek</strong> '
       + 'listesinden bir örnek, ' + _gmN(_GM_SIHIRBAZ, 'step') + ' <strong>STEP’ten başla</strong> ile bir dosya '
       + 'ya da hiçbiri. Ekranda: önizleme dolar, ' + _gmN(_GM_SIHIRBAZ, 'durum') + ' çip modelin çözülüp '
       + 'çözülemediğini söyler.',
@@ -1382,7 +1383,8 @@ function _gmSec15(){
       _gmN(_GM_SIHIRBAZ, 'gorunus') + ' <strong>3B · 2B</strong> önizlemenin bakışını değiştirir. 3B’de '
     + 'sürüklemek döndürür; çipler parçaların adını ve kütlesini taşır. 2B’de Yandan, Önden ve Üstten '
     + 'tek sayfada, ortak eksenlerle durur; tekerlek yakınlaştırır, sürüklemek kaydırır, eksen '
-    + 'değerleri görünen aralıktan yazılır. G birleşik ağırlık merkezidir.');
+    + 'değerleri görünen aralıktan yazılır. İki bakışta da bir gövdeye ya da takoza tıklamak onu '
+    + 'seçer, boş yere tıklamak seçimi bırakır. G birleşik ağırlık merkezidir.');
   return h;
 }
 
