@@ -162,14 +162,15 @@ describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
     satirlar().forEach((r) => {
       const ex = core.getMountExample(r.v);
       const top = ex.model.components.reduce((t, c) => t + c.mass, 0);
+      const aski = (ex.model.askilar || []).length;                     // askı yayı varsa sayısı (10 Ton TTA askılı)
       expect([r.v, r.ad, r.sayi, r.kutle]).toEqual([ex.id, ex.vehicle,
-        n(ex.model.components.length) + ' gövde · ' + n(ex.model.mounts.length) + ' takoz', n(top) + ' kg']);
+        n(ex.model.components.length) + ' gövde · ' + n(ex.model.mounts.length) + ' takoz' + (aski ? ' · ' + n(aski) + ' askı' : ''), n(top) + ' kg']);
     });
   });
   test('ayrıntı: gövdeler kütleleriyle (tek ondalık), takozların adı', () => {
     satirlar().forEach((r) => {
       const ex = core.getMountExample(r.v);
-      expect(r.detay.map((d) => d.baslik)).toEqual(['Gövdeler', 'Takozlar']);
+      expect(r.detay.map((d) => d.baslik)).toEqual(['Gövdeler', 'Takozlar'].concat((ex.model.askilar || []).length ? ['Askı yayları'] : []));
       const kodsuz = (x) => x.replace(/\s*[·—–-]?\s*\b\d{2}[A-Z]{2}\d{6}\b/g, '').trim();   // Canlı Not 29: parça numarası düşer
       expect(r.detay[0].ogeler).toEqual(ex.model.components.map((c) => ({ ad: kodsuz(c.name), deger: n(c.mass, 1) + ' kg' })));
       expect(r.detay[1].ogeler).toEqual(ex.model.mounts.map((m) => ({ ad: kodsuz(m.name) })));
@@ -741,7 +742,7 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     const kapi = el().querySelector('.ve-bas-kapi');
     const sek = (i) => el().querySelectorAll('.ve-bas-sekme')[i];
     const satirlar = () => [...el().querySelectorAll('.ve-bas-satir')].map((r) => r.getAttribute('data-v'));
-    expect(satirlar()).toEqual(['siper', 'tulga', 'asfat', 'tta10']);
+    expect(satirlar()).toEqual(['siper', 'tulga', 'asfat', 'tta10', 'tta10askili']);
     sek(1).click();
     expect(satirlar()).toEqual(['kutu', 'hafif', 'kamyon']);
     expect(sek(1).getAttribute('aria-selected')).toBe('true');

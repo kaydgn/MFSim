@@ -98,7 +98,7 @@ function _mntRepIsolation(R, opts){
   var zeta=_mntRepZeta(R, opts);
   var fFire=(eng.idleRpm>0 && eng.cylinders>0) ? (eng.idleRpm/60)*(eng.cylinders/2) : NaN;
   var m=(R && R.mp && R.mp.m)>0 ? R.mp.m : NaN;
-  var fB=(C && C.bounceFrequency) ? C.bounceFrequency(R && R.mounts, m, R && R.kBasis) : NaN;   // taban modal çözümünki
+  var fB=(C && C.bounceFrequency) ? C.bounceFrequency(_mntRepDin(R), m, R && R.kBasis) : NaN;   // taban modal çözümünki
   var T =(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, zeta) : NaN;
   var T0=(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, 0)    : NaN;
   return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<MNT_TR_SINIR) };
@@ -127,7 +127,7 @@ function _mntRepIsolation3(R, opts){
   var M6=C.buildM6(R.mp.m, R.mp.I_G);
   if(!M6) return null;
   var dirs=_MNT_ISO_DIRS.map(function(nm, d){
-    var T=C.frfAt(R.mounts, R.mp.cg, M6, R.damping, fFire, d);
+    var T=C.frfAt(_mntRepDin(R), R.mp.cg, M6, R.damping, fFire, d);
     return { name:nm, dir:d, T:T,
              // İzolasyon yüzdesi = (1−T)·100. T > 1'de NEGATİF çıkar ve öyle
              // bırakılır: rezonans bölgesinde titreşim azalmaz, katlanır.
@@ -512,8 +512,11 @@ function _mntRepGeom(R){
   var mounts=(R.gather.mounts||[]).map(function(m){
     return { name:m.name||'takoz', x:_rNum(m.x), y:_rNum(m.y), z:_rNum(m.z) };
   }).filter(function(m){ return Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z); });
+  var askilar=(R.gather.askilar||[]).map(function(a){
+    return { name:a.name||'askı', x:_rNum(a.x), y:_rNum(a.y), z:_rNum(a.z) };
+  }).filter(function(a){ return Number.isFinite(a.x)&&Number.isFinite(a.y)&&Number.isFinite(a.z); });
   var cg={ x:R.mp.cg[0]*1000, y:R.mp.cg[1]*1000, z:R.mp.cg[2]*1000 };
-  return { comps:comps, mounts:mounts, cg:cg };
+  return { comps:comps, mounts:mounts, askilar:askilar, cg:cg };
 }
 
 // Dinamik tablo/şekil numaralandırma (koşullu tablolar boşluk bırakmasın).
@@ -536,7 +539,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepMassTable(geom);
   h+=_mntRepMountTable(R);
   h+=_mntRepAkso(R);
-  h+=_mntRepFigure(geom,'xy',_rFig(),'Üstten görünüş (X–Y düzlemi, ölçekli): takozlar (kare, adlı), bileşen ağırlık merkezleri (daire) ve birleşik ağırlık merkezi (G).');
+  h+=_mntRepFigure(geom,'xy',_rFig(),'Üstten görünüş (X–Y düzlemi, ölçekli): takozlar (kare, adlı)'+((geom.askilar||[]).length ? ', askı yayları (zikzak)' : '')+', bileşen ağırlık merkezleri (daire) ve birleşik ağırlık merkezi (G).');
   h+=_mntRepFigure(geom,'xz',_rFig(),'Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezinin takoz düzlemlerine göre düşey ofseti, öteleme–dönme kuplajının (K<sub>tθ</sub>) ana kaynağıdır.');
   h+=_mntRepStep1Mass(R);
   h+=_mntRepStep2Stiffness(R, C);
@@ -557,6 +560,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepSensitivity(R, opts);
   h+=_mntRepBaglanti(R);
   h+=_mntRepZarf(R);
+  h+=_mntRepAski(R);
   return h;
 }
 
@@ -660,6 +664,155 @@ function _mntRepZarf(R){
   return h;
 }
 
+// §8.20 — Askı yayları (2026-11-11). Güç grubunu şasiye asan ön yüklü helisel
+// basma yayları (çekirdek solveWithHangers): durum başına boy, kuvvet ve durum;
+// yayın gerilmesi (EN 13906-1) ve bağlantı yüzü için montaj önerisi (cp-mount.js
+// _mntAskiOneri). Askısız modelde bölüm yok. İşletme durumu Parametrik Analiz'in
+// kuralıyla (veMntKatalog.isletmeMi): n_z = −1, |n_x| · |n_y| ≤ 1.
+function _mntRepYay(){
+  if(typeof veMntYayGerilmeHam!=='function') return null;
+  return { ham:veMntYayGerilmeHam, duz:veMntYayGerilme, sabit:veMntYaySabiti, frekans:veMntYayFrekans,
+           izin:(typeof VE_MNT_YAY_IZIN!=='undefined' ? VE_MNT_YAY_IZIN : 0.56),
+           G:(typeof VE_MNT_YAY_GMOD!=='undefined' ? VE_MNT_YAY_GMOD : 78500) };
+}
+function _mntRepIsletmeMi(lc){
+  if(typeof veMntKatalog!=='undefined' && veMntKatalog && typeof veMntKatalog.isletmeMi==='function') return veMntKatalog.isletmeMi(lc);
+  var n=(lc && lc.n) || [];
+  return n[2]===-1 && Math.abs(n[0])<=1 && Math.abs(n[1])<=1;
+}
+// Askı yaylarının çalışma aralığı — §8.20 ve uygunluğun askı satırı AYNI hesabı okur.
+// Dönüş: { statik:[perHanger] | null, islMin, islMax [m], disi:[{ durum, yay, hal }] (işletme),
+//          darbe:[{ durum, yay, hal }] (öteki durumlar), Fmax · FmaxIsl:[N] (yay başına) } | null
+function _mntRepAskiAralik(R){
+  var A=R && R.askilar;
+  if(!A || !A.length) return null;
+  var o={ statik:null, islMin:Infinity, islMax:-Infinity, disi:[], darbe:[],
+          Fmax:A.map(function(){ return 0; }), FmaxIsl:A.map(function(){ return 0; }) };
+  _mntRepZarfDurumlari(R).forEach(function(rc){
+    var ph=rc.res.perHanger;
+    if(!ph) return;
+    var isl=_mntRepIsletmeMi(rc.loadCase || {});
+    if(rc.name==='Static' && !o.statik) o.statik=ph;
+    ph.forEach(function(p, j){
+      if(p.F>o.Fmax[j]) o.Fmax[j]=p.F;
+      if(isl){
+        if(p.L<o.islMin) o.islMin=p.L;
+        if(p.L>o.islMax) o.islMax=p.L;
+        if(p.F>o.FmaxIsl[j]) o.FmaxIsl[j]=p.F;
+      }
+      if(p.durum!=='normal') (isl ? o.disi : o.darbe).push({ durum:rc.name, yay:A[j].name, hal:p.durum });
+    });
+  });
+  return o;
+}
+function _mntRepAskiHal(h){ return h==='acik' ? 'açık' : (h==='blok' ? 'blok' : 'normal'); }
+// Sütun başlığı: adın parça numarasından önceki kısmı ("Sol askı yayı · 2K60377" → "Sol askı yayı")
+function _mntRepAskiKisa(ad){ return _mntRepShort(String(ad||'askı').split(' · ')[0], 16); }
+function _mntRepAski(R){
+  var A=R.askilar;
+  if(!A || !A.length) return '';
+  var g=R.g||9.81, Y=_mntRepYay(), O=_mntRepAskiAralik(R);
+  var mm=function(v, d){ return _rF(v*1000, d==null ? 2 : d); };
+  var kgf=function(F, d){ return _rF(F/g, d==null ? 1 : d); };
+  var xyz=function(p){ return p.map(function(v){ return _rF(v*1000, 1); }).join('; '); };
+  var h='<h3>8.20 Askı yayları</h3>';
+  h+='<p>Askı yayı güç grubunu şasiye asan ön yüklü helisel basma yayıdır ve yalnız basmada çalışır. Boyu \\( L=L_d+\\delta_z \\): '
+    +'\\( L_d \\) tasarım konumundaki (takozlar yüksüzken) boy, \\( \\delta_z \\) yay noktasının düşey yer değiştirmesi. Gövdeye uyguladığı düşey kuvvet:</p>';
+  h+='$$ F=\\begin{cases}0, & L\\ge L_0\\\\ k\\,(L_0-L), & L_c&lt;L&lt;L_0\\\\ k\\,(L_0-L_c)+k_B\\,(L_c-L), & L\\le L_c\\end{cases}\\qquad k_B=1000\\,k $$';
+  h+='<p>Kuvvet birleşik ağırlık merkezinde eşdeğer yük olarak girer: '
+    +'\\( \\mathbf n\'=\\mathbf n+\\sum_j F_j\\,\\mathbf e_z/(m g) \\), \\( \\mathbf T\'=\\mathbf T+\\sum_j(\\mathbf h_j-\\mathbf G)\\times F_j\\,\\mathbf e_z \\). '
+    +'Her yük durumunda yayın durumu (normal · açık · blok) aktif küme ile bulunur. Statik montajla (kuvvet ya da boy) tanımlanan yayın tasarım boyu '
+    +'bilinen kuvvetle çözülen statik dengeden: \\( L_d=L_s-\\delta_{z,s} \\). Modal analiz, frekans yanıtı ve şokta yay statik dengedeki durumunun '
+    +'z rijitliğiyle ve sönümsüz girer.</p>';
+  // ── Tanım
+  var kurulum=function(a){
+    if(a.kurulum==='tasarim') return 'tasarım boyu '+mm(a.Ld, 1)+' mm';
+    if(a.kurulum==='boy') return 'statik boy '+mm(a.Ls, 1)+' mm';
+    return 'statik kuvvet '+kgf(a.Fs)+' kgf';
+  };
+  h+='<table><caption>Tablo '+_rTbl()+' — Askı yayları</caption>';
+  h+='<tr><th>Yay</th><th>Konum (x; y; z) [mm]</th><th>k [N/mm]</th><th>L<sub>0</sub> [mm]</th><th>L<sub>c</sub> [mm]</th>'
+    +'<th>Kurulum</th><th>L<sub>d</sub> [mm]</th></tr>';
+  A.forEach(function(a){
+    h+='<tr><td class="l">'+_rEsc(a.name)+'</td><td class="c">('+xyz(a.pos)+')</td><td>'+_rF(a.k/1000, 2)+'</td>'
+      +'<td>'+mm(a.L0, 1)+'</td><td>'+mm(a.Lc, 1)+'</td><td class="l">'+kurulum(a)+'</td>'
+      +'<td>'+(Number.isFinite(a.Ld) ? mm(a.Ld, 2) : '—')+'</td></tr>';
+  });
+  h+='</table>';
+  // ── Yük durumu başına boy ve kuvvet (aynı yükün iki adı tek satırda)
+  var durumlar=[], anahtar={};
+  _mntRepZarfDurumlari(R).forEach(function(rc){
+    if(!rc.res.perHanger) return;
+    var lc=rc.loadCase||{}, k=(lc.n||[]).join(';')+'|'+(lc.T||[]).join(';');
+    if(anahtar[k]) anahtar[k].adlar.push(_mntRepCaseTr(rc.name));
+    else durumlar.push(anahtar[k]={ ph:rc.res.perHanger, adlar:[_mntRepCaseTr(rc.name)], isl:_mntRepIsletmeMi(lc) });
+  });
+  h+='<table><caption>Tablo '+_rTbl()+' — Askı yayının boyu ve kuvveti, yük durumu başına</caption>';
+  h+='<tr><th>Yük durumu</th>'+A.map(function(a){
+    return '<th title="'+_rEsc(a.name)+'">'+_rEsc(_mntRepAskiKisa(a.name))+' L [mm]</th><th>F [kgf]</th>'; }).join('')+'<th>Durum</th></tr>';
+  durumlar.forEach(function(d){
+    var hal=d.ph.map(function(p, j){
+      return p.durum==='normal' ? '' : _rEsc(_mntRepAskiKisa(A[j].name))+' '+_mntRepAskiHal(p.durum); }).filter(Boolean);
+    var halH=!hal.length ? 'normal'
+      : (d.isl ? '<span style="color:var(--warn);font-weight:600;">'+hal.join(' · ')+'</span>' : hal.join(' · '));
+    h+='<tr><td class="l">'+d.adlar.map(_rEsc).join(' · ')+(d.isl ? '' : ' (darbe)')+'</td>'
+      +d.ph.map(function(p){ return '<td>'+mm(p.L, 2)+'</td><td>'+kgf(p.F)+'</td>'; }).join('')
+      +'<td class="l">'+halH+'</td></tr>';
+  });
+  h+='</table>';
+  if(O && O.statik && O.islMin<Infinity){
+    var darbeBlok=O.darbe.some(function(x){ return x.hal==='blok'; });
+    h+='<p>Statik ve işletme durumlarında yay çalışma aralığında olmalıdır (\\( L_c&lt;L&lt;L_0 \\)): işletme durumlarında boy '
+      +mm(O.islMin, 2)+'–'+mm(O.islMax, 2)+' mm'
+      +(O.disi.length ? ', <b style="color:var(--warn);">'+O.disi.length+' yay-durumda aralık dışı</b>' : '')+'. '
+      +(O.darbe.length ? 'Darbe durumlarında '+O.darbe.length+' yay-durumda yay '+(darbeBlok ? 'blok boyuna iner' : 'açılır')+'.'
+                       : 'Darbe durumlarında yay çalışma aralığında kalır.')+'</p>';
+  }
+  // ── Gerilme (EN 13906-1) — tel çapı, ortalama çap ve aktif sarım verilmişse
+  var gy=Y ? A.filter(function(a){ return a.d>0 && a.D>0 && a.n>0; }) : [];
+  if(gy.length){
+    h+='<p>Yay gerilmesi EN 13906-1 ile: \\( \\tau=8FD/(\\pi d^3) \\), düzeltilmiş \\( \\tau_k=k\\,\\tau \\), '
+      +'\\( k=(w+0{,}5)/(w-0{,}75) \\), \\( w=D/d \\); geometriden yay sabiti \\( G d^4/(8D^3n) \\) '
+      +'(\\( G='+_rTeX(_rF(Y.G, 0))+' \\) N/mm²) ve sarımın ilk doğal frekansı \\( 3{,}56\\cdot10^5\\,d/(nD^2) \\) Hz. '
+      +'Statik ölçüt blok boyunda \\( \\tau_c\\le '+_rTeX(_rF(Y.izin, 2))+'\\,R_m \\) (soğuk şekillendirilmiş yay; sıcak şekillendirilmişte §10.1.2).</p>';
+    h+='<table><caption>Tablo '+_rTbl()+' — Askı yayının gerilmesi ve sarım frekansı</caption>';
+    h+='<tr><th>Yay</th><th>k (geometri) [N/mm]</th><th>f<sub>sarım</sub> [Hz]</th><th>τ<sub>k</sub>, işletmede en büyük [MPa]</th>'
+      +'<th>F<sub>c</sub> [kgf]</th><th>τ<sub>c</sub> [MPa]</th><th>τ<sub>izin</sub> [MPa]</th><th>Sonuç</th></tr>';
+    gy.forEach(function(a){
+      var j=A.indexOf(a), Fc=a.k*(a.L0-a.Lc), tc=Y.ham(Fc, a.d, a.D), iz=(a.Rm>0) ? Y.izin*a.Rm : NaN;
+      var tk=(O && O.FmaxIsl[j]>0) ? Y.duz(Math.min(O.FmaxIsl[j], Fc), a.d, a.D) : NaN;
+      var ok=Number.isFinite(iz) && Number.isFinite(tc);
+      var sonuc=!ok ? '—' : (tc<=iz ? '<span class="ok">✓ Uygun</span>' : '<span style="color:var(--warn);font-weight:600;">✗ sınırın üstünde</span>');
+      h+='<tr><td class="l">'+_rEsc(a.name)+'</td><td>'+_rF(Y.sabit(a.d, a.D, a.n, Y.G), 2)+'</td><td>'+_rF(Y.frekans(a.d, a.D, a.n), 0)+'</td>'
+        +'<td>'+(Number.isFinite(tk) ? _rF(tk, 0) : '—')+'</td><td>'+kgf(Fc)+'</td><td>'+_rF(tc, 0)+'</td>'
+        +'<td>'+(ok ? _rF(iz, 0) : '—')+'</td><td class="c">'+sonuc+'</td></tr>';
+    });
+    h+='</table>';
+  }
+  // ── Montaj önerisi — bağlantı yüzü (§8.18) tanımlıysa
+  var P=R.askiOneri, B=R.baglanti;
+  if(P && B){
+    var e=P.egim*g;                                  // N·m / kgf
+    h+='<p>Bağlantı yüzündeki (§8.18) statik eğilme momenti askıların toplam statik kuvveti R ile doğrusal değişir: \\( M_b(R)=M_0+e\\,R \\); '
+      +'\\( M_0 \\) askısız moment, \\( e \\) bilinen kuvvetle çözülen iki statik dengeden. \\( M_b=0 \\) için \\( R^*=-M_0/e \\)'
+      +(P.R3bant ? '; Cummins’in tercih bandı \\( 0\\le M_b\\le 0{,}2\\,M_{\\text{sınır}} \\)' : '')+'.</p>';
+    h+='$$ M_0='+_rTeX(_rF(P.m0, 1))+'\\ \\text{N·m},\\quad e='+_rTeX(_rF(e, 3))+'\\ \\text{N·m/kgf},\\quad '
+      +'R='+_rTeX(_rF(P.R3/g, 1))+'\\ \\text{kgf}\\;\\Rightarrow\\;M_b='+_rTeX(_rF(P.mSimdi, 0))+'\\ \\text{N·m},\\quad '
+      +'R^*='+_rTeX(_rF(P.R3sifir/g, 1))+'\\ \\text{kgf} $$';
+    h+='<table><caption>Tablo '+_rTbl()+' — Askı yayının statik montajı</caption>';
+    h+='<tr><th>Yay</th><th>Şimdiki F [kgf]</th><th>L<sub>s</sub> [mm]</th><th>M<sub>b</sub> = 0: F [kgf]</th><th>L<sub>s</sub> [mm]</th>'
+      +(P.R3bant ? '<th>Tercih bandı F [kgf]</th><th>L<sub>s</sub> [mm]</th>' : '')+'</tr>';
+    P.yaylar.forEach(function(y){
+      var blok=function(L){ return L<=y.Lc ? ' (blok)' : ''; };
+      h+='<tr><td class="l">'+_rEsc(y.name)+'</td><td>'+kgf(y.F)+'</td><td>'+mm(y.L, 1)+'</td>'
+        +'<td>'+kgf(y.Fsifir)+'</td><td>'+mm(y.Lsifir, 1)+blok(y.Lsifir)+'</td>'
+        +(P.R3bant ? '<td>'+kgf(y.Fbant[0])+'–'+kgf(y.Fbant[1])+'</td><td>'+mm(y.Lbant[0], 1)+'–'+mm(y.Lbant[1], 1)+blok(y.Lbant[0])+'</td>' : '')+'</tr>';
+    });
+    h+='</table>';
+  }
+  return h;
+}
+
 // §8.18 — Bağlantı yüzünde statik eğilme momenti (2026-11-06). Güç grubu motor ↔
 // şanzıman bağlantı yüzünde kesilir (yüzün merkezi S ve şanzımanın ekseni a —
 // veri sayfasının referansı); şanzıman tarafındaki kütlelerin yükü ve takoz
@@ -678,12 +831,15 @@ function _mntRepBaglanti(R){
   var h='<h3>8.18 Bağlantı yüzünde statik eğilme momenti</h3>';
   h+='<p>Güç grubu <b>'+_rEsc(B.ad)+'</b> gövdesinin motora bağlandığı düzlemde kesilir: düzlemin merkezi '
     +'S = ('+xyz(B.S, 1)+') mm, normali şanzımanın ekseni a = ('+xyz(B.a, 3)+'). Düzlemin şanzıman tarafındaki kütlelerin yükü ve takoz kuvvetleri S\'ye göre moment üretir; eksene dik bileşeni eğilme momentidir:</p>';
+  var askili=!!(R.askilar && R.askilar.length);
   h+='$$ \\mathbf{M}_S=\\sum_{(\\mathbf{r}_i-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{r}_i-\\mathbf{S})\\times m_i g\\,\\mathbf{n}'
-    +'-\\sum_{(\\mathbf{p}_j-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{p}_j-\\mathbf{S})\\times\\mathbf{f}_j,'
+    +'-\\sum_{(\\mathbf{p}_j-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{p}_j-\\mathbf{S})\\times\\mathbf{f}_j'
+    +(askili ? '+\\sum_{(\\mathbf{h}_l-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{h}_l-\\mathbf{S})\\times F_l\\,\\mathbf{e}_z' : '')+','
     +'\\qquad M_b=\\left|\\mathbf{M}_S-(\\mathbf{M}_S\\cdot\\mathbf{a})\\,\\mathbf{a}\\right| $$';
+  if(askili) h+='<p>\\( \\mathbf h_l \\) ve \\( F_l \\): şanzıman tarafındaki askı yaylarının noktası ve gövdeye uyguladığı kuvvet (§8.20).</p>';
   var lim=B.sinir, st=_mntRepBaglantiStatik(B);
   h+='<table><caption>Tablo '+_rTbl()+' — Bağlantı yüzünde kesit momenti, şanzıman tarafı'+(lim ? ' · sınır '+_rF(lim, 0)+' N·m (veri sayfası, statik)' : '')+'</caption>';
-  h+='<tr><th>Yük durumu</th><th>Kütle [kg]</th><th>Takoz</th><th>M<sub>b</sub> [N·m]</th><th>Burulma [N·m]</th>'
+  h+='<tr><th>Yük durumu</th><th>Kütle [kg]</th><th>Takoz</th>'+(askili ? '<th>Askı F [kgf]</th>' : '')+'<th>M<sub>b</sub> [N·m]</th><th>Burulma [N·m]</th>'
     +(lim ? '<th>M<sub>b</sub> / sınır</th><th>Sonuç</th>' : '')+'</tr>';
   B.satirlar.forEach(function(r){
     var ok=Number.isFinite(r.egilme), stat=r===st;
@@ -691,6 +847,7 @@ function _mntRepBaglanti(R){
       : (r.egilme<=lim ? '<span class="ok">✓ Uygun</span>' : '<span style="color:var(--warn);font-weight:600;">✗ sınırın üstünde</span>')));
     h+='<tr'+(stat?' style="font-weight:600;"':'')+'><td class="l">'+_rEsc(_mntRepCaseTr(r.name))+'</td>'
       +'<td>'+(ok ? _rF(r.m, 1) : '—')+'</td><td>'+(ok ? r.takoz : '—')+'</td>'
+      +(askili ? '<td>'+(ok ? _rF((r.askiF||0)/(R.g||9.81), 1) : '—')+'</td>' : '')
       +'<td>'+(ok ? _rF(r.egilme, 0) : '—')+'</td><td>'+(ok ? _rF(r.burulma, 0) : '—')+'</td>'
       +(lim ? '<td>'+(ok ? '%'+_rF(r.egilme/lim*100, 1) : '—')+'</td><td class="c">'+sonuc+'</td>' : '')+'</tr>';
   });
@@ -782,6 +939,11 @@ function _mntRepCritical(R){
   var Z=R.zarf && R.zarf.toplam;
   if(Z) h+=row('Hareket zarfı (statik konuma göre)', ['X','Y','Z'].map(function(e, i){
     return e+' '+_rFs(Math.min(0, Z.min[i])*1000, 1)+' / '+_rFs(Math.max(0, Z.max[i])*1000, 1); }).join(' · ')+' mm (§8.19)');
+  var AO=_mntRepAskiAralik(R);
+  if(AO && AO.statik) h+=row('Askı yayı', 'statik '+AO.statik.map(function(p){ return _rF(p.L*1000,1)+' mm · '+_rF(p.F/(R.g||9.81),1)+' kgf'; }).join(' / ')
+    +(AO.islMin<Infinity ? ' · işletmede '+_rF(AO.islMin*1000,1)+'–'+_rF(AO.islMax*1000,1)+' mm' : '')
+    +(AO.disi.length ? ' · <b style="color:var(--warn);">aralık dışı</b> — '+AO.disi.map(function(x){ return _rEsc(_mntRepCaseTr(x.durum)); }).filter(function(v, i, a){ return a.indexOf(v)===i; }).join(', ') : '')
+    +(AO.darbe.length ? ' · darbede '+(AO.darbe.some(function(x){ return x.hal==='blok'; }) ? 'blok' : 'açık') : '')+' (§8.20)');
   if(modes.length) h+=row('Modal bant', 'en düşük '+_rF(modes[0].f_Hz,2)+' Hz · en yüksek '+_rF(modes[modes.length-1].f_Hz,2)+' Hz ('+modes.length+' rijit gövde modu)');
   h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü.</div>';
   h+='</div>';
@@ -901,7 +1063,9 @@ function _repPlaceLabels(labels, H, engel){
 function _mntRepFigure(geom, plane, no, caption){
   var horiz='x', vert=(plane==='xy')?'y':'z';
   var pts=[];
+  var askilar=geom.askilar||[];
   geom.mounts.forEach(function(m){ pts.push({h:m[horiz], v:m[vert]}); });
+  askilar.forEach(function(a){ pts.push({h:a[horiz], v:a[vert]}); });
   geom.comps.forEach(function(c){ pts.push({h:c[horiz], v:c[vert]}); });
   if(geom.cg) pts.push({h:geom.cg[horiz], v:geom.cg[vert]});
   pts.push({h:0,v:0});
@@ -931,8 +1095,11 @@ function _mntRepFigure(geom, plane, no, caption){
   // kümele
   var mClust=_repCluster(geom.mounts.map(function(m){ return {x:sx(m[horiz]), y:sy(m[vert]), name:m.name}; }), 26);
   var cClust=_repCluster(geom.comps.map(function(c){ return {x:sx(c[horiz]), y:sy(c[vert]), name:c.name}; }), 18);
+  var aClust=_repCluster(askilar.map(function(a){ return {x:sx(a[horiz]), y:sy(a[vert]), name:a.name}; }), 26);
   // takoz kareleri (küme başına bir kare)
   mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#1f2328" stroke-width="1.8"/>'; });   // makine: SVG koordinatı
+  // askı yayları: düşey zikzak (yay), takoz karesinin ölçüsünde
+  aClust.forEach(function(k){ svg+='<path d="M'+(k.x-6).toFixed(1)+','+(k.y-7).toFixed(1)+' l12,2.8 l-12,2.8 l12,2.8 l-12,2.8 l12,2.8" fill="none" stroke="#1f2328" stroke-width="1.6" stroke-linejoin="round"/>'; });   // makine: SVG koordinatı
   // bileşen CG daireleri
   cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });   // makine: SVG koordinatı
   // birleşik CG (pinwheel G)
@@ -947,11 +1114,13 @@ function _mntRepFigure(geom, plane, no, caption){
   // etiketler → çakışma-önlemeyle yerleştir; işaretler ENGEL
   var engel=[{ x0:0, y0:0, x1:ax+80, y1:ay+60 }];
   mClust.forEach(function(k){ engel.push({ x0:k.x-8, y0:k.y-8, x1:k.x+8, y1:k.y+8 }); });
+  aClust.forEach(function(k){ engel.push({ x0:k.x-8, y0:k.y-8, x1:k.x+8, y1:k.y+8 }); });
   cClust.forEach(function(k){ engel.push({ x0:k.x-7, y0:k.y-7, x1:k.x+7, y1:k.y+7 }); });
   if(geom.cg) engel.push({ x0:GX-12, y0:GY-12-18, x1:GX+12, y1:GY+12 });
   var labels=[];
   // Boy 10,5: viewBox (820) sayfada ~%96'ya iner — 9,5 ölçek tabanının altına düşmesin
   mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:10.5, col:'#1f2328', marker:'sq' }); });
+  aClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'askı'), dir:(k.y<=y0?-1:1), fs:10.5, col:'#1f2328', marker:'sq' }); });
   cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10.5, col:'#5a6270', marker:'ci' }); });
   _repPlaceLabels(labels, H-2, engel);
   labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'"'+_R_HALE+'>'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
@@ -1039,7 +1208,8 @@ function _mntRepStep1Mass(R){
     var sfz=stat.res.sumF[2];
     var Fz=stat.res.F?stat.res.F[2]:(-m*9.81);
     h+='<div class="note check"><span class="t">Tutarlılık · kütle birleştirme</span>'
-      +'Statik durumda takozların ilettiği toplam düşey kuvvet Σf<sub>z</sub> = '+_rF(sfz/1000,2)+' kN, dış düşey yükü '
+      +'Statik durumda takozların ilettiği toplam düşey kuvvet Σf<sub>z</sub> = '+_rF(sfz/1000,2)+' kN'
+      +(Number.isFinite(stat.res.checks.askiFz) ? ' ve askı yaylarının taşıdığı ΣF = '+_rF(stat.res.checks.askiFz/1000,2)+' kN (§8.20) birlikte' : '')+', dış düşey yükü '
       +'F<sub>z</sub> = '+_rF(Fz/1000,2)+' kN dengeler (fark '+_rF(Math.abs(stat.res.checks.sumFzResidual),1)+' N). '
       +'Atalet tensöründeki çarpım terimleri (I<sub>xz</sub>, I<sub>yz</sub>) sıfırdan farklıysa, bounce–pitch ve roll–yaw kuplajlarının kütle tarafındaki kaynağıdır.</div>';
   }
@@ -1081,11 +1251,15 @@ function _mntRepStep1Mass(R){
   return h;
 }
 
+// Dinamik analizlerin takoz listesi: takozlar + askı yaylarının z rijitliği
+// (R.dinMounts — askının statik dengedeki durumuyla); takoz başına satırlar R.mounts'tan.
+function _mntRepDin(R){ return (R && R.dinMounts) || (R && R.mounts) || []; }
+
 // §8.2 — rijitlik matrisi blokları (MN birimlerinde)
 function _mntRepStep2Stiffness(R, C){
   var h='<h3>8.2 Adım 2 — Rijitlik matrisi</h3>';
   if(!C || !C.buildK){ return h+'<p>Rijitlik çekirdeği bulunamadı.</p>'; }
-  var Ks=C.buildK(R.mounts, R.mp.cg, false);
+  var Ks=C.buildK(_mntRepDin(R), R.mp.cg, false);
   function blk(K,r0,c0,sc,dec){ var o=[]; for(var i=0;i<3;i++){ var row=[]; for(var j=0;j<3;j++){ row.push(_rTeX(_rF(K[r0+i][c0+j]/sc,dec))); } o.push(row.join(' & ')); } return o.join('\\\\ '); }
   h+='<p>Denklem (5.2) blokları statik rijitliklerle (öteleme bloğu MN/m, kuplaj MN/rad, dönme MN·m/rad):</p>';
   h+='$$ \\mathbf K_{tt}=\\begin{bmatrix}'+blk(Ks,0,0,1e6,3)+'\\end{bmatrix},\\;\\; '
@@ -1138,7 +1312,7 @@ function _mntRepStep3Static(R, geom){
     +'<td colspan="'+(anyCap?4:2)+'" class="c">ön (küçük X) %'+_rF(100*front/tot,1)+' · arka %'+_rF(100*rear/tot,1)+'</td>'
     +'<td class="c">Σf<sub>z</sub> = '+_rF(res.sumF[2]/1000,2)+' kN '+(res.checks.sumFzOk?'✓':'✗')+'</td></tr>';
   h+='</table>';
-  h+='<p>Σf<sub>z</sub> değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
+  h+='<p>Σf<sub>z</sub> değeri dış yükü (−mg) dengeler'+(Number.isFinite(res.checks.askiFz) ? ' (askı yaylarının taşıdığı '+_rF(res.checks.askiFz/1000,2)+' kN ile birlikte, §8.20)' : '')+'; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
   if(anyCap){
     h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Dayanım hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve sehimi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>”; tipik tasarım hedefi %25–50 — çok düşük değer gereğinden sert/büyük takoz, %100\'e yakın değer ömür riski.</p>';
   }
@@ -1258,7 +1432,7 @@ function _mntRepStep5Modal(R, C){
   var modes=R.modes;
   if(!modes || !modes.length){ return h+'<p>Modal analiz üretilemedi (K tekil / kütle geçersiz olabilir).</p>'; }
   var mstat=null;
-  try { if(C && C.buildK && C.buildM6 && C.solveModal){ mstat=C.solveModal(C.buildK(R.mounts,R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
+  try { if(C && C.buildK && C.buildM6 && C.solveModal){ mstat=C.solveModal(C.buildK(_mntRepDin(R),R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
   h+='<p>Sönümsüz özdeğer problemi (7.1) dinamik rijitlikle çözülür. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir; oran, dinamik sertleşmeyi \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) mertebesinde gösterir.</p>';
   // Sönümlü modal — mod başına ζ_r ve sönümlü frekans (varsa; §8.12 sönüm tablosu
   // üretilemediyse sütunlar hiç basılmaz, boş sütun gösterilmez).
@@ -1705,10 +1879,10 @@ function _mntRepFRF(R, opts){
   // Izgara Sonuçlar'ınkiyle AYNI (mount-signals _frfIzgara): 240 nokta + üç
   // yönün inceltilmiş tepeleri. Eskiden burada 260, orada 240 noktaydı ve tepe
   // iki yüzeyde farklı (ve ızgaraya göre düşük) okunuyordu.
-  var izgara=C.frfGrid ? C.frfGrid(R.mounts, R.mp.cg, M6, R.damping,
+  var izgara=C.frfGrid ? C.frfGrid(_mntRepDin(R), R.mp.cg, M6, R.damping,
     { fMin:_FRF_FMIN, fMax:_FRF_FMAX, nPts:240, dirs:[0,1,2],
       fModal:(R.modes||[]).map(function(m){ return m.f_Hz; }) }) : null;
-  var pts=C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
+  var pts=C.frequencyResponse(_mntRepDin(R), R.mp.cg, M6, R.damping,
     { fMin:_FRF_FMIN, fMax:_FRF_FMAX, dir:2, f:izgara });
   if(!pts) return '';
   var iso=_mntRepIsolation(R, opts);
@@ -1730,11 +1904,11 @@ function _mntRepFRF(R, opts){
 
   // ── SDOF kestirimi ile karşılaştırma: kestirim ne kadar iyi? ──
   if(Number.isFinite(fFire)){
-    var Td=C.frfAt(R.mounts, R.mp.cg, M6, R.damping, fFire, 2);
+    var Td=C.frfAt(_mntRepDin(R), R.mp.cg, M6, R.damping, fFire, 2);
     // Sönümsüz eğri AYNI rijitlik tabanından okunmalı: damping null geçildiği
     // için taban ondan çözülemez, açıkça verilir. Yoksa iki sütun (sönümlü /
     // sönümsüz) farklı K'dan gelir ve fark sönüme değil tabana yazılır.
-    var Tu=C.frfAt(R.mounts, R.mp.cg, M6, null,       fFire, 2, R.kBasis||null);
+    var Tu=C.frfAt(_mntRepDin(R), R.mp.cg, M6, null,       fFire, 2, R.kBasis||null);
     h+='<table><caption>Tablo '+_rTbl()+' — Ateşleme frekansında iletilebilirlik: tam çözüm ve tek-serbestlik kestirimi</caption>';
     h+='<tr><th>Yöntem</th><th>Sönümlü</th><th>Sönümsüz</th></tr>';
     h+='<tr><td class="l">Tam frekans yanıtı (6 SD)</td><td>%'+_rF(Td*100,1)+'</td><td>%'+_rF(Tu*100,1)+'</td></tr>';
@@ -2164,7 +2338,7 @@ function _mntRepSoftening(R, opts){
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
   var zeta=_mntRepZeta(R, opts||{});
   var M6=C.buildM6(R.mp.m, R.mp.I_G);
-  var scan=C.softeningScan(R.mounts, R.mp.cg, M6, R.mp.m, _SOFT_FACTORS, fFire, zeta, R.kBasis||null);
+  var scan=C.softeningScan(_mntRepDin(R), R.mp.cg, M6, R.mp.m, _SOFT_FACTORS, fFire, zeta, R.kBasis||null);
   if(!scan || !scan.length) return '';
 
   var GAP_MIN=0.5, BAND=[8,10], lim=haveIdle?0.5*fFire:NaN;
@@ -2268,7 +2442,7 @@ function _mntRepDuyarlilik(R){
   if(R && R.sensitivity) return R.sensitivity;
   var C=_rMountCore();
   if(!C || !C.modalSensitivity || !R || !R.modes || !R.mp || !R.mounts) return null;
-  return C.modalSensitivity(R.modes, C.buildM6(R.mp.m, R.mp.I_G), R.mounts, R.mp.cg, R.kBasis||null);
+  return C.modalSensitivity(R.modes, C.buildM6(R.mp.m, R.mp.I_G), _mntRepDin(R), R.mp.cg, R.kBasis||null);
 }
 // Modun en etkili kaldıracı: esnekliği en büyük takoz · eksen (çekirdek `en`).
 function _mntRepEnEtkili(S, r){ return (S[r] && S[r].en) || null; }
@@ -2282,7 +2456,8 @@ function _rYuzdeDegisim(s){
   return (p<0?'−':'+')+'%'+_rF(Math.abs(p),1);
 }
 function _mntRepKaldiracAd(R, b){
-  return _rEsc((R.mounts[b.i]&&R.mounts[b.i].name)||('Takoz '+(b.i+1)))+' · k<sub>'+_SENS_EKSEN[b.ax]+'</sub>';
+  var d=_mntRepDin(R);
+  return _rEsc((d[b.i]&&d[b.i].name)||('Takoz '+(b.i+1)))+' · k<sub>'+_SENS_EKSEN[b.ax]+'</sub>';
 }
 // Kriter 1 · 1a · 1b — sınıra en yakın (ya da sınırı aşan) mod, onun en etkili
 // kaldıracı ve o kaldıracın sınıra kadar değişimi. Ölçütler §8.8/§8.15 ile AYNI:
@@ -2295,7 +2470,7 @@ function _mntRepKaldiraclar(R, opts){
   var haveIdle=(rpm>0 && z>0), L=haveIdle ? 0.5*(rpm/60)*(z/2) : NaN;
   var GAP=0.5, BAND=[8,10];
   function ara(b, olcut, hedef, yon){
-    return b ? C.springScaleFor(R.mounts, R.mp.cg, M6, R.kBasis||null, b.i, b.ax, olcut, hedef, yon,
+    return b ? C.springScaleFor(_mntRepDin(R), R.mp.cg, M6, R.kBasis||null, b.i, b.ax, olcut, hedef, yon,
                                 { sMin:_SENS_ARALIK[0], sMax:_SENS_ARALIK[1] }) : null;
   }
   function f(md, r){ return md[r].f_Hz; }
@@ -2403,9 +2578,12 @@ function _mntRepSensitivity(R, opts){
     h+='<th>Mod '+(r+1)+(S[r].cakisik ? '‡' : (yakin[r] ? '†' : ''))+'<br>'+_rFd(m.f_Hz,2)+' Hz</th>';
   });
   h+='</tr>';
-  mounts.forEach(function(mt, i){
-    _SENS_EKSEN.forEach(function(a, ax){
-      h+='<tr>'+(ax===0 ? '<td class="l" rowspan="3">'+_rEsc(mt.name||('Takoz '+(i+1)))+'</td>' : '')
+  // Askı yayı (R.dinMounts'un sonu) yalnız k_z satırıyla
+  _mntRepDin(R).forEach(function(mt, i){
+    var eks=mt.aski ? [2] : [0, 1, 2];
+    eks.forEach(function(ax, j){
+      var a=_SENS_EKSEN[ax];
+      h+='<tr>'+(j===0 ? '<td class="l" rowspan="'+eks.length+'">'+_rEsc(mt.name||('Takoz '+(i+1)))+'</td>' : '')
         +'<td class="c">k<sub>'+a+'</sub></td>';
       S.forEach(function(s, r){
         var v=s.e[i][ax], en=enler[r] && enler[r].i===i && enler[r].ax===ax;
@@ -2585,6 +2763,21 @@ function veMntUygunluk(R, opts){
       ? { st:(bs.egilme<=B.sinir ? 'ok' : 'no'), bulgu:'Statik durumda M<sub>b</sub> = <b>'+_rF(bs.egilme,0)+'</b> N·m · '+_rEsc(B.ad)+' bağlantı yüzü (§8.18)' }
       : { st:'wait', bulgu:'Statik durum çözülemedi' };
     satirlar.push({ no:'5', ad:'Bağlantı yüzünde statik eğilme momenti', kisa:'Bağlantı yüzü', hedef:'≤ '+_rF(B.sinir,0)+' N·m (veri sayfası)', st:c5.st, bulgu:c5.bulgu });
+  }
+  // Askı yayları (§8.20) — modelde askı varsa: statik ve işletme durumlarında L_c < L < L_0
+  var AO=_mntRepAskiAralik(R);
+  if(AO){
+    var c6=!AO.statik ? { st:'wait', bulgu:'Statik durum çözülemedi' }
+      : (function(){
+          var stDisi=AO.statik.some(function(p){ return p.durum!=='normal'; });
+          var ad=AO.disi.map(function(x){ return _mntRepCaseTr(x.durum); }).filter(function(v, i, a){ return a.indexOf(v)===i; });
+          return { st:(stDisi || AO.disi.length) ? 'no' : 'ok',
+                   bulgu:'Statik L = <b>'+AO.statik.map(function(p){ return _rF(p.L*1000,1); }).join(' / ')+'</b> mm'
+                     +(AO.islMin<Infinity ? ' · işletmede '+_rF(AO.islMin*1000,1)+'–'+_rF(AO.islMax*1000,1)+' mm' : '')
+                     +(ad.length ? ' · aralık dışı: '+_rEsc(ad.join(', ')) : '')+' (§8.20)' };
+        })();
+    satirlar.push({ no:(B && B.sinir) ? '6' : '5', ad:'Askı yayı çalışma aralığı', kisa:'Askı yayı',
+      hedef:'L<sub>c</sub> &lt; L &lt; L<sub>0</sub> (statik ve işletme)', st:c6.st, bulgu:c6.bulgu });
   }
   var sts=satirlar.map(function(s){ return s.st; });
   return { modalYok:false, satirlar:satirlar, concern:concern,

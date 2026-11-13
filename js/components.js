@@ -549,6 +549,15 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="43" y="6" width="14" height="16" rx="4" fill="var(--text-secondary, #535c67)"/><g fill="var(--accent-success, #1a7f37)" opacity="0.85"><path d="M27 51 H73 A14 14 0 0 1 73 79 H27 A14 14 0 0 1 27 51 Z"/><path d="M31 27 H69 A13.5 13.5 0 0 1 69 54 H31 A13.5 13.5 0 0 1 31 27 Z"/></g><g fill="none" stroke="var(--on-success, #ffffff)" stroke-linecap="round"><path d="M24 53 H76" stroke-opacity=".45" stroke-width="4.5"/><path d="M28 34.5 H40 M24 59 H34" stroke-opacity=".65" stroke-width="5.5"/></g><rect x="25" y="17" width="50" height="12" rx="6" fill="var(--text-secondary, #535c67)"/><rect x="6" y="77" width="88" height="15" rx="7.5" fill="var(--text-secondary, #535c67)"/><circle cx="18" cy="84.5" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/><circle cx="82" cy="84.5" r="4.5" fill="var(--bg-tertiary, #e4e8ed)"/></svg>',
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
+  // Askı Yayı (2026-11-11) — şanzımanın kuyruğunu şasiye asan ön yüklü helisel
+  // basma yayı (BMC 2K60377). Yalnız DÜŞEY kuvvet taşır; çözüme takozların
+  // yanında ayrı eleman olarak girer (cp-mount.js _mntGatherForSolver →
+  // askilar, çekirdek solveWithHangers). Çıkış portu taşıdığı gövdeye.
+  'mnt-aski': {
+    name: 'Askı Yayı',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="22" y="8" width="56" height="13" rx="3" fill="var(--text-secondary, #535c67)"/><path d="M50 21 L50 26 L32 32 L68 40 L32 48 L68 56 L32 64 L50 70 L50 75" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="79" x2="82" y2="79" stroke="var(--text-secondary, #535c67)" stroke-width="5"/><line x1="26" y1="79" x2="20" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/><line x1="50" y1="79" x2="44" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/><line x1="74" y1="79" x2="68" y2="90" stroke="var(--text-secondary, #535c67)" stroke-width="2.5"/></svg>',
+    inputs: 0, outputs: 1, isMountAski: true, defaultWidth: 50, defaultHeight: 46
+  },
   // Takoz Özellikleri — takoz KATALOĞU/kütüphane yöneticisi. Fiziksel topolojiye
   // bağlanmaz (giriş/çıkış portu yok); node.data.mounts içinde kullanıcı tanımlı
   // takozları tutar. Buradaki girdiler her Takoz'un "Kütüphaneden yükle" listesinde
