@@ -221,8 +221,9 @@ describe('SAYFA', () => {
     expect([...sehim.querySelectorAll('tbody tr')].map((r) => r.children[0].classList.contains('yuk'))).toEqual([true, true]);
     expect(sehim.querySelector('thead th').classList.contains('yuk')).toBe(true);
     const st = [...sehim.querySelectorAll('tbody tr')].map((r) => [...r.children].map(metin));
-    expect(st[0]).toEqual(['Static', '−0,12', '0,00', '−15,00', '0,02', '0,00', '−12,00', '0,02', '0,00', '−12,10']);
-    expect(st[1].slice(1)).toEqual(Array(9).fill('—'));                      // sonuç yok
+    // takozların blokları arasında boş sütun (Canlı not 2009, aşağıda)
+    expect(st[0]).toEqual(['Static', '−0,12', '0,00', '−15,00', '', '0,02', '0,00', '−12,00', '', '0,02', '0,00', '−12,10']);
+    expect(st[1].slice(1)).toEqual(['—', '—', '—', '', '—', '—', '—', '', '—', '—', '—']);   // sonuç yok
     expect([...mod.querySelectorAll('tbody tr')].map((r) => [...r.children].map(metin))[0]).toEqual(['1', 'Bounce + Pitch', '3,58']);
     const a = [...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => [metin(x), x.getAttribute('href')]);
     expect(a).toEqual([['← Tarama', '#tarama'], ['← No 1', '#T1'], ['No 3 →', '#T3']]);
@@ -243,6 +244,42 @@ describe('SAYFA', () => {
     expect(st[1].slice(1, 4)).toEqual(['0,20', '0,00', '−15,10']);
     expect([...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => x.getAttribute('href'))).toEqual(['#ozet', '#K1']);
     expect(metin(d.querySelector('#ve-sonuc .izgara div'))).toBe('UygunlukUygun değil');
+  });
+
+  // Canlı not 2009: "Her takoz çiftini ayır. Yan yana olunca okuması zorlanıyor. Arada bir sütun kadar
+  // boşluk olsun. Okunması kolay olsun." — Sehim tablosunda her takozun X · Y · Z bloğu bir sonrakinden
+  // boş bir sütunla ayrık: iki başlık satırında ve her yük durumunda aynı sütunda; Yük durumu ile ilk
+  // takoz arasında boşluk yok (ilk takozun Z'si satırın 4. hücresi). Boşluk yazısız, çizgisiz, sayfanın
+  // zemininde (satırın üstündeki fare de boyamaz), genişliği bir sayı sütunu kadar; kap çerçevesiz,
+  // bloklar kendi ızgarasıyla. Modlar tablosu aynı.
+  test('Sehim: takozların blokları arasında bir sütunluk boşluk — iki başlık satırında ve her satırda; çizgisiz, sayfanın zemininde; Modlar aynı', () => {
+    const w = ac(html, '#T2'), d = w.document, cs = (e) => w.getComputedStyle(e);
+    const [sehim, mod] = d.querySelectorAll('#ve-sonuc table');
+    // satırın dizilişi: Y = Yük durumu, x = takozun bir sütunu (grup başlığı üç), | = boşluk
+    const dizilis = (r) => [...r.children].map((c) => (c.classList.contains('bosluk') ? '|' : c.classList.contains('yuk') ? 'Y' : 'x'.repeat(c.colSpan))).join('');
+    const SATIRLAR = ['Yxxx|xxx|xxx', 'xxx|xxx|xxx', 'Yxxx|xxx|xxx', 'Yxxx|xxx|xxx'];   // ikinci başlık satırı Yük durumunun altında
+    expect([...sehim.rows].map(dizilis)).toEqual(SATIRLAR);
+    expect([...ac(html, '#K0').document.querySelector('#ve-sonuc table').rows].map(dizilis)).toEqual(SATIRLAR);
+    const bos = [...sehim.querySelectorAll('td.bosluk')];
+    expect(bos.length).toBe(2 * 4);                                           // iki aralık × dört satır
+    expect(bos.every((c) => c.textContent === '' && c.colSpan === 1 && c.rowSpan === 1)).toBe(true);
+    expect(metin(sehim.tBodies[0].rows[0].children[3])).toBe('−15,00');
+    const b = bos[0], kok = cs(d.documentElement);
+    const px = (v) => { const m = /^var\((--[\w-]+)\)$/.exec(v); return parseFloat(m ? kok.getPropertyValue(m[1]) : v); };   // jeton ya da değer
+    expect(['Top', 'Right', 'Bottom', 'Left'].map((k) => cs(b)['border' + k + 'Width'])).toEqual(['0px', '0px', '0px', '0px']);
+    // zeminsiz: boşluktan sayfaya dek her kap saydam (aralıkta sayfanın zemini görünür); sayının hücresi zeminli
+    const saydam = (e) => /^(rgba\(0, 0, 0, 0\)|transparent|none)(\s|$)/.test(cs(e).background);
+    for (let e = b; e !== d.body; e = e.parentElement) expect([e.tagName, e.className, saydam(e)]).toEqual([e.tagName, e.className, true]);
+    expect(saydam(d.body)).toBe(false);
+    expect(saydam(sehim.tBodies[0].rows[0].children[1])).toBe(false);
+    const kural = [...d.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => /td\.bosluk/.test(r.selectorText || ''));
+    expect(kural.selectorText).toMatch(/tr:hover td\.bosluk/);
+    const sutun = px(cs(sehim.tBodies[0].rows[0].children[1]).minWidth), bosluk = px(cs(b).minWidth);
+    expect(bosluk / sutun).toBeGreaterThanOrEqual(0.8);
+    expect(bosluk).toBeLessThanOrEqual(sutun);
+    expect(['Top', 'Right', 'Bottom', 'Left'].map((k) => cs(sehim.parentElement)['border' + k + 'Width'])).toEqual(['0px', '0px', '0px', '0px']);
+    expect(mod.querySelectorAll('.bosluk').length).toBe(0);
+    expect(mod.parentElement.className).toBe('kap dar');
   });
 
   // Belge Canlı Not'ta çerçevede (srcdoc) açılır: "#tarama" üst sayfanın adresine çözülür ve
