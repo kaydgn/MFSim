@@ -31,6 +31,14 @@
  * ipucunda, tek tipli markada ok yok, odak yeniden kurulan okta kalır. Gerçek
  * yerleşim (oklar (i) gelip gidince yerinde) tests/e2e/mount-pencere.spec.js →
  * *Takoz Özellikleri*.
+ *
+ * ÖZET (kullanıcı 2026-11-13, Canlı Not 159: *"hangi markadan ne kadar var ve toplam
+ * takoz sayısı gibi. Kullanıcı bilgilensin."*): pencerenin İLK bölümü, Takoz tipinin
+ * üstünde. Satırlar Marka listesinin markaları ve sırası; Takoz o markanın Tip listesinin
+ * satır sayısı (pencerenin kendi listesinden sayılır), Aile ve Tip üreticinin
+ * veritabanından (js/mount-amc.js · mount-ap.js · mount-laspar.js, burada ondan bağımsız
+ * sayılır), veritabanı olmayan markada "—"; Toplam sütunların toplamı; sayılar Türkçe
+ * yazıcıdan (1.000'in binlik noktası).
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -436,5 +444,113 @@ describe('ekle / sil sonrası seçim', () => {
     const el = mountPanel(node);
     const builtins = cp.veMntGetLibraryList().filter((e) => e.builtin);
     expect(el.trigger.textContent).toContain(builtins[0].name);
+  });
+});
+
+describe('ÖZET — markaların takoz sayıları, Takoz tipinin üstünde (Canlı Not 159)', () => {
+  const AMC = require('../../js/mount-amc.js');
+  const AP = require('../../js/mount-ap.js');
+  const LP = require('../../js/mount-laspar.js');
+  // Üreticinin veritabanı ondan bağımsız sayılır: kodun tipi (KOD[kod][0]) ve tipin ailesi (TIP[tip][0]).
+  const VERITABANI = {};
+  [AMC, AP, LP].forEach((M) => {
+    const tip = new Set(Object.keys(M.KOD).map((k) => M.KOD[k][0]));
+    VERITABANI[M.MARKA] = { aile: new Set([...tip].map((t) => M.TIP[t][0])).size, tip: tip.size };
+  });
+  const kategoriler = (d) => [...d.querySelectorAll('.ve-fp-govde > .ve-fp-kat')].map((k) => k.getAttribute('data-k'));
+  // Özet tablosu: başlığın adıyla sütun, satır başına { marka, aile, tip, takoz } (hücre YAZISI).
+  function ozet(d) {
+    const kat = d.querySelector('.ve-fp-kat[data-k="ozet"]');
+    const tablo = kat.querySelector('table');
+    const sutun = [...tablo.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    const satir = [...tablo.querySelectorAll('tbody tr')].map((tr) => {
+      const h = [...tr.children].map((td) => td.textContent.trim());
+      return { marka: h[sutun.indexOf('Marka')], aile: h[sutun.indexOf('Aile')], tip: h[sutun.indexOf('Tip')],
+        takoz: h[sutun.indexOf('Takoz')], top: tr.classList.contains('top') };
+    });
+    return { kat, sutun, satir };
+  }
+  // Markanın Tip listesinin satır sayısı: o markanın bir tipi seçiliyken pencerenin KENDİ listesi.
+  function tipListesi(mounts, marka) {
+    const n = libNode(mounts);
+    const g = cp._mntLibSecim(n).markalar.find((x) => x.ad === marka);
+    n.data._selKey = g.girdiler[0].key;
+    const el = mountPanel(n);
+    expect(document.getElementById('mntlib-marka-lib1').value).toBe(marka);
+    return el.list.querySelectorAll('.mntlib-opt').length;
+  }
+  const sayi = (v) => global.veSayi(v, 0);
+
+  test('pencerenin İLK bölümü, Takoz tipinden önce; başlığı Özet, künyesi yok', () => {
+    [libNode(), libNode([], 'TK040'), libNode([{ key: 'k1', name: 'Özel A', sz: 640 }])].forEach((n) => {
+      mountPanel(n);
+      const d = document.getElementById('host');
+      const k = kategoriler(d);
+      expect(k[0]).toBe('ozet');
+      expect(k[1]).toBe('tip');
+      const kat = d.querySelector('.ve-fp-kat[data-k="ozet"]');
+      expect(kat.getAttribute('aria-label')).toBe('Özet');
+      expect(kat.querySelector('.ve-fp-sect > b').textContent).toBe('Özet');
+      expect(kat.querySelector('.ve-fp-sect > em')).toBeNull();               // toplam başlıkta ikinci kez yazılmaz
+      expect(d.querySelectorAll('.ve-fp-sect > b')[0].textContent).toBe('Özet');
+    });
+  });
+
+  test('satırlar Marka listesinin markaları ve sırası; Takoz o markanın Tip listesinin satır sayısı', () => {
+    const ozel = [{ key: 'k1', name: 'Özel A', sz: 640 }, { key: 'k2', name: 'Özel B', sz: 700 }];
+    [[], ozel].forEach((mounts) => {
+      mountPanel(libNode(mounts));
+      const d = document.getElementById('host');
+      const marka = [...d.querySelectorAll('select.mntlib-marka option')].map((o) => o.value);
+      const O = ozet(d);
+      expect(O.sutun).toEqual(['Marka', 'Aile', 'Tip', 'Takoz']);
+      const govde = O.satir.filter((r) => !r.top);
+      expect(govde.map((r) => r.marka)).toEqual(marka);
+      expect(marka).toEqual(mounts.length ? [...cp.VE_MNT_LIB_MARKALAR, cp.VE_MNT_LIB_MARKA_OZEL] : cp.VE_MNT_LIB_MARKALAR);
+      govde.forEach((r) => expect(r.takoz).toBe(sayi(tipListesi(mounts, r.marka))));
+    });
+  });
+
+  test('Aile ve Tip üreticinin veritabanından; veritabanı olmayan markada (Diğer, Özel takozlar) "—"', () => {
+    mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
+    const O = ozet(document.getElementById('host'));
+    const bul = (m) => O.satir.find((r) => r.marka === m);
+    [AMC.MARKA, AP.MARKA, LP.MARKA].forEach((m) => {
+      expect(VERITABANI[m].tip).toBeGreaterThan(0);                           // kâhin boş değil
+      expect([bul(m).aile, bul(m).tip]).toEqual([sayi(VERITABANI[m].aile), sayi(VERITABANI[m].tip)]);
+    });
+    ['Diğer', cp.VE_MNT_LIB_MARKA_OZEL].forEach((m) => expect([bul(m).aile, bul(m).tip]).toEqual(['—', '—']));
+    // LASPAR'ın Tip listesinde programın kendi takozları da var: Takoz'da sayılır, tipte değil
+    expect(Number(bul(LP.MARKA).takoz)).toBeGreaterThan(Object.keys(LP.KOD).length);
+  });
+
+  test('Toplam son satır, kalın: sütunların toplamı', () => {
+    mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
+    const O = ozet(document.getElementById('host'));
+    const son = O.satir[O.satir.length - 1];
+    expect(O.satir.filter((r) => r.top)).toEqual([son]);
+    expect(son.marka).toBe('Toplam');
+    const govde = O.satir.filter((r) => !r.top);
+    const topla = (alan) => govde.reduce((t, r) => t + (r[alan] === '—' ? 0 : Number(r[alan])), 0);
+    expect([son.aile, son.tip, son.takoz]).toEqual([sayi(topla('aile')), sayi(topla('tip')), sayi(topla('takoz'))]);
+    expect(son.takoz).toBe(sayi(cp.veMntGetLibraryList().filter((e) => e.builtin).length + 1));
+  });
+
+  test('sayılar Türkçe yazıcıdan: 1.000 özel takozda binlik noktası; liste değişince özet de', () => {
+    const cok = Array.from({ length: 1000 }, (_, i) => ({ key: 'u' + i, name: 'Özel ' + i, sz: 100 }));
+    mountPanel(libNode(cok, 'TK040'));
+    const O = ozet(document.getElementById('host'));
+    const katalog = cp.veMntGetLibraryList().filter((e) => e.builtin).length;
+    expect(O.satir.find((r) => r.marka === cp.VE_MNT_LIB_MARKA_OZEL).takoz).toBe('1.000');
+    expect(O.satir[O.satir.length - 1].takoz).toBe(sayi(katalog + 1000));
+    expect(O.satir[O.satir.length - 1].takoz).toMatch(/^\d\.\d{3}$/);
+    // Yeni takoz pencereyi yeniden kurar: Özel takozlar satırı listeyle birlikte gelir
+    const node = libNode();
+    global.nodes = [node];
+    cp.veMntLibAdd('lib1');
+    mountPanel(node);
+    const S = ozet(document.getElementById('host')).satir;
+    expect(S.find((r) => r.marka === cp.VE_MNT_LIB_MARKA_OZEL).takoz).toBe('1');
+    expect(S[S.length - 1].takoz).toBe(sayi(katalog + 1));
   });
 });
