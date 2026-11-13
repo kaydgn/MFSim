@@ -498,10 +498,22 @@ describe('GÖRÜNÜM CSS\'TE, JETONDAN', () => {
     const i = CSS.indexOf('\n' + sec + '{');
     return i < 0 ? '' : CSS.slice(i, CSS.indexOf('}', i));
   };
-  test('bant bir uyarı kutusu: zemin + çerçeve kehribar jetondan', () => {
+  // Canlı Not 1009: *"temaya uygun hale getirelim"* — bant eskiden kehribar zeminli bir
+  // uyarı kutusuydu (zemin ve çerçeve kehribar karışımı); pencerenin öteki yüzeyleri gibi
+  // nötr zemin ve kart çerçevesi taşır, uyarı yalnız sol kenarın 2 px'lik kehribar çizgisinde.
+  test('bant pencerenin yüzeyi: nötr zemin + kart çerçevesi, uyarı sol kenarın çizgisinde', () => {
     const r = kural('.ve-fp-eksik');
-    expect(r).toMatch(/background:color-mix\(in srgb, var\(--accent-warning\)/);
-    expect(r).toMatch(/border:1px solid color-mix\(in srgb, var\(--accent-warning\)/);
+    expect(r).toMatch(/background:var\(--bg-secondary\);/);
+    expect(r).toMatch(/border:1px solid var\(--border-color\);/);
+    expect(r).toMatch(/border-left:2px solid var\(--accent-warning\);/);
+    expect(r).not.toMatch(/color-mix/);                                  // boyalı zemin ya da çerçeve yok
+    expect(r).toMatch(/border-radius:var\(--radius-md\)/);             // KÖŞE KESKİN: kartın jetonu
+    // Bandın hiçbir kuralı (dar kap kopyası dâhil) zemini yeniden boyamaz.
+    const tum = [...CSS.matchAll(/\.ve-fp-eksik\s*\{([^}]*)\}/g)].map((m) => m[1]).join('\n');
+    expect(tum).not.toMatch(/background:[^;]*(warning|color-mix)/);
+    // Kehribar yalnız durumun işaretinde: Doldur'un oku bağlantının renginde (eski seçici oku da boyuyordu).
+    expect(kural('.ve-fp-eksik-s > .mf-ico')).toMatch(/color:var\(--ink-warning\)/);
+    expect(CSS).not.toMatch(/\.ve-fp-eksik-s \.mf-ico/);
   });
   test('eksik kategori kenarında işaretli — renk jetondan, içerik hizası değişmez', () => {
     const r = kural('.ve-fp-kat[data-d="eksik"]');

@@ -1409,8 +1409,10 @@ function _gmSec15(){
       + _gmN(_GM_SIHIRBAZ, 'ornek') + ' kayıtlı bir örnek ya da boş başlangıç', 'Örnek bütün adımları doldurur'],
     ['2 · Kütle gövdeleri', 'Gövde başına tip, kütle, ağırlık merkezi ve atalet; nokta kütle',
       _gmB('govde')],
-    ['3 · Takozlar', 'Takoz başına konum, katalogdan tip ya da statik ve dinamik rijitlik, kapasite',
-      _gmB('takoz')],
+    ['3 · Takozlar', 'Takoz başına konum, katalogdan tip ya da statik ve dinamik rijitlik, kapasite; '
+      + '<strong>Şanzıman askısı</strong>: Askısız ya da Askılı, askılıda yay başına bağlantı noktası, '
+      + 'katalogdan yay ya da yay sabiti ve boylar, kurulum (statik kuvvet, statik boy ya da tasarım boyu)',
+      _gmB('takoz') + ' · ' + _gmB('aski')],
     ['4 · Tork ve çalışma', 'Motor torku ve devirleri, rölanti, silindir sayısı; vites oranları, stall oranı, '
       + 'transfer oranı ve aks payı', _gmB('tork')],
     ['5 · Özet ve kurulum', 'Modelin özeti ve denetimi; <strong>Modeli kur</strong>', 'Kurulum tek geri-al adımıdır']
