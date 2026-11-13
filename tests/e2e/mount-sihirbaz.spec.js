@@ -292,7 +292,7 @@ test('EYLEM ŞERİDİ: Geri · İleri girdilerin sütununun dibinde, 32 px; kıs
   expect(o.alt).toBe(5);                                              // yüzen panelin iç boşluğu (4 px) + çerçeve
   // Alt+→ ve Esc eskisi gibi
   await page.keyboard.press('Alt+ArrowLeft');
-  expect((await olc()).adim).toBe('4');
+  expect((await olc()).adim).toBe(String(await page.evaluate(() => VE_MW_STEPS.findIndex((s) => s.key === 'ozet'))));   // özetin bir öncesi
   expect(hatalar).toEqual([]);
 });
 
@@ -328,7 +328,7 @@ test('BAŞLANGIÇ SÜTUNU: künye ile tablo arası kartın aralığı; yönlendi
   expect(o.arasi).toBe(10);
   expect(o.yonYanda).toBe(true);
   expect(Math.abs(o.yonOrtasi)).toBeLessThanOrEqual(1);
-  expect(o.girdi.length).toBe(5);                                     // beş adımın beşinde
+  expect(o.girdi.length).toBe(await page.evaluate(() => VE_MW_STEPS.length));   // her adımda
   expect(o.girdi.every((n) => n >= 1 && n <= 2)).toBe(true);          // en çok iki satır
   expect(o.adimBoy.every((h) => h <= 64)).toBe(true);
   expect(hatalar).toEqual([]);
@@ -474,7 +474,7 @@ test('BOŞLUĞA TIK: 3B ve 2B masada işarete tık seçer, boşluğa tık seçim
   const b3t = await bosluk('svg.ve-mnt2d-akso');
   await page.mouse.click(b3t.x, b3t.y);
   await page.waitForTimeout(300);
-  expect(await durum()).toEqual({ secili: [], kart: ['Takozlar', 'Şanzıman askısı'], perde: '0' });
+  expect(await durum()).toEqual({ secili: [], kart: ['Takozlar'], perde: '0' });
   // 2B: işarete tık seçer, boşluğa tık bırakır
   await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'govde')));
   await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' }).click();

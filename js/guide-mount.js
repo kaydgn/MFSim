@@ -367,7 +367,7 @@ var _GM_KARSILAMA = [
 
 var _GM_BASLANGIC = [
   { k: 'sihirbaz', s: '.ve-bas-kapi[data-ey="sihirbaz"]', ad: 'Sihirbazla kur',
-    not: 'Modeli beş adımda kurar.' },
+    not: 'Modeli altı adımda kurar.' },
   { k: 'step', s: '.ve-bas-kapi[data-ey="step"]', ad: 'STEP’ten başla',
     not: 'Güç grubunun STEP dosyasını 3B’de açar.' },
   { k: 'bos', s: '.ve-bas-kapi[data-ey="bos"]', ad: 'Boş kanvas',
@@ -1399,7 +1399,7 @@ function _gmSec14(){
 
 function _gmSec15(){
   var h = _gmH2('m15');
-  h += '<p><strong>Takoz Başlangıç Sihirbazı</strong> modeli beş adımda kurar: girdiler sağda, '
+  h += '<p><strong>Takoz Başlangıç Sihirbazı</strong> modeli altı adımda kurar: girdiler sağda, '
     + 'model ortadaki önizlemede adım adım dolar (' + _gmS('sihirbaz') + '). Sihirbaz başlangıç '
     + 'sayfasının <strong>Sihirbazla kur</strong> seçeneğiyle ' + _gmNS('baslangic', _GM_BASLANGIC, 'sihirbaz') + ' ya da '
     + 'tuvaldeki <strong>Başlangıç Sihirbazı</strong> bileşenine ' + _gmNS('tuval', _GM_TUVAL, 'sihirbaz') + ' tıklayarak açılır.</p>';
@@ -1407,15 +1407,15 @@ function _gmSec15(){
   h += _gmAlanTablo('Sihirbazın adımları', [
     ['1 · Başlangıç', 'Modelin kaynağı: ' + _gmN(_GM_SIHIRBAZ, 'step') + ' STEP dosyası, '
       + _gmN(_GM_SIHIRBAZ, 'ornek') + ' kayıtlı bir örnek ya da boş başlangıç', 'Örnek bütün adımları doldurur'],
-    ['2 · Kütle gövdeleri', 'Gövde başına tip, kütle, ağırlık merkezi ve atalet; nokta kütle',
-      _gmB('govde')],
-    ['3 · Takozlar', 'Takoz başına konum, katalogdan tip ya da statik ve dinamik rijitlik, kapasite; '
-      + '<strong>Şanzıman askısı</strong>: Askısız ya da Askılı, askılıda yay başına bağlantı noktası, '
-      + 'katalogdan yay ya da yay sabiti ve boylar, kurulum (statik kuvvet, statik boy ya da tasarım boyu)',
-      _gmB('takoz') + ' · ' + _gmB('aski')],
-    ['4 · Tork ve çalışma', 'Motor torku ve devirleri, rölanti, silindir sayısı; vites oranları, stall oranı, '
+    ['2 · Kütle gövdeleri', 'Gövde başına tip, kütle, ağırlık merkezi ve atalet; nokta kütle; şanzımanda '
+      + '<strong>Askı</strong>: Askısız ya da Askılı', _gmB('govde')],
+    ['3 · Takozlar', 'Takoz başına konum, katalogdan tip ya da statik ve dinamik rijitlik, kapasite',
+      _gmB('takoz')],
+    ['4 · Şanzıman askısı', 'Askılı şanzımanda yay başına bağlantı noktası, katalogdan yay ya da yay sabiti ve '
+      + 'boylar, kurulum (statik kuvvet, statik boy ya da tasarım boyu)', 'Askısız güç grubunda boş geçilir · ' + _gmB('aski')],
+    ['5 · Tork ve çalışma', 'Motor torku ve devirleri, rölanti, silindir sayısı; vites oranları, stall oranı, '
       + 'transfer oranı ve aks payı', _gmB('tork')],
-    ['5 · Özet ve kurulum', 'Modelin özeti ve denetimi; <strong>Modeli kur</strong>', 'Kurulum tek geri-al adımıdır']
+    ['6 · Özet ve kurulum', 'Modelin özeti ve denetimi; <strong>Modeli kur</strong>', 'Kurulum tek geri-al adımıdır']
   ], ['Adım', 'Ne girilir', 'Not']);
   h += _gmAdimlar([
     'Başlangıç sayfasında <strong>Sihirbazla kur</strong>’a basın.',
