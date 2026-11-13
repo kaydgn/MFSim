@@ -637,6 +637,17 @@ var veMntAkso = (function(){
     return [n*(u[0]+t[1]*r[2]-t[2]*r[1]), n*(u[1]+t[2]*r[0]-t[0]*r[2]), n*(u[2]+t[0]*r[1]-t[1]*r[0])];
   }
   // Çizimin kapsamı (mm): kutuların köşeleri, nokta kütleler, takozlar.
+  // ASKI BRAKETİ (Canlı Not 166 · 167): yayların ÜST uçlarının (gövdeye bağlı nokta) bağlandığı dikdörtgen
+  // prizma — referans görselde braket yayların üstünde, onları şanzımanın üstünden aşan kemer: alt yüzü
+  // noktaların düzleminde, noktaların x · y aralığının her yanında pay.
+  function askiBraket(m){
+    var A=(m.aski || []).filter(function(a){ return Number.isFinite(a.x) && Number.isFinite(a.y) && Number.isFinite(a.z) && a.L>0; });
+    if(!A.length) return null;
+    var xs=A.map(function(a){ return a.x; }), ys=A.map(function(a){ return a.y; }), zs=A.map(function(a){ return a.z; });
+    var x0=Math.min.apply(null, xs), x1=Math.max.apply(null, xs), y0=Math.min.apply(null, ys), y1=Math.max.apply(null, ys), zb=Math.min.apply(null, zs);
+    var px=Math.max(75, (x1-x0)*0.18), py=Math.max(75, (y1-y0)*0.18), T=65;
+    return { c:[(x0+x1)/2, (y0+y1)/2, zb+T/2], h:[(x1-x0)/2+px, (y1-y0)/2+py, T/2], zb:zb };
+  }
   function kapsam(m){
     var xs=[], ys=[], zs=[0];
     m.govde.forEach(function(g){
@@ -645,6 +656,8 @@ var veMntAkso = (function(){
     });
     m.takoz.forEach(function(t){ xs.push(t.x); ys.push(t.y); zs.push(t.z); });
     (m.aski || []).forEach(function(a){ xs.push(a.x); ys.push(a.y); zs.push(a.z, a.z-a.L); });
+    var ab=askiBraket(m);
+    if(ab){ xs.push(ab.c[0]-ab.h[0], ab.c[0]+ab.h[0]); ys.push(ab.c[1]-ab.h[1], ab.c[1]+ab.h[1]); zs.push(ab.c[2]+ab.h[2]); }
     if(m.G){ xs.push(m.G.x); ys.push(m.G.y); zs.push(m.G.z); }
     if(!xs.length){ xs.push(0); ys.push(0); }
     return { xmin:Math.min.apply(null, xs), xmax:Math.max.apply(null, xs), ymin:Math.min.apply(null, ys), ymax:Math.max.apply(null, ys),
@@ -701,6 +714,8 @@ var veMntAkso = (function(){
     nok.forEach(function(g){ nokta3.push([g.x, g.y, g.z]); });
     m.takoz.forEach(function(t){ nokta3.push([t.x, t.y, t.z]); });
     (m.aski || []).forEach(function(a){ nokta3.push([a.x, a.y, a.z], [a.x, a.y, a.z-a.L]); });
+    var askiBr=askiBraket(m);
+    if(askiBr) yuzler(askiBr.c, askiBr.h).forEach(function(f){ f.pts.forEach(function(p){ nokta3.push(p); }); });
     if(m.G) nokta3.push([m.G.x, m.G.y, m.G.z]);
     // Serbest kameranın küresi MODELİN kendisinden (zemin, duvar ve cetvel
     // hariç): döndürülen modeldir; zemin kenarda kesilebilir.
@@ -1009,6 +1024,15 @@ var veMntAkso = (function(){
       var kx=kp.map(function(q){ return q[0]; }), ky=kp.map(function(q){ return q[1]; }), e=w+2;
       engel.push({ l:Math.min.apply(null, kx)-e, t:Math.min.apply(null, ky)-e, r:Math.max.apply(null, kx)+e, b:Math.max.apply(null, ky)+e });
     });
+    // ASKI BRAKETİ: yayların üstündeki dikdörtgen prizma (alt yüzü yayların üst uçlarında); yaylardan
+    // sonra çizilir, üstten bakışta onları örter. Yazısız; künyesi ipucunda.
+    if(askiBr){
+      var abx=(stil==='xray'), abh='<g class="ve-ak-g ve-ak-br ve-ak-ab '+(abx ? 'xray' : 'golge')+'"'+bilgiAttr(['Askı braketi', 'Yay üst uçları', 'Boyut '+R(askiBr.h[0]*2)+' × '+R(askiBr.h[1]*2)+' × '+R(askiBr.h[2]*2)+' mm'])+'>';
+      yuzler(askiBr.c, askiBr.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){ abh+='<path class="'+(abx ? 'f-cam' : yuzSinif(f))+'" d="M'+yol(f.pts)+' Z"/>'; });
+      govdeSvg+=abh+'</g>';
+      var abp=[]; yuzler(askiBr.c, askiBr.h).forEach(function(f){ f.pts.forEach(function(p){ abp.push(P(p)); }); });
+      var abk=sar(abp); abk.a=0.3; engel.push(abk);
+    }
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
     var gSvg='', gq=null, g3=null;
     if(m.G){

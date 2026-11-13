@@ -450,7 +450,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   N'i; yumuşatma askıyı ölçeklemez; duyarlılık askıyı da satırlar (Σe = ½). Rapor §8.20 (boy · kuvvet · EN 13906-1
   gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
   katar. Pencere SONUÇ GÖSTERMEZ. Görünümler · Güç grubundaki yeri · raporun aksonometrisi askıyı noktasından
-  oturağına zikzakla çizer (yazısız). Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
+  oturağına zikzakla çizer (yazısız). **Yayların üst uçları, üstlerindeki dikdörtgen prizma bir askı braketine bağlıdır** (kullanıcı 2026-11-13, Canlı Not 166 · 167: *"braketi alt tarafa yapmışsın, öyle olmayacak"* — referans görselde braket yayların üstünde; alt yüzü yayların üst uçlarında, uçların her yanında pay; `askiBraket`); kapı `mount-akso.test.js` → *ASKI BRAKETİ*. Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
   taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Örnek `isg430askili`:
   Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); bileşen kütleleri sunumda
   yok, Adams'ın 60 sonucuna uydurma; askı sunumun ön yüküyle. Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
