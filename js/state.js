@@ -44,7 +44,10 @@ var MAX_UNDO_STEPS = 50;
 // SÜRÜM 9 (2026-09-28): FEAD ARAÇLARI PENCEREDE. Dönüş Yönü bileşeni kalktı —
 // yön pencerenin Yön bölümünde; kayıtlı `fead-spin` düğümleri silinir
 // (veFeadMigrateSpinOff), veri taşımıyorlardı.
-var VE_SCHEMA_VERSION = 9;
+//
+// SÜRÜM 10 (2026-11-11): PARÇA KODU YOK. Katalog anahtarı parça koduydu; eski
+// anahtar yenisine göç eder (veParcaKoduGoc, aşağıda).
+var VE_SCHEMA_VERSION = 10;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -222,6 +225,60 @@ function veMigrateNodeData(node) {
   return node;
 }
 
+// ── PARÇA KODU GÖÇÜ (şema 10) ────────────────────────────────────────────────
+// Kullanıcı 2026-11-11, Canlı Not 1004: *"Programda ne BMC parça kodu varsa, hepsini
+// kaldır."* Takoz kütüphanesinin dört girdisinin, FEAD motor ve aksesuar kataloğunun
+// anahtarı parça koduydu ve projeye yazılıyordu (takozun libKey'i, aksesuarın
+// aksKatalog'u, kasnağın accLib'i, çözücünün engineLib'i, sihirbazın durumu, Parametrik
+// Analiz'in adayları). Eski anahtar ÖZETİNDEN (FNV-1a, 32 bit) tanınır: kodun kendisi
+// programda yok. Değer ve nesne anahtarı olarak, iç içe her yerde; `bmc:` önekli liste
+// değeri de. Aynı modelin birebir aynı satırları tek kayda indi: birden çok eski anahtar
+// aynı yeni anahtara göç eder. Kapı: state.test.js → *PARÇA KODU GÖÇÜ*.
+var VE_PARCA_GOC = {
+  'e3c12d7a':'a26-a', 'dec1259b':'a26-b', '5e782fd6':'motor-01', 'f17d946d':'motor-02',
+  '4a14bec6':'motor-03', '4b14c059':'motor-04', 'e311de0a':'motor-05', 'e011d951':'motor-06',
+  'df11d7be':'motor-07', '67965315':'motor-08', 'e211dc77':'motor-09', '5f873bf3':'motor-10',
+  '5d782e43':'motor-11', '4f14c6a5':'motor-11', 'e193418c':'motor-12', 'e111dae4':'motor-13',
+  'b94afa57':'motor-14', 'b93e2e64':'motor-15', '5e873a60':'motor-16', '4c170083':'motor-17',
+  '571711d4':'motor-18', '4c14c1ec':'motor-19', 'e27d7cd0':'motor-20', '66965182':'motor-21',
+  '58171367':'motor-22', '4d14c37f':'motor-23', 'd32e814f':'prestolite-120a', '276f6a66':'prestolite-140a',
+  '67d5861d':'prestolite-155a', '2cdb9d0d':'prestolite-155a', '5c98a839':'prestolite-180a', '0ac7d084':'prestolite-180a',
+  'eb0ed24e':'prestolite-180a', 'ccdd1bf4':'prestolite-250a', '0bd3b31b':'prestolite-600a', 'cdb69d57':'sanden-7h15',
+  'd34917a0':'asfat-a', '66f0ec09':'asfat-b', 'c514072c':'tepas-350a', 'd270ef3e':'valeo-tm21',
+  '6e4a77de':'valeo-tm31', '7ccc1639':'valeo-tm31'
+};
+function _veFnv(s){
+  var h=0x811c9dc5;
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h, 0x01000193)>>>0; }
+  return ('0000000'+h.toString(16)).slice(-8);
+}
+function _veParcaYeni(s){
+  if(typeof s!=='string' || s.length<10 || s.length>24) return null;
+  var on='';
+  if(s.indexOf('bmc:')===0){ on='bmc:'; s=s.slice(4); }
+  var y=VE_PARCA_GOC[_veFnv(s)];
+  return y ? on+y : null;
+}
+// Döner: göç eden değer ve anahtar sayısı.
+function veParcaKoduGoc(state){
+  var n=0;
+  var gez=function(o, d){
+    if(!o || typeof o!=='object' || d>60) return;
+    if(Array.isArray(o)){
+      for(var i=0;i<o.length;i++){ var y=_veParcaYeni(o[i]); if(y){ o[i]=y; n++; } else gez(o[i], d+1); }
+      return;
+    }
+    Object.keys(o).forEach(function(k){
+      var y=_veParcaYeni(o[k]);
+      if(y){ o[k]=y; n++; } else gez(o[k], d+1);
+      var yk=_veParcaYeni(k);
+      if(yk){ if(!Object.prototype.hasOwnProperty.call(o, yk)) o[yk]=o[k]; delete o[k]; n++; }
+    });
+  };
+  ((state && state.nodes) || []).forEach(function(nd){ if(nd && nd.data) gez(nd.data, 0); });
+  return n;
+}
+
 // LEGACY migrasyonu bir STATE'in tüm düğümlerine uygular — AMA yalnızca state
 // sürüm damgası taşımıyorsa (veya daha eskiyse). Güncel state'ler (undo/redo,
 // sekme değiştirme, bu sürümle kaydedilen dosyalar) VE_SCHEMA_VERSION taşır →
@@ -258,6 +315,8 @@ function veApplyLegacyMigrations(state) {
   if(v < 8 && typeof veFeadMigratePafta === 'function') veFeadMigratePafta(state);
   // ARAÇLAR PENCEREDE: Dönüş Yönü düğümü silinir (veri taşımıyordu).
   if(v < 9 && typeof veFeadMigrateSpinOff === 'function') veFeadMigrateSpinOff(state);
+  // PARÇA KODU: katalog anahtarı parça koduydu (yukarıda — Canlı Not 1004).
+  if(v < 10) veParcaKoduGoc(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

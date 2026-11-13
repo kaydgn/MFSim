@@ -25,7 +25,7 @@ test.beforeAll(() => {
 });
 test.setTimeout(420000);
 
-const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS'], ['tta10', '4500 SP'], ['tta10askili', 'askı yayı']];
+const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', 'Orta Takoz'], ['tta10', '4500 SP'], ['tta10askili', 'askı yayı']];
 
 test('Takoz raporu: çizgi yazıyı kesmiyor, yazı yazıya binmiyor, sözcük bölünmüyor, küçük yazı yok — beş örnek', async ({ page, browser }) => {
   await page.setViewportSize({ width: 1920, height: 1032 });

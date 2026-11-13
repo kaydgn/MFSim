@@ -140,7 +140,7 @@ describe('KÜTÜPHANE — VE_MOUNT_LIBRARY girdileri', () => {
   });
 
   test('ilk 24 girdinin sırası DEĞİŞMEDİ (taramanın kombinasyon sırası)', () => {
-    expect(Object.keys(L).slice(0, 24)).toEqual(['amc55sha', '57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116',
+    expect(Object.keys(L).slice(0, 24)).toEqual(['amc55sha', 'a26-a', 'a26-b', 'asfat-a', 'asfat-b',
       'TK035', 'TK040', 'TK050', 'amc137963', 'amc137964', 'amc137731', 'amc137981', 'amc137982', 'amc137983',
       'amc137830', 'amc137833', 'amc177296', 'amc137829', 'lmt1433-00-40sh', 'lmt1433-00-55sh', 'lmt1433-00-70sh',
       'bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
@@ -444,7 +444,7 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(d.textContent).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük|Maks\. yük|650 kg/i);
   });
   test('üretici veritabanı dışı tipte künye de (i) de yok', () => {
-    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: '57RS313773' } };
+    const lib = { id: 'lib1', type: 'mnt-library', def: componentDefs['mnt-library'], data: { mounts: [], _selKey: 'a26-a' } };
     global.nodes = [lib];
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
     expect([d.querySelector('.ve-mnt-amc'), d.querySelector('.mntlib-bilgi')]).toEqual([null, null]);

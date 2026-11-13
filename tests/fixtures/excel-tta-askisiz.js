@@ -26,7 +26,7 @@ module.exports = {
   // AĞIRLIK_KIRILIMI — [parça no, tanım, kg (O), X (P), Y (Q), Z (R)]
   agirlik: {
     motor: [
-      ['57RS303304', 'MOTOR', 1073, -67, -0.58, 684.96],
+      ['motor-17', 'MOTOR', 1073, -67, -0.58, 684.96],
       ['59RS021368', 'YAĞ 34lt x 0.881 = 30kg', 30, -231.73, 0.18, 263.35],
       ['55RS251711', 'MOTOR ARKA KULAK - SAG', 5.5, 513.06, 319.6, 584],
       ['55RS251712', 'MOTOR ARKA KULAK - SOL', 5.5, 511.82, -320.4, 584],

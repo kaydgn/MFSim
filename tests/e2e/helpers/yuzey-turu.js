@@ -319,10 +319,10 @@ async function takozTuru(page, olc) {
   expect(ek.length).toBeGreaterThan(0);
   await pencereler(page, olc, ek);
   // ÖTEKİ ÜÇ ÖRNEĞİN TOPOLOJİSİ (yapışık ad): yalnız Tulga ölçülüyordu;
-  // ASFAT'ta "Motor — Cummins 57RS303308" ile "Şanzıman + Retarder — Allison
+  // ASFAT'ta "Motor — Cummins X15E3 600" ile "Şanzıman + Retarder — Allison
   // 4700" üst üste biniyordu (−6 px). 10 Ton TTA on bir gövdeli. ASFAT SON:
   // aşağıdaki parametrik analiz onun üç grubunu tarar.
-  for (const [k, imza] of [['siper', 'cradle'], ['tta10', '4500 SP'], ['asfat', '57RS']]) {
+  for (const [k, imza] of [['siper', 'cradle'], ['tta10', '4500 SP'], ['asfat', 'Orta Takoz']]) {
     await page.evaluate((kk) => {
       veMntOrnekYukle(kk);
     }, k);

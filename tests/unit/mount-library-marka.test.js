@@ -37,14 +37,14 @@ describe('MARKA — katalogdaki her tipin markası var', () => {
     expect(sayi['AMC Mecanocaucho']).toBe(148);
     expect(sayi['Angst+Pfister']).toBe(86);
     expect(sayi.LASPAR).toBe(10 + 43);                 // programın LASPAR takozları + katalog
-    expect(sayi['Diğer']).toBe(4);                     // 57RS… (A26)
+    expect(sayi['Diğer']).toBe(4);                     // A26 · ASR-SR-116 takozları
     expect(kat()).toHaveLength(291);
   });
 
   test('anahtar, ad ve rijitlik değerleri markadan etkilenmez (kayıtlı projeler)', () => {
     const k = cp.VE_MOUNT_LIBRARY;
     expect(k.amc55sha).toMatchObject({ name: 'LMT-1433-37 55 ShA', sx: 1252, sz: 640, dz: 977 });
-    expect(k.TK040).toMatchObject({ name: 'TK040 45 ShA (57RS329001M)', dx: 740, dz: 335 });
+    expect(k.TK040).toMatchObject({ name: 'TK040 45 ShA', dx: 740, dz: 335 });
     expect(Object.keys(k)).toHaveLength(291);
   });
 
@@ -84,8 +84,8 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     expect(adlar.slice(0, 10).every((a) => /LMT-1433|TK0|Mount 1/.test(a))).toBe(true);   // programın LASPAR takozları önce
     expect(adlar.slice(10).every((a) => /\(LASPAR M?LMT-/.test(a))).toBe(true);          // sonra katalog, ailenin sırasıyla
     expect(d.querySelector('.mntlib-opt.sel .mntlib-opt-name').textContent).toContain('TK040');
-    const d2 = pencere(libNode([], '57RS313773'));
-    expect([...d2.querySelectorAll('.mntlib-opt-name')].map((e) => e.textContent).every((a) => /57RS/.test(a))).toBe(true);
+    const d2 = pencere(libNode([], 'a26-a'));
+    expect([...d2.querySelectorAll('.mntlib-opt-name')].map((e) => e.textContent).every((a) => /^(A26|ASFAT) takozu [AB]$/.test(a))).toBe(true);
   });
 
   test('Marka seçilince seçili tip o markanın ilk tipine geçer', () => {

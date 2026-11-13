@@ -1240,7 +1240,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
       // Eski kart YALNIZ AP'yi gösteriyordu — birleşim ondan kesinlikle geniş.
       expect(alt.length).toBeGreaterThan(ap.length);
       const ac = wiz.veFeadWizAccModelOpts('fead-ac');
-      expect(ac.filter((o) => o[0].indexOf('bmc:') === 0).length).toBe(4);
+      expect(ac.filter((o) => o[0].indexOf('bmc:') === 0).length).toBe(3);   // defterin dört satırı üç model
       // Hava kompresörünün defterde karşılığı YOK; AP kataloğu tek kaynak.
       const hk = wiz.veFeadWizAccModelOpts('fead-aircomp');
       expect(hk.length).toBe(Object.keys(veFeadPresetLib('fead-aircomp')).length);
@@ -1294,7 +1294,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
       d.innerHTML = wiz._fwAccCard(wiz.veFeadWizState(), wiz.veFeadWizBuild(),
         wiz.veFeadWizState().pulleys.filter((p) => !p.driver));
       const not = d.querySelector('.ve-fw-acc[data-fw-k="' + alt.key + '"] .ve-fw-acc-not').textContent;
-      expect(not).toContain(k);
+      expect(not).toContain('künye ' + veFeadAccOf(k).ad);
     });
   });
 
@@ -2830,7 +2830,7 @@ describe('motor künyesi PENCEREDE — sayfa sadeleşti', () => {
     expect(wiz.veFeadWizEngHTML()).not.toContain('noLoadGovernedRpm');
     expect(wiz.VE_FW_ENG_FIELDS.some((f) => /noLoad/i.test(f.yol))).toBe(false);
     const sd = {};
-    veFeadEngineApply(sd, veFeadEngineList().find((r) => r.key === '57RS303234').key);
+    veFeadEngineApply(sd, veFeadEngineList().find((r) => r.key === 'motor-10').key);
     expect(sd.noLoadGovernedRpm).toBe(2330);
     // Ve sapma raporu onu ARAMIYOR: görülemeyen bir alan için kapatılamayan
     // bir uyarı üretmek, uyarının kendisini değersizleştirirdi.

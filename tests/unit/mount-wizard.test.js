@@ -76,7 +76,7 @@ describe('KATALOG LİSTESİ — örnekten doldurulan satır tipini gösterir', (
     expect(st.takozlar.every((t) => !t.libKey)).toBe(true);
     const sec = (t) => { const d = document.createElement('div'); d.innerHTML = W._mwKatalogSecHTML(t); return d.querySelector('select').value; };
     expect(st.takozlar.map(sec)).toEqual(st.takozlar.map((t) => cp._mntKutuphaneEslesme({ data: t }).e.key));
-    expect([...new Set(st.takozlar.map(sec))].sort()).toEqual(['57RS313773-sr116', '57RS313774-sr116']);
+    expect([...new Set(st.takozlar.map(sec))].sort()).toEqual(['asfat-a', 'asfat-b']);
     st.takozlar[0].kzs = 999;
     expect(sec(st.takozlar[0])).toBe('');
   });
@@ -683,8 +683,8 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     // iki ön takoz (y = −49 · +53 mm, föyün Mount 1 · 2'si — Canlı Not 68) hattın sırasında,
     // şasinin çerçevesinin dışında yan yana (çerçeve gövdeleri adlarıyla sarar + 26 px); adları
     // altta ve çerçeveye değmez (dış yanında zeminin taraması); yan takozlar dış sıralarda
-    const onler = L.filter((n) => n.rol === 'takoz' && /^Ön /.test(n.customName));
-    expect(onler.map((n) => n.customName)).toEqual(['Ön sol takoz · 57RS313774', 'Ön sağ takoz · 57RS313774']);
+    const onler = L.filter((n) => n.rol === 'takoz' && / ön takoz$/.test(n.customName));
+    expect(onler.map((n) => n.customName)).toEqual(['Sol ön takoz', 'Sağ ön takoz']);
     const cerceveSol = Math.min(...govde.map((n) => { const w = veNodeDefaultSize(n.type).w, g = Math.max(60, n.customName.length * 7.8);
       return n.lx + Math.min(0, w / 2 - g / 2); })) - 26;
     const tw = veNodeDefaultSize('mnt-mount').w;

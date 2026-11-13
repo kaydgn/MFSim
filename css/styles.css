@@ -10105,20 +10105,22 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-prm-marka[open] > summary .mf-ico{ transform:rotate(180deg); }
 .ve-prm-marka > table{ margin:0; border-top:1px solid var(--border-light); }
 @media (prefers-reduced-motion: reduce){ .ve-prm-marka > summary .mf-ico{ transition:none; } }
-/* TAKOZ YERLEŞİMİ (Canlı Not 1003 · 1006) — çizim Görünümler'in bileşeni; grubun RENGİ diyagramların
-   seri paletinden (--seri-1…4; iki temada zeminine ≥ 3:1, üstündeki yazı --bg-input ile AA): föyün ve aday
-   tablosunun numara rozeti, çizimde takozun küpü ve çipinin kenarı. Renk VERİ (data-renk · ve-ak-renk-N). */
+/* TAKOZ YERLEŞİMİ (Canlı Not 1003 · 1006 · 1007) — çizim Görünümler'in bileşeni; grubun RENGİ diyagramların
+   seri paletinden (--seri-1…4; iki temada zeminine ≥ 3:1): föyün ve aday tablosunun numarasının önündeki
+   kare, çizimde takozun küpü ve çipinin kenarı. Renk VERİ (data-renk · ve-ak-renk-N). Numara düz yazı, çipin
+   yazısı gibi (Canlı Not 1007: balon "çocukça"); kare keskin köşeli, rakamın boyunda ve tabanında. */
 .ve-prm-ak{ margin:0 0 10px; }
 .ve-prm-no[data-renk="1"], .ve-ak-renk-1{ --grup-renk:var(--seri-1); }
 .ve-prm-no[data-renk="2"], .ve-ak-renk-2{ --grup-renk:var(--seri-2); }
 .ve-prm-no[data-renk="3"], .ve-ak-renk-3{ --grup-renk:var(--seri-3); }
 .ve-prm-no[data-renk="4"], .ve-ak-renk-4{ --grup-renk:var(--seri-4); }
 .ve-prm-no{
-  display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;
-  width:20px; height:20px; border-radius:50%; vertical-align:middle;
-  background:var(--grup-renk, var(--text-primary)); color:var(--bg-input);
-  border:1px solid color-mix(in srgb, var(--grup-renk, var(--text-primary)) 70%, var(--text-heading));
-  font-size:var(--fs-tiny); font-weight:700; line-height:1; letter-spacing:normal; font-variant-numeric:tabular-nums;
+  white-space:nowrap; font-size:var(--fs-tiny); font-weight:600; letter-spacing:normal; text-transform:none;
+  color:var(--text-heading); font-variant-numeric:tabular-nums;
+}
+.ve-prm-kare{
+  display:inline-block; width:.72em; height:.72em; margin-right:.36em; vertical-align:baseline;
+  background:var(--grup-renk, var(--text-muted));
 }
 .ve-ak-t.ve-ak-renkli path{ stroke:var(--bg-input); }
 .ve-ak-t.ve-ak-renkli .t-z{ fill:color-mix(in srgb, var(--grup-renk) 55%, var(--bg-input)); }

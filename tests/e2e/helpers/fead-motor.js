@@ -11,7 +11,7 @@
  * global adıyla çağırıyor) ve sihirbaz tohumu (`veFeadWizSeed` — açılır liste
  * de global adıyla çağırıyor). Program yüklendikten SONRA çağrılır.
  */
-const MOTOR = '57RS303252';   // ISL8.9E3 375 — 700 · 2100 · 2900 RPM · 6 silindir
+const MOTOR = 'motor-11';   // ISL8.9E3 375 — 700 · 2100 · 2900 RPM · 6 silindir
 
 async function motorluOrnekler(page, key) {
   await page.evaluate((k) => {

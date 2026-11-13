@@ -1574,7 +1574,7 @@ function _mwStpKaynakSecHTML(s, b, y){
     + ' onchange="veMntWizStpYogunluk(' + b.dugum + ', this.value)">'
     + sec.map(se).join('')
     + (vs.length ? '<optgroup label="' + _mwEsc(_mwStpModelAd(b.tip)) + '">' + vs.map(function(v){ return se([v.k, v.ad]); }).join('') + '</optgroup>' : '')
-    + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad + ' · ' + a.key]); }).join('') + '</optgroup>' : '')
+    + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad]); }).join('') + '</optgroup>' : '')
     + '</select>';
 }
 // Kütle hücresi: elle → alan; veri sayfası → sayfanın ıslak kütlesi, YAZILMAZ

@@ -375,26 +375,26 @@ describe('sihirbaz — "kurulmaya hazır" yalnız işletme girdisi de tamsa', ()
 describe('motor kataloğu AÇIKÇA SEÇİLMİŞ tahrik düzenini ezmez', () => {
   // Motor künyesi zorunlu olunca örneği tamamlamak için motor seçen kullanıcı,
   // kataloğun kademe çaplarıyla bütün devirleri sessizce kaydırırdı
-  // (57RS303234: 218,3 / 179,62 = 1,215 → %21,5).
+  // (motor-10: 218,3 / 179,62 = 1,215 → %21,5).
   test('doğrudan tahrikli örnek doğrudan kalır; seçilmemiş düzen türetmeye geçer', () => {
     const sd = { ratioMode: 'direct', driveRatio: 1 };
-    EN.veFeadEngineApply(sd, '57RS303234');
+    EN.veFeadEngineApply(sd, 'motor-10');
     expect(sd.ratioMode).toBe('direct');
     expect(M.veFeadDriveRatio(sd).ratio).toBe(1);
     const bos = {};
-    EN.veFeadEngineApply(bos, '57RS303234');
+    EN.veFeadEngineApply(bos, 'motor-10');
     expect(bos.ratioMode).toBe('derive');
     expect(M.veFeadDriveRatio(bos).ratio).toBeCloseTo(218.3 / 179.62, 12);
     // Çapları olan ara kademe: katalog çapları geçerli (öneri; sapma yazılır).
     const kademe = { ratioMode: 'derive', crankOD: 200, fanOD: 180 };
-    EN.veFeadEngineApply(kademe, '57RS303234');
+    EN.veFeadEngineApply(kademe, 'motor-10');
     expect(M.veFeadDriveRatio(kademe).ratio).toBeCloseTo(218.3 / 179.62, 12);
-    expect(MOTOR).toBe('57RS303252');
+    expect(MOTOR).toBe('motor-11');
   });
 
   // Karar kipin ADINA değil ETKİN orana bakar. Sihirbaz örneğin `direct` 1'ini
   // `derive` kipine çeviriyor ama sayıyı taşıyor; motor seçimi o modelde oranı
-  // 1 → 1,1008'e kaydırıyordu (ölçüldü, gerçek tarayıcı, 57RS303252).
+  // 1 → 1,1008'e kaydırıyordu (ölçüldü, gerçek tarayıcı, motor-11).
   test('sihirbazdan kurulan örnek (derive + taşınan oran): motor seçimi oranı DEĞİŞTİRMEZ', () => {
     const sd = { ratioMode: 'derive', driveRatio: 1 };
     expect(M.veFeadDriveRatio(sd)).toMatchObject({ ok: true, ratio: 1 });

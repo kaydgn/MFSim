@@ -34,17 +34,17 @@ function E_(buyuk) {
   return {
     baslik: 'Takoz konfigürasyonları', arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4500 SP',
     fAtes: 35, trSinir: 0.15, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
-    gruplar: ['Ön takoz · 57RS313774', 'Sağ/Sol arka takoz · 57RS313773'],
-    takozlar: [{ ad: 'Ön takoz · 57RS313774', grup: 0 }, { ad: 'Sağ arka takoz · 57RS313773', grup: 1 }, { ad: 'Sol arka takoz · 57RS313773', grup: 1 }],
+    gruplar: ['Ön takoz', 'Sağ/Sol arka takoz'],
+    takozlar: [{ ad: 'Ön takoz', grup: 0 }, { ad: 'Sağ arka takoz', grup: 1 }, { ad: 'Sol arka takoz', grup: 1 }],
     konfig: [
-      { K: 0, mevcut: true, tipler: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'], uygunluk: 'Uygun değil',
+      { K: 0, mevcut: true, tipler: ['ASFAT takozu B', 'ASFAT takozu A'], uygunluk: 'Uygun değil',
         kriter: [true, true, false, true], d: 2.9001, f: [5.11, 5.70, 6.53, 8.49, 10.79, 15.47], T: 0.10309,
-        takozTip: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'],
+        takozTip: ['ASFAT takozu B', 'ASFAT takozu A', 'ASFAT takozu A'],
         vakalar: [vaka('Static', [-2.69, -2.66, -2.9]), vaka('Max Bump', [-15.1, -8.9, -9.7])],
         modlar: [{ f: 5.70, ad: 'roll' }, { f: 5.11, ad: 'pitch+bounce' }] },
-      { K: 1, tipler: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
+      { K: 1, tipler: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
         kriter: [true, true, true, true], d: 5.9178, f: [6.82, 7.98, 11.41, 12.04, 14.21, 15.21], T: 0.121701,
-        takozTip: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
+        takozTip: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
         vakalar: [vaka('Static', [-3.9, -5.43, -5.92])], modlar: [{ f: 6.82, ad: 'roll' }] },
       { K: 2, tipler: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
         kriter: [true, true, true, true], d: 6.0128, f: [5.69, 7.03, 7.86, 10.53, 11.06, 13.16], T: 0.051,
@@ -90,8 +90,8 @@ describe('VERİ', () => {
     expect(html.startsWith('<!doctype html>\n<html lang="tr">')).toBe(true);
     expect(html).toMatch(/<title>10 Ton TTA — Takoz konfigürasyonları<\/title>/);
     expect(D.konfig.map((k) => [k.K, k.u, k.tip])).toEqual([
-      [0, 'Uygun değil', ['57RS313774', '57RS313773']],                        // "ASR…" eki yazılmaz
-      [1, 'En uygun', ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)']],
+      [0, 'Uygun değil', ['ASFAT takozu B', 'ASFAT takozu A']],
+      [1, 'En uygun', ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)']],
       [2, 'Uygun', ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)']]]);
     expect(D.konfig[0].k).toBe(0b1011);                                       // dört kriter bit bit
     expect(D.konfig[0].mod.map((m) => m[0])).toEqual([5.11, 5.7]);            // modlar frekansa göre
@@ -155,7 +155,7 @@ describe('SAYFA', () => {
     expect(tr.map((r) => metin(r.children[0]))).toEqual(['K0', 'K1', 'K2']);
     expect(tr.map((r) => r.querySelector('.u-en, .u-uy') ? r.querySelector('.u-en, .u-uy').className : '')).toEqual(['', 'sol u-en', 'sol u-uy']);
     const c = [...tr[0].children].map(metin);
-    expect(c.slice(1, 5)).toEqual(['57RS313774', '57RS313773', 'Uygun değil', '2,90']);
+    expect(c.slice(1, 5)).toEqual(['ASFAT takozu B', 'ASFAT takozu A', 'Uygun değil', '2,90']);
     expect(c.slice(5, 9)).toEqual(['✓', '✓', '✗', '✓']);
     expect(c[9]).toBe('%10,3');
     // Canlı not 2004 ("Daha güzel bir şekilde … yayalım bu bilgileri"): künye ad · değer hücreleri
@@ -212,7 +212,7 @@ describe('SAYFA', () => {
     expect(w.location.hash).toBe('#T2');
     expect(d.getElementById('v-sonuc').hidden).toBe(false);
     expect(metin(d.querySelector('#ve-sonuc h2'))).toBe('No 2');
-    expect(metin(d.querySelector('#ve-sonuc .tipler'))).toBe('Ön takoz: 57RS313774 · Sağ/Sol arka takoz: Cone 39 50 ShA (AMC 137982)');
+    expect(metin(d.querySelector('#ve-sonuc .tipler'))).toBe('Ön takoz: ASFAT takozu B · Sağ/Sol arka takoz: Cone 39 50 ShA (AMC 137982)');
     const [sehim, mod] = d.querySelectorAll('#ve-sonuc table');
     // Canlı not 2002 ("Sonuç kısmını aynı Excel gibi … Sütun aralarını çizgili … Yük durumu sütununu da
     // ayıralım"): iki tablo ızgara, Yük durumu sütunu ayrık (başlığı ve her satırın ilk hücresi)

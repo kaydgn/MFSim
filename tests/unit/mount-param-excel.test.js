@@ -42,33 +42,33 @@ const modF = new Float64Array(18).fill(NaN), modAd = new Uint16Array(18).fill(65
 }));
 const E = {
   baslik: '10 Ton TTA — takoz konfigürasyonları', fAtes: 35, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
-  gruplar: ['Ön takoz · 57RS313774', 'Sağ/Sol arka takoz · 57RS313773'],
-  takozlar: [{ ad: 'Ön takoz · 57RS313774', grup: 0 }, { ad: 'Sağ arka takoz · 57RS313773', grup: 1 }, { ad: 'Sol arka takoz · 57RS313773', grup: 1 }],
+  gruplar: ['Ön takoz', 'Sağ/Sol arka takoz'],
+  takozlar: [{ ad: 'Ön takoz', grup: 0 }, { ad: 'Sağ arka takoz', grup: 1 }, { ad: 'Sol arka takoz', grup: 1 }],
   konfig: [
-    { K: 0, mevcut: true, tipler: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'], uygunluk: 'Uygun değil',
+    { K: 0, mevcut: true, tipler: ['ASFAT takozu B', 'ASFAT takozu A'], uygunluk: 'Uygun değil',
       kriter: [true, true, false, true], d: 2.9001, f: F_K0, T: 0.10309,
-      takozTip: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'],
+      takozTip: ['ASFAT takozu B', 'ASFAT takozu A', 'ASFAT takozu A'],
       vakalar: [vaka('Static', [-2.69, -2.66, -2.9]), vaka('Max Bump', [-15.1, -8.9, -9.7])],
       modlar: F_K0.map((f, i) => ({ f, ad: ['pitch+bounce', 'roll', 'bounce', 'lateral+yaw', 'fore-aft', 'roll'][i] })) },
-    { K: 1, tipler: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
+    { K: 1, tipler: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
       kriter: [true, true, true, true], d: 5.9178, f: F_K1, T: 0.121701,
-      takozTip: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
+      takozTip: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
       vakalar: [vaka('Static', [-3.9, -5.43, -5.92])], modlar: F_K1.map((f) => ({ f, ad: 'roll' })) },
     { K: 2, tipler: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
       kriter: [true, true, true, true], d: 6.0128, f: [5.69, 7.03, 7.86, 10.53, 11.06, 13.16], T: 0.051,
       takozTip: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)', 'Cone 39 50 ShA (AMC 137982)'],
       vakalar: [vaka('Static', [-3.1, -6.0, -6.01])], modlar: [{ f: 5.69, ad: 'yaw+lateral' }] },
-    { K: 3, tipler: ['LMT-1433-00 55 ShA', '57RS313773 (A26)'], uygunluk: 'Uygun',
+    { K: 3, tipler: ['LMT-1433-00 55 ShA', 'A26 takozu A'], uygunluk: 'Uygun',
       kriter: [true, true, true, true], d: 6.368, f: [4.25, 5.03, 6.42, 7.31, 10.66, 16.1], T: 0.0881,
-      takozTip: ['LMT-1433-00 55 ShA', '57RS313773 (A26)', '57RS313773 (A26)'], vakalar: [], modlar: [] }
+      takozTip: ['LMT-1433-00 55 ShA', 'A26 takozu A', 'A26 takozu A'], vakalar: [], modlar: [] }
   ],
-  tarama: { N: 576, gruplar: [0, 1], adaylar: [['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'Mount 1 40 ShA']],
+  tarama: { N: 576, gruplar: [0, 1], adaylar: [['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Mount 1 40 ShA']],
     satirlar: [
-      { tipler: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)'], f: F_K1, fB: 11.49, T: 0.121701, d: 5.918,
+      { tipler: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)'], f: F_K1, fB: 11.49, T: 0.121701, d: 5.918,
         k: [true, true, true, true], yuk: [496, 648], azami: [null, 1200] },
       { tipler: ['Mount 1 40 ShA', 'Cone 39 50 ShA (AMC 137982)'], f: [3.58, 4.45, 6.0, 7.78, 10.11, 12.13], fB: 7.16, T: 0.045, d: 15.0,
         k: [true, true, true, true], yuk: [470, 661], azami: [null, 600] },
-      { tipler: ['57RS313774 (ASR-SR-116)', 'Cone 38 60 ShA (AMC 137963)'], f: [3.7, 4.42, 6.0, 7.01, 8.9, 12.0], fB: 3.62, T: 0.012, d: 15.1,
+      { tipler: ['ASFAT takozu B', 'Cone 38 60 ShA (AMC 137963)'], f: [3.7, 4.42, 6.0, 7.01, 8.9, 12.0], fB: 3.62, T: 0.012, d: 15.1,
         k: [true, false, false, true], yuk: [497.3, 647.8], azami: [null, 650] }
     ],
     veri: { vakaAdlari: ['Static', 'Max Bump'], nT: 3, nM: 6, kod, modF, modAd, modAdlar: ['pitch+bounce', 'roll'] } }
@@ -221,8 +221,8 @@ describe('SONUÇ — bütün konfigürasyonlar, sekmeden açılınca boş', () =
 
   test('bloklar: önce K0…K3, sonra No 1…3; başlık grupların tipi', () => {
     expect([0, 1, 2, 3, 4, 5, 6].map((j) => G.d(BASL(j), 3).split(' — ')[0])).toEqual(['K0', 'K1', 'K2', 'K3', 'No 1', 'No 2', 'No 3']);
-    expect(G.d(BASL(1), 3)).toBe('K1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
-    expect(G.d(BASL(6), 3)).toBe('No 3 — Ön takoz: 57RS313774 · Sağ/Sol arka takoz: Cone 38 60 ShA (AMC 137963)');
+    expect(G.d(BASL(1), 3)).toBe('K1 — Ön takoz: TK040 45 ShA · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)');
+    expect(G.d(BASL(6), 3)).toBe('No 3 — Ön takoz: ASFAT takozu B · Sağ/Sol arka takoz: Cone 38 60 ShA (AMC 137963)');
   });
 
   test('düğmeler: dönüş (K → Özet, No → Tarama\'daki satırı), geri ve ileri komşu bloğun şeridine; uçlarda yok', () => {
@@ -251,7 +251,7 @@ describe('SONUÇ — bütün konfigürasyonlar, sekmeden açılınca boş', () =
     expect(G.d(mh + 1, 3)).toBe('Pitch + Bounce'); expect(G.d(mh + 2, 3)).toBe('Roll');
     F_K1.forEach((f, j) => expect(G.d(mh + 1 + j, 4)).toBe(f));
     expect(G.d(mh + 6 + 3, 3)).toBeCloseTo(12.1701, 4);
-    expect(G.d(t3 + 4, 5)).toBe('57RS313774');                                   // taranan grubun tipi, "ASR" eki yok
+    expect(G.d(t3 + 4, 5)).toBe('ASFAT takozu B');                                   // taranan grubun tipi, "ASR" eki yok
     expect([...G.H.values()].some((x) => x[0] && typeof x[0] === 'object')).toBe(false);   // formülsüz
   });
 
@@ -306,17 +306,17 @@ describe('AD', () => {
     G.H.forEach(([v]) => expect(String(v)).not.toMatch(/ASR/));
     const F = X.dosyalar(KITAP);
     F.forEach(([ad, m]) => expect([ad, /ASR/.test(m)]).toEqual([ad, false]));
-    expect(hucre(sayfa('Özet'), 7, 4)[2]).toBe('57RS313774');
+    expect(hucre(sayfa('Özet'), 7, 4)[2]).toBe('ASFAT takozu B');
   });
 
   test('kısa tip adı ve konfigürasyonun adı (bütün grupların tipi)', () => {
     expect(E_.kisa('Cone 39 50 ShA (AMC 137982)')).toBe('Cone39-50');
-    expect(E_.kisa('57RS313773 (A26)')).toBe('57RS313773 A26');
-    expect(E_.kisa('57RS313773 (ASR-SR-116)')).toBe('57RS313773');
+    expect(E_.kisa('A26 takozu A')).toBe('A26 takozu A');
+    expect(E_.kisa('ASFAT takozu A')).toBe('ASFAT takozu A');
     expect(E_.kisa('LMT-1433-00 55 ShA')).toBe('LMT-55');
     expect(E_.kisa('Cone 121 NG 65 ShA (AMC 137833)')).toBe('Cone121NG-65');
-    expect(E_.sayfaAdi({ K: 7 }, ['57RS313773 (A26)', 'Cone 39 60 ShA (AMC 137983)', '57RS313774 (A26)']))
-      .toBe('K7 57RS313773 A26 + Cone39-60 + 57RS313774 A26');
+    expect(E_.sayfaAdi({ K: 7 }, ['A26 takozu A', 'Cone 39 60 ShA (AMC 137983)', 'A26 takozu B']))
+      .toBe('K7 A26 takozu A + Cone39-60 + A26 takozu B');
     expect(E_.sayfaAdi({ K: 0, mevcut: true }, [])).toBe('K0 Mevcut');
   });
 
@@ -324,17 +324,17 @@ describe('AD', () => {
   // "LMT-55" oluyordu — K6 ile K7 aynı adla görünüyordu. Ailede birden çok kod varsa ailenin
   // bütün tipleri kodlu; tek kodlu aile onaylanan kısa adında kalır.
   test('AYIRT EDİCİ kısa ad: aynı kısa adı alan iki tip ayrı; ailede tek kod varsa kısa ad değişmez', () => {
-    const U = ['LMT-1433-37 55 ShA', 'LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', '57RS313773 (A26)', '57RS313773 (ASR-SR-116)',
-      'Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA', 'TK035 35 ShA (57RS328045)'];
+    const U = ['LMT-1433-37 55 ShA', 'LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', 'A26 takozu A', 'ASFAT takozu A',
+      'Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA', 'TK035 35 ShA'];
     const f = E_.ayirici(U);
-    expect(U.map(f)).toEqual(['LMT-1433-37-55', 'LMT-1433-00-55', 'LMT-1433-00-40', '57RS313773 A26', '57RS313773',
+    expect(U.map(f)).toEqual(['LMT-1433-37-55', 'LMT-1433-00-55', 'LMT-1433-00-40', 'A26 takozu A', 'ASFAT takozu A',
       'Cone39-50', 'Mount1-55', 'TK035-35']);
     expect(new Set(U.map(f)).size).toBe(U.length);
     const g = E_.ayirici(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', 'Cone 39 50 ShA (AMC 137982)']);
     expect(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA'].map(g)).toEqual(['LMT-55', 'LMT-40']);
     expect(g('Kümede olmayan 70 ShA')).toBe(E_.kisa('Kümede olmayan 70 ShA'));
-    expect(E_.sayfaAdi({ K: 6 }, ['LMT-1433-37 55 ShA', '57RS313774 (A26)', 'LMT-1433-00 55 ShA'], f))
-      .toBe('K6 LMT-1433-37-55 + 57RS313774 A26 + LMT-1433-00-55');
+    expect(E_.sayfaAdi({ K: 6 }, ['LMT-1433-37 55 ShA', 'A26 takozu B', 'LMT-1433-00 55 ShA'], f))
+      .toBe('K6 LMT-1433-37-55 + A26 takozu B + LMT-1433-00-55');
     // iki kodu da kısa adında çakışan tip adın kendisine çıkar
     const h = E_.ayirici(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)']);
     expect(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)'].map(h)).toEqual(['X 50 ShA (AMC 137001)', 'X 50 ShA (AMC 137002)']);
@@ -410,15 +410,15 @@ describe('DOSYA — programın okuyucusuyla gidiş-dönüş', () => {
     const b = X.yaz(KITAP), wb = R.veXlsOpen(b);
     expect(wb.sheets.map((s) => s.name)).toEqual(['Özet', 'Tarama', 'Sonuç']);
     const oz = wb.readSheet(0).rows;
-    expect(oz[7].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
+    expect(oz[7].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
     const ta = wb.readSheet(1).rows;
-    expect(ta[5].slice(0, 3)).toEqual([1, 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)']);
+    expect(ta[5].slice(0, 3)).toEqual([1, 'TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)']);
     const z = R.veXlsZipRead(b), s2 = R.veXlsUtf8(z.read('xl/worksheets/sheet2.xml'));
     expect(s2).toContain('<f>HYPERLINK(&quot;#\'Sonuç\'!' + SERIT(4) + '&quot;,1)</f><v>1</v>');
     const son = wb.readSheet(2).rows;
     expect(son[1][2]).toBe('Özet’te ya da Tarama’da konfigürasyonu seçin.');
     expect([son[BASL(1) - 1][2], son[BASL(1) + 6][2], son[BASL(1) + 6][9]]).toEqual([
-      'K1 — Ön takoz: TK040 45 ShA (57RS329001M) · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)', 'Static', -5.43]);
+      'K1 — Ön takoz: TK040 45 ShA · Sağ/Sol arka takoz: Cone 121 NP 55 ShA (AMC 137829)', 'Static', -5.43]);
     expect(son[BASL(4) + 6].slice(3, 6)).toEqual([-0.3, 0.1, -3.9]);
     expect(R.veXlsUtf8(z.read('xl/workbook.xml'))).not.toContain('showSheetTabs');
   });

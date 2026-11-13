@@ -26,17 +26,17 @@ describe('GRUP — sağ/sol çift, konum grubu', () => {
   test('ad eşleşmesi: yan sözcüğü çıkınca kalan ad aynıysa çift; söz dizimi ve büyük/küçük harf fark etmez', () => {
     const G = K.gruplar([
       tk('a', 'Sağ Ön Takoz', 0, 300, 400), tk('b', 'Sol Ön Takoz', 0, -300, 400),
-      tk('c', 'Ön Sol · 57RS313774', -900, -50, 370), tk('d', 'Ön Sağ · 57RS313774', -900, 50, 370),
+      tk('c', 'Ön Sol · tip', -900, -50, 370), tk('d', 'Ön Sağ · tip', -900, 50, 370),
       tk('e', 'sağ arka', 600, 350, 600), tk('f', 'SOL ARKA', 600, -350, 600)]);
     expect(G.map((g) => [g.ad, g.idler.slice().sort().join('')])).toEqual([
-      ['Ön Sağ/Sol · 57RS313774', 'cd'], ['Sağ/Sol Ön Takoz', 'ab'], ['sağ/sol arka', 'ef']]);
+      ['Ön Sağ/Sol · tip', 'cd'], ['Sağ/Sol Ön Takoz', 'ab'], ['sağ/sol arka', 'ef']]);
     expect(G.every((g) => g.cift)).toBe(true);
   });
 
-  test('grubun adı tek boşlukla (ASFAT: "Ön Sol   · 57RS313774" — ekran birleştirir, ipucu birleştirmez)', () => {
-    const G = K.gruplar([tk('a', 'Ön Sol   · 57RS313774', -900, -50, 370), tk('b', 'Ön Sağ   · 57RS313774', -900, 50, 370),
+  test('grubun adı tek boşlukla (eski ASFAT adı "Ön Sol   · …" — ekran birleştirir, ipucu birleştirmez)', () => {
+    const G = K.gruplar([tk('a', 'Ön Sol   · tip', -900, -50, 370), tk('b', 'Ön Sağ   · tip', -900, 50, 370),
                          tk('c', '  Orta  takoz ', 0, 0, 300)]);
-    expect(G.map((g) => g.ad)).toEqual(['Ön Sağ/Sol · 57RS313774', 'Orta takoz']);
+    expect(G.map((g) => g.ad)).toEqual(['Ön Sağ/Sol · tip', 'Orta takoz']);
   });
 
   test('orta hattaki "Ön Takoz", çiftin kalan adıyla AYNI olsa da tek başına grup (TULGA)', () => {

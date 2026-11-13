@@ -40,7 +40,7 @@ const kur = (sd) => {
   return { ok: true, sys, names: sys.pulleys.map((p) => p.name), order,
     solver: { data: Object.assign({
       cylinders: 6, idleRpm: 700, governedRpm: 2600,
-      accelRpmS: 1100, decelRpmS: 900, engineLib: '57RS303251'
+      accelRpmS: 1100, decelRpmS: 900, engineLib: 'motor-01'
     }, sd || {}) } };
 };
 
