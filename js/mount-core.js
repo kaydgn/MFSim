@@ -1610,6 +1610,226 @@ var veMountCore = (function() {
                     (dir === 0 || dir === 1) ? dir : 2, kb);
   }
 
+  // ═══════════ Geçici rejim entegratörleri — tek genelleştirilmiş-α çerçevesi ═══════════
+  //
+  // Şok çözümünün (shockResponse) dört zaman entegratörü AYNI denklemin özel
+  // hâlleridir — genelleştirilmiş-α (Chung & Hulbert, J. Appl. Mech. 60, 1993):
+  //
+  //   M·a_{n+1−αm} + C·v_{n+1−αf} + f_iç(d)_{n+1−αf} = F(t_{n+1−αf})
+  //   x_{n+1−α} = (1−α)·x_{n+1} + α·x_n
+  //   d_{n+1} = d_n + Δt·v_n + Δt²·[(½−β)·a_n + β·a_{n+1}]        (Newmark)
+  //   v_{n+1} = v_n + Δt·[(1−γ)·a_n + γ·a_{n+1}]
+  //
+  //   newmark-ort       αm = αf = 0, β = ¼, γ = ½            koşulsuz kararlı, ρ∞ = 1
+  //   newmark-dogrusal  αm = αf = 0, β = 1/6, γ = ½          KOŞULLU: Ω = ω·Δt < 2√3
+  //   hht               αm = 0, αf = −α, γ = ½ − α, β = (1−α)²/4,   α ∈ [−⅓, 0]
+  //                     (Hilber, Hughes & Taylor, EESD 5, 1977)    ρ∞ = (1+α)/(1−α)
+  //   gen-alfa          αm = (2ρ∞−1)/(ρ∞+1), αf = ρ∞/(ρ∞+1),
+  //                     γ = ½ − αm + αf, β = ¼(1 − αm + αf)²,      ρ∞ ∈ [0, 1]
+  //
+  // Newmark'lar αm = αf = 0 hâli, HHT αm = 0 hâli; genelleştirilmiş-α ρ∞ = ½'de
+  // HHT α = −⅓'ün KENDİSİDİR (dört parametre birebir aynı çıkar).
+  //
+  // ρ∞: Ω → ∞ limitinde adım büyütme matrisinin spektral yarıçapı. 1 → hiçbir
+  // frekans sönmez; < 1 → adımın çözemediği yüksek frekanslar söner, düşük
+  // frekans ikinci mertebe doğrulukla korunur. Gerekçe: durdurucu temasında ve
+  // sertleşen eğride tanjant adımdan adıma sıçrar; sıçramanın uyardığı yüksek
+  // frekanslı içerik newmark-ort'ta (her Ω'da ρ = 1) hiç sönmez.
+  //
+  // KARARLILIK (Hughes, The Finite Element Method, 1987, §9.1): γ = ½'de β ≥ ¼
+  // koşulsuz kararlı, β < ¼'te Ω_kritik = 1/√(γ/2 − β) — doğrusal ivmede 2√3.
+  // HHT ve genelleştirilmiş-α tanım aralıklarının tamamında koşulsuz kararlıdır
+  // (αm ≤ αf ≤ ½, β ≥ ¼ + ½(αf − αm)).
+  //
+  // Kapı: tests/unit/mount-entegrator.test.js (kuram ↔ ölçülen sönüm ve periyot,
+  // özel hâl kimlikleri, kararlılık kısıtı, Newton yolu).
+
+  // Geçici rejim ayarlarının varsayılanları ve aralıkları — TEK yer. Arayüz bu
+  // nesneyi okur, çekirdek girdiyi geciciAyar ile bunun aralığına kırpar.
+  //   adimPeriyot    Δt = min(τ/N, 1/(N·f_en yüksek)); 40 eski sabit
+  //   newtonTol      adım başına Newton artığının göreli sınırı (m·A·g ölçeğinde)
+  //   newtonMaxIter  adım başına Newton üst sınırı
+  const GECICI_VARSAYILAN = Object.freeze({
+    entegrator: 'newmark-ort',
+    alfa: -0.05,
+    rhoInf: 0.8,
+    adimPeriyot: 40,
+    newtonTol: NL_RTOL,
+    newtonMaxIter: SHOCK_NEWTON_MAXITER,
+    aralik: Object.freeze({
+      entegrator: Object.freeze(['newmark-ort', 'newmark-dogrusal', 'hht', 'gen-alfa']),
+      alfa: Object.freeze([-1/3, 0]),
+      rhoInf: Object.freeze([0, 1]),
+      adimPeriyot: Object.freeze([4, 1000]),
+      newtonTol: Object.freeze([1e-12, 1e-3]),
+      newtonMaxIter: Object.freeze([1, 100])
+    })
+  });
+  // Koşullu kararlı yöntemde adımın kritik sınıra en çok yaklaşabildiği oran
+  // (ω_en·Δt ≤ pay·Ω_kritik) ve tanjant sınırı aşınca yeniden koşunun ek payı.
+  const GECICI_KARARLILIK_PAYI = 0.9;
+  const GECICI_YENIDEN_PAYI = 0.8;
+  const GECICI_YENIDEN_MAX = 8;
+  // Adım sayısı üst sınırları: doğruluk için 40 000 (eski sabit); kararlılık
+  // için aşılabilir — sınırı aşan adım doğruluğu değil sonucun KENDİSİNİ bozar.
+  const GECICI_ADIM_UST = 40000;
+  const GECICI_ADIM_UST_KARARLI = 200000;
+
+  function _geciciSayi(v, aralik, varsayilan, tam){
+    const x = (typeof v === 'number') ? v
+            : (typeof v === 'string' && v.trim() !== '') ? Number(v) : NaN;
+    if(!Number.isFinite(x)) return varsayilan;
+    const y = tam ? Math.round(x) : x;
+    return Math.min(aralik[1], Math.max(aralik[0], y));
+  }
+  // Ham ayar (Çözücü verisi, opts) → temiz ayar. Sayı aralığa kırpılır, tam
+  // sayı alanı yuvarlanır; bilinmeyen ad ve sayı olmayan değer varsayılana düşer.
+  function geciciAyar(ham){
+    const h = (ham && typeof ham === 'object') ? ham : {};
+    const V = GECICI_VARSAYILAN, R = V.aralik;
+    return {
+      entegrator: (R.entegrator.indexOf(h.entegrator) >= 0) ? h.entegrator : V.entegrator,
+      alfa:          _geciciSayi(h.alfa, R.alfa, V.alfa, false),
+      rhoInf:        _geciciSayi(h.rhoInf, R.rhoInf, V.rhoInf, false),
+      adimPeriyot:   _geciciSayi(h.adimPeriyot, R.adimPeriyot, V.adimPeriyot, true),
+      newtonTol:     _geciciSayi(h.newtonTol, R.newtonTol, V.newtonTol, false),
+      newtonMaxIter: _geciciSayi(h.newtonMaxIter, R.newtonMaxIter, V.newtonMaxIter, true)
+    };
+  }
+
+  // Entegratörün adı (+ α, ρ∞) → genelleştirilmiş-α parametreleri.
+  // Dönüş: { ad, alfaM, alfaF, beta, gamma, rhoInf, kosullu, OmegaKrit }
+  //   rhoInf     Ω → ∞'da spektral yarıçap; koşullu yöntemde null (limit kararsız)
+  //   kosullu    Δt kararlılıkla sınırlı mı; OmegaKrit o sınır (ω·Δt), değilse ∞
+  // HHT'de αf = 0 − α: α = 0'da +0 çıksın (−0 değil) diye.
+  function entegratorParam(ad, o){
+    const A = geciciAyar(Object.assign({}, o || {}, { entegrator: ad }));
+    if(A.entegrator === 'newmark-dogrusal'){
+      const beta = 1/6, gamma = 0.5;
+      return { ad: A.entegrator, alfaM: 0, alfaF: 0, beta: beta, gamma: gamma, rhoInf: null,
+               kosullu: true, OmegaKrit: 1/Math.sqrt(gamma/2 - beta) };
+    }
+    if(A.entegrator === 'hht'){
+      const a = A.alfa;
+      return { ad: A.entegrator, alfaM: 0, alfaF: 0 - a, beta: (1 - a)*(1 - a)/4, gamma: 0.5 - a,
+               rhoInf: (1 + a)/(1 - a), kosullu: false, OmegaKrit: Infinity };
+    }
+    if(A.entegrator === 'gen-alfa'){
+      const r = A.rhoInf, am = (2*r - 1)/(r + 1), af = r/(r + 1), s = 1 - am + af;
+      return { ad: A.entegrator, alfaM: am, alfaF: af, beta: s*s/4, gamma: 0.5 - am + af,
+               rhoInf: r, kosullu: false, OmegaKrit: Infinity };
+    }
+    return { ad: 'newmark-ort', alfaM: 0, alfaF: 0, beta: 0.25, gamma: 0.5, rhoInf: 1,
+             kosullu: false, OmegaKrit: Infinity };
+  }
+
+  // λ³ − I₁λ² + I₂λ − I₃ = 0'ın kökleri [{re, im}]. Cardano (tek gerçel kök)
+  // ya da Viète (üç gerçel kök); gerçel kök Newton'la düzeltilir, karmaşık çift
+  // düzeltilmiş kökle indirgenen ikinci dereceden (çiftin modülü makine
+  // duyarlığında; katlı kökte duyarlık ε^½ … ε^⅓'e iner). Karmaşık çift varsa
+  // gerçel kök İLK sırada.
+  function _kubikKokler(I1, I2, I3){
+    const f  = function(x){ return ((x - I1)*x + I2)*x - I3; };
+    const fp = function(x){ return (3*x - 2*I1)*x + I2; };
+    const duzelt = function(x){
+      for(let k=0;k<4;k++){
+        const d = fp(x); if(!d) break;
+        const y = x - f(x)/d;
+        if(!Number.isFinite(y) || Math.abs(f(y)) >= Math.abs(f(x))) break;
+        x = y;
+      }
+      return x;
+    };
+    const s = I1/3, p = I2 - I1*I1/3, q = -I3 + I1*I2/3 - 2*I1*I1*I1/27;
+    const D = q*q/4 + p*p*p/27;
+    if(D > 0){
+      const u = ((q > 0) ? -1 : 1)*Math.cbrt(Math.abs(q)/2 + Math.sqrt(D));
+      const r = duzelt(u - p/(3*u) + s);
+      const S = I1 - r, Pc = I2 - r*S, ic = S*S/4 - Pc;
+      if(ic < 0) return [{re:r, im:0}, {re:S/2, im:Math.sqrt(-ic)}, {re:S/2, im:-Math.sqrt(-ic)}];
+      return [{re:r, im:0}, {re:S/2 + Math.sqrt(ic), im:0}, {re:S/2 - Math.sqrt(ic), im:0}];
+    }
+    if(!(p < 0)) return [{re:s, im:0}, {re:s, im:0}, {re:s, im:0}];       // üçlü kök
+    const m = 2*Math.sqrt(-p/3);
+    const c = Math.max(-1, Math.min(1, 3*q/(p*m)));
+    const fi = Math.acos(c)/3;
+    return [0, 1, 2].map(function(k){
+      return { re: duzelt(m*Math.cos(fi - 2*Math.PI*k/3) + s), im: 0 };
+    });
+  }
+
+  // Tek serbestlikli sistemin (ẍ + 2ξω·ẋ + ω²·x = 0) adım büyütme matrisi ve
+  // spektral özellikleri — KAPALI FORM; ölçülen sönümün ve periyodun hakemi.
+  // Ölçekli durum X = [x, V, A] = [x, Δt·v, Δt²·a], Ω = ω·Δt; denklem αm/αf
+  // noktasında yazılıp Newmark güncellemeleri yerine konunca:
+  //   D·A_{n+1} = −[Ω²·x_n + (2ξΩ + Ω²(1−αf))·V_n
+  //                 + (αm + 2ξΩ(1−αf)(1−γ) + Ω²(1−αf)(½−β))·A_n]
+  //   D = (1−αm) + 2ξΩ(1−αf)γ + Ω²(1−αf)β
+  //   x_{n+1} = x_n + V_n + (½−β)·A_n + β·A_{n+1}
+  //   V_{n+1} = V_n + (1−γ)·A_n + γ·A_{n+1}
+  // Ω = Infinity: limit matris (D·A_{n+1}'in Ω²'li terimleri) — ρ∞ buradan.
+  // Kökler λ³ − I₁λ² + I₂λ − I₃ = 0'dan (iz, köşegen küçükleri, determinant).
+  // Dönüş: { rho        max|λᵢ| — spektral yarıçap
+  //          genlik     |λ₁| — asıl kökün modülü: adım başına genlik oranı
+  //          OmegaBar   arg λ₁ [rad/adım] — sayısal periyot T̄ = 2π·Δt/Ω̄
+  //          xiBar      −ln|λ₁|/√(Ω̄² + ln²|λ₁|) — sayısal çözümün logaritmik
+  //                     azalmasından okunan sönüm oranı: fiziksel ξ dâhil, tam
+  //                     entegratörde ξ'nin kendisi; ξ = 0'da yalnız algoritmik
+  //                     sönüm ve Hughes'un (1987, §9.3) −ln|λ₁|/Ω̄'sıyla ikinci
+  //                     mertebeye kadar aynı
+  //          periyotUzama  Ω·√(1−ξ²)/Ω̄ − 1 — tam çözümün (sönümlü) periyoduna göre
+  //          parazit    λ₃ (gerçel) — Newmark'ta 0
+  //          salinimli  asıl kökler karmaşık mı }
+  // Asıl kökler gerçelse (salınım yok) genlik, OmegaBar, xiBar, periyotUzama,
+  // parazit NaN. Geçersiz girdi → null.
+  function entegratorYukseltme(param, Omega, xi){
+    const P = param || entegratorParam('newmark-ort');
+    const am = P.alfaM, af = P.alfaF, b = P.beta, gm = P.gamma;
+    const W = Omega, z = (xi > 0) ? xi : 0;
+    if(!(W >= 0) || !(b > 0)) return null;
+    let ax, av, aa;
+    if(W === Infinity){
+      ax = -1/((1 - af)*b); av = -1/b; aa = -(0.5 - b)/b;
+    } else {
+      const D = (1 - am) + 2*z*W*(1 - af)*gm + W*W*(1 - af)*b;
+      ax = -W*W/D;
+      av = -(2*z*W + W*W*(1 - af))/D;
+      aa = -(am + 2*z*W*(1 - af)*(1 - gm) + W*W*(1 - af)*(0.5 - b))/D;
+    }
+    const T = [[1 + b*ax, 1 + b*av, 0.5 - b + b*aa],
+               [gm*ax,    1 + gm*av, 1 - gm + gm*aa],
+               [ax,       av,        aa]];
+    const I1 = T[0][0] + T[1][1] + T[2][2];
+    const I2 = (T[0][0]*T[1][1] - T[0][1]*T[1][0]) + (T[0][0]*T[2][2] - T[0][2]*T[2][0])
+             + (T[1][1]*T[2][2] - T[1][2]*T[2][1]);
+    const I3 = T[0][0]*(T[1][1]*T[2][2] - T[1][2]*T[2][1])
+             - T[0][1]*(T[1][0]*T[2][2] - T[1][2]*T[2][0])
+             + T[0][2]*(T[1][0]*T[2][1] - T[1][1]*T[2][0]);
+    const kok = _kubikKokler(I1, I2, I3);
+    const rho = Math.max.apply(null, kok.map(function(k){ return Math.hypot(k.re, k.im); }));
+    const out = { rho: rho, genlik: NaN, OmegaBar: NaN, xiBar: NaN, periyotUzama: NaN,
+                  parazit: NaN, salinimli: false };
+    if(kok[1].im !== 0 && W < Infinity){
+      out.genlik = Math.hypot(kok[1].re, kok[1].im);
+      out.OmegaBar = Math.atan2(Math.abs(kok[1].im), kok[1].re);
+      const ln = Math.log(out.genlik);
+      out.xiBar = -ln/Math.sqrt(out.OmegaBar*out.OmegaBar + ln*ln);
+      out.periyotUzama = W*Math.sqrt(Math.max(0, 1 - z*z))/out.OmegaBar - 1;
+      out.parazit = kok[0].re;
+      out.salinimli = true;
+    }
+    return out;
+  }
+
+  // (K − λM)φ = 0'ın en büyük doğal açısal frekansı [rad/s]; M tekilse NaN.
+  function _omegaMaks(K, M){
+    const e = generalizedEigenSym(K, M);
+    if(!e) return NaN;
+    let lm = 0;
+    e.lambda.forEach(function(l){ if(l > lm) lm = l; });
+    return Math.sqrt(lm);
+  }
+
   // ═══════════ Şok / geçici rejim yanıtı ═══════════
   //
   // Frekans yanıtı SÜREKLİ rejimi anlatır: sonsuza kadar süren bir titreşimde
@@ -1633,7 +1853,8 @@ var veMountCore = (function() {
   // standart darbesi budur (MIL-STD-810, ISO 8568). Dikdörtgen darbe fiziksel
   // olarak üretilemez (sonsuz jerk) ve yapay yüksek frekans içeriği katar.
   //
-  // İNTEGRASYON: Newmark-β, ortalama ivme (γ=1/2, β=1/4). Seçim gerekçesi:
+  // İNTEGRASYON (varsayılan): Newmark-β, ortalama ivme (γ=1/2, β=1/4). Seçim
+  // gerekçesi:
   //   • KOŞULSUZ KARARLI — adım boyu doğrulukla sınırlıdır, kararlılıkla değil.
   //     Açık bir yöntem (RK4) 20 Hz'lik modda dt < ~1/(π·f) şartına takılır ve
   //     sessizce patlar.
@@ -1642,6 +1863,25 @@ var veMountCore = (function() {
   //     cevabını bozardı.
   //   • M, C, K sabit → etkin matris BİR KEZ kurulur, her adımda yalnız 6×6
   //     çözüm yapılır.
+  // opts.entegrator öteki üçünü seçer (newmark-dogrusal · hht · gen-alfa —
+  // parametreler entegratorParam'da); hepsi aşağıdaki TEK genelleştirilmiş-α
+  // denkleminden geçer, Newmark'lar αm = αf = 0 hâlidir:
+  //
+  //   M·a_{n+1−αm} + C·v_{n+1−αf} + f_iç,{n+1−αf} = F(t_{n+1−αf})
+  //
+  // LİNEER YOLUN SAĞ TARAFI (türetme). Newmark güncellemeleri bilinmeyen d_{n+1}
+  // cinsinden:  a_{n+1} = a₀(d_{n+1}−dₙ) − a₂vₙ − a₃aₙ,
+  //             v_{n+1} = a₁(d_{n+1}−dₙ) − a₄vₙ − a₅aₙ,
+  //   a₀ = 1/(βΔt²), a₁ = γ/(βΔt), a₂ = 1/(βΔt), a₃ = 1/(2β) − 1,
+  //   a₄ = γ/β − 1,  a₅ = Δt(γ/(2β) − 1).
+  // Denkleme konup d_{n+1}'li terimler sola toplanınca:
+  //   K_eff = (1−αm)a₀·M + (1−αf)a₁·C + (1−αf)·K
+  //   K_eff·d_{n+1} = F(t_{n+1−αf})
+  //       + M·[(1−αm)a₀·dₙ + (1−αm)a₂·vₙ + ((1−αm)a₃ − αm)·aₙ]
+  //       + C·[(1−αf)a₁·dₙ + ((1−αf)a₄ − αf)·vₙ + (1−αf)a₅·aₙ]
+  //       − αf·K·dₙ
+  // αm = αf = 0'da eski K_eff = K + a₀M + a₁C ve eski sağ taraf — katsayılar
+  // 1·a₀ = a₀ olduğundan sayılar BİREBİR aynıdır.
   //
   // NONLİNEER ÇÖZÜM — ADIM BAŞINA NEWTON. Eskiden burası tümüyle lineerdi:
   // sabit K_dyn, adım başına tek doğrudan çözüm, nonlineer eğri de metal-metal
@@ -1650,9 +1890,15 @@ var veMountCore = (function() {
   // (sertleşen takozda lineer yol sehimi bu kadar FAZLA gösteriyor). Adams'ın
   // her Δt'de koştuğu Newton–Raphson'ın karşılığı artık burada:
   //
-  //   r(q) = Ψ(q) + M[a₀(q−qₙ) − a₂q̇ₙ − a₃q̈ₙ] + C[a₁(q−qₙ) − a₄q̇ₙ − a₅q̈ₙ] − F(t)
+  //   r(q) = (1−αf)·Ψ(q) + αf·Ψ(qₙ)
+  //        + M[(1−αm)a₀(q−qₙ) − (1−αm)a₂q̇ₙ − ((1−αm)a₃ − αm)q̈ₙ]
+  //        + C[(1−αf)a₁(q−qₙ) − ((1−αf)a₄ − αf)q̇ₙ − (1−αf)a₅q̈ₙ] − F(t_{n+1−αf})
   //   Ψ(q) = g(q₀+q) − g(q₀)          (statik dengeye GÖRE iç kuvvet artışı)
-  //   J    = K_T(q) + a₀M + a₁C ,   J·Δq = −r
+  //   J    = (1−αf)·K_T(q) + (1−αm)a₀M + (1−αf)a₁C ,   J·Δq = −r
+  //
+  // İç kuvvet ORTALANIR (Abaqus'un HHT'si gibi): (1−αf)Ψ(q_{n+1}) + αfΨ(qₙ) —
+  // yasa ara noktadaki sehimde DEĞİL, iki uçta okunur; lineer yasada ikisi aynı.
+  // Newmark'larda (αm = αf = 0) eski r ve J.
   //
   // NEDEN q₀ (statik denge) GEREKİYOR: q bu çözümde statik dengeden sapmadır,
   // yerçekimi süperpozisyonla düşürülmüştür. Nonlineer yasada süperpozisyon
@@ -1668,9 +1914,27 @@ var veMountCore = (function() {
   // GERİYE UYUM: eğrisiz takoz + useStop kapalı → Ψ(q)=K_dyn·q, tanjant sabit
   // → Newton'a hiç girilmez, ESKİ lineer yol (bir kez kurulan K_eff) korunur.
   //
+  // KOŞULLU KARARLILIK (newmark-dogrusal): Δt, en yüksek frekansta
+  // ω·Δt ≤ 0,9·Ω_kritik olacak şekilde KENDİLİĞİNDEN küçülür (out.dtKisit).
+  // Lineer yolda en yüksek frekans modal çözümün kendisi. Newton yolunda
+  // tanjant değişir (durdurucu teması k_z'nin 100 katı): her adımın tanjantı
+  // statik dengedekiyle kıyaslanır — K_T ≤ r·K_A (Loewner) ⇒ ω²_en(K_T) ≤ r·ω²_en(K_A),
+  // r = takoz-eksen başına k_T/k_A'nın en büyüğü (gevşekse kesin özdeğer); sınır
+  // aşılırsa koşu kesilir ve aşan tanjanta göre küçülen Δt ile baştan yapılır.
+  // Adım bütçesi ya da yeniden koşu hakkı yetmezse son koşu kesilmez, bayraklı
+  // döner (out.kararli = false) — sessiz patlama YOK. Sınır DOĞRUSAL
+  // kararlılıktır: kaba adımda sert temasın açılıp kapanması sönümsüz
+  // yöntemlerde (Newmark'lar) enerji katabilir; ilacı HHT ve genelleştirilmiş-α.
+  //
+  // opts (hepsi isteğe bağlı; aralıklar GECICI_VARSAYILAN'da, geciciAyar kırpar):
+  //   entegrator ('newmark-ort') · alfa (HHT, −0,05) · rhoInf (gen-α, 0,8) ·
+  //   adimPeriyot (40) · newtonTol (1e-9) · newtonMaxIter (20)
+  //
   // Dönüş: { t:[s], a:[g], q:[[6]], qd:[[6]], per:[{f:[N], fz:[N], d:[mm]}],
   //          dMax:[mm], dTotMax:[mm], dir, aPeak, dur,
-  //          nonlinear, useStop, stopHit, converged, newtonIters }
+  //          nonlinear, useStop, stopHit, converged, newtonIters,
+  //          entegrator, param:{alfaM, alfaF, beta, gamma, rhoInf},
+  //          adimPeriyot, dtKisit, kararli }
   function shockResponse(mounts, cg, M6, damping, opts){
     opts = opts || {};
     if(!mounts || !mounts.length || !M6) return null;
@@ -1698,6 +1962,11 @@ var veMountCore = (function() {
     // olmalı, bayrağın kendisi değil.
     const useStop = wantStop && nl;
 
+    // Entegratör ve adım ayarları — aralığa kırpılmış (GECICI_VARSAYILAN).
+    const ayar = geciciAyar(opts);
+    const P = entegratorParam(ayar.entegrator, ayar);
+    const alfaM = P.alfaM, alfaF = P.alfaF, beta = P.beta, gamma = P.gamma;
+
     // Kayıt süresi: darbe + en yavaş modun birkaç çevrimi. Sabit bir süre
     // (ör. 1 s) yumuşak montajda salınımın başını, sert montajda saatlerce
     // düz çizgi gösterirdi.
@@ -1711,21 +1980,17 @@ var veMountCore = (function() {
     if(!(fLo > 0)) return null;
     const tEnd = Math.min(tau + 8 / fLo, 3);
 
-    // Adım boyu: en hızlı modun periyodunun 1/40'ı VE darbenin 1/40'ı.
-    // Newmark kararlı olsa da doğruluk adım boyuna bağlıdır; darbeyi kaba
-    // örneklemek tepeyi düşürür.
-    let dt = Math.min(tau / 40, 1 / (40 * (fHi > 0 ? fHi : fLo)));
+    // Adım boyu: en hızlı modun periyodunun 1/N'i VE darbenin 1/N'i (N =
+    // adimPeriyot, varsayılan 40). Kararlı yöntemde de doğruluk adım boyuna
+    // bağlıdır; darbeyi kaba örneklemek tepeyi düşürür.
+    const N = ayar.adimPeriyot;
+    let dt = Math.min(tau / N, 1 / (N * (fHi > 0 ? fHi : fLo)));
     let nStep = Math.ceil(tEnd / dt);
-    if(nStep > 40000) { nStep = 40000; dt = tEnd / nStep; }
+    if(nStep > GECICI_ADIM_UST) { nStep = GECICI_ADIM_UST; dt = tEnd / nStep; }
 
     // Çıktı seyreltme: integrasyon ince, kayıt kaba. 40 000 noktalı bir kanal
     // panoya da yorum katmanına da yük, bilgi katkısı yok.
     const OUT_MAX = 1500;
-    const every = Math.max(1, Math.ceil(nStep / OUT_MAX));
-
-    const beta = 0.25, gamma = 0.5;
-    const a0 = 1/(beta*dt*dt), a1 = gamma/(beta*dt), a2 = 1/(beta*dt);
-    const a3 = 1/(2*beta) - 1, a4 = gamma/beta - 1, a5 = dt*(gamma/(2*beta) - 1);
 
     // Takoz geometrisi + dinamik yasalar bir kez
     const AA = mounts.map(function(mnt){
@@ -1758,9 +2023,12 @@ var veMountCore = (function() {
     }
 
     // TOPLAM yer değiştirmede iç genelleştirilmiş kuvvet (+ tanjant).
-    function internal(x, wantK){
+    // taban (ops., kararlılık izlemesi): takoz-eksen başına k_T/k_A'nın en
+    // büyüğü `oran`da döner; k_A = 0 iken pozitif tanjant ∞ (kesin denetime düşer).
+    function internal(x, wantK, taban){
       const g6=[0,0,0,0,0,0];
       const KT=wantK?zeros(6,6):null;
+      let oran = 0;
       for(let i=0;i<mounts.length;i++){
         const Ai=AA[i], law=laws[i];
         const d=[0,0,0];
@@ -1772,9 +2040,12 @@ var veMountCore = (function() {
                     law[2].tangent(d[2]) + stopTangent(i, d[2])];
           for(let ax=0;ax<3;ax++){ const kk=kt[ax], row=Ai[ax];
             for(let a=0;a<6;a++){ const t=kk*row[a]; for(let b=0;b<6;b++) KT[a][b]+=t*row[b]; } }
+          if(taban) for(let ax=0;ax<3;ax++){
+            if(kt[ax] > 0) oran = Math.max(oran, (taban[i][ax] > 0) ? kt[ax]/taban[i][ax] : Infinity);
+          }
         }
       }
-      return {g6, KT};
+      return {g6, KT, oran};
     }
     // Statik dengedeki iç kuvvet — Ψ(0)=0 olsun diye bir kez.
     const gStat = nl ? internal(q0, false).g6 : null;
@@ -1784,16 +2055,37 @@ var veMountCore = (function() {
       return [law[0].force(dd[0]), law[1].force(dd[1]), law[2].force(dd[2]) + stopForce(i, dd[2])];
     }) : null;
 
-    // Lineer yolda etkin matris BİR KEZ kurulur; Newton yolunda her adımda
-    // tanjanttan yeniden (K_T değişiyor — değişmediğini varsaymak tam olarak
-    // düzeltilen hataydı).
-    const Keff = nl ? null : (function(){
-      const E = zeros(6,6);
-      for(let i=0;i<6;i++) for(let j=0;j<6;j++) E[i][j] = K6[i][j] + a0*M6[i][j] + a1*C6[i][j];
-      return E;
-    })();
-    const tol = NL_RTOL * (M6[0][0]*A*g + 1);
-    let newtonIters = 0, converged = true, stopHit = false;
+    // ── Koşullu kararlılık: Δt kendiliğinden sınırın altına iner ──
+    // Sınır ω_en·Δt ≤ pay·Ω_kritik. Lineer yolda K6 sabit, en yüksek mod modal
+    // çözümün kendisi — sınır KESİN. Newton yolunda başlangıç sınırı statik
+    // dengedeki tanjanttan (+ q₀'da oturmuş durdurucu); sonrası adım adım
+    // izlenir (kos → izle).
+    const OmegaSinir = P.kosullu ? GECICI_KARARLILIK_PAYI*P.OmegaKrit : Infinity;
+    let dtKisit = false, kararli = true, omegaA = 0, kA = null;
+    if(P.kosullu){
+      let wEn;
+      if(nl){
+        kA = mounts.map(function(_, i){
+          const law = laws[i], dd = d0[i];
+          return [law[0].tangent(dd[0]), law[1].tangent(dd[1]),
+                  law[2].tangent(dd[2]) + stopTangent(i, dd[2])]
+            .map(function(k){ return (k > 0) ? k : 0; });
+        });
+        omegaA = _omegaMaks(buildKfromBasis(mounts, cg, kA), M6);
+        wEn = omegaA;
+      } else {
+        wEn = 2*Math.PI*fHi;
+      }
+      if(wEn*dt > OmegaSinir){
+        dtKisit = true;
+        dt = OmegaSinir / wEn;
+        nStep = Math.ceil(tEnd / dt);
+        if(nStep > GECICI_ADIM_UST_KARARLI){ nStep = GECICI_ADIM_UST_KARARLI; dt = tEnd / nStep; kararli = false; }
+      }
+    }
+
+    const tol = ayar.newtonTol * (M6[0][0]*A*g + 1);
+    const maxIter = ayar.newtonMaxIter;
 
     // a(t): yarım sinüs [m/s²]
     const aOf = function(t){
@@ -1806,138 +2098,212 @@ var veMountCore = (function() {
       return F;
     };
 
-    let q = [0,0,0,0,0,0], qd = [0,0,0,0,0,0];
-    // q̈₀ = M⁻¹(F₀ − C q̇₀ − K q₀); yarım sinüste F(0)=0 → sıfır, yine de genel
-    // kalsın diye çözülür (başka darbe biçimi eklenirse doğru başlar).
-    let qdd = solveLinear(M6, Fof(0)) || [0,0,0,0,0,0];
+    // Tek koşu: verilen Δt ile baştan sona. izle → koşullu yöntemin Newton
+    // yolunda her adımın başındaki tanjant kararlılık sınırıyla kıyaslanır;
+    // kes → aşınca koşu kesilir ({ ihlal: Ω }), değilse işaretlenir (ihlalVar).
+    function kos(dt, nStep, izle, kes){
+      const every = Math.max(1, Math.ceil(nStep / OUT_MAX));
+      const a0 = 1/(beta*dt*dt), a1 = gamma/(beta*dt), a2 = 1/(beta*dt);
+      const a3 = 1/(2*beta) - 1, a4 = gamma/beta - 1, a5 = dt*(gamma/(2*beta) - 1);
+      // Genelleştirilmiş-α katsayıları (türetme yukarıda): kütle terimi αm'de,
+      // sönüm ve iç kuvvet αf'de. αm = αf = 0'da a₀ … a₅'in kendileri.
+      const kf = 1 - alfaF;
+      const m0 = (1 - alfaM)*a0, m2 = (1 - alfaM)*a2, m3 = (1 - alfaM)*a3 - alfaM;
+      const c1 = kf*a1, c4 = kf*a4 - alfaF, c5 = kf*a5;
 
-    const out = { t: [], a: [], q: [], qd: [], dMax: [], dTotMax: [],
-                  per: mounts.map(function(){ return { f: [], fz: [], d: [] }; }),
-                  dir: dir, aPeak: A, dur: tau, dt: dt, tEnd: tEnd,
-                  nonlinear: nl, useStop: useStop, q0: q0.slice(),
-                  d0: d0.map(function(d){
-                    return Math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2])*1000; }) };
+      // Lineer yolda etkin matris BİR KEZ kurulur; Newton yolunda her adımda
+      // tanjanttan yeniden (K_T değişiyor — değişmediğini varsaymak tam olarak
+      // düzeltilen hataydı).
+      const Keff = nl ? null : (function(){
+        const E = zeros(6,6);
+        for(let i=0;i<6;i++) for(let j=0;j<6;j++) E[i][j] = kf*K6[i][j] + m0*M6[i][j] + c1*C6[i][j];
+        return E;
+      })();
+      let newtonIters = 0, converged = true, stopHit = false, ihlalVar = false;
 
-    const record = function(t, q_, qd_){
-      out.t.push(t);
-      out.a.push(aOf(t)/g);                       // kayıtta [g]
-      out.q.push(q_.slice());
-      out.qd.push(qd_.slice());
-      let worst = 0, worstTot = 0;
-      for(let i=0;i<mounts.length;i++){
-        const Ai = AA[i];
-        let dR=[0,0,0], vR=[0,0,0];
-        for(let r=0;r<3;r++){
-          let sv=0, svv=0;
-          for(let c=0;c<6;c++){ sv += Ai[r][c]*q_[c]; svv += Ai[r][c]*qd_[c]; }
-          dR[r]=sv; vR[r]=svv;
-        }
-        const cc = cList[i];
-        // Kuvvet, statik dengeye GÖRE artıştır (kanalın bugünkü anlamı korunur:
-        // statik pay Sonuçlar'ın yük durumu tablosunda zaten var). Lineer
-        // takozda φ(δ₀+δ)−φ(δ₀) = k·δ → eski değerle BİREBİR aynı.
-        let fv;
-        if(nl){
-          const law=laws[i], dd=d0[i], fs=fStat[i];
-          const tz = dd[2]+dR[2];
-          fv = [law[0].force(dd[0]+dR[0]) - fs[0] + cc[0]*vR[0],
-                law[1].force(dd[1]+dR[1]) - fs[1] + cc[1]*vR[1],
-                law[2].force(tz) + stopForce(i, tz) - fs[2] + cc[2]*vR[2]];
-          if(useStop && Math.abs(tz) > gap) stopHit = true;
-        } else {
-          const k = kb[i];
-          fv = [k[0]*dR[0] + cc[0]*vR[0],
-                k[1]*dR[1] + cc[1]*vR[1],
-                k[2]*dR[2] + cc[2]*vR[2]];
-        }
-        out.per[i].f.push(Math.sqrt(fv[0]*fv[0]+fv[1]*fv[1]+fv[2]*fv[2]));
-        out.per[i].fz.push(fv[2]);
-        const dm = Math.sqrt(dR[0]*dR[0]+dR[1]*dR[1]+dR[2]*dR[2])*1000;
-        out.per[i].d.push(dm);
-        if(mounts[i].aski) continue;              // en büyük TAKOZ sehimi: askı yayı sayılmaz
-        if(dm > worst) worst = dm;
-        // TOPLAM sehim (statik + darbe) — ±15 mm durdurucu boşluğu YÜKSÜZ
-        // konumdan ölçülür, dolayısıyla sınırla karşılaştırılacak büyüklük budur.
-        const dd0 = d0[i];
-        const tx = dd0[0]+dR[0], ty = dd0[1]+dR[1], tz2 = dd0[2]+dR[2];
-        const dt2 = Math.sqrt(tx*tx + ty*ty + tz2*tz2)*1000;
-        if(dt2 > worstTot) worstTot = dt2;
-      }
-      out.dMax.push(worst);
-      out.dTotMax.push(worstTot);
-    };
+      let q = [0,0,0,0,0,0], qd = [0,0,0,0,0,0];
+      // q̈₀ = M⁻¹(F₀ − C q̇₀ − K q₀); yarım sinüste F(0)=0 → sıfır, yine de genel
+      // kalsın diye çözülür (başka darbe biçimi eklenirse doğru başlar).
+      let qdd = solveLinear(M6, Fof(0)) || [0,0,0,0,0,0];
+      // Ψ(qₙ) — iç kuvvetin ortalaması için (Newton yolu, αf ≠ 0); Ψ(0) = 0.
+      const psiN = (nl && alfaF) ? [0,0,0,0,0,0] : null;
 
-    record(0, q, qd);
-    for(let n=1;n<=nStep;n++){
-      const t = n*dt;
-      const F = Fof(t);
-      let qn;
-      if(!nl){
-        // ── Lineer yol (ESKİ): sabit K_eff, adım başına tek çözüm ──
-        const rhs = [0,0,0,0,0,0];
-        for(let i=0;i<6;i++){
-          let mTerm=0, cTerm=0;
-          for(let j=0;j<6;j++){
-            mTerm += M6[i][j]*(a0*q[j] + a2*qd[j] + a3*qdd[j]);
-            cTerm += C6[i][j]*(a1*q[j] + a4*qd[j] + a5*qdd[j]);
+      const out = { t: [], a: [], q: [], qd: [], dMax: [], dTotMax: [],
+                    per: mounts.map(function(){ return { f: [], fz: [], d: [] }; }),
+                    dir: dir, aPeak: A, dur: tau, dt: dt, tEnd: tEnd,
+                    nonlinear: nl, useStop: useStop, q0: q0.slice(),
+                    d0: d0.map(function(d){
+                      return Math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2])*1000; }) };
+
+      const record = function(t, q_, qd_){
+        out.t.push(t);
+        out.a.push(aOf(t)/g);                       // kayıtta [g]
+        out.q.push(q_.slice());
+        out.qd.push(qd_.slice());
+        let worst = 0, worstTot = 0;
+        for(let i=0;i<mounts.length;i++){
+          const Ai = AA[i];
+          let dR=[0,0,0], vR=[0,0,0];
+          for(let r=0;r<3;r++){
+            let sv=0, svv=0;
+            for(let c=0;c<6;c++){ sv += Ai[r][c]*q_[c]; svv += Ai[r][c]*qd_[c]; }
+            dR[r]=sv; vR[r]=svv;
           }
-          rhs[i] = F[i] + mTerm + cTerm;
+          const cc = cList[i];
+          // Kuvvet, statik dengeye GÖRE artıştır (kanalın bugünkü anlamı korunur:
+          // statik pay Sonuçlar'ın yük durumu tablosunda zaten var). Lineer
+          // takozda φ(δ₀+δ)−φ(δ₀) = k·δ → eski değerle BİREBİR aynı.
+          let fv;
+          if(nl){
+            const law=laws[i], dd=d0[i], fs=fStat[i];
+            const tz = dd[2]+dR[2];
+            fv = [law[0].force(dd[0]+dR[0]) - fs[0] + cc[0]*vR[0],
+                  law[1].force(dd[1]+dR[1]) - fs[1] + cc[1]*vR[1],
+                  law[2].force(tz) + stopForce(i, tz) - fs[2] + cc[2]*vR[2]];
+            if(useStop && Math.abs(tz) > gap) stopHit = true;
+          } else {
+            const k = kb[i];
+            fv = [k[0]*dR[0] + cc[0]*vR[0],
+                  k[1]*dR[1] + cc[1]*vR[1],
+                  k[2]*dR[2] + cc[2]*vR[2]];
+          }
+          out.per[i].f.push(Math.sqrt(fv[0]*fv[0]+fv[1]*fv[1]+fv[2]*fv[2]));
+          out.per[i].fz.push(fv[2]);
+          const dm = Math.sqrt(dR[0]*dR[0]+dR[1]*dR[1]+dR[2]*dR[2])*1000;
+          out.per[i].d.push(dm);
+          if(mounts[i].aski) continue;              // en büyük TAKOZ sehimi: askı yayı sayılmaz
+          if(dm > worst) worst = dm;
+          // TOPLAM sehim (statik + darbe) — ±15 mm durdurucu boşluğu YÜKSÜZ
+          // konumdan ölçülür, dolayısıyla sınırla karşılaştırılacak büyüklük budur.
+          const dd0 = d0[i];
+          const tx = dd0[0]+dR[0], ty = dd0[1]+dR[1], tz2 = dd0[2]+dR[2];
+          const dt2 = Math.sqrt(tx*tx + ty*ty + tz2*tz2)*1000;
+          if(dt2 > worstTot) worstTot = dt2;
         }
-        qn = solveLinear(Keff, rhs);
-        if(!qn) return null;
-      } else {
-        // ── Newton yolu: adım başına denge iterasyonu ──
-        const qP=q, qdP=qd, qddP=qdd;
-        const evalR = function(x, wantK){
-          const tot = [0,0,0,0,0,0];
-          for(let i=0;i<6;i++) tot[i] = q0[i] + x[i];
-          const asm = internal(tot, wantK);
-          const r=[0,0,0,0,0,0];
+        out.dMax.push(worst);
+        out.dTotMax.push(worstTot);
+      };
+
+      record(0, q, qd);
+      for(let n=1;n<=nStep;n++){
+        const t = n*dt;
+        // Dış kuvvet ara anda: t_{n+1−αf} = t_{n+1} − αf·Δt (Newmark'ta t_{n+1})
+        const F = Fof(alfaF ? t - alfaF*dt : t);
+        let qn;
+        if(!nl){
+          // ── Lineer yol: sabit K_eff, adım başına tek çözüm ──
+          const rhs = [0,0,0,0,0,0];
           for(let i=0;i<6;i++){
-            let mT=0, cT=0;
+            let mTerm=0, cTerm=0;
             for(let j=0;j<6;j++){
-              mT += M6[i][j]*(a0*(x[j]-qP[j]) - a2*qdP[j] - a3*qddP[j]);
-              cT += C6[i][j]*(a1*(x[j]-qP[j]) - a4*qdP[j] - a5*qddP[j]);
+              mTerm += M6[i][j]*(m0*q[j] + m2*qd[j] + m3*qdd[j]);
+              cTerm += C6[i][j]*(c1*q[j] + c4*qd[j] + c5*qdd[j]);
             }
-            r[i] = asm.g6[i] - gStat[i] + mT + cT - F[i];
+            rhs[i] = F[i] + mTerm + cTerm;
+            if(alfaF){                              // − αf·K·dₙ
+              let kTerm=0;
+              for(let j=0;j<6;j++) kTerm += K6[i][j]*q[j];
+              rhs[i] -= alfaF*kTerm;
+            }
           }
-          return {r:r, KT:asm.KT};
-        };
-        let x = q.slice(), ok = false;
-        for(let it=0; it<SHOCK_NEWTON_MAXITER; it++){
-          newtonIters++;
-          const e = evalR(x, true);
-          const rn = norm(e.r);
-          if(rn <= tol){ ok = true; break; }
-          const J = zeros(6,6);
-          for(let i=0;i<6;i++) for(let j=0;j<6;j++)
-            J[i][j] = e.KT[i][j] + a0*M6[i][j] + a1*C6[i][j];
-          const dq = solveLinear(J, e.r.map(function(v){ return -v; }));
-          if(!dq) return null;
-          // Geri-izlemeli sönüm — solveCaseNL ile aynı: adım artığı büyütürse yarıla.
-          let lam=1, xn=x.map(function(v,i){ return v+dq[i]; });
-          let rnn=norm(evalR(xn,false).r), bt=0;
-          while(rnn>rn && bt<12){
-            lam*=0.5; xn=x.map(function(v,i){ return v+lam*dq[i]; });
-            rnn=norm(evalR(xn,false).r); bt++;
+          qn = solveLinear(Keff, rhs);
+          if(!qn) return null;
+        } else {
+          // ── Newton yolu: adım başına denge iterasyonu ──
+          const qP=q, qdP=qd, qddP=qdd;
+          let sonG6 = null;                         // son değerlendirmenin iç kuvveti
+          const evalR = function(x, wantK, taban){
+            const tot = [0,0,0,0,0,0];
+            for(let i=0;i<6;i++) tot[i] = q0[i] + x[i];
+            const asm = internal(tot, wantK, taban);
+            sonG6 = asm.g6;
+            const r=[0,0,0,0,0,0];
+            for(let i=0;i<6;i++){
+              let mT=0, cT=0;
+              for(let j=0;j<6;j++){
+                mT += M6[i][j]*(m0*(x[j]-qP[j]) - m2*qdP[j] - m3*qddP[j]);
+                cT += C6[i][j]*(c1*(x[j]-qP[j]) - c4*qdP[j] - c5*qddP[j]);
+              }
+              r[i] = kf*(asm.g6[i] - gStat[i]) + mT + cT - F[i];
+              if(psiN) r[i] += alfaF*psiN[i];
+            }
+            return {r:r, KT:asm.KT, oran:asm.oran};
+          };
+          let x = q.slice(), ok = false;
+          for(let it=0; it<maxIter; it++){
+            newtonIters++;
+            const izleBu = izle && it === 0 && !ihlalVar;
+            const e = evalR(x, true, izleBu ? kA : null);
+            if(izleBu){
+              // Adımın başındaki (yakınsamış) durumun tanjantı sınırda mı? Önce
+              // ucuz üst sınır √r·ω_A·Δt; gevşekse kesin en yüksek frekans.
+              let Om = Math.sqrt(e.oran)*omegaA*dt;
+              if(!(Om <= OmegaSinir)) Om = _omegaMaks(e.KT, M6)*dt;
+              if(!(Om <= OmegaSinir)){
+                if(kes) return { ihlal: Om };
+                ihlalVar = true;
+              }
+            }
+            const rn = norm(e.r);
+            if(rn <= tol){ ok = true; break; }
+            const J = zeros(6,6);
+            for(let i=0;i<6;i++) for(let j=0;j<6;j++)
+              J[i][j] = kf*e.KT[i][j] + m0*M6[i][j] + c1*C6[i][j];
+            const dq = solveLinear(J, e.r.map(function(v){ return -v; }));
+            if(!dq) return null;
+            // Geri-izlemeli sönüm — solveCaseNL ile aynı: adım artığı büyütürse yarıla.
+            let lam=1, xn=x.map(function(v,i){ return v+dq[i]; });
+            let rnn=norm(evalR(xn,false).r), bt=0;
+            while(rnn>rn && bt<12){
+              lam*=0.5; xn=x.map(function(v,i){ return v+lam*dq[i]; });
+              rnn=norm(evalR(xn,false).r); bt++;
+            }
+            x = xn;
+            if(rnn <= tol){ ok = true; break; }
           }
-          x = xn;
-          if(rnn <= tol){ ok = true; break; }
+          if(!ok) converged = false;
+          qn = x;
+          // Sonraki adımın ortalaması için Ψ(q_{n+1}): son değerlendirme her
+          // yolda (yakınsama, geri izleme, üst sınır) kabul edilen x'te yapıldı.
+          if(psiN) for(let i=0;i<6;i++) psiN[i] = sonG6[i] - gStat[i];
         }
-        if(!ok) converged = false;
-        qn = x;
+        const qddN = [], qdN = [];
+        for(let i=0;i<6;i++){
+          qddN.push(a0*(qn[i]-q[i]) - a2*qd[i] - a3*qdd[i]);
+          qdN.push(qd[i] + dt*((1-gamma)*qdd[i] + gamma*qddN[i]));
+        }
+        q = qn; qd = qdN; qdd = qddN;
+        if(n % every === 0 || n === nStep) record(t, q, qd);
       }
-      const qddN = [], qdN = [];
-      for(let i=0;i<6;i++){
-        qddN.push(a0*(qn[i]-q[i]) - a2*qd[i] - a3*qdd[i]);
-        qdN.push(qd[i] + dt*((1-gamma)*qdd[i] + gamma*qddN[i]));
-      }
-      q = qn; qd = qdN; qdd = qddN;
-      if(n % every === 0 || n === nStep) record(t, q, qd);
+      out.stopHit = stopHit;
+      out.converged = converged;
+      out.newtonIters = newtonIters;
+      return { out: out, ihlalVar: ihlalVar };
     }
-    out.stopHit = stopHit;
-    out.converged = converged;
-    out.newtonIters = newtonIters;
+
+    // Koşullu yöntemin Newton yolunda tanjant sınırı aşarsa Δt aşan tanjanta
+    // göre küçülür ve koşu baştan yapılır. Yeniden koşu hakkı ya da adım
+    // bütçesi biterse son koşu kesilmez, işaretlenir (kararli = false).
+    const izle = !!(P.kosullu && nl);
+    let sonuc = null;
+    for(let deneme = 0; ; deneme++){
+      const kes = izle && kararli && deneme < GECICI_YENIDEN_MAX;
+      sonuc = kos(dt, nStep, izle, kes);
+      if(!sonuc) return null;
+      if(!sonuc.ihlal) break;
+      dtKisit = true;
+      dt *= (sonuc.ihlal > 0 && Number.isFinite(sonuc.ihlal))
+            ? GECICI_YENIDEN_PAYI*OmegaSinir/sonuc.ihlal : 0.25;
+      nStep = Math.ceil(tEnd / dt);
+      if(nStep > GECICI_ADIM_UST_KARARLI){ nStep = GECICI_ADIM_UST_KARARLI; dt = tEnd / nStep; kararli = false; }
+    }
+    if(sonuc.ihlalVar) kararli = false;
+    const out = sonuc.out;
+    out.entegrator = P.ad;
+    out.param = { alfaM: alfaM, alfaF: alfaF, beta: beta, gamma: gamma, rhoInf: P.rhoInf };
+    out.adimPeriyot = N;
+    out.dtKisit = dtKisit;
+    out.kararli = kararli;
     return out;
   }
 
@@ -3233,6 +3599,7 @@ var veMountCore = (function() {
     mountLoadShares, mountDamping, sectionMoment, motionEnvelope,
     ASKI_BLOK_KAT, askiDurum, askiKuvvet, askiEleman, askiTakozlari, askiYasalari, yukeKuvvetEkle, noktaYerDegisimi, askiTasarimBoylari, solveWithHangers,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
+    entegratorParam, entegratorYukseltme, geciciAyar, GECICI_VARSAYILAN,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
     modalSensitivity, modesWithSpringScale, springScaleFor,
