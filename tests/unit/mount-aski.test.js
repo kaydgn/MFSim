@@ -290,8 +290,10 @@ describe('TTA ASKILI — örnek, programın yolundan', () => {
     expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(XA.yay.map((y) => [y[1], y[2], y[3]]));
     as.forEach((n) => expect(n.data).toMatchObject({ yay: 'tta-aski', kurulum: 'kuvvet', montajF: 80, L0: 90, Lc: 63 }));
     const M = core.getMountExample('tta10askili').model;
-    expect(M.askilar.map((a) => a.pos)).toEqual(as.map((n) => [n.data.x, n.data.y, n.data.z]));
-    expect(M.mounts.map((m) => m.kstat.concat(m.kdyn))).toEqual(tak.map((n) => alti(n.data)));
+    // iki kopya (çekirdeğin örneği · topoloji dosyası) ad, yay ve kurulum dâhil aynı
+    expect(M.askilar.map((a) => [a.name, a.pos, a.yay, a.k, a.L0, a.Lc, a.kurulum, a.montajF]))
+      .toEqual(as.map((n) => [n.customName, [n.data.x, n.data.y, n.data.z], n.data.yay, n.data.k, n.data.L0, n.data.Lc, n.data.kurulum, n.data.montajF]));
+    expect(M.mounts.map((m) => [m.name].concat(m.kstat, m.kdyn))).toEqual(tak.map((n) => [n.customName].concat(alti(n.data))));
   });
   test('statik: yaylar 80 kgf (76,33 mm), ΣFz dengede; M_b 119,9 N·m (askısız 1.173,1)', () => {
     const s = st(R).res;
