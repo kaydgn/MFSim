@@ -519,7 +519,7 @@ var _GM_KUTUPHANE = [
 var _GM_PARAM = [
   { k: 'yerlesim', bolum: 'Takoz yerleşimi', ad: 'Takoz yerleşimi', not: 'Takozlar yerlerine göre gruplu: çizim ve grupların föyü.' },
   { k: 'plan', s: '.ve-prm-ak', ad: 'Çizim', yer: 'sag', not: 'Güç grubu; takozun çipi grubun numarası, küpü grubun rengi. Sürükle döndürür.' },
-  { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Taranan grup ve kombinasyon sayısı.' }
+  { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Kütüphanenin tip sayıları, taranan grup ve kombinasyon sayısı.' }
 ];
 
 var _GM_PARAM_ADAY = [
@@ -1118,7 +1118,7 @@ function _gmSec9(){
     + 'değiştiği için oran tipin özelliğidir (Cone 39’un üç sertliğinde 1,86 · 1,91 · 1,78). Oran sırayla '
     + 'aynı tipin AMC değerinden, yoksa aynı ailenin AMC-EO’daki tiplerinden, yoksa AMC-EO’daki bütün '
     + 'tiplerden (medyan) gelir; dinamik değer statik × dinamik/statik oranıdır. Tahminli tip çözülür, '
-    + 'raporda değeri ≈ ile yazılır; katalog taramasına aday olmaz. Üreticinin değeri girilince o eksen '
+    + 'raporda değeri ≈ ile yazılır ve Parametrik Analiz’in aday tiplerine girer. Üreticinin değeri girilince o eksen '
     + 'tahmin olmaktan çıkar.');
   h += _gmH3('Nonlineer z-eğrisi', 'egri');
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
@@ -1716,7 +1716,9 @@ function _gmSec17(){
     + '(' + _gmS('parametrik-aday') + '): <strong>Tüm kombinasyonlar</strong> (varsayılan) her grupta bütün '
     + 'aday tipleri dener; <strong>Özel kombinasyon</strong> seçilince her grubun tipleri arama kutusundan '
     + 'eklenir — yazılan sözcükler tipin adında ve markasında aranır, satıra tık ya da Enter tipi gruba ekler. '
-    + 'Tip eklenmeyen grup mevcut tipinde kalır.</p>';
+    + 'Tip eklenmeyen grup mevcut tipinde kalır. Takoz Özellikleri’nde eklenen ya da rijitliği tamamlanan '
+    + 'tip kendiliğinden aday olur. <strong>Analiz</strong> kütüphanenin tip sayılarını, taranan grup ve '
+    + 'kombinasyon sayısını yazar.</p>';
   h += _gmSahne('parametrik-p', _gmPencere('mnt-parametric', { tut: ['Takoz yerleşimi'] }),
     'Parametrik Analiz penceresi, örnek model: Takoz yerleşimi ve Analiz.', null, _GM_PARAM);
   h += _gmSahne('parametrik-aday', _gmPencere('mnt-parametric', { tut: ['Adaylar'], yan: false,
@@ -1728,11 +1730,11 @@ function _gmSec17(){
       + 'birebir taşıyan kütüphane tipidir'],
     ['Adaylar', 'Kip (Tüm kombinasyonlar · Özel kombinasyon); özelde grup başına numara, ad, tip sayısı, '
       + 'arama kutusu ve eklenen tipler (ad, kz, kaldır)',
-      'Aday: altı rijitliği tam ve tahminsiz kütüphane tipi. Tip eklenmeyen grup mevcut tipinde kalır'],
-    ['Analiz', 'Taranan grup, kombinasyon',
-      'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 24’er tip: 13.824); '
-      + 'üst sınır ' + ((typeof veMntKatalog !== 'undefined' && typeof veSayi === 'function')
-        ? veSayi(veMntKatalog.MAKS_KOMB, 0) : '200.000')]
+      'Aday: altı rijitliği tam kütüphane tipi, tahmini rijitlikli tip de. Tip eklenmeyen grup mevcut tipinde kalır'],
+    ['Analiz', 'Kayıtlı takoz, aday tip (ölçülü ve tahmini rijitlik), rijitlik eksik, aday değil, taranan grup, kombinasyon',
+      'Kayıtlı takoz: aday tip + rijitlik eksik + aday değil. Rijitliği eksik tip çözülmez; aday değil, '
+      + 'taramanın dışında tutulan tiptir. '
+      + 'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 10’ar tip: 1.000)']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   return h;
 }

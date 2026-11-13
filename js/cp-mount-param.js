@@ -54,7 +54,9 @@ function _mntParamModel(liste){
 // TAHMİNİ tip (AMC'nin yayımlamadığı 132 kod, Canlı Not 113) çözülür ama aday
 // DEĞİL — öneri ölçülmüş değerle verilir ve tarama 24 tipten 156'ya çıkardı
 // (üç grupta 13.824 → 3,8 milyon kombinasyon); Takoz Özellikleri'nde radyali
-// girilince aday olur (cp-mount.js → _mntLibTam · _mntLibTahmin).
+// girilince aday olur (cp-mount.js → _mntLibTam · _mntLibTahmin). PARKTAKİ taramanın
+// listesi: pencerenin Tüm kombinasyonlar'ı Canlı Not 1008'den beri tahminli tipi de
+// alır (_mntParamAdayTipler).
 function _mntParamAdaylar(M, node){
   if(_mntParamAnaliz(node)==='konum') return _mntParamKonumAdaylar(node).adaylar;
   var haric={};
@@ -126,8 +128,7 @@ function _mntParamHazirlik(node, liste){
   var eksik=!M.tak.length ? 'Takoz yok'
     : !(M.fAtes>0) ? 'Rölanti devri ve silindir sayısı yok'
     : !aday.length ? 'Aday tip yok'
-    : !N ? 'Taranacak grup yok'
-    : N>veMntKatalog.MAKS_KOMB ? 'Kombinasyon sayısı '+_mntS(veMntKatalog.MAKS_KOMB, 0)+' üstünde' : '';
+    : !N ? 'Taranacak grup yok' : '';
   return { M:M, A:A, aday:aday, sabit:sabit, N:N, eksik:eksik, ctx:_mntParamCtx(M, node), analiz:analiz };
 }
 
@@ -313,13 +314,29 @@ function getMntParamPropertiesHTML(node){
   ], _mntParamYeniYanHTML(node, Y));
 }
 
-// Aday tipler: kütüphanenin TAM ve TAHMİNSİZ tipleri, aday:false olmayanlar (eski pencerenin
-// kuralı — tahminli tip çözülür ama aday değil: _mntParamAdaylar); kütüphane sırası.
+// ADAY TİPLER (kullanıcı 2026-11-13, Canlı Not 1008: *"Tüm kombinasyonlara 'tüm takozların' dahil
+// olduğundan ve takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"*): etkin kütüphanenin
+// (gömülü + değiştirilmiş + Takoz Özellikleri'nde eklenen özel tip) ÇÖZÜLEBİLEN her tipi, kütüphane
+// sırasıyla — tahmini rijitlikli tip DE (Canlı Not 113'ün tahmini; 23 → 235 tip). Liste her
+// kurulumda haritadan türer: eklenen tip kendiliğinden aday olur. Aday değil: rijitliği eksik tip
+// (altı rijitlikten biri yok — çözücü reddeder; Takoz Özellikleri'nde girilince aday olur) ve
+// `aday:false` tip (Canlı Not 133). Analiz'in sayıları AYNI sınıftan (_mntParamKutuphane). Parktaki
+// taramanın listesi eskisi (tahminsiz, _mntParamAdaylar) — tarama bağlanırken bu listeye geçer.
+function _mntParamTipSinif(e){
+  if(!e || e.aday===false) return 'disi';
+  if(typeof _mntLibTam==='function' && !_mntLibTam(e)) return 'eksik';
+  return (typeof _mntLibTahmin==='function' && _mntLibTahmin(e).length) ? 'tahmini' : 'olculu';
+}
 function _mntParamAdayTipler(M){
-  var tam=(typeof _mntLibTam==='function') ? _mntLibTam : function(){ return true; };
-  var tahmin=(typeof _mntLibTahmin==='function') ? _mntLibTahmin : function(){ return []; };
-  return Object.keys(M.lib).filter(function(k){ return M.lib[k].aday!==false && tam(M.lib[k]) && !tahmin(M.lib[k]).length; })
+  return Object.keys(M.lib).filter(function(k){ var s=_mntParamTipSinif(M.lib[k]); return s==='olculu' || s==='tahmini'; })
     .map(function(k){ return { key:k, name:M.lib[k].name, e:M.lib[k], dahil:true }; });
+}
+// Kütüphanenin sayıları: kayıtlı tip, aday (ölçülü + tahmini), rijitliği eksik, aday dışı.
+function _mntParamKutuphane(M){
+  var S={ kayitli:0, olculu:0, tahmini:0, eksik:0, disi:0 };
+  Object.keys(M.lib).forEach(function(k){ S.kayitli++; S[_mntParamTipSinif(M.lib[k])]++; });
+  S.aday=S.olculu+S.tahmini;
+  return S;
 }
 // ADAYLARIN KİPİ (Canlı Not 1005: *"kullanıcı bunları tek tek seçerek uğraşmasın. Program default
 // olarak TÜM TAKOZ KOMBİNASYONLARINI analiz etsin"*): 'hepsi' (varsayılan — her grupta bütün aday
@@ -328,11 +345,12 @@ var VE_MNT_PARAM_ADAY_KIP = [['hepsi', 'Tüm kombinasyonlar'], ['ozel', 'Özel k
 function _mntParamAdayKip(node){
   return (node && node.data && node.data.adaylarKip==='ozel') ? 'ozel' : 'hepsi';
 }
-// Pencerenin bütün girdisi: model, gruplar, aday tipler, kip, özelin seçimi ve kombinasyon.
-// `say` grup başına denenecek tip sayısı (0: grup mevcut tipinde). Seçimden bugün olmayan grup,
-// aday olmayan tip ve tekrar düşer (model ya da kütüphane değişmiş olabilir).
+// Pencerenin bütün girdisi: model, gruplar, aday tipler, kütüphanenin sayıları (K), kip, özelin
+// seçimi ve kombinasyon. `say` grup başına denenecek tip sayısı (0: grup mevcut tipinde). Seçimden
+// bugün olmayan grup, aday olmayan tip ve tekrar düşer (model ya da kütüphane değişmiş olabilir).
+// Kombinasyonun üst sınırı YOK (kullanıcı 2026-11-13: *"Bu limiti kaldıralım"*; eskiden 200.000).
 function _mntParamYeni(node){
-  var M=_mntParamModel(), A=_mntParamAdayTipler(M), kip=_mntParamAdayKip(node);
+  var M=_mntParamModel(), A=_mntParamAdayTipler(M), K=_mntParamKutuphane(M), kip=_mntParamAdayKip(node);
   var ham=(node && node.data && node.data.adaylar) || {};
   var var_={};
   A.forEach(function(a){ var_[a.key]=true; });
@@ -348,10 +366,8 @@ function _mntParamYeni(node){
   var say=M.G.map(function(g){ return kip==='ozel' ? (sec[g.anahtar] || []).length : A.length; });
   var taranan=say.filter(function(s){ return s>0; }).length;
   var N=taranan ? say.reduce(function(p, s){ return p*(s || 1); }, 1) : 0;
-  var eksik=!M.tak.length ? 'Takoz yok'
-    : !A.length ? 'Aday tip yok'
-    : N>veMntKatalog.MAKS_KOMB ? 'Kombinasyon sayısı '+_mntS(veMntKatalog.MAKS_KOMB, 0)+' üstünde' : '';
-  return { M:M, A:A, kip:kip, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
+  var eksik=!M.tak.length ? 'Takoz yok' : !A.length ? 'Aday tip yok' : '';
+  return { M:M, A:A, K:K, kip:kip, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
 }
 
 // YERLEŞİMİN ÇİZİMİ (Canlı Not 1003: *"daha güzel yapalım. Çok sade olmuş."*) — güç grubunun
@@ -412,7 +428,7 @@ function _mntParamYerlesimHTML(node, Y){
 // yerinde tazelenir (`data-tazele`); arama kutusu TAZELENMEZ — ekleyince odak ve imleç kutuda kalır.
 function _mntParamAdaylarHTML(node, Y){
   var G=Y.M.G, A=Y.A;
-  if(!G.length || !A.length) return _mntBolum('Adaylar', A.length+' tip', '');   // durum sağ sütunda, bir kez
+  if(!G.length || !A.length) return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', '');   // durum sağ sütunda, bir kez
   var h='<div class="ve-prm-kip" role="group" aria-label="Adaylar">'+VE_MNT_PARAM_ADAY_KIP.map(function(k){
     return '<button type="button" data-kip="'+k[0]+'" aria-pressed="'+(k[0]===Y.kip)+'"'
       + ' onclick="veMntParamAdayKip(\''+node.id+'\',\''+k[0]+'\')">'+k[1]+'</button>';
@@ -421,7 +437,7 @@ function _mntParamAdaylarHTML(node, Y){
     var S=_mntParamListeSira(A);
     h+='<div class="ve-prm-oz-l">'+G.map(function(g){ return _mntParamOzelHTML(node, Y, g, S); }).join('')+'</div>';
   }
-  return _mntBolum('Adaylar', A.length+' tip', h);
+  return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', h);
 }
 function _mntParamOzelHTML(node, Y, g, S){
   var id=node.id+'-'+g.no, lid='ve-mnt-param-ara-l-'+id, n=(Y.sec[g.anahtar] || []).length;
@@ -461,10 +477,18 @@ function _mntParamListeSira(A){
   return A.slice().sort(function(a, b){ return sira(a)-sira(b); });
 }
 
-// Sağ sütun: taranan grup ve kombinasyon; eksik varsa durumu.
+// Sağ sütun: kütüphanenin sayıları (Canlı Not 1008: *"programda kayıtlı olan takoz sayısını vs
+// yazalım. Kullanıcı bilgilensin"*) — kayıtlı tip, aday tip ve ikiye ayrımı (ölçülü · tahmini
+// rijitlik), aday olmayanlar (rijitlik eksik · aday değil); taranan grup ve kombinasyon; eksik
+// varsa durumu. Sayılar haritadan, her kurulumda.
 function _mntParamYeniYanHTML(node, Y){
-  var ozet=_mntBolum('Analiz', '', _mntIzgara(2, _mntOku('Taranan grup', Y.taranan+' / '+Y.M.G.length)
-    + _mntOku('Kombinasyon', _mntS(Y.N, 0))), { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
+  var K=Y.K, n=function(v){ return _mntS(v, 0); };
+  var ozet=_mntBolum('Analiz', '', _mntIzgara(2,
+      _mntOku('Kayıtlı takoz', n(K.kayitli)) + _mntOku('Aday tip', n(K.aday))
+    + _mntOku('Ölçülü rijitlik', n(K.olculu)) + _mntOku('Tahmini rijitlik', n(K.tahmini))
+    + _mntOku('Rijitlik eksik', n(K.eksik)) + _mntOku('Aday değil', n(K.disi))
+    + _mntOku('Taranan grup', Y.taranan+' / '+Y.M.G.length) + _mntOku('Kombinasyon', n(Y.N))),
+    { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
   var yon=Y.eksik ? _mntParamEksikYonu(Y.eksik) : '';
   return ozet+'<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'
     + (Y.eksik ? _mntDurumKutu('<b>'+Y.eksik+'</b>'+(yon ? '. '+yon : ''), 'warn') : '')+'</div>';
@@ -624,7 +648,7 @@ function _mntParamEskiPencereHTML(node){
 }
 
 // Taramanın eksiğine çare — yalnız yolu pencerenin DIŞINDA olan iki eksik;
-// aday, sabit grup ve kombinasyon sınırı aynı pencerede.
+// aday ve sabit grup aynı pencerede.
 function _mntParamEksikYonu(eksik){
   if(eksik === 'Rölanti devri ve silindir sayısı yok') return veYon('Motor penceresinde girin.');
   if(eksik === 'Takoz yok') return veYon('Bileşenler’den takoz ekleyin.');
@@ -1018,6 +1042,7 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntParamPropertiesHTML: getMntParamPropertiesHTML, _mntParamEskiPencereHTML: _mntParamEskiPencereHTML,
     _mntParamYeni: _mntParamYeni, _mntParamAdayTipler: _mntParamAdayTipler, veMntParamGrupAday: veMntParamGrupAday,
+    _mntParamTipSinif: _mntParamTipSinif, _mntParamKutuphane: _mntParamKutuphane, _mntParamYeniYanHTML: _mntParamYeniYanHTML,
     _mntParamAksoVeri: _mntParamAksoVeri, _mntParamRenk: _mntParamRenk,
     VE_MNT_PARAM_ADAY_KIP: VE_MNT_PARAM_ADAY_KIP, _mntParamAdayKip: _mntParamAdayKip, veMntParamAdayKip: veMntParamAdayKip,
     _mntParamAdaylarHTML: _mntParamAdaylarHTML, _mntParamListeSira: _mntParamListeSira, _mntParamKz: _mntParamKz,

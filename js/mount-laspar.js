@@ -46,8 +46,8 @@
 // doğrusal, dışında en yakınınki) — Canlı Not 113'ün kuralı: TAHMİNİ, işaretli. Öteki
 // ailelerde radyalin ölçülmüş benzeri yok → tip eksik, Takoz Özellikleri'nden girilir.
 // DİNAMİK yayımlanmıyor: statik × (Sh+20)/50 (AMC'nin NR konilerinde ölçtüğü yasa,
-// js/mount-amc.js; A+P ile aynı) — tahmini. Kapasite = W (kg). Tahminli tip çözülür,
-// taramaya aday olmaz. Kapı: tests/unit/mount-laspar.test.js.
+// js/mount-amc.js; A+P ile aynı) — tahmini. Kapasite = W (kg). Tahminli tip çözülür ve
+// Parametrik Analiz'in adayıdır (Canlı Not 1008). Kapı: tests/unit/mount-laspar.test.js.
 //
 // ANAHTAR 'lp-' + kodun küçük harfi ('lp-lmt-1433-00-tk60') — DEĞİŞMEZ. Ad: "<ürün>
 // <tip> <sertlik> ShA (LASPAR <kod>)".

@@ -29,7 +29,7 @@
 // (±%20); marine ve jeneratörde yalnız Z (Fz/Sz · yazılı Cz). Kapasite = statik Fz
 // (N/9,81 kg).
 // DİNAMİK TAHMİN (Canlı Not 113'ün kuralı: yayımlanmayan değer modeli reddettirmez,
-// tahminle çözülür ve işaretlenir; tahminli tip taramaya aday olmaz). A+P dinamik
+// tahminle çözülür ve işaretlenir; tahminli tip Parametrik Analiz'in adayıdır — Canlı Not 1008). A+P dinamik
 // rijitlik yayımlamıyor: NR takozda (konik · HD · marine · jeneratör) din./stat. =
 // (Sh+20)/50 — AMC'nin NR konilerinde doğal frekans grafiklerinden ölçülen yasa
 // (js/mount-amc.js; sertlik A+P'nin yaklaşık değeri, "~45 Shore A"). H-takoz CR ve

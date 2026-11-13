@@ -256,8 +256,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // kütüphanedeki yerinde durur — ilk 24 girdinin sırası taramanın kombinasyon
 // sırasıdır. Radyal rijitliği yayımlanmayan kodlarda sx/sy/dx/dy TAHMİNİ (Canlı Not
 // 113: AMC-EO'nun radyal/eksenel oranı, js/mount-amc.js → RADYAL TAHMİN): tip çözülür,
-// girilen değer tahminin yerine geçer, tahminli tip taramaya aday olmaz
-// (_mntLibTahmin); kz'si olmayan DSM kodları EKSİK (_mntLibTam).
+// girilen değer tahminin yerine geçer, tahminli tip Parametrik Analiz'in adayıdır
+// (Canlı Not 1008, _mntLibTahmin); kz'si olmayan DSM kodları EKSİK (_mntLibTam).
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
 // ── ANGST+PFISTER APSOvib® — js/mount-ap.js (86 kod: konik · HD konik · H-takoz ·
@@ -289,7 +289,7 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
 // A26 ve ASR-SR-116'nın dört tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
-// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
+// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK. Kapı:
 // mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
@@ -444,8 +444,8 @@ function _mntLibTam(e){
   return !!e && ['sx','sy','sz','dx','dy','dz'].every(function(f){ return _mntNum(e[f], 0)>0; });
 }
 // Tipin TAHMİNİ alanları (js/mount-amc.js → RADYAL TAHMİN · js/mount-ap.js → DİNAMİK TAHMİN):
-// girilen değer listeden düşer. Tahminli tip çözülür; katalog taramasına aday olmaz
-// (cp-mount-param.js → _mntParamAdaylar).
+// girilen değer listeden düşer. Tahminli tip çözülür ve Parametrik Analiz'in adayıdır
+// (Canlı Not 1008; cp-mount-param.js → _mntParamAdayTipler).
 function _mntLibTahmin(e){
   return (e && Array.isArray(e.tahmin)) ? e.tahmin : [];
 }
