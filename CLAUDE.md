@@ -441,12 +441,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   YOK — Canlı Not 1007: *"Çocukça duruyor"*, kapı `mount-param.test.js` → *NUMARA BALONSUZ*; kaynağı pencere
   `_mntAksoKaynak` → `P.duzelt`, tam ekranı
   yok; kapı `mount-akso.test.js` → *GRUBUN RENGİ*) + **Adaylar** (tip × grup
-  işaret tablosu; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında; işaretsiz
-  grup mevcut tipinde) + sağda taranan grup · kombinasyon (grup sayılarının çarpımı). Aşağıdaki
+  işaret tablosunun yerine İKİ KİP — Canlı Not 1005: *"kullanıcı bunları tek tek seçerek uğraşmasın"*):
+  **Tüm kombinasyonlar** varsayılan (her grupta bütün aday tipler) · **Özel kombinasyon** (`node.data.adaylarKip
+  = 'ozel'`; konum başına ARAMA kutusu — sorgunun her sözcüğü adda ya da markada, harf katlaması Takoz
+  Özellikleri'ninki (`_mntLibNorm`); tık ya da Enter ekler, Esc temizler; kutu yerinde tazelenmez, odak ve
+  imleç kalır; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
+  silinmez; tipi eklenmeyen grup mevcut tipinde) + sağda taranan grup · kombinasyon (grupların tip
+  sayılarının çarpımı). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
   (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır — grup
   başına liste bağlanırken karışık tabana geçer. Kapı: `mount-param.test.js` → *YERLEŞİM ve
-  ADAYLAR*. İlk analizi **Katalogdan seçim** (kullanıcı
+  ADAYLAR* + `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin

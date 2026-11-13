@@ -330,11 +330,32 @@ async function takozTuru(page, olc) {
     await page.waitForTimeout(800);
     await olc('#ve-canvas', 'topoloji · ' + k);
   }
-  // PARAMETRİK ANALİZ: pencere BOŞ (kullanıcı 2026-11-11, Canlı Not 1001) — yalnız kimliği
-  // ölçülür. Eski pencere (tarama, Sonuç, galeri) parkta: gerçek tarayıcıda
-  // mount-param-sonuc.spec.js onu yerine koyarak sınar.
+  // PARAMETRİK ANALİZ (Canlı Not 1001'den beri adım adım kuruluyor): önce varsayılan görünüm
+  // (Takoz yerleşimi + Tüm kombinasyonlar), sonra Özel kombinasyon — konum başına eklenen
+  // tipler ve açık arama listesi (Canlı Not 1005). Eski pencere (tarama, Sonuç, galeri)
+  // parkta: gerçek tarayıcıda mount-param-sonuc.spec.js onu yerine koyarak sınar.
   await page.evaluate(() => { createNode('mnt-parametric', 900, 120); });
   await pencereler(page, olc, ['mnt-parametric']);
+  const ara = await page.evaluate(async () => {
+    const n = nodes.find((x) => x.type === 'mnt-parametric');
+    veMntParamAdayKip(n.id, 'ozel');
+    const Y = _mntParamYeni(n), S = _mntParamListeSira(Y.A), G = Y.M.G;
+    [[1, G[0].tip], [1, S[0].key], [G.length, S[S.length - 1].key]].forEach(([no, k]) => { if (k) veMntParamGrupAday(n.id, no, k, true); });
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+    await new Promise((r) => setTimeout(r, 450));
+    const kutu = document.getElementById('ve-mnt-param-ara-' + n.id + '-1');
+    if (!kutu) return null;
+    kutu.focus(); kutu.value = 'cone'; kutu.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 300));
+    const L = document.querySelector('#ve-properties .ve-prm-ara-l:not([hidden])');
+    return { satir: document.querySelectorAll('#ve-properties .ve-prm-oz-t li').length,
+      secenek: L ? L.querySelectorAll('.ve-prm-ara-o').length : 0 };
+  });
+  // son örnek ASFAT: mevcut tipleri aday değil (Canlı Not 133) — eklenen iki aday tip ve açık liste
+  expect(ara.satir).toBeGreaterThanOrEqual(2);
+  expect(ara.secenek).toBeGreaterThan(0);
+  await olc('#ve-properties', 'mnt-parametric · Özel kombinasyon');
+  await page.evaluate(() => veTogglePropertiesPanel(false));
 }
 
 async function feadTuru(page, olc) {
