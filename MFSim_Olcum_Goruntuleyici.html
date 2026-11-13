@@ -4430,9 +4430,11 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    model olurdu). Tıklama tuvale geçer (`pointer-events`), yani müfettiş
    açıkken model düzenlenebilir; kapatma ✕ ve ESC'te kalır.
 
-   DAR ekranda modal davranış BİREBİR durur: 1280 px altında sütun ile tuval
-   birlikte sığmaz (ray 48 + kenar çubuğu 220 + müfettiş 380 = 648; kalan
-   tuval 632 px ve kenar çubuğu 360'a kadar genişleyebiliyor).
+   DAR ekranda modal davranış BİREBİR durur: 1024 px altında sütun ile tuval
+   birlikte sığmaz (ray 48 + müfettiş 380 = 428; kalan tuval 596 px). Eşik
+   1280'di ve 1242 px'lik ekranda Parametrik Analiz tuvali örten açılır
+   pencereye dönüyordu (kullanıcı 2026-11-13, Canlı Not 1011: "Eski haline
+   getir"). Eşik map.js → veMufettisSutunKipi ile aynı.
 
    SÜTUNA SIĞMAYAN PENCERE MODAL KALIR — `.ve-properties--modal`, tipten
    (js/cp-core.js → VE_SUTUNA_SIGMAYAN, ÖLÇÜLMÜŞ liste). İlk hâli yalnız iki
@@ -4440,7 +4442,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    on iki pencere daha sütuna girip KESİLİYORDU (motor 185 px taşıyordu —
    kullanıcı bildirimi). Karar varyant sınıflarından değil tek listeden:
    `--wide` hem sığan hem sığmayan pencerelerde geçiyor. */
-@media (min-width:1280px){
+@media (min-width:1024px){
   .ve-properties-overlay:not(:has(.ve-properties--modal)){
     inset:var(--chrome-h) 0 0 auto;   /* sağ kenar, bandın ALTINDAN başlar */
     width:var(--inspector-w);

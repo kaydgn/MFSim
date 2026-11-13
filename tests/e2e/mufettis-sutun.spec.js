@@ -15,7 +15,7 @@
 const { test, expect } = require('@playwright/test');
 
 const GENIS = 1600;   // sütun kipi
-const DAR = 1100;     // modal kipi (eşik 1280)
+const DAR = 960;      // modal kipi (eşik 1024)
 
 async function bootApp(page, w) {
   await page.setViewportSize({ width: w, height: 900 });

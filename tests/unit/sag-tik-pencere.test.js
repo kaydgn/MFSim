@@ -60,7 +60,7 @@ function kur() {
   _veModalSutundan = false;
   document.documentElement.className = '';
   // Kullanıcının ekranı (1450 px): pencere tuvalin yanında sütun.
-  window.matchMedia = (q) => ({ matches: /min-width:\s*1280px/.test(q), media: q });
+  window.matchMedia = (q) => ({ matches: /min-width:\s*1024px/.test(q), media: q });
   return global.nodes;
 }
 const acik = () => document.getElementById('ve-properties-overlay').classList.contains('visible');
