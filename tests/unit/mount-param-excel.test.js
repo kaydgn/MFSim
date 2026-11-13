@@ -54,19 +54,19 @@ const E = {
       kriter: [true, true, true, true], d: 5.9178, f: F_K1, T: 0.121701,
       takozTip: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
       vakalar: [vaka('Static', [-3.9, -5.43, -5.92])], modlar: F_K1.map((f) => ({ f, ad: 'roll' })) },
-    { K: 2, tipler: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
+    { K: 2, tipler: ['LMT-1433-20 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
       kriter: [true, true, true, true], d: 6.0128, f: [5.69, 7.03, 7.86, 10.53, 11.06, 13.16], T: 0.051,
-      takozTip: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)', 'Cone 39 50 ShA (AMC 137982)'],
+      takozTip: ['LMT-1433-20 70 ShA', 'Cone 39 50 ShA (AMC 137982)', 'Cone 39 50 ShA (AMC 137982)'],
       vakalar: [vaka('Static', [-3.1, -6.0, -6.01])], modlar: [{ f: 5.69, ad: 'yaw+lateral' }] },
     { K: 3, tipler: ['LMT-1433-00 55 ShA', 'A26 takozu A'], uygunluk: 'Uygun',
       kriter: [true, true, true, true], d: 6.368, f: [4.25, 5.03, 6.42, 7.31, 10.66, 16.1], T: 0.0881,
       takozTip: ['LMT-1433-00 55 ShA', 'A26 takozu A', 'A26 takozu A'], vakalar: [], modlar: [] }
   ],
-  tarama: { N: 576, gruplar: [0, 1], adaylar: [['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Mount 1 40 ShA']],
+  tarama: { N: 576, gruplar: [0, 1], adaylar: [['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'LMT-1433-20 40 ShA']],
     satirlar: [
       { tipler: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)'], f: F_K1, fB: 11.49, T: 0.121701, d: 5.918,
         k: [true, true, true, true], yuk: [496, 648], azami: [null, 1200] },
-      { tipler: ['Mount 1 40 ShA', 'Cone 39 50 ShA (AMC 137982)'], f: [3.58, 4.45, 6.0, 7.78, 10.11, 12.13], fB: 7.16, T: 0.045, d: 15.0,
+      { tipler: ['LMT-1433-20 40 ShA', 'Cone 39 50 ShA (AMC 137982)'], f: [3.58, 4.45, 6.0, 7.78, 10.11, 12.13], fB: 7.16, T: 0.045, d: 15.0,
         k: [true, true, true, true], yuk: [470, 661], azami: [null, 600] },
       { tipler: ['ASFAT takozu B', 'Cone 38 60 ShA (AMC 137963)'], f: [3.7, 4.42, 6.0, 7.01, 8.9, 12.0], fB: 3.62, T: 0.012, d: 15.1,
         k: [true, false, false, true], yuk: [497.3, 647.8], azami: [null, 650] }
@@ -325,10 +325,10 @@ describe('AD', () => {
   // bütün tipleri kodlu; tek kodlu aile onaylanan kısa adında kalır.
   test('AYIRT EDİCİ kısa ad: aynı kısa adı alan iki tip ayrı; ailede tek kod varsa kısa ad değişmez', () => {
     const U = ['LMT-1433-37 55 ShA', 'LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', 'A26 takozu A', 'ASFAT takozu A',
-      'Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA', 'TK035 35 ShA'];
+      'Cone 39 50 ShA (AMC 137982)', 'LMT-1433-20 55 ShA', 'TK035 35 ShA'];
     const f = E_.ayirici(U);
     expect(U.map(f)).toEqual(['LMT-1433-37-55', 'LMT-1433-00-55', 'LMT-1433-00-40', 'A26 takozu A', 'ASFAT takozu A',
-      'Cone39-50', 'Mount1-55', 'TK035-35']);
+      'Cone39-50', 'LMT-1433-20-55', 'TK035-35']);
     expect(new Set(U.map(f)).size).toBe(U.length);
     const g = E_.ayirici(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA', 'Cone 39 50 ShA (AMC 137982)']);
     expect(['LMT-1433-00 55 ShA', 'LMT-1433-00 40 ShA'].map(g)).toEqual(['LMT-55', 'LMT-40']);

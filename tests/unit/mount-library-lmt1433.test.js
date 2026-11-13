@@ -142,8 +142,12 @@ describe('Değerler FEA raporunun KENDİ modal sonucunu üretiyor', () => {
   });
 });
 
-// ── "Mount 1" — aynı tablonun ilk satırı, parça numarası yok ────────────────
-describe('"Mount 1" girdileri', () => {
+// ── LMT-1433-20 — aynı tablonun ilk satırı (raporda "Mount 1") ──────────────
+// Canlı not 2011: "Şu programda tanımlı olan 'mount 1, mount 2' gibi garip isimli takozların ne
+// olduğunu araştırabilir misin? Tam isimlerini koyalım." — FEA raporu parçayı yalnız "Mount 1"
+// diye anıyor ("Mount 2" LMT-1433-00); kimliği LASPAR LMT-1433-20, 1433'ün radyal anizotrop
+// çeşidi (aynı aracın MSB raporunda ön takoz, "X yönü yumuşatılmış"). Ad tam ad, anahtar eski.
+describe('LMT-1433-20 girdileri (raporda "Mount 1")', () => {
   const M1 = {                                     // takoz başına [X, Y, Z] N/mm
     'bmc-mount1-40sh': { sh: 40, k: [800, 450, 300] },
     'bmc-mount1-55sh': { sh: 55, k: [1000, 750, 500] },
@@ -159,11 +163,31 @@ describe('"Mount 1" girdileri', () => {
     });
   });
 
-  // Ad kaynaktaki etiket + sertlik (AD KURALI, 2026-10-19): not ada girmez;
-  // parça numarası uydurulmaz.
-  test('adı kaynaktaki etiket ve sertlik — numara uydurulmadı', () => {
+  // Ad LASPAR modeli + sertlik (AD KURALI, 2026-10-19); anahtar değişmez — kayıtlı projeler
+  // takozu anahtarla bağlar. Sıra etiketinin ad olamayacağı: mount-library-adlar.test.js.
+  test('adı LASPAR modeli ve sertlik: LMT-1433-20 <sertlik> ShA; anahtar eski', () => {
     Object.entries(M1).forEach(([k, v]) =>
-      expect(cp.VE_MOUNT_LIBRARY[k].name).toBe('Mount 1 ' + v.sh + ' ShA'));
+      expect(cp.VE_MOUNT_LIBRARY[k].name).toBe('LMT-1433-20 ' + v.sh + ' ShA'));
+  });
+
+  // KİMLİĞİN SAYILARI: A+P'nin aynı gövdedeki iki konik yatağı — 026 S 1 (X = Y; LMT-1433-00'ın
+  // eşi) ve 026 S 3 (X > Y, anizotrop çeşit) — FEA'nın iki satırının oranını veriyor; LASPAR'ın
+  // -20 çeşidi bulunan küçük gövdeler (1436 · 1423) bu Z'yi taşıyamaz.
+  test('KİMLİK — Z/LMT-1433-00 = 026 S 3/026 S 1 (%5 içinde); 40 ShA\'da X · Y 026 S 3\'ün; Z 1433 ile 1436 · 1423 arasında', () => {
+    const AP = require('../../js/mount-ap.js'), LP = require('../../js/mount-laspar.js'), L = cp.VE_MOUNT_LIBRARY;
+    const k = (kod, f, s) => AP.KOD[kod][f] / AP.KOD[kod][s];                  // F / S
+    const S1 = ['1221402501', '1221402503', '1221402504'], S3 = ['1221402601', '1221402603', '1221402604'];
+    [40, 55, 70].forEach((sh, i) => {
+      const r = L['bmc-mount1-' + sh + 'sh'].sz / L['lmt1433-00-' + sh + 'sh'].sz, a = k(S3[i], 3, 4) / k(S1[i], 3, 4);
+      expect([sh, Math.abs(r / a - 1) < 0.05]).toEqual([sh, true]);            // 0,67 · 0,67 · 0,70 ↔ 0,70 · 0,67 · 0,68
+    });
+    expect([L['bmc-mount1-40sh'].sx, k(S3[0], 5, 6)]).toEqual([800, 800]);
+    expect(Math.abs(L['bmc-mount1-40sh'].sy / k(S3[0], 7, 8) - 1)).toBeLessThan(0.02);   // 450 ↔ 458,75
+    [['TK45', 40], ['TK60', 55], ['TK70', 70]].forEach(([tk, sh]) => {
+      const z = L['bmc-mount1-' + sh + 'sh'].sz;
+      expect([sh, z < LP.kz('LMT-1433-00-' + tk), z > LP.kz('LMT-1436-00-' + tk), z > LP.kz('LMT-1423-00-' + tk)])
+        .toEqual([sh, true, true, true]);
+    });
   });
 
   test('radyal ANİZOTROPİK (sx > sy > sz) — LMT-1433-00 ile karışmaz', () => {
@@ -211,9 +235,10 @@ describe('"Mount 1" girdileri', () => {
 });
 
 describe('Kaynak sınırları kayıt altında', () => {
-  test('LMT-1433-20 kütüphaneye GİRMEDİ (rijitlik verisi hiçbir dokümanda yok)', () => {
-    const keys = Object.keys(cp.VE_MOUNT_LIBRARY);
-    expect(keys.some((k) => /1433-20/.test(k))).toBe(false);
+  test('LMT-1433-20 FEA tablosunun "Mount 1" satırıdır: eski anahtarlarla, ikinci girdi açılmadı', () => {
+    const L = cp.VE_MOUNT_LIBRARY;
+    expect(Object.keys(L).some((k) => /1433-20/.test(k))).toBe(false);
+    expect(Object.keys(L).filter((k) => /LMT-1433-20/.test(L[k].name))).toEqual(['bmc-mount1-40sh', 'bmc-mount1-55sh', 'bmc-mount1-70sh']);
   });
 
   test('mevcut girdiler DEĞİŞMEDİ (regresyon)', () => {

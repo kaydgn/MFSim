@@ -96,8 +96,8 @@ describe('SEÇİM ve ONAY', () => {
     expect(oz.map((r) => r[3] + ' + ' + r[4]).sort()).toEqual([
       'Cone 39 40 ShA (AMC 137981) + A26 takozu A', 'LMT-1433-00 40 ShA + Cone 39 50 ShA (AMC 137982)',
       'LMT-1433-00 55 ShA + A26 takozu A', 'LMT-1433-00 55 ShA + Cone 39 50 ShA (AMC 137982)',
-      'Mount 1 40 ShA + Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA + Cone 39 50 ShA (AMC 137982)',
-      'Mount 1 70 ShA + Cone 39 50 ShA (AMC 137982)', 'TK035 35 ShA + Mount 1 55 ShA',
+      'LMT-1433-20 40 ShA + Cone 39 50 ShA (AMC 137982)', 'LMT-1433-20 55 ShA + Cone 39 50 ShA (AMC 137982)',
+      'LMT-1433-20 70 ShA + Cone 39 50 ShA (AMC 137982)', 'TK035 35 ShA + LMT-1433-20 55 ShA',
       'TK040 45 ShA + Cone 121 NP 55 ShA (AMC 137829)'].sort());
     const d = oz.map((r) => r[6]);
     for (let i = 1; i < d.length; i++) expect(d[i]).toBeGreaterThanOrEqual(d[i - 1]);
@@ -305,6 +305,18 @@ describe('HTML — Excel\'in planı', () => {
     let fark = 0;
     for (let j = 0; j < ref.length; j++) if ((kod[j] === bos ? -2147483648 : kod[j]) !== ref[j]) fark++;
     expect(fark).toBe(0);
+  });
+
+  // Canlı not 2011 ("Şu programda tanımlı olan 'mount 1, mount 2' gibi garip isimli takozların ne olduğunu
+  // araştırabilir misin? Tam isimlerini koyalım."): FEA raporunun "Mount 1"i LASPAR LMT-1433-20 — HTML
+  // raporunun Tarama'sında ve K'larında tipin tam adı, raporun etiketi ("Mount N") hiçbir yerde
+  test('tipler tam adıyla: "Mount 1" yerine LMT-1433-20; Tarama\'nın tip listesinde ve K\'larda "Mount N" yok', async () => {
+    const html = await PS.veMntParamHtmlIndir('pa'), D = veri(html);
+    const adlar = [].concat(...D.tarama.adlar);
+    expect(['LMT-1433-20 40 ShA', 'LMT-1433-20 55 ShA', 'LMT-1433-20 70 ShA'].filter((a) => adlar.indexOf(a) >= 0))
+      .toEqual(['LMT-1433-20 40 ShA', 'LMT-1433-20 55 ShA', 'LMT-1433-20 70 ShA']);
+    expect(adlar.concat(...D.konfig.map((k) => k.tip)).filter((a) => /\bMount \d/i.test(a))).toEqual([]);
+    expect(html).not.toMatch(/Mount 1\b/);
   });
 
   // Canlı not 2008 ("Buraya aracın ismini falan da yazalım. Yani bilgi versin kullanıcıya."): künyenin

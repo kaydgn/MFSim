@@ -81,7 +81,7 @@ describe('SEÇİCİ — önce Marka, sonra o markanın tipleri', () => {
     expect(d.querySelector('select.mntlib-marka').value).toBe('LASPAR');
     const adlar = [...d.querySelectorAll('.mntlib-opt-name')].map((e) => e.textContent);
     expect(adlar).toHaveLength(53);
-    expect(adlar.slice(0, 10).every((a) => /LMT-1433|TK0|Mount 1/.test(a))).toBe(true);   // programın LASPAR takozları önce
+    expect(adlar.slice(0, 10).every((a) => /^(LMT-1433-\d{2}|TK0\d{2}) \d{2} ShA$/.test(a))).toBe(true);   // programın LASPAR takozları önce
     expect(adlar.slice(10).every((a) => /\(LASPAR M?LMT-/.test(a))).toBe(true);          // sonra katalog, ailenin sırasıyla
     expect(d.querySelector('.mntlib-opt.sel .mntlib-opt-name').textContent).toContain('TK040');
     const d2 = pencere(libNode([], 'a26-a'));

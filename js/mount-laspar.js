@@ -15,7 +15,9 @@
 // Z'si katalogla uyumlu (40 ShA 450 ↔ TK45 451 · 55 ShA 750 ↔ TK60 701 · 70 ShA 1.150 ↔
 // TK70 1.091 N/mm). Angst+Pfister'in Bursa şirketi 2012'de LASPAR'la ortak girişim:
 // raporların çizimindeki A+P logosu bununla uyumlu; LMT-1433-00 A+P konik yatak
-// 026 S 1'in ölçüsünde (AP_ESI → künyede "A+P eşi").
+// 026 S 1'in ölçüsünde (AP_ESI → künyede "A+P eşi"). Aynı FEA tablosunun "Mount 1"i
+// LMT-1433-20 (Canlı not 2011): 1433'ün radyal anizotrop çeşidi — kanıtı js/cp-mount.js'in
+// "LMT-1433-20" yorumunda; rijitliği FEA'nın, katalogda yok, künyesi kod + kaynak.
 //
 // KAYNAK: LASPAR genel kataloğu 2018 (laspargroup.com → Kataloglarımız; "Laspar Genel
 // Katalog -2018"), anti-vibrasyon bölümü. Tablo: sertlik, en büyük yük F (N) ve W (kg),
@@ -39,7 +41,8 @@
 // sandviç takozlar (1848 · 1849 · 1886 — titreşimli elek, kırıcı), destek takozları
 // (1876–1884), askı tipi (1255 · 1412 · 1424), pullar — cihaz ve makine elemanı, güç
 // grubu takozu değil. Marine kataloğu (52 MB) herkese açık değil. DirectIndustry'de
-// görünen 1423-20 · 1433-20 · 1436-20 · 1449-00 çeşitlerinin verisi yok.
+// görünen 1423-20 · 1436-20 · 1449-00 çeşitlerinin verisi yok; 1433-20 programın FEA'dan
+// girdisi (ESKI).
 //
 // RİJİTLİK [N/mm]: yalnız eksenel (Z) yayımlanıyor. RADYAL: konik ailede LMT-1433-00'ın
 // FEA oranı (kx = ky = oran · kz; 40 ShA 2,0 · 55 ShA 2,0 · 70 ShA 2,17, sertliğe göre
@@ -157,8 +160,9 @@ var VE_MNT_LASPAR = (function() {
     rapor: 'LASPAR test raporu'
   };
   // Programın eski girdileri → LASPAR modeli (künye): TK takozları MLMT-0216-33'ün üç
-  // sertliği; LMT-1433-00 katalogdaki tip 1433; LMT-1433-37 aynı gövdenin katalogda olmayan
-  // çeşidi. "Mount 1" (aynı FEA raporu, parça no yok) burada yok.
+  // sertliği; LMT-1433-00 katalogdaki tip 1433; LMT-1433-37 ve LMT-1433-20 (FEA raporunun
+  // "Mount 1"i, Canlı not 2011) aynı gövdenin katalogda olmayan çeşitleri — ölçüsü ve resmi
+  // yayımlanmadı, künyede tip yok.
   var ESKI = {
     'TK035': { kod: 'MLMT-0216-33-TK035', sh: 35, kaynak: 'rapor' },
     'TK040': { kod: 'MLMT-0216-33-TK040', sh: 45, kaynak: 'rapor' },
@@ -166,6 +170,9 @@ var VE_MNT_LASPAR = (function() {
     'lmt1433-00-40sh': { kod: 'LMT-1433-00', tip: '1433', sh: 40, kaynak: 'fea' },
     'lmt1433-00-55sh': { kod: 'LMT-1433-00', tip: '1433', sh: 55, kaynak: 'fea' },
     'lmt1433-00-70sh': { kod: 'LMT-1433-00', tip: '1433', sh: 70, kaynak: 'fea' },
+    'bmc-mount1-40sh': { kod: 'LMT-1433-20', sh: 40, kaynak: 'fea' },
+    'bmc-mount1-55sh': { kod: 'LMT-1433-20', sh: 55, kaynak: 'fea' },
+    'bmc-mount1-70sh': { kod: 'LMT-1433-20', sh: 70, kaynak: 'fea' },
     'amc55sha': { kod: 'LMT-1433-37', sh: 55, kaynak: null }
   };
 

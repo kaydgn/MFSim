@@ -201,10 +201,22 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // buradan bir statik/dinamik oranı TÜRETİLMEDİ. Angst+Pfister'in statik+dinamik
 // ayrımlı verisi gelirse sz/sx düşürülüp dx/dz ayrıştırılmalıdır.
 //
-// ── "Mount 1" — aynı tablonun ÖTEKİ satırı (kullanıcı kararı: numarasız ekle) ─
-// Aynı "Design Proposal (Standard Part)" tablosunun ilk satırı. PARÇA NUMARASI
-// HİÇBİR DOKÜMANDA GEÇMİYOR — kaynak yalnız "Mount 1" diye anıyor (LMT-1433-00
-// ise "Mount 2"). Numara bulununca girdi ADI düzeltilmeli, anahtarlar kalır.
+// ── LMT-1433-20 — aynı tablonun ÖTEKİ satırı (raporda "Mount 1") ────────────
+// Aynı "Design Proposal (Standard Part)" tablosunun ilk satırı; FEA raporu parçayı
+// yalnız "Mount 1" diye anıyor (LMT-1433-00 ise "Mount 2"). KİMLİK (Canlı not 2011:
+// "'mount 1, mount 2' gibi garip isimli takozların ne olduğunu araştırabilir misin?
+// Tam isimlerini koyalım."): LASPAR LMT-1433-20, konik 1433'ün radyal anizotrop çeşidi.
+//   • Aynı aracın (8x8 TTAR) MSB raporu (11.03.2019) ön takozu LMT-1433-20 yazıyor,
+//     "X yönü yumuşatılmış"; FEA'nın Konsept 1'inde ön çift bu takoz, 90° döndürülmüş
+//     (yumuşak ekseni araç X'inde — aşağıda).
+//   • LASPAR'ın -20 çeşidi 1423 · 1436 · 1433'te görünüyor (DirectIndustry; 1434 · 1435'te
+//     yalnız -00): A+P'nin anizotrop çeşidi olan gövdeler de bunlar (021 S 1 · 025 S 1 ·
+//     026 S 3). A+P'de çeşidin Z'si gövdesininkinin 0,65–0,77'si.
+//   • Z, LMT-1433-00'ınkinin 0,67 · 0,67 · 0,70'i ↔ A+P 026 S 3 / 026 S 1: 0,70 · 0,67 · 0,68;
+//     40 ShA'da X · Y 026 S 3'ün 800 · 459'u. Z, 1436-00 ile 1423-00'ın katalog Z'sinden
+//     büyük: onların çeşidi olamaz.
+// Rijitlik FEA'nın (LMT-1433-20'nin föyü elde yok); anahtarlar ('bmc-mount1-*') kalır.
+// Kapı: mount-library-lmt1433.test.js → *LMT-1433-20*.
 //
 //   ShA | X N/mm | Y N/mm | Z N/mm      (takoz başına)
 //   ----|--------|--------|--------
@@ -215,7 +227,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // LMT-1433-00'ın aksine RADYAL ANİZOTROPİK (sx > sy > sz).
 //
 // RAPORUN KENDİ TOPLAMLARIYLA ÇAPRAZ DOĞRULANDI: Konsept 1'in "Total Stiffness"
-// satırı bu tablodan yeniden kuruluyor → Konsept 1 = 6 adet "Mount 1" @ 70 ShA.
+// satırı bu tablodan yeniden kuruluyor → Konsept 1 = 6 adet LMT-1433-20 @ 70 ShA.
 //   arka sol/sağ  rapor Z1600 Y2100 X2700  ↔  2×(800,1100,1350) = Z1600 Y2200 X2700
 //   ön            rapor Z1600 Y2700 X2100  ↔  aynı takoz 90° DÖNDÜRÜLMÜŞ (X↔Y)
 // Z ve X birebir; tek sapma Y'de %4,8 (2200 ↔ 2100) — tablodaki 1100 ya da
@@ -228,12 +240,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // "AMC 55 ShA" bir AMC ürün adı değil (AMC kodu altı hanelidir) → 2026-10-19'da
 // "LMT-1433-37 55 ShA" oldu. Anahtar kaldı.
 //
-// EKLENMEYENLER (veri yok):
-//   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
-//     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
-//
-// İnternette bulunmayanlar (2026-10-19): A26 · ASR-SR-116 takozları, TK035/040/050,
-// LMT-1433 ve "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
+// İnternette bulunmayanlar (2026-10-19): A26 · ASR-SR-116 takozları — adları kaynak
+// belgelerdeki gibi. TK035/040/050 ve LMT-1433-xx LASPAR'ın (js/mount-laspar.js).
 // ── maxLoad — TAŞIMA KAPASİTESİ [kg], opsiyonel ─────────────────────────────
 // Üretici kataloğunun verdiği en büyük statik EKSENEL (basma, z) yük. Birim
 // KİLOGRAM'dır: AMC, Angst+Pfister ve benzeri kataloglar kapasiteyi kg olarak
@@ -280,13 +288,14 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 //     js/mount-amc.js'ten markasıyla gelir (VE_MNT_AMC.girdi).
 //   • Angst+Pfister — katalog kodları ("(A+P 12.2140.2503)"), js/mount-ap.js.
 //   • LASPAR — katalog kodları (js/mount-laspar.js) ve programın LASPAR takozları:
-//     LMT-1433-00 (katalogda: Endüstriyel Konik Takoz 1433), LMT-1433-37 ve aynı FEA
-//     raporunun "Mount 1"i; TK035/040/050 = MLMT-0216-33-TK0xx (LASPAR'ın kod kuralı:
+//     LMT-1433-00 (katalogda: Endüstriyel Konik Takoz 1433), LMT-1433-37 ve LMT-1433-20
+//     (FEA raporunun "Mount 1"i); TK035/040/050 = MLMT-0216-33-TK0xx (LASPAR'ın kod kuralı:
 //     "LMT/MLMT-xxxx-yy-TKnn", TKnn Shore sertliği — kullanıcı 2026-11-11). Raporların
 //     çizimindeki A+P logosu A+P'nin Bursa ortaklığından (LASPAR ile, 2012).
 //   • Diğer — A26 · ASR-SR-116 takozları: kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
-// Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
+// Anahtarlar DEĞİŞMEZ (kayıtlı projeler anahtarla bağlar); marka alanı ad ve değer
+// değiştirmez. Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
 // A26 ve ASR-SR-116'nın dört tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
 // örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
@@ -332,13 +341,13 @@ var VE_MOUNT_LIBRARY = {
   'lmt1433-00-40sh': { marka:'LASPAR', name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
   'lmt1433-00-55sh': { marka:'LASPAR', name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
   'lmt1433-00-70sh': { marka:'LASPAR', name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
-  // ── "Mount 1" — aynı raporun ÖTEKİ standart parçası, PARÇA NUMARASI YOK ──
-  // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
-  // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
-  // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
-  'bmc-mount1-40sh': { marka:'LASPAR', name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
-  'bmc-mount1-55sh': { marka:'LASPAR', name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
-  'bmc-mount1-70sh': { marka:'LASPAR', name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
+  // ── LMT-1433-20 — aynı raporun ÖTEKİ standart parçası (raporda "Mount 1") ──
+  // Kimliği yukarıdaki "LMT-1433-20" blok yorumunda (Canlı not 2011); anahtarlar eski
+  // adla kalır. LMT-1433-00'dan farklı olarak radyal ANİZOTROPİK: sx > sy. Tek taban
+  // (sx = dx), gerekçesi LMT-1433-00 ile aynı.
+  'bmc-mount1-40sh': { marka:'LASPAR', name:'LMT-1433-20 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { marka:'LASPAR', name:'LMT-1433-20 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { marka:'LASPAR', name:'LMT-1433-20 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 // AMC girdileri: eski 10 kod TK050'nin ardındaki yerine (sözlüğün sırası korunur),
 // kalan kodlar sona — ailenin, tipin, sertliğin sırasıyla.
@@ -4720,7 +4729,7 @@ function _mntLibApKunye(e){
   return (e && e.ap && _MNT_AP) ? _MNT_AP.kunye(e.ap.kod) : null;
 }
 // LASPAR künyesi: katalog kodu (e.lp) ya da programın LASPAR girdisi (TK035/040/050 →
-// MLMT-0216-33, LMT-1433-00 → katalog tipi 1433, LMT-1433-37).
+// MLMT-0216-33, LMT-1433-00 → katalog tipi 1433, LMT-1433-37, LMT-1433-20).
 function _mntLibLpKunye(e){
   if(!e || !_MNT_LP) return null;
   return e.lp ? _MNT_LP.kunye(e.lp.kod) : _MNT_LP.kunyeEski(e.key);
