@@ -474,7 +474,7 @@ test('BOŞLUĞA TIK: 3B ve 2B masada işarete tık seçer, boşluğa tık seçim
   const b3t = await bosluk('svg.ve-mnt2d-akso');
   await page.mouse.click(b3t.x, b3t.y);
   await page.waitForTimeout(300);
-  expect(await durum()).toEqual({ secili: [], kart: ['Takozlar', 'Şanzıman askısı'], perde: '0' });
+  expect(await durum()).toEqual({ secili: [], kart: ['Takozlar'], perde: '0' });
   // 2B: işarete tık seçer, boşluğa tık bırakır
   await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'govde')));
   await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' }).click();

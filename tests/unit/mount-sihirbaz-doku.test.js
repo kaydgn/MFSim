@@ -504,7 +504,7 @@ describe('BOŞLUĞA TIK SEÇİMİ BIRAKIR (Canlı Not 153)', () => {
     expect(secili()).toEqual([st.takozlar[0].key]);
     tik(() => ak());
     expect(secili()).toEqual([]);
-    expect(kartlar()).toEqual(['Takozlar', 'Şanzıman askısı']);   // askının seçeneği adımda kalır
+    expect(kartlar()).toEqual(['Takozlar']);
     expect(ak().querySelector('[data-sec]')).toBeNull();
     // seçimsiz adımda (özet) boşluk bir şey yapmaz
     W.veMntWizGoto(OZET);
@@ -554,7 +554,7 @@ describe('BOŞLUĞA TIK SEÇİMİ BIRAKIR (Canlı Not 153)', () => {
     expect(secili()).toEqual([st.takozlar[0].key]);
     tik(() => ikiB());
     expect(secili()).toEqual([]);
-    expect(kartlar()).toEqual(['Takozlar', 'Şanzıman askısı']);   // askının seçeneği adımda kalır
+    expect(kartlar()).toEqual(['Takozlar']);
     tik(() => ikiB().querySelector('[data-mnt2b="ust"] [data-mnt-sec="takoz:2"]'));
     expect(secili()).toEqual([st.takozlar[2].key]);
     W.veMntWizGorunus('3b');

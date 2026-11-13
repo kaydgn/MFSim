@@ -123,12 +123,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
   *"Zaten aşağıda yazıyor"*; kapı `mount-wizard.test.js` → *TUVALDEKİ MODEL KARTI YOK*); Örnek alanının kartı
   BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de kaldıralım."*; kapı
-  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **Şanzıman askısı Takozlar adımında** (kullanıcı 2026-11-13:
-  *"Programa 'askılı' seçeneğini entegre eder misin?"*): Askısız · Askılı; askılıda yaylar (ilk seçimde sol ve sağ),
+  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **Şanzıman askısı KENDİ ADIMINDA** ("Şanzıman askısı", takozlardan sonra — kullanıcı 2026-11-13: *"askıyı ayrı
+  adım yap"*; talimatı kullanıcının onayıyla): Askısız · Askılı seçeneği ŞANZIMANIN satırında, Kütle gövdeleri'nde,
+  TEK satır (*"şanzıman seçtiğimiz zaman sor … tek satırda halledelim"*); ilk Askılı'da sol ve sağ yay; adımda
   bağlantı noktası, katalog yayı ya da k · L0 · Lc, kurulum ve karşılığı — Askı Yayı bileşeninin alanları; denetim
-  Çözücü'nün kapısı (`_mntAskiSorunlari`); askı ile takozun seçimi birbirini bırakır; masa 3B'de ve 2B'de çizer (2B:
-  yandan · önden zikzak, üstten halka); Modeli kur Askı Yayı bileşenlerini kurar ve günceller. Ayrı adımın talimatı
-  kullanıcının kararını bekliyor (talimat metni tabana yalnız onun kararıyla). Kapı: `mount-wizard-aski.test.js`. **İlk hâl** —
+  Çözücü'nün kapısı (`_mntAskiSorunlari`); masa 3B'de ve 2B'de çizer (2B: yandan · önden zikzak, üstten halka); Modeli
+  kur Askı Yayı bileşenlerini kurar ve günceller. Kapı: `mount-wizard-aski.test.js`. **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
