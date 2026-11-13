@@ -1220,9 +1220,12 @@ function _mntFoyGir(node, key, aria, opt){
     + ' aria-label="'+_mntEsc(aria)+(opt.tahmin?' · tahmini':'')+'" onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></td>';
 }
 // FÖYÜN SATIRI — ad hücresi + değer hücreleri (_mntFoyGir · _mntFoyCoz). `icin`: adın
-// bağlı olduğu girdinin kimliği (ada tık girdiye gider).
-function _mntFoySatir(ad, hucreler, icin){
-  return '<tr><td>'+(icin ? '<label for="'+icin+'">'+ad+'</label>' : ad)+'</td>'+hucreler+'</tr>';
+// bağlı olduğu girdinin kimliği (ada tık girdiye gider). `opt.sinif` · `opt.ipucu`: ad
+// hücresinin sınıfı ve `title`ı (türetilen satırın adı da oyuk — `cz`).
+function _mntFoySatir(ad, hucreler, icin, opt){
+  opt=opt||{};
+  return '<tr><td'+(opt.sinif?' class="'+opt.sinif+'"':'')+(opt.ipucu?' title="'+_mntEsc(opt.ipucu)+'"':'')+'>'
+    + (icin ? '<label for="'+icin+'">'+ad+'</label>' : ad)+'</td>'+hucreler+'</tr>';
 }
 // TEK DEĞERLİ ALAN SATIRDA (Canlı Not 161: *"Bunlar neden aşağıda"*): etiket solda,
 // girdi değer sütununda — Rijitlik föyünün satırıyla aynı yükseklik, kıl çizgi ve sağa
@@ -2222,17 +2225,24 @@ function _mntTakozTipGovde(node){
       [{ key:'bosY', etiket:'Yanal boşluk <u>[mm]</u>', aria:'Yanal boşluk', opt:{ ph:'yok', ipucu:d.bosYKaynak } }], 'Durdurucu'));
   return h;
 }
+// KONUM YAN YANA (Canlı Not 162: *"Yapabilirsek yan yana yapalım bunları."*): X · Y · Z
+// sütunlarda, girdi (Konum) ve birleşik CG'ye farkı (türetilen, oyuk satır) iki satırda —
+// Rijitlik föyünün satır yüksekliği, kıl çizgisi ve sağa yaslı rakamı. Kimlikler ve yazıcı
+// alanınki (`ve-mnt-x|y|z-<düğüm>` · veMntSet; fark `ve-mnt-tamd-<i>-<düğüm>`, yerinde
+// tazelenir). Askı Yayı penceresi de bu gövdeyi taşır.
+var _MNT_KONUM_AX = ['x','y','z'];
 function _mntTakozKonumGovde(node, M){
   var d=node.data||{};
   // Konum ve birleşik CG'ye göre yeri (canlı model).
   var P=[_mntNum(d.x,0), _mntNum(d.y,0), _mntNum(d.z,0)], F=_mntAmFarki(P, M);
-  var f2=_mntFoyAc([{ b:'Eksen', gen:'20%' }, { b:'Konum', gen:'40%' },
-                    { b:'CG\'ye '+_mntSym('Δ'), gen:'40%', sinif:'cz ay', ipucu:'Takoz konumu − birleşik CG' }], 'Konum');
-  ['x','y','z'].forEach(function(k, i){
-    f2+='<tr><td>'+_MNT_EKSEN[i][0]+'</td>'+_mntFoyGir(node, k, 'Konum '+_MNT_EKSEN[i][0], { zorunlu:true })
-      + _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { ay:true, id:'ve-mnt-tamd-'+i+'-'+node.id })+'</tr>';
-  });
-  return _mntBolum('Konum', '[mm] · global eksen', f2+_MNT_FOY_KAPA);
+  var f=_mntFoyAc([{ b:'', gen:'22%' }].concat(_MNT_EKSEN.map(function(e){ return { b:e[0], gen:'26%' }; })), 'Konum', 've-mnt-foy--yan');
+  f+=_mntFoySatir('Konum', _MNT_KONUM_AX.map(function(k, i){
+    return _mntFoyGir(node, k, 'Konum '+_MNT_EKSEN[i][0], { zorunlu:true });
+  }).join(''), 've-mnt-x-'+node.id);
+  f+=_mntFoySatir('CG\'ye '+_mntSym('Δ'), _MNT_KONUM_AX.map(function(k, i){
+    return _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { id:'ve-mnt-tamd-'+i+'-'+node.id });
+  }).join(''), null, { sinif:'cz', ipucu:'Konum − birleşik CG' });
+  return _mntBolum('Konum', '[mm] · global eksen', f+_MNT_FOY_KAPA);
 }
 // Kategori durumları — çözücünün boş alan kuralından (boş ya da ≤ 0 rijitlik
 // modeli reddeder, boş konum 0 alınır) ve eksen takası bekçisinden.

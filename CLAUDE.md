@@ -846,8 +846,9 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
   *"neden sağ tarafta 'isteğe bağlı · hesaba girmez' gibi garip açıklamalar var?"*):
   başlığın yanında yalnız birim ya da veri; alanın hesaptaki yeri (isteğe bağlı ·
   opsiyonel · hesaba girmez) sözlüğün `aciklama` işareti. Takoz penceresinin tek
-  değerli alanı föyün satırında, etiket solda (`_mntSatirFoy`). Kapı:
-  `metin-dili.test.js` + `mount-pencere.test.js` → *KAPASİTE · DURDURUCU SATIRDA*.
+  değerli alanı föyün satırında, etiket solda (`_mntSatirFoy`); Konum'u X · Y · Z yan
+  yana, Konum ve CG'ye Δ iki satır (Canlı Not 162; Askı Yayı da). Kapı:
+  `metin-dili.test.js` + `mount-pencere.test.js` → *KAPASİTE · DURDURUCU SATIRDA* · *KONUM YAN YANA*.
 - **TEK İSTİSNA — Takoz Başlangıç Sihirbazı'nın TALİMAT bölümü** (kullanıcı
   2026-11-09, Canlı Not 93: *"talimatları yazalım … Kullanıcıya referans olur.
   Adım eksikliklerini de ekleyelim"*): adım listesinin altında açık adımın 3–4
