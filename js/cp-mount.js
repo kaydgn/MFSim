@@ -264,8 +264,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // kütüphanedeki yerinde durur — ilk 24 girdinin sırası taramanın kombinasyon
 // sırasıdır. Radyal rijitliği yayımlanmayan kodlarda sx/sy/dx/dy TAHMİNİ (Canlı Not
 // 113: AMC-EO'nun radyal/eksenel oranı, js/mount-amc.js → RADYAL TAHMİN): tip çözülür,
-// girilen değer tahminin yerine geçer, tahminli tip taramaya aday olmaz
-// (_mntLibTahmin); kz'si olmayan DSM kodları EKSİK (_mntLibTam).
+// girilen değer tahminin yerine geçer, tahminli tip Parametrik Analiz'in adayıdır
+// (Canlı Not 1008, _mntLibTahmin); kz'si olmayan DSM kodları EKSİK (_mntLibTam).
 var _MNT_AMC = (typeof VE_MNT_AMC !== 'undefined') ? VE_MNT_AMC
   : ((typeof require === 'function') ? require('./mount-amc.js') : null);
 // ── ANGST+PFISTER APSOvib® — js/mount-ap.js (86 kod: konik · HD konik · H-takoz ·
@@ -298,7 +298,7 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 // değiştirmez. Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
 // A26 ve ASR-SR-116'nın dört tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
-// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
+// örneklerde ve eşleşmede durur, taramanın aday listesinde YOK. Kapı:
 // mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
@@ -453,8 +453,8 @@ function _mntLibTam(e){
   return !!e && ['sx','sy','sz','dx','dy','dz'].every(function(f){ return _mntNum(e[f], 0)>0; });
 }
 // Tipin TAHMİNİ alanları (js/mount-amc.js → RADYAL TAHMİN · js/mount-ap.js → DİNAMİK TAHMİN):
-// girilen değer listeden düşer. Tahminli tip çözülür; katalog taramasına aday olmaz
-// (cp-mount-param.js → _mntParamAdaylar).
+// girilen değer listeden düşer. Tahminli tip çözülür ve Parametrik Analiz'in adayıdır
+// (Canlı Not 1008; cp-mount-param.js → _mntParamAdayTipler).
 function _mntLibTahmin(e){
   return (e && Array.isArray(e.tahmin)) ? e.tahmin : [];
 }
@@ -4858,7 +4858,7 @@ function _mntLibLpKunyeHTML(e){
 // (sayaçlar) kalktı; takozun tipten sapmasını Takoz penceresinin tip notu
 // söyler. Gövdenin üstünde yalnız eksik bandı durur (aile kuralı); alttaki iki
 // kategori seçili tipin adını bölüm künyesinde taşır. Kapı: mount-yon.test.js →
-// *SADE PENCERE*.
+// *SADE PENCERE*. İLK bölüm ÖZET (Canlı Not 159, _mntLibOzet): Takoz tipinin üstünde.
 // Bu pencerenin tipleri: düğümün özel takozları (kayıtlı ham girdinin marka etiketli
 // KOPYASI — kayıtlı veriye alan eklenmez) ve gömülü katalog. Marka listesi ve seçili
 // tip AYNI listeden okur.
@@ -4884,18 +4884,55 @@ function _mntLibSecim(node){
   var grup=(sel && markalar.filter(function(g){ return g.ad===sel.marka; })[0]) || markalar[0] || null;
   return { G:G, sel:sel, markalar:markalar, grup:grup };
 }
+// ÖZET (kullanıcı 2026-11-13, Canlı Not 159: *"Takoz Tipi kısmının üstüne 'Özet' diye bir
+// başlık yapalım ve burada programa kayıtlı olan takozların özetini yazalım. Yani, hangi
+// markadan ne kadar var ve toplam takoz sayısı gibi."*): pencerenin İLK bölümü. Satırlar
+// Marka listesinin markaları, AYNI sırada ve AYNI gruplamadan (_mntLibSecim → veMntLibMarkalar):
+// Takoz o markanın Tip listesinin uzunluğu (özel takoz kendi satırında); Aile ve Tip üreticinin
+// veritabanının ailesi ve tipi (e.amc · e.ap · e.lp — js/mount-amc.js · mount-ap.js ·
+// mount-laspar.js). Veritabanı dışındaki girdi (Diğer, özel takoz, programın LASPAR takozları)
+// Takoz'da sayılır, aile ve tipe girmez; hiç veritabanı girdisi olmayan markada "—". Toplam
+// sütunların toplamı. Sayı elle yazılmaz. Kapı: mount-library-dropdown.test.js → *ÖZET*.
+function _mntLibOzet(markalar){
+  var T={ ad:'Toplam', aile:null, tip:null, takoz:0 };
+  var ekle=function(a, v){ return v==null ? a : (a||0)+v; };
+  var satir=(markalar||[]).map(function(g){
+    var aile={}, tip={}, ure=false;
+    g.girdiler.forEach(function(e){
+      var u=e.amc || e.ap || e.lp;
+      if(!u) return;
+      ure=true; aile[u.aile]=1; tip[u.aile+'|'+u.tip]=1;
+    });
+    var r={ ad:g.ad, aile:ure ? Object.keys(aile).length : null, tip:ure ? Object.keys(tip).length : null,
+            takoz:g.girdiler.length };
+    T.aile=ekle(T.aile, r.aile); T.tip=ekle(T.tip, r.tip); T.takoz+=r.takoz;
+    return r;
+  });
+  return { satir:satir, toplam:T };
+}
+function _mntLibOzetHTML(markalar){
+  var O=_mntLibOzet(markalar);
+  var hucre=function(r){ return '<td>'+_mntS(r.aile,0)+'</td><td>'+_mntS(r.tip,0)+'</td><td>'+_mntS(r.takoz,0)+'</td>'; };
+  var f=_mntFoyAc([{ b:'Marka', gen:'46%' }, { b:'Aile', gen:'18%' }, { b:'Tip', gen:'18%' }, { b:'Takoz', gen:'18%' }], 'Özet');
+  O.satir.forEach(function(r){
+    f+='<tr><td title="'+_mntEsc(r.ad)+'">'+_mntEsc(r.ad)+'</td>'+hucre(r)+'</tr>';
+  });
+  f+='<tr class="top"><td>Toplam</td>'+hucre(O.toplam)+'</tr>';
+  return _mntBolum('Özet', '', f+_MNT_FOY_KAPA);
+}
 function getMntLibraryPropertiesHTML(node){
   var S=_mntLibSecim(node);
   var sel=S.sel, markalar=S.markalar, grup=S.grup;
   var secici=_mntLibSecici(node, markalar, grup, sel);
+  var ozet={ k:'ozet', ad:'Özet', govde:_mntLibOzetHTML(markalar) };
   if(!sel){
-    return _mntPencereKabuk(node, [
+    return _mntPencereKabuk(node, [ozet,
       { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntNot('Takoz seçilmedi.', '')) },
       { k:'rij', ad:'Rijitlik', govde:_mntBolum('Rijitlik', '[N/mm]', _mntNot('Takoz seçilmedi.', '')) }], '');
   }
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
   var D=_mntLibDurumlari(node, sel);
-  var kategoriler=[
+  var kategoriler=[ozet,
     { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)+_mntLibAmcKunyeHTML(sel)+_mntLibApKunyeHTML(sel)+_mntLibLpKunyeHTML(sel)),
       durum:_mntDurum('ok') },
     { k:'oneri', ad:'Öneri', govde:_mntLibOneriHTML(node, grup, sel) },
@@ -6528,6 +6565,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     veMntLibSelect: veMntLibSelect,
     veMntLibAdim: veMntLibAdim, _mntLibAdimHTML: _mntLibAdimHTML, _mntLibSecim: _mntLibSecim,
+    _mntLibOzet: _mntLibOzet, _mntLibOzetHTML: _mntLibOzetHTML,
     veMntLibDropdownToggle: veMntLibDropdownToggle,
     veMntLibDropdownClose: veMntLibDropdownClose,
     veMntLibFilter: veMntLibFilter,

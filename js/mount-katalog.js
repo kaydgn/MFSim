@@ -116,12 +116,9 @@ var veMntKatalog = (function() {
     return G;
   }
 
-  // Tek taramanın üst sınırı: aşama 1 kombinasyon başına ~0,5 ms (tarayıcıda
-  // ölçülen Node değeri) → 200.000 kombinasyon ~2 dakika. Dört grup × 27 tip
-  // 531.441'dir; o durumda grup sabitlenir ya da aday daraltılır.
-  var MAKS_KOMB = 200000;
-
-  // Taranan grup sayısı ve kombinasyon sayısı. sabit: { grupAnahtarı: true }.
+  // Taranan grup sayısı ve kombinasyon sayısı. sabit: { grupAnahtarı: true }. Üst sınır YOK
+  // (kullanıcı 2026-11-13: *"Bu limiti kaldıralım, yani program sonsuz sayıda iterasyon
+  // yapabilmeli"*); kapı: mount-param.test.js → *SINIR YOK*.
   function kombinasyonSayisi(G, nAday, sabit){
     var s = sabit || {}, N = 1, t = 0;
     (G || []).forEach(function(g){ if(!s[g.anahtar]){ N *= nAday; t++; } });
@@ -680,7 +677,7 @@ var veMntKatalog = (function() {
   }
 
   return {
-    TOL_MM: TOL_MM, MAKS_KOMB: MAKS_KOMB, KISITLAR: KISITLAR, SINIR_VARSAYILAN: SINIR_VARSAYILAN,
+    TOL_MM: TOL_MM, KISITLAR: KISITLAR, SINIR_VARSAYILAN: SINIR_VARSAYILAN,
     ACIK_VARSAYILAN: ACIK_VARSAYILAN, SINIR_ARALIK: SINIR_ARALIK,
     K1_ORAN: K1_ORAN, K1A_HZ: K1A_HZ, K1B: K1B, K2_T: K2_T,
     yanAyir: yanAyir, gruplar: gruplar, kombinasyonSayisi: kombinasyonSayisi,

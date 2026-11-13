@@ -2584,7 +2584,7 @@ yönlendirmesiz. → kaydgn/MFSim#1172 · E4 → Takoz: Parametrik Analiz'in Tar
 Rapor'un düğmesi kapalıyken görünür sebebe `aria-describedby` ile bağlı (Tara'nın
 yolu pencerenin dışındaysa — rölanti ve silindir: Motor penceresi; takoz:
 Bileşenler — sebebin arkasında yönlendirme; aday, sabit grup ve kombinasyon sınırı
-aynı pencerede, yönlendirmesiz); Kütüphane'nin Fabrika'sı sebebini ipucunda
+(2026-11-13'te kalktı) aynı pencerede, yönlendirmesiz); Kütüphane'nin Fabrika'sı sebebini ipucunda
 taşıyor; Rapor'un çözümsüz ve bayat hâli Çözücü'nün Hesapla'sını gösteriyor;
 "Çözücü yok." Bileşenler'i; sihirbazın boş gövde ve takoz listesi ekleyiciyi, boş
 başlangıç masası örneği ve STEP'i. "Olası çift sayım" ve şok yanıtının "sayısal

@@ -379,7 +379,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   ailesi → bütün tiplerin medyanı, dinamik = statik × din./stat.; tahmin işaretli (Takoz Özellikleri, Takoz penceresi, raporda ≈), girilen
   değer tahminden çıkar; Rijitlik tablosunun altında oran ve tahmin SATIRI YOK — tahmin hücrede
   (italik, künyesi ipucunda), eksen takası bölümün durumunda (Canlı Not 138; kapı `mount-amc.test.js`
-  → *TABLONUN ALTI BOŞ*); tahminli tip çözülür, taramaya aday olmaz (`_mntLibTahmin`); kz'si
+  → *TABLONUN ALTI BOŞ*); tahminli tip çözülür ve Parametrik Analiz'in adayıdır (Canlı Not 1008, `_mntLibTahmin`); kz'si
   olmayan DSM eksik (`_mntLibTam`). Kapı: `mount-amc.test.js` → *RADYAL TAHMİN*. Kütüphane girdileri modülden üretilir
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
@@ -390,7 +390,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *TEKNİK RESİM* · *KÜÇÜK*); `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
   (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
-  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil); Tip satırının SONUNDA Önceki tip · Sonraki tip okları listenin sırasıyla gezer — listeden seçmenin aynısı, uçta ok kapalı (sebebi ipucunda), (i) okların solunda: (i) gelip gidince oklar yerinde (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu"*). **BMC teknik
+  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil); Tip satırının SONUNDA Önceki tip · Sonraki tip okları listenin sırasıyla gezer — listeden seçmenin aynısı, uçta ok kapalı (sebebi ipucunda), (i) okların solunda: (i) gelip gidince oklar yerinde (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu"*). Takoz
+  Özellikleri'nin İLK bölümü **Özet** (kullanıcı 2026-11-13, Canlı Not 159: *"hangi markadan ne kadar var ve
+  toplam takoz sayısı"*): marka başına aile · tip · takoz sayısı ve toplam, Marka · Tip listeleriyle AYNI
+  kaynaktan; kapı `mount-library-dropdown.test.js` → *ÖZET*. **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
@@ -401,7 +404,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   marine · jeneratör — 24 tip, 86 kod, e-mağazanın güncel tablosundan (föylerle çapraz); A+P'nin
   kg'ı daN. **Dinamik yayımlanmıyor**: TAHMİNİ (Canlı Not 113'ün kuralı) — NR'de (Sh+20)/50 (AMC'nin
   NR yasası), CR H-takozda AMC-EO'nun 9 NR kodunun medyanı (`DIN_MEDYAN`); işaretli, çözülür,
-  taramaya aday olmaz; statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
+  Parametrik Analiz'in adayıdır (Canlı Not 1008); statiği dinamik saymak YAZILMAZ. Marine ve jeneratörde X · Y yayımlanmıyor,
   ölçülmüş benzeri yok → eksik. Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --ap`).
   Programdaki LMT-1433-00 ve LMT-1433-20 (FEA raporunun "Mount 1"i, Canlı Not 2011) LASPAR'ın (aşağıda); 1433'ün A+P eşi (026 S 1, flanş) LASPAR'ın
   künyesinde. Kapı: `mount-ap.test.js`.
@@ -414,7 +417,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sehim yok → grafiğin eğimi (`EGIM`). **İki ayrışma**: kabin tablosunda "F (N)" sütunu kg, "W (kg)"
   sütunu kN (grafik doğruluyor); temelde F "31" kN → W 3.130 kg. Kapasite W. **Radyal ve dinamik
   yayımlanmıyor**: konikte radyal LMT-1433-00'ın FEA oranıyla (`FEA_ORAN`, sertlikte doğrusal),
-  dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, aday olmaz; öteki ailelerde X · Y yok → eksik.
+  dinamik (Sh+20)/50 — TAHMİNİ (Canlı Not 113), çözülür, Parametrik Analiz'in adayı (Canlı Not 1008); öteki ailelerde X · Y yok → eksik.
   Görsel yalnız teknik resim, (i)'de (`tools/takoz-gorsel.js --lp`). Denizcilik kataloğu oturum
   istiyor, alınamadı. Kapı: `mount-laspar.test.js` (→ *GRAFİK ↔ TABLO* · *KÜNYE*).
 - `js/mount-yay.js` + bileşen **Askı Yayı** (`mnt-aski`) — **şanzıman askısı** (kullanıcı 2026-11-11: *"Tamam,
@@ -449,12 +452,19 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   = 'ozel'`; konum başına ARAMA kutusu — sorgunun her sözcüğü adda ya da markada, harf katlaması Takoz
   Özellikleri'ninki (`_mntLibNorm`); tık ya da Enter ekler, Esc temizler; kutu yerinde tazelenmez, odak ve
   imleç kalır; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
-  silinmez; tipi eklenmeyen grup mevcut tipinde) + sağda taranan grup · kombinasyon (grupların tip
-  sayılarının çarpımı). Aşağıdaki
+  silinmez; tipi eklenmeyen grup mevcut tipinde). **Aday tip kütüphanenin ÇÖZÜLEBİLEN her tipi**
+  (kullanıcı 2026-11-13, Canlı Not 1008: *"takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"*):
+  `aday:false` dışında altı rijitliği tam olan, tahminli tip DE; liste her kurulumda haritadan TÜRER
+  (gömülü · değiştirilmiş · özel tip) — eklenen ya da Takoz Özellikleri'nde tamamlanan tip kendiliğinden
+  aday (`_mntParamTipSinif`). Sağda **Analiz**: kayıtlı takoz · aday tip · ölçülü · tahmini rijitlik ·
+  rijitlik eksik · aday değil (aynı sınıftan, `_mntParamKutuphane`) · taranan grup · kombinasyon (grupların
+  tip sayılarının çarpımı; ÜST SINIRI YOK — kullanıcı 2026-11-13: *"program sonsuz sayıda iterasyon
+  yapabilmeli"*). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
-  (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır — grup
-  başına liste bağlanırken karışık tabana geçer. Kapı: `mount-param.test.js` → *YERLEŞİM ve
-  ADAYLAR* + `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
+  (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır (parktaki
+  listesi tahminsiz, `_mntParamAdaylar`) — grup başına liste bağlanırken karışık tabana geçer. Kapı:
+  `mount-param.test.js` → *YERLEŞİM ve ADAYLAR* (→ *TÜM TİPLER* · *EKLENEN TİP* · *ANALİZ* · *SINIR YOK*) +
+  `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
