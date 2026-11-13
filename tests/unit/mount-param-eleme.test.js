@@ -182,19 +182,37 @@ describe('PENCERE — beklenen takoz sehimi', () => {
   test('BOŞ ARALIK: kullanıcıya sorulur — eksik bandı, çözümle de çözümsüz de aynı', () => {
     const n = cozumsuzKur('tulga');
     let d = dom(P.getMntParamPropertiesHTML(n));
-    expect(bant(d)).toEqual(['Beklenen takoz sehimi — Aralık boş: aday tipler elenmez.']);
+    expect(bant(d)).toEqual(['Beklenen takoz sehimi — Aralık boş.']);
     expect(bolum(d).getAttribute('data-d')).toBe('eksik');
     const c = cozKur('tulga');
     d = dom(P.getMntParamPropertiesHTML(c.n));
-    expect(bant(d)).toEqual(['Beklenen takoz sehimi — Aralık boş: aday tipler elenmez.']);
+    expect(bant(d)).toEqual(['Beklenen takoz sehimi — Aralık boş.']);
     expect(not(d)).toBe('');
     alanlar(d).forEach((a) => expect([a.disabled, a.hasAttribute('aria-describedby')]).toEqual([false, false]));
     expect(P._mntParamYeni(c.n).E.aktif).toBe(false);
     c.n.data = { sehim: { alt: 3 } };
-    expect(bant(dom(P.getMntParamPropertiesHTML(c.n)))).toEqual(['Beklenen takoz sehimi — En çok boş: aday tipler elenmez.']);
+    expect(bant(dom(P.getMntParamPropertiesHTML(c.n)))).toEqual(['Beklenen takoz sehimi — En çok boş.']);
     c.n.data = { sehim: { ust: 5 } };
-    expect(bant(dom(P.getMntParamPropertiesHTML(c.n)))).toEqual(['Beklenen takoz sehimi — En az boş: aday tipler elenmez.']);
+    expect(bant(dom(P.getMntParamPropertiesHTML(c.n)))).toEqual(['Beklenen takoz sehimi — En az boş.']);
     expect(P._mntParamYeni(c.n).A.length).toBe(adayHakem().length);
+  });
+
+  // Canlı Not 1009: *"Bu yazıyı daha sadeleştirelim … Alt satıra inmesin, bir satırda halledelim."*
+  // Eski satır durumun ardından sonucu da yazıyordu ("Aralık boş: aday tipler elenmez.") ve
+  // pencerenin sütununda ikiye iniyordu. Satır yalnız DURUM: açıklama yok, üç sözcüğü geçmez.
+  test('BANDIN SATIRI TEK DURUM (Canlı Not 1009): açıklamasız, kısa; Doldur aynı satırda', () => {
+    const c = cozKur('tulga');
+    [{}, { sehim: { alt: 3 } }, { sehim: { ust: 5 } }].forEach((data) => {
+      c.n.data = data;
+      const d = dom(P.getMntParamPropertiesHTML(c.n));
+      const sat = d.querySelectorAll('#ve-fp-eksik-pe .ve-fp-eksik-s');
+      expect(sat.length).toBe(1);
+      const neden = sat[0].querySelector('.ve-fp-eksik-t').textContent.split(' — ')[1];
+      expect(neden).not.toMatch(/[:;]/);
+      expect(neden).not.toMatch(/elen/);
+      expect(neden.replace(/\.$/, '').split(/\s+/).length).toBeLessThanOrEqual(3);
+      expect(sat[0].querySelector('button').textContent.trim()).toBe('Doldur');
+    });
   });
 
   test('ELEME (Tulga, 3–5 mm): aralığın dışındaki tip elenir — aday tip, elenen, kombinasyon, başlık; en düşük takoz yükü ipucunda takozun adıyla', () => {
@@ -347,7 +365,7 @@ describe('YERİNDE — pencere kurulmaz, alan ve odak yerinde', () => {
     expect(n.data.sehim).toEqual({ alt: 3 });
     expect(document.activeElement).toBe(ust);
     expect(document.getElementById('ve-mnt-param-sehim-ust-pe')).toBe(ust);
-    expect(document.querySelector('.ve-fp-eksik-t').textContent).toBe('Beklenen takoz sehimi — En çok boş: aday tipler elenmez.');
+    expect(document.querySelector('.ve-fp-eksik-t').textContent).toBe('Beklenen takoz sehimi — En çok boş.');
     ust.value = '5';
     ust.dispatchEvent(new Event('change', { bubbles: true }));
     expect(n.data.sehim).toEqual({ alt: 3, ust: 5 });
