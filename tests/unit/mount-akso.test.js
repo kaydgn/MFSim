@@ -1400,6 +1400,242 @@ describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki p
   });
 });
 
+// Kullanıcı 2026-11-13 (Canlı Not 163): "Görünüşte bileşenlere tıkladığımda, sanki seçmişim gibi
+// renklensin ve aşağıdaki tabloda rengi belli olsun. Değişiklik yapmaya hazır olsun yani."
+// Önce: çizimde tık hiçbir şey yapmıyordu — parça yalnız föyün satırının üstündeyken aydınlanıyor,
+// fare çıkınca sönüyordu; satır yalnız fare üstünde renkleniyordu ve girdi odakta değildi.
+// Gerçek fare: tests/e2e/mount-pencere.spec.js → TIK SEÇER.
+describe('TIK SEÇER (Canlı Not 163) — parçaya tık perdeyi kalıcı kurar, föyün satırı seçili, X odakta', () => {
+  let N, pen;
+  const kur = () => {
+    N = yukle('tulga');
+    pen = { id: 'ts', type: 'mnt-2dview', def: componentDefs['mnt-2dview'], data: {} };
+    N.push(pen);
+    document.body.innerHTML = '<div class="ve-properties-content"><div data-mnt-pencere="ts">' + cp.getMnt2DViewPropertiesHTML(pen) + '</div></div>';
+    const kap = document.getElementById('ve-mnt-akso3b-ts');
+    Object.defineProperty(kap, 'clientWidth', { value: 356 });
+    Object.defineProperty(document.getElementById('ve-fp-panes-ts'), 'clientWidth', { value: 356 });
+    expect(cp._mntAksoKur(kap.id, 354)).toBe(true);
+    window.veMntIsaretYaz = cp.veMntIsaretYaz;
+    return kap;
+  };
+  const sv = () => document.querySelector('#ve-mnt-akso3b-ts svg.ve-mnt2d-akso');
+  const foy = () => document.querySelector('.ve-mnt-foy-odak[data-ak-kap="ve-mnt-akso3b-ts"]');
+  const odakta = () => [...new Set([...sv().querySelectorAll(':scope > g.ve-ak-odak [data-ak]')].map((e) => e.getAttribute('data-ak')))];
+  const perde = () => !!sv().querySelector(':scope > rect.ve-ak-perde');
+  const satir = () => [...foy().querySelectorAll('tr.ve-ak-sec')].map((tr) => [tr.getAttribute('data-ak'), tr.getAttribute('aria-selected')]);
+  const k = (re) => cp._mntAksoCizim['ve-mnt-akso3b-ts'].m.govde.find((g) => re.test(g.ad)).k;
+  // basış → (hareketler) → bırakış; bırakış yakalanmış kaba düşer (gerçek tarayıcıda olduğu gibi)
+  const tik = (el, yol = [], dugme = 0) => {
+    const ev = (hedef, t, [x, y]) => hedef.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, button: dugme, clientX: x, clientY: y }));
+    const kap = document.getElementById('ve-mnt-akso3b-ts'), bas = [100, 100];
+    ev(el, 'pointerdown', bas);
+    yol.forEach((p) => ev(kap, 'pointermove', p));
+    ev(kap, 'pointerup', yol.length ? yol[yol.length - 1] : bas);
+  };
+  const parca = (key) => sv().querySelector('.ve-ak-hareket [data-ak="' + key + '"]');
+  afterEach(() => {
+    Object.keys(cp._mntAksoSec).forEach((a) => delete cp._mntAksoSec[a]);
+    cp.veMntAksoAyar('yok', 'sifirla');
+    document.body.innerHTML = '';
+    delete window.veMntIsaretYaz;
+  });
+
+  test('Şanzıman\'a tık: perdenin üstünde yalnız o, föyün satırı seçili, X girdisi odakta ve yazısı seçili; geri-al adımı yok; takoz ve yazı da seçer', () => {
+    kur();
+    const sz = k(/Şanzıman/), veri = JSON.stringify(N.map((n) => n.data));
+    expect(perde()).toBe(false);
+    tik(parca(sz));
+    expect([perde(), odakta()]).toEqual([true, [sz]]);
+    expect(satir()).toEqual([[sz, 'true']]);
+    const x = foy().querySelector('tr[data-ak="' + sz + '"] input');
+    expect(document.activeElement).toBe(x);
+    expect(x.id).toMatch(/^ve-mnt-cgx-/);
+    expect([x.selectionStart, x.selectionEnd]).toEqual([0, x.value.length]);
+    expect(x.value.length).toBeGreaterThan(0);
+    // görünüm durumu: model ve geri-al yığını aynı
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(JSON.stringify(N.map((n) => n.data))).toBe(veri);
+    // takoz da (küp), yazısına (çip) tık da aynı parçayı seçer
+    tik(parca('T3'));
+    expect([odakta(), satir()]).toEqual([['T3'], [['T3', 'true']]]);
+    expect(document.activeElement.id).toMatch(/^ve-mnt-x-/);
+    const yazi = [...sv().querySelectorAll('g[data-ak="' + sz + '"]')].find((g) => g.querySelector('text') && !g.closest('.ve-ak-hareket'));
+    expect(yazi).toBeTruthy();
+    tik(yazi.querySelector('text'));
+    expect(satir()).toEqual([[sz, 'true']]);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  test('boşluğa tık seçimi bırakır (perde kalkar, satır işaretsiz, odak çizimde); sürükleme seçmez de bırakmaz da', () => {
+    kur();
+    const sz = k(/Şanzıman/), ilk = sv().outerHTML;
+    tik(parca(sz));
+    tik(sv().querySelector(':scope > rect.ve-ak-zem'));
+    expect([perde(), satir(), Object.keys(cp._mntAksoSec)]).toEqual([false, [], []]);
+    expect(document.activeElement).toBe(sv());
+    expect(sv().outerHTML.replace(' tabindex="0"', '')).toBe(ilk.replace(' tabindex="0"', ''));   // seçimsiz çizim birebir
+    // sürükleme (eşik |dx| + |dy| ≥ 3): parçanın üstünden başlasa da seçmez
+    tik(parca(sz), [[103, 100]]);
+    expect([perde(), satir()]).toEqual([false, []]);
+    // eşiğin altındaki titreme tıktır
+    tik(parca(sz), [[101, 101]]);
+    expect(satir()).toEqual([[sz, 'true']]);
+    // seçim varken sürükleme bırakmaz, döndürür; boşluktan başlayan sürükleme de
+    const az = cp.VE_MNT_AKSO3B.az;
+    tik(sv().querySelector(':scope > rect.ve-ak-zem'), [[110, 100], [130, 100]]);
+    expect(cp.VE_MNT_AKSO3B.az).not.toBe(az);
+    expect([perde(), odakta(), satir()]).toEqual([true, [sz], [[sz, 'true']]]);
+    // sağ tık (kaydırma eli) seçmez
+    tik(parca('T1'), [], 2);
+    expect(satir()).toEqual([[sz, 'true']]);
+  });
+
+  test('yeniden kurulumda yerinde: Sıfırla, çift tık, değer yazımı (TEK geri-al adımı) — satır seçili, çizim yeni konumla', () => {
+    kur();
+    const sz = k(/Şanzıman/);
+    tik(parca(sz));
+    cp.veMntAksoAyar('ve-mnt-akso3b-ts', 'sifirla');
+    expect([odakta(), satir()]).toEqual([[sz], [[sz, 'true']]]);
+    document.getElementById('ve-mnt-akso3b-ts').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    sv().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect([odakta(), satir()]).toEqual([[sz], [[sz, 'true']]]);
+    // seçili satırın X'ine yazılır: model değişir, çizim yeni konumla, seçim yerinde
+    const x = document.activeElement, sv0 = sv().outerHTML;
+    const n = N.find((q) => x.id === 've-mnt-cgx-' + q.id);
+    x.value = String(Number(n.data.cgx) + 400);
+    x.dispatchEvent(new Event('change'));
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    cp.veMntPencereTazele();                                                          // saveState'in kancası
+    expect(sv().outerHTML).not.toBe(sv0);
+    expect([perde(), odakta(), satir()]).toEqual([true, [sz], [[sz, 'true']]]);
+    expect(document.activeElement).toBe(x);
+    // pencerenin yeniden kurulması (aynı bileşen): satır ve perde kurulumdan
+    document.querySelector('[data-mnt-pencere="ts"]').innerHTML = cp.getMnt2DViewPropertiesHTML(pen);
+    expect(satir()).toEqual([[sz, 'true']]);
+    expect(perde()).toBe(true);
+    // pencere yeniden AÇILINCA seçimsiz (başka modelin aynı kimlikli parçası seçili gelmesin)
+    document.body.innerHTML = '';
+    document.body.innerHTML = '<div class="ve-properties-content"><div data-mnt-pencere="ts">' + cp.getMnt2DViewPropertiesHTML(pen) + '</div></div>';
+    expect([satir(), perde(), Object.keys(cp._mntAksoSec)]).toEqual([[], false, []]);
+  });
+
+  test('G: satırı seçili, girdi odaklanmaz (türetilir); Esc odaktaki çizimde bırakır, seçim yokken Esc olağan sırada', () => {
+    kur();
+    const disari = jest.fn();
+    document.addEventListener('keydown', disari);
+    try {
+      tik(sv().querySelector('.ve-ak-hareket [data-ak="G"], [data-ak="G"]'));
+      expect([odakta(), satir()]).toEqual([['G'], [['G', 'true']]]);
+      expect(document.activeElement).toBe(sv());
+      expect(document.activeElement.tagName).not.toBe('INPUT');
+      const esc = () => sv().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      esc();
+      expect([perde(), satir()]).toEqual([false, []]);
+      expect(disari).not.toHaveBeenCalled();                                          // pencere ve tam ekran kapanmaz
+      expect(document.activeElement).toBe(sv());
+      esc();
+      expect(disari).toHaveBeenCalledTimes(1);                                        // seçim yok: Esc pencereye gider
+    } finally { document.removeEventListener('keydown', disari); }
+  });
+
+  test('föy: satıra tık seçer ve X\'i odaklar; satırın girdisine odak o satırı seçer (odak yerinde)', () => {
+    kur();
+    const sz = k(/Şanzıman/);
+    foy().querySelector('tr[data-ak="T2"] td.sol').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect([odakta(), satir()]).toEqual([['T2'], [['T2', 'true']]]);
+    expect(document.activeElement.id).toMatch(/^ve-mnt-x-/);
+    const z = foy().querySelector('tr[data-ak="' + sz + '"] input[id^="ve-mnt-cgz-"]');
+    z.focus();
+    expect([odakta(), satir()]).toEqual([[sz], [[sz, 'true']]]);
+    expect(document.activeElement).toBe(z);
+    // föyün fare üstü önizler, çıkınca seçime döner
+    cp._mntFoyOdak({ target: foy().querySelector('tr[data-ak="T1"] td') }, 've-mnt-akso3b-ts');
+    expect(odakta()).toEqual(['T1']);
+    cp._mntAksoOdak('ve-mnt-akso3b-ts', null);
+    expect(odakta()).toEqual([sz]);
+    // G satırı ve başlık
+    foy().querySelector('tr[data-ak="G"] td').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(satir()).toEqual([['G', 'true']]);
+    foy().querySelector('thead th').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(satir()).toEqual([['G', 'true']]);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  test('tam ekran Görünümler\'in seçimini paylaşır; kapanınca pencere aynı parçada', () => {
+    kur();
+    const cw = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get() { return 1226; } });
+    try {
+      tik(parca('T3'));
+      window.veMntAksoTazele = cp.veMntAksoTazele;
+      cp.veMntAkso3BTamEkran();
+      const fk = document.getElementById('ve-mnt-akso3b-fs'), fsv = () => fk.querySelector('svg.ve-mnt2d-akso');
+      expect(fk.getAttribute('data-tik-sec')).toBe('ve-mnt-akso3b-ts');
+      expect([...new Set([...fsv().querySelectorAll(':scope > g.ve-ak-odak [data-ak]')].map((e) => e.getAttribute('data-ak')))]).toEqual(['T3']);
+      // tam ekranda tık: föyün satırı (pencerede) izler, odak tam ekranın çiziminde
+      fsv().querySelector('.ve-ak-hareket [data-ak="T1"]').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientX: 5, clientY: 5 }));
+      fk.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, cancelable: true, button: 0, clientX: 5, clientY: 5 }));
+      expect(satir()).toEqual([['T1', 'true']]);
+      expect(document.activeElement).toBe(fsv());
+      document.getElementById('ve-mnt-fs-x').click();
+      expect(odakta()).toEqual(['T1']);
+      // "Güç grubundaki yeri"nin tam ekranı sabit konulu: seçmez
+      cp.veMntAkso3BTamEkran(N.find((n) => n.type === 'mnt-gearbox').id);
+      expect(document.getElementById('ve-mnt-akso3b-fs').hasAttribute('data-tik-sec')).toBe(false);
+      document.getElementById('ve-mnt-fs-x').click();
+    } finally {
+      if (cw) Object.defineProperty(HTMLElement.prototype, 'clientWidth', cw); else delete HTMLElement.prototype.clientWidth;
+      delete window.veMntAksoTazele;
+    }
+  });
+
+  test('öteki kullanıcılar seçmez: "Güç grubundaki yeri" (sabit konu) ve beyansız kap (sihirbazın masası, Parametrik Analiz)', () => {
+    N = yukle('tulga');
+    const motor = N.find((n) => n.type === 'mnt-motor');
+    document.body.innerHTML = '<div class="ve-properties-content">' + cp._mntKrokiHTML(motor, cp._mntCanliModel())
+      + '<div class="ve-mnt-akso-kap" id="ve-ts-yalin" data-yalin="1"></div></div>';
+    const yer = document.getElementById('ve-mnt-yer-' + motor.id), yalin = document.getElementById('ve-ts-yalin');
+    expect(cp._mntAksoKur(yer.id)).toBe(true);                                        // data-w: sabit genişlik
+    Object.defineProperty(yalin, 'clientWidth', { value: 500 });
+    expect(cp._mntAksoKur(yalin.id, 500)).toBe(true);
+    [yer, yalin].forEach((kap) => {
+      const s = kap.querySelector('svg.ve-mnt2d-akso'), once = s.outerHTML;
+      const t = s.querySelector('.ve-ak-hareket [data-ak="T1"]');
+      t.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, clientX: 1, clientY: 1 }));
+      kap.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, cancelable: true, button: 0, clientX: 1, clientY: 1 }));
+      expect({ id: kap.id, ayni: kap.querySelector('svg.ve-mnt2d-akso').outerHTML === once }).toEqual({ id: kap.id, ayni: true });
+    });
+    expect(Object.keys(cp._mntAksoSec)).toEqual([]);
+  });
+
+  test('seçili satır seçimin renginde: fare üstünden koyu vurgu zemini + vurgu kenarı; yazıları iki temada AA', () => {
+    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const oran = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const sec = /\.ve-mnt-foy-odak \.ve-mnt-foy tr\.ve-ak-sec td:not\(\.zor\)\{ background:color-mix\(in srgb, var\(--accent-primary\) (\d+)%, var\(--bg-input\)\); \}/.exec(css);
+    const ust = /tr\.ve-ak-satir td\{ background:color-mix\(in srgb, var\(--accent-primary\) (\d+)%, var\(--bg-input\)\); \}/.exec(css);
+    expect(sec && ust).toBeTruthy();
+    expect(Number(sec[1])).toBeGreaterThan(Number(ust[1]));                             // seçim fare üstünden belirgin
+    expect(css).toMatch(/tr\.ve-ak-sec td:first-child\{ box-shadow:inset 3px 0 0 var\(--accent-primary\); \}/);
+    // seçili satır fare üstünden SONRA: üstündeyken de seçimin renginde
+    expect(css.indexOf('tr.ve-ak-sec td:not(.zor)')).toBeGreaterThan(css.indexOf('tr.ve-ak-satir td{'));
+    const p = Number(sec[1]) / 100, sorun = [];
+    [['acik', /:root, \[data-theme="acik"\]\s*\{([^}]*)\}/], ['koyu', /\[data-theme="koyu"\]\s*\{([^}]*)\}/]].forEach(([ad, re]) => {
+      const blok = re.exec(css)[1], v = (n) => hex(new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(blok)[1]);
+      const a = v('accent-primary'), b = v('bg-input'), zem = a.map((x, i) => x * p + b[i] * (1 - p));
+      // satırın yazıları: numara (ikincil), ad ve girdi (birincil), G satırı (başlık), eksik hücre (uyarı mürekkebi)
+      ['text-primary', 'text-secondary', 'text-heading', 'ink-warning'].forEach((t) => {
+        const o = oran(v(t), zem);
+        if (o < 4.5) sorun.push(`${ad}: ${t} ${o.toFixed(2)}:1`);
+      });
+    });
+    expect(sorun).toEqual([]);
+  });
+});
+
 // 3D Görüntüleyici'nin penceresi CAD'in evi (2026-10-20; kapıları
 // mount-cad.test.js): açılışında sahne kurulmaz, 3B yalnız eylemiyle açılır.
 describe('KLASİK 3B — 3D Görüntüleyici açılışta sahne kurmaz', () => {

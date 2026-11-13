@@ -3119,11 +3119,17 @@ function _mntLoadExampleFromModel(anahtar){
 // `sec`: "Güç grubundaki yeri"nden açılınca bileşenin kimliği (tam ekranda da
 // perdenin üstünde). Çizim kabın yüksekliğini doldurur ve pencere boyu
 // değişince yeniden ölçülür (_mntAksoTamH).
+// Sabit konusuz tam ekran tıkla seçer (Canlı Not 163) ve açıldığı Görünümler'in seçimini
+// paylaşır (`data-tik-sec` o kabın anahtarı): kapanınca pencerenin çizimi ve föyü aynı parçada.
 function veMntAkso3BTamEkran(sec){
   if(typeof document==='undefined') return;
-  var gozcu=null;
+  var gozcu=null, tik=null;
+  if(sec==null){
+    var kaynak=document.querySelector('.ve-properties-content .ve-mnt-akso-kap[data-tik-sec]');
+    tik=(kaynak && kaynak.getAttribute('data-tik-sec')) || 've-mnt-akso3b-fs';
+  }
   _mntFsOverlay('Görünümler', '<div class="ve-mnt2d-fs" id="ve-mnt-akso3b-fs-kap">'
-    + '<div class="ve-mnt-akso-kap" id="ve-mnt-akso3b-fs" data-tam="1"'+(sec!=null ? ' data-sec="'+_mntEsc(sec)+'"' : '')+'></div></div>', function(){
+    + '<div class="ve-mnt-akso-kap" id="ve-mnt-akso3b-fs" data-tam="1"'+(sec!=null ? ' data-sec="'+_mntEsc(sec)+'"' : ' data-tik-sec="'+_mntEsc(tik)+'"')+'></div></div>', function(){
     var kap=document.getElementById('ve-mnt-akso3b-fs-kap'); if(!kap) return;
     var kur=function(){ _mntAksoKur('ve-mnt-akso3b-fs', kap.clientWidth-26); };
     kur();
@@ -3467,6 +3473,8 @@ function _mntAksoLejant(m, b, sec){
 // YALIN KAP (Canlı Not 37 · sihirbazın masası): `ek.yalin` yalnız çizimi
 // döndürür (başlık ve gösterge kabın sahibinde), `ek.H` yüksekliği, `ek.perdesiz`
 // seçiliyi perdesiz vurgular, `ek.etiket` yazı kipini verir.
+// TIK SEÇER (Canlı Not 163): `ek.tikSec` seçimin anahtarı (_mntAksoSec) — sabit
+// konusu olmayan çizimde seçili parça perdenin üstünde (föy satırının perdesi).
 function _mntAksoHTML(P, W, tam, kapId, ek){
   if(!_mntAk()) return _mntNot('Aksonometrik çizici yüklenmedi.', 'warn');
   ek=ek||{};
@@ -3477,6 +3485,7 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
   // Bileşen kimlikle bulunur (sıra, silinen bir düğümle kayardı).
   var sec=null;
   if(ek.sec!=null) m.govde.concat(m.takoz, m.aski || []).forEach(function(x){ if(x.id!=null && String(x.id)===String(ek.sec)) sec=x; });
+  var tikK=(!sec && ek.sec==null && ek.tikSec) ? _mntAksoSecK(m, _mntAksoSec[ek.tikSec]) : null;
   W=Math.max(200, Math.round(W));
   // Serbest kamera: sığdırma dönmeden bağımsız (küre), yükseklik sabit. Yazı
   // yerleri bir önceki çizimden (yapışkan yer, mount-akso.js → yerlestir).
@@ -3489,10 +3498,12 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
   if(ek.balon) o.balon=true;   // yazılar çerçeveli çip, kısa kırık kılavuz (sihirbazın masası, Canlı Not 41)
   if(ek.ortu && ek.ortu.length) o.ortu=ek.ortu;   // çizimin üstünde yüzen yüzeyler
   if(sec){ o.secili=sec.k; o.perde=!ek.perdesiz; if(!ek.perdesiz) o.aria='Güç grubundaki yeri: '+sec.ad; }
+  else if(tikK){ o.secili=tikK; o.perde=true; }
   var r=veMntAkso.ciz(m, o), svg=_mntAksoSvg(r.svg);
   // Sürüklerken hızlı kare ve föyün vurgusu aynı model ve seçeneklerle
-  // çizilir (_mntAkso3bHizli · _mntAksoOdak); `svg` son çizimin kendisi.
-  _mntAksoCizim[kapId]={ m:m, o:o, F:r.F, yer:r.yer, svg:svg };
+  // çizilir (_mntAkso3bHizli · _mntAksoOdak); `svg` son çizimin kendisi;
+  // `sk` tıkla seçilen parçanın anahtarı (föyün satırı onunla işaretlenir).
+  _mntAksoCizim[kapId]={ m:m, o:o, F:r.F, yer:r.yer, svg:svg, sk:tikK };
   if(ek.yalin) return '<div class="ve-mnt-2d ve-mnt-akso ve-mnt-akso3b ve-mnt-akso-yalin" data-mnt2d="akso">'+svg+'</div>';
   var ay=function(k, v){ return 'veMntAksoAyar(\''+kapId+'\',\''+k+'\''+(v==null ? '' : ',\''+v+'\'')+')'; };
   var dg=function(js, ik, ad){ return '<button type="button" title="'+ad+'" aria-label="'+ad+'" onclick="'+js+'">'+veIkon(ik)+'</button>'; };
@@ -3557,12 +3568,17 @@ function _mntAksoKur(kapId, W, P){
   if(kap.getAttribute('data-ortu')) ek.ortu=kap.getAttribute('data-ortu').split(';').map(function(t){
     var v=t.split(',').map(Number); return { l:v[0], t:v[1], r:v[2], b:v[3] }; }).filter(function(r){ return [r.l, r.t, r.r, r.b].every(isFinite); });
   if(!tam && Number(kap.getAttribute('data-h'))>120) ek.H=Number(kap.getAttribute('data-h'));
+  if(kap.hasAttribute('data-tik-sec')) ek.tikSec=kap.getAttribute('data-tik-sec') || kapId;
   P=P||(typeof _mntAksoKaynak[kapId]==='function' ? _mntAksoKaynak[kapId]() : null)||_mnt2DPencereVeri();
   if(tam) ek.H=_mntAksoTamH(kap);
+  // odaktaki çizim yeniden kurulunca odak yeni çizimde (oklar, Esc)
+  var ae=document.activeElement, odakSv=!!(ae && kap.contains(ae) && ae.matches && ae.matches('svg.ve-mnt2d-akso'));
   kap.innerHTML=_mntAksoHTML(P, W, tam, kapId, ek);
   // Tam ekran kabı doldurur: başlık ve gösterge ölçülür, ikinci kurulum farkı kapatır.
   if(tam){ var H2=_mntAksoTamH(kap); if(H2 && Math.abs(H2-ek.H)>1){ ek.H=H2; kap.innerHTML=_mntAksoHTML(P, W, tam, kapId, ek); } }
   _mntAksoBagla(kap);
+  if(odakSv){ var sv=kap.querySelector('svg.ve-mnt2d-akso'); if(sv && sv.focus) sv.focus({ preventScroll:true }); }
+  if(ek.tikSec) _mntAksoSecFoy(ek.tikSec, (_mntAksoCizim[kapId] || {}).sk);
   return true;
 }
 // Dinleyiciler KABA bir kez (kap tam çizimde yerinde kalır): fare üstü
@@ -3574,6 +3590,7 @@ function _mntAksoBagla(kap){
   _mnt2DAttachHover(kap);
   _mntAkso3bBagla(kap, kap.id);
   _mntAksoVurguBagla(kap);
+  _mntAksoFoyBagla(kap);
 }
 // SÜRÜKLERKEN HIZLI KARE: yalnız çizim yeniden yazılır (aynı model ve
 // seçenekler), başlık ve gösterge yerinde kalır; bırakınca tam çizim
@@ -3617,7 +3634,8 @@ function _mntAkso3bBagla(kap, kapId){
     e.preventDefault();
     var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId), bb=sv.getBoundingClientRect();
     s={ x:e.clientX, y:e.clientY, az:A.az, el:A.el, kay:G.kay.slice(), kaydir:(e.button===2 || e.shiftKey),
-        birim:(bb.width>0 ? (Number(sv.viewBox.baseVal.width) || bb.width)/bb.width : 1), oynadi:false, odak:document.activeElement===sv };
+        birim:(bb.width>0 ? (Number(sv.viewBox.baseVal.width) || bb.width)/bb.width : 1), oynadi:false, odak:document.activeElement===sv,
+        tik:(e.button===0 && !e.shiftKey), hedef:e.target };
     try{ kap.setPointerCapture(e.pointerId); }catch(x){ /* eski tarayıcı */ }
     kap.classList.add('ve-ak3b-surukle');
     // Fare üstü bilgisi çizimi örtmez: basılı düğmede fare olayı gelmez
@@ -3634,14 +3652,22 @@ function _mntAkso3bBagla(kap, kapId){
     else { var y=_mntAkso3bDondur(s, dx, dy); A.az=y.az; A.el=y.el; }
     kare();
   });
-  var birak=function(){
+  // TIK SEÇER (Canlı Not 163): kımıldamadan bırakılan sol tık (eşik |dx| + |dy| < 3,
+  // sihirbazın masasıyla aynı — VE_MW_TIK) seçimi olan çizimde parçayı seçer, boşlukta
+  // bırakır. Hedef bırakılan noktanın öğesi (yakalama olayın hedefini kaba çevirir),
+  // nokta yoksa basılan öğe.
+  var birak=function(e, tik){
     if(!s) return;
-    var oynadi=s.oynadi, odak=s.odak; s=null;
+    var oynadi=s.oynadi, odak=s.odak, t=s; s=null;
     kap.classList.remove('ve-ak3b-surukle');
-    if(oynadi) bitir(odak);
+    if(oynadi){ bitir(odak); return; }
+    if(!tik || !t.tik || !kap.hasAttribute('data-tik-sec')) return;
+    var h=(e && document.elementFromPoint && Number.isFinite(e.clientX)) ? document.elementFromPoint(e.clientX, e.clientY) : null;
+    if(!h || !kap.contains(h)) h=t.hedef;
+    _mntAksoTik(kapId, h);
   };
-  kap.addEventListener('pointerup', birak);
-  kap.addEventListener('pointercancel', birak);
+  kap.addEventListener('pointerup', function(e){ birak(e, true); });
+  kap.addEventListener('pointercancel', function(e){ birak(e, false); });
   kap.addEventListener('contextmenu', function(e){ if(cizimde(e)) e.preventDefault(); });
   kap.addEventListener('wheel', function(e){
     var sv=cizimde(e); if(!sv) return;
@@ -3661,6 +3687,11 @@ function _mntAkso3bBagla(kap, kapId){
   });
   kap.addEventListener('keydown', function(e){
     var sv=cizimde(e); if(!sv) return;
+    // Esc önce tıkla seçimi bırakır (pencere ve tam ekran açık kalır), seçim yoksa olağan sıra
+    if(e.key==='Escape'){
+      if(kap.hasAttribute('data-tik-sec') && _mntAksoSecBirak(kapId)){ e.preventDefault(); e.stopPropagation(); }
+      return;
+    }
     var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId), y=null;
     if(e.key==='ArrowLeft') y=_mntAkso3bDondur(A, -10, 0);
     else if(e.key==='ArrowRight') y=_mntAkso3bDondur(A, 10, 0);
@@ -3762,6 +3793,135 @@ function _mntFoyOdak(e, kapId){
   var tr=(e && e.target && e.target.closest) ? e.target.closest('tr[data-ak]') : null;
   return _mntAksoOdak(kapId, tr ? tr.getAttribute('data-ak') : null);
 }
+// TIK SEÇER (kullanıcı 2026-11-13, Canlı Not 163: *"Görünüşte bileşenlere tıkladığımda, sanki
+// seçmişim gibi renklensin ve aşağıdaki tabloda rengi belli olsun. Değişiklik yapmaya hazır
+// olsun"*): seçimi beyan eden çizimde (kabı `data-tik-sec` taşır — Görünümler ve onun tam
+// ekranı) parçaya tık onu perdenin üstüne KALICI alır (föyün satırının perdesi), föyün satırı
+// seçili renkte (`tr.ve-ak-sec`) ve satırın X girdisi odakta, yazısı seçili: yazılan değer
+// eskisinin yerine geçer. G türetilir: satırı işaretlenir, girdi odaklanmaz. Boşluğa tık ve
+// odaktaki çizimde Esc seçimi bırakır; sürükleme tık değil (_mntAkso3bBagla). Föyün satırına tık
+// ve satırın girdisine odak aynı parçayı seçer. Fare üstü (föy → çizim) önizler, çıkınca seçime
+// döner. Seçim GÖRÜNÜM DURUMU: modele yazılmaz, geri-al adımı yok; parça kimlikle tutulur ve
+// çizim yeniden kurulunca (değer yazıldı, bakış değişti) yerinde. Anahtar kabın `data-tik-sec`i:
+// tam ekran açıldığı Görünümler'in seçimini paylaşır. Sabit konulu çizim ("Güç grubundaki
+// yeri"), Parametrik Analiz'in yerleşimi (föyü grup satırı) ve sihirbazın masası (kendi seçimi)
+// beyan etmez. Kapı: mount-akso.test.js → *TIK SEÇER* + mount-pencere.spec.js → *TIK SEÇER*.
+var _mntAksoSec = {};
+// Çizimin anahtarı → seçimin kaydı ({ k, id }); seçilemeyen işaret (yazısı, ekseni) null.
+function _mntAksoParca(m, k){
+  if(!m || k==null) return null;
+  if(k==='G') return m.G ? { k:'G', id:null } : null;
+  var x=m.govde.concat(m.takoz, m.aski || []).filter(function(q){ return q.k===k; })[0];
+  return x ? { k:x.k, id:(x.id!=null ? x.id : null) } : null;
+}
+// Kayıt → bu modelin anahtarı (kimlikle; kimliksiz öğede sırayla); parça yoksa null.
+function _mntAksoSecK(m, s){
+  if(!m || !s) return null;
+  if(s.k==='G') return m.G ? 'G' : null;
+  var hep=m.govde.concat(m.takoz, m.aski || []), x=null;
+  if(s.id!=null) x=hep.filter(function(q){ return q.id!=null && String(q.id)===String(s.id); })[0];
+  else x=hep.filter(function(q){ return q.k===s.k; })[0];
+  return x ? x.k : null;
+}
+function _mntAksoFoy(kapId){
+  return (typeof document!=='undefined' && kapId) ? document.querySelector('.ve-mnt-foy-odak[data-ak-kap="'+kapId+'"]') : null;
+}
+// Föyün satırını işaretle (anahtarın föyü — Görünümler'inki); işaretlenen satırı döndürür.
+function _mntAksoSecFoy(anahtar, k){
+  var f=_mntAksoFoy(anahtar), tr=null;
+  if(!f) return null;
+  Array.prototype.forEach.call(f.querySelectorAll('tr[data-ak]'), function(r){
+    var on=(k!=null && r.getAttribute('data-ak')===k);
+    if(r.classList.contains('ve-ak-sec')!==on) r.classList.toggle('ve-ak-sec', on);
+    if(on){ if(r.getAttribute('aria-selected')!=='true') r.setAttribute('aria-selected', 'true'); tr=r; }
+    else if(r.hasAttribute('aria-selected')) r.removeAttribute('aria-selected');
+  });
+  return tr;
+}
+function _mntAksoSecAnahtar(kapId){
+  var kap=(typeof document!=='undefined') ? document.getElementById(kapId) : null;
+  return (kap && kap.hasAttribute('data-tik-sec')) ? (kap.getAttribute('data-tik-sec') || kapId) : null;
+}
+// Seçimi yaz ve çizimi kur (seçim değişmediyse kurulmaz).
+function _mntAksoSecYaz(kapId, x){
+  var a=_mntAksoSecAnahtar(kapId); if(!a || !x) return false;
+  var e=_mntAksoSec[a], c=_mntAksoCizim[kapId];
+  if(e && e.k===x.k && String(e.id)===String(x.id) && c && c.sk===x.k) return false;
+  _mntAksoSec[a]={ k:x.k, id:x.id };
+  // son çizimin genişliğiyle: seçim çizimi yalnız aydınlatır, ölçeği oynatmaz
+  if(!_mntAksoKur(kapId, (c && c.o) ? c.o.W : undefined)) _mntAksoSecFoy(a, x.k);
+  return true;
+}
+// Seçimi bırak; bırakılacak seçim yoksa false.
+function _mntAksoSecBirak(kapId){
+  var a=_mntAksoSecAnahtar(kapId); if(!a) return false;
+  var c=_mntAksoCizim[kapId], vardi=!!(c && c.sk);
+  delete _mntAksoSec[a];
+  if(!vardi) return false;
+  if(!_mntAksoKur(kapId, c.o ? c.o.W : undefined)) _mntAksoSecFoy(a, null);
+  return true;
+}
+// Satırın ilk girdisi odakta, yazısı seçili; satır görünmüyorsa en kısa kaydırmayla görünür.
+function _mntAksoSatirOdak(tr){
+  var inp=tr ? tr.querySelector('input:not([readonly]):not([disabled])') : null;
+  if(!inp) return false;
+  try{ inp.focus({ preventScroll:true }); }catch(x){ inp.focus(); }
+  if(typeof inp.select==='function') inp.select();
+  if(typeof tr.scrollIntoView==='function' && !_mntGorunur(tr)) tr.scrollIntoView({ block:'nearest', inline:'nearest' });
+  return true;
+}
+// Öğe kaydırılan atalarının ve ekranın içinde tümüyle görünüyor mu.
+function _mntGorunur(el){
+  var r=el.getBoundingClientRect(), p=el.parentElement;
+  if(!(r.width>0 || r.height>0)) return true;
+  while(p && p!==document.body && p!==document.documentElement){
+    var cs=(typeof getComputedStyle==='function') ? getComputedStyle(p) : null;
+    if(cs && /(auto|scroll|hidden)/.test(cs.overflowY) && p.scrollHeight>p.clientHeight){
+      var q=p.getBoundingClientRect();
+      if(r.top<q.top-0.5 || r.bottom>q.bottom+0.5) return false;
+    }
+    p=p.parentElement;
+  }
+  var H=(typeof window!=='undefined' && window.innerHeight) || 0;
+  return !(H && (r.top<0 || r.bottom>H));
+}
+// Çizimde kımıldamadan tık (_mntAkso3bBagla): parça seçilir, föyün satırının X'i odakta (G
+// türetilir); boşlukta seçim bırakılır ve odak çizimde.
+function _mntAksoTik(kapId, el){
+  var kap=(typeof document!=='undefined') ? document.getElementById(kapId) : null, c=_mntAksoCizim[kapId];
+  if(!kap || !c || !c.m || !_mntAksoSecAnahtar(kapId)) return false;
+  var a=(el && el.closest) ? el.closest('svg.ve-mnt2d-akso [data-ak]') : null;
+  var x=a ? _mntAksoParca(c.m, a.getAttribute('data-ak')) : null;
+  var cizimOdak=function(){ var sv=kap.querySelector('svg.ve-mnt2d-akso'); if(sv && sv.focus){ try{ sv.focus({ preventScroll:true }); }catch(er){ sv.focus(); } } };
+  if(!x){ _mntAksoSecBirak(kapId); cizimOdak(); return false; }
+  _mntAksoSecYaz(kapId, x);
+  var f=_mntAksoFoy(kapId), tr=f ? f.querySelector('tr[data-ak="'+x.k+'"]') : null;
+  if(!(x.k!=='G' && _mntAksoSatirOdak(tr))) cizimOdak();
+  return true;
+}
+// Föyün tıkı ve girdisinin odağı (dinleyiciler föyün kabında, _mntAksoFoyBagla): satırın parçası
+// seçilir; girdisiz hücreye tık X'i odaklar.
+function _mntFoyTik(e, kapId){
+  var t=e && e.target, tr=(t && t.closest) ? t.closest('tr[data-ak]') : null;
+  var c=_mntAksoCizim[kapId];
+  if(!tr || !c || !c.m || !_mntAksoSecAnahtar(kapId)) return false;
+  var x=_mntAksoParca(c.m, tr.getAttribute('data-ak'));
+  if(!x) return false;
+  _mntAksoSecYaz(kapId, x);
+  if(e.type==='click' && x.k!=='G' && !t.closest('input, select, textarea, button')){
+    var f=_mntAksoFoy(kapId);
+    _mntAksoSatirOdak(f ? f.querySelector('tr[data-ak="'+x.k+'"]') : null);
+  }
+  return true;
+}
+function _mntAksoFoyBagla(kap){
+  if(!kap || !kap.id || !kap.hasAttribute('data-tik-sec')) return;
+  var f=_mntAksoFoy(kap.id), kapId=kap.id;
+  if(!f || f.__mntAksoTik) return;
+  f.__mntAksoTik=true;
+  f.addEventListener('focusin', function(e){ _mntFoyTik(e, kapId); });
+  f.addEventListener('click', function(e){ _mntFoyTik(e, kapId); });
+}
 // İŞARETLER DÜZENLENİR (kullanıcı 2026-11-11, Canlı Not 124: *"Bu tablo üzerinden
 // komponentlere tıkladığımda X, Y, Z koordinatlarını düzenleyebileyim"*): gövdenin ve
 // takozun konum hücresi bileşenin KENDİ alanının girdisi — gövde cgx · cgy · cgz,
@@ -3769,19 +3929,22 @@ function _mntFoyOdak(e, kapId){
 // (`ve-mnt-<alan>-<düğüm>`). Yazınca çizim yeniden kurulur (veMntIsaretYaz), Birleşik
 // CG satırı ve eksik notu yerinde tazelenir; Birleşik CG türetilir, düzenlenmez.
 // `kimlik`: pencerenin düğümü (tazelenen satırların kimliği).
-function _mnt2DIsaretFoy(P, kimlik){
+// `sk`: tıkla seçilen parçanın anahtarı (Canlı Not 163) — satırı seçili (`tr.ve-ak-sec`);
+// yerinde tazelenen G satırı DOM'daki işaretle birebir yazılır (tazeleme onu değişti saymasın).
+function _mnt2DIsaretFoy(P, kimlik, sk){
   var M=P.M, cg=P.veri.cg, eks=0, kim=_mntEsc(kimlik || 'foy');
+  var on=function(k){ return sk!=null && k===sk; };
   var hucre=function(v){ return _mntBos(v) ? '<td class="eks">boş</td>' : '<td>'+_mntS(_mntNum(v),0)+'</td>'; };
   var sat=function(k, no, ad, n, al, deger){
     if(deger.some(_mntBos)) eks++;
     var hc=n ? al.map(function(a, i){ return _mntFoyGir(n, a, ad+' '+'XYZ'[i], { zorunlu:true, ph:'boş', setter:'veMntIsaretYaz' }); }).join('')
              : deger.map(hucre).join('');
-    return '<tr data-ak="'+k+'"><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hc+'</tr>';
+    return '<tr data-ak="'+k+'"'+(on(k) ? ' class="ve-ak-sec" aria-selected="true"' : '')+'><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hc+'</tr>';
   };
   // Konum sütunları girdi taşır: sütunda girdi ≥ 56 px (mufettis-sigma.spec.js) → %18'er.
   var h=_mntFoyAc([{ b:'No', gen:'10%' }, { b:'Ad', gen:'36%', sinif:'sol' }, { b:'X', gen:'18%' }, { b:'Y', gen:'18%' }, { b:'Z', gen:'18%' }],
                   'İşaretler', 've-mnt-foy--sik');
-  if(cg) h+='<tr class="top" data-ak="G" id="ve-mnt-isr-g-'+kim+'" data-tazele><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
+  if(cg) h+='<tr class="top'+(on('G') ? ' ve-ak-sec' : '')+'" data-ak="G" id="ve-mnt-isr-g-'+kim+'" data-tazele'+(on('G') ? ' aria-selected="true"' : '')+'><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
   M.g.components.forEach(function(c, i){ h+=sat('g'+(i+1), String(i+1), c.name, _mntDugum(c.id), ['cgx','cgy','cgz'], [c.cgx, c.cgy, c.cgz]); });
   M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), 'T'+(i+1), m.name, _mntDugum(m.id), ['x','y','z'], [m.x, m.y, m.z]); });
   h+=_MNT_FOY_KAPA;
@@ -3805,10 +3968,15 @@ function getMnt2DViewPropertiesHTML(node, tazele){
   var P=_mnt2DPencereVeri(), M=P.M, kapId='ve-mnt-akso3b-'+node.id;
   var bos=!M.g.components.length && !M.g.mounts.length;
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
+  // Çizim seçimi beyan eder (`data-tik-sec`, Canlı Not 163); föyün satırı son çizimin seçiminden.
+  // Pencere yeni açılınca seçimsiz başlar; açık pencerenin yeniden kurulması seçimi korur.
+  if(!tazele && typeof document!=='undefined' && !document.getElementById(kapId)) delete _mntAksoSec[kapId];
+  var ciz=(bos || tazele) ? '' : _mntAksoHTML(P, _MNT_KROKI_W, false, kapId, { tikSec:kapId });
+  var sk=(_mntAksoCizim[kapId] && _mntAksoCizim[kapId].sk) || null;
   var govde=bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'+_mntBolum('İşaretler', em, _mntNot('Kanvasta model yok.', ''))
-    : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+(tazele ? '' : _mntAksoHTML(P, _MNT_KROKI_W, false, kapId))+'</div>'
+    : '<div class="ve-mnt-akso-kap" id="'+kapId+'" data-tik-sec="'+kapId+'">'+ciz+'</div>'
       + _mntBolum('İşaretler', em, '<div class="ve-mnt-foy-odak" data-ak-kap="'+kapId+'" onmouseover="_mntFoyOdak(event,\''+kapId+'\')"'
-        + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P, node.id)+'</div>');
+        + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P, node.id, sk)+'</div>');
   return _mntPencereKabuk(node, [{ k:'akso', ad:'Aksonometrik', govde:govde }], '');
 }
 // Açılışta (cp-core), sütun genişliği değişince ve tam ekran kapanınca:
@@ -6541,6 +6709,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
     _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak, _mntAksoVurguBagla: _mntAksoVurguBagla,
+    _mntAksoSec: _mntAksoSec, _mntAksoTik: _mntAksoTik, _mntFoyTik: _mntFoyTik, _mntAksoSecBirak: _mntAksoSecBirak, _mntAksoParca: _mntAksoParca,
     _mntAksoTamH: _mntAksoTamH, veMntAksoTazele: veMntAksoTazele, veMntAkso3BTamEkran: veMntAkso3BTamEkran,
     _mnt2DFs: _mnt2DFs, _mntFsOverlay: _mntFsOverlay,
     _mntAksoCizim: _mntAksoCizim, _mntAksoGorus: _mntAksoGorus,
