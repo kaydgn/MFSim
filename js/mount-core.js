@@ -2538,7 +2538,9 @@ var veMountCore = (function() {
   // m·g'den yalnız yayın sehim kuvveti kadar az, kütleler yeniden uydurulsa da 918,4 N'la sehim RMS
   // 0,53 mm (ön yüksüz 0,022). Yayın resmi 918,4 N'u (ilk noktası 74 mm · 93,5 kgf) ve statikte
   // montaj noktasını (70 mm · 117 ± 10 kgf) veriyor: Askı Yayı penceresinin "Resmin ön yükü".
-  // Kapı: tests/unit/mount-adams-isg.test.js.
+  // ÇERÇEVE programınki (Canlı Not 168): Adams'ın Z'si krank ekseninden (z = 0), bütün Z'ler +716,5 mm —
+  // aynı 6×6 kabinin föyündeki askı noktası yüksekliği (672,5; TTA askılı); Z = 0 düzlemi güç grubunun
+  // altında, öteki örnekler gibi. Kapı: tests/unit/mount-adams-isg.test.js.
   const _ISG_I = function(a){ return { Ixx:a[0]*1e-6, Iyy:a[1]*1e-6, Izz:a[2]*1e-6, Ixy:0, Ixz:0, Iyz:0 }; };
   const _CONE3840 = { kstat:[1200, 780, 450], kdyn:[1440, 936, 540] };
   const _CONE3940 = { kstat:[1340, 1340, 720], kdyn:[1608, 1608, 864] };
@@ -2546,22 +2548,22 @@ var veMountCore = (function() {
   const ISG430_ASKILI_EXAMPLE = {
     g: 9.81,
     components: [
-      Object.assign({name:'Motor — ISG 430', mass:1002.0, cg:[1042.3, -11.6, -43], pointMass:false, kind:'mnt-motor'}, _ISG_I([4.75e7, 1.33e8, 1.14e8])),
-      Object.assign({name:'Şanzıman', mass:524.3, cg:[2154.4, -42.9, -302.4], pointMass:false, kind:'mnt-gearbox'}, _ISG_I([1.21e7, 3.37e7, 3.15e7])),
-      Object.assign({name:'Askı braketi', mass:8.1, cg:[2516.3, 4.5, 29], pointMass:false, kind:'mnt-bracket'}, _ISG_I([4.11e5, 2.40e4, 4.17e5])),
-      {name:'Şaft', mass:26.1, cg:[2699.6, 0, -219.55], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft'}
+      Object.assign({name:'Motor — ISG 430', mass:1002.0, cg:[1042.3, -11.6, 673.5], pointMass:false, kind:'mnt-motor'}, _ISG_I([4.75e7, 1.33e8, 1.14e8])),
+      Object.assign({name:'Şanzıman', mass:524.3, cg:[2154.4, -42.9, 414.1], pointMass:false, kind:'mnt-gearbox'}, _ISG_I([1.21e7, 3.37e7, 3.15e7])),
+      Object.assign({name:'Askı braketi', mass:8.1, cg:[2516.3, 4.5, 745.5], pointMass:false, kind:'mnt-bracket'}, _ISG_I([4.11e5, 2.40e4, 4.17e5])),
+      {name:'Şaft', mass:26.1, cg:[2699.6, 0, 496.95], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft'}
     ],
     mounts: [
-      Object.assign({name:'Sol ön takoz',   pos:[ 457.1,  -50.8, -419.9]}, _CONE3840),
-      Object.assign({name:'Sağ ön takoz',   pos:[ 457.1,   50.8, -419.9]}, _CONE3840),
-      Object.assign({name:'Sol orta takoz', pos:[1637.7, -356,   -150.9]}, _CONE3940),
-      Object.assign({name:'Sağ orta takoz', pos:[1637.7,  356,   -150.9]}, _CONE3940),
-      Object.assign({name:'Sol arka takoz', pos:[1747.7, -356,   -150.9]}, _CONE3940),
-      Object.assign({name:'Sağ arka takoz', pos:[1747.7,  356,   -150.9]}, _CONE3940)
+      Object.assign({name:'Sol ön takoz',   pos:[ 457.1,  -50.8, 296.6]}, _CONE3840),
+      Object.assign({name:'Sağ ön takoz',   pos:[ 457.1,   50.8, 296.6]}, _CONE3840),
+      Object.assign({name:'Sol orta takoz', pos:[1637.7, -356,   565.6]}, _CONE3940),
+      Object.assign({name:'Sağ orta takoz', pos:[1637.7,  356,   565.6]}, _CONE3940),
+      Object.assign({name:'Sol arka takoz', pos:[1747.7, -356,   565.6]}, _CONE3940),
+      Object.assign({name:'Sağ arka takoz', pos:[1747.7,  356,   565.6]}, _CONE3940)
     ],
     askilar: [
-      {name:'Sol askı yayı', pos:[2523.3, -350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0},
-      {name:'Sağ askı yayı', pos:[2523.3,  350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0}
+      {name:'Sol askı yayı', pos:[2523.3, -350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0},
+      {name:'Sağ askı yayı', pos:[2523.3,  350, 672.5], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'onyuk', onyukF:0}
     ],
     torque: ISG430_TORQUE,
     cozucu: { zeta:0.02 },

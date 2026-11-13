@@ -120,7 +120,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-mount', 'mnt-aski', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
-  // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
+  // Çözücü çok bölümlü bir pencere (statik · modal · frekans yanıtı · geçici rejim) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri.

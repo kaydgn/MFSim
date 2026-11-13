@@ -1283,6 +1283,26 @@ describe('ASKI BRAKETİ (Canlı Not 166) — yayların üst uçları üstlerinde
     expect(say.tulga).toBe('yok');
     document.body.innerHTML = '';
   });
+
+  test('modelin braketi yayların yanındaysa prizma O bileşen: ISG 430\'da "Askı braketi" — ikinci küp yok (Canlı Not 168 · 169)', () => {
+    yukle('isg430askili');
+    const m = cp._mntAksoModel(), br = m.govde.find((g) => g.ad === 'Askı braketi'), ab = AK.askiBraket(m);
+    expect(ab.g).toBe(br);
+    // ağırlık merkezi prizmanın içinde, alt yüzü yayların üst uçlarında
+    [0, 1, 2].forEach((i) => expect(Math.abs([br.x, br.y, br.z][i] - ab.c[i])).toBeLessThan(ab.h[i]));
+    m.aski.forEach((a) => expect(ab.c[2] - ab.h[2]).toBeCloseTo(a.z, 6));
+    KAM.forEach((kam) => ['golge', 'xray'].forEach((stil) => {
+      document.body.innerHTML = AK.ciz(m, { W: 354, H: 326, kam, kure: true, stil, kat: { golge: true }, fs: FS, etiket: 'genis', balon: true }).svg;
+      const gr = [...document.querySelectorAll(`g.ve-ak-g[data-ak="${br.k}"]`)];
+      expect({ kam, stil, n: gr.length, ab: gr.every((e) => e.classList.contains('ve-ak-ab')) }).toEqual({ kam, stil, n: 1, ab: true });
+      expect(document.querySelectorAll('g.ve-ak-ab').length).toBe(1);
+      expect(gr[0].getAttribute('data-mnt-info')).not.toMatch(/Eşdeğer/);
+    }));
+    // TTA askılıda modelin braketi yayların yanında değil: prizma bileşensiz
+    yukle('tta10askili');
+    expect(AK.askiBraket(cp._mntAksoModel()).g).toBeNull();
+    document.body.innerHTML = '';
+  });
 });
 
 describe('BRAKET HEP KÖŞEBENT (Canlı Not 164)', () => {
@@ -1322,8 +1342,10 @@ describe('BRAKET HEP KÖŞEBENT (Canlı Not 164)', () => {
           expect({ k, kam, ad: g.ad, nokta: !!document.querySelector(`circle.ve-ak-nokta[data-ak="${g.k}"]`) }).toEqual({ k, kam, ad: g.ad, nokta: false });
           const grup = document.querySelector(`.ve-ak-hareket g.ve-ak-g.ve-ak-br[data-ak="${g.k}"]`);
           expect({ k, kam, ad: g.ad, grup: !!grup }).toEqual({ k, kam, ad: g.ad, grup: true });
-          // levhanın parçaları: takozun üstünde küp payı (hm = 4,4 px), serbest levhada yok
-          const kose = AK.levhaParca(g.levha, g.levha.takoz ? 4.4 / r.sc : 0).flatMap((q) => [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [-1, 1].map((c) => P([q.c[0] + a * q.h[0], q.c[1] + b * q.h[1], q.c[2] + c * q.h[2]])))));
+          // levhanın parçaları: takozun üstünde küp payı (hm = 4,4 px), serbest levhada yok; yayların
+          // yanındaki braket askı braketinin prizması (Canlı Not 168 · 169)
+          const ab = AK.askiBraket(m), parca = (ab && ab.g === g) ? [{ c: ab.c, h: ab.h }] : AK.levhaParca(g.levha, g.levha.takoz ? 4.4 / r.sc : 0);
+          const kose = parca.flatMap((q) => [-1, 1].flatMap((a) => [-1, 1].flatMap((b) => [-1, 1].map((c) => P([q.c[0] + a * q.h[0], q.c[1] + b * q.h[1], q.c[2] + c * q.h[2]])))));
           const ciz = [...grup.querySelectorAll('path')].flatMap((p) => noktalar(p.getAttribute('d')));
           expect(ciz.length).toBeGreaterThan(3);
           const uzak = ciz.filter((q) => !kose.some((c) => Math.hypot(c[0] - q[0], c[1] - q[1]) < 0.2));

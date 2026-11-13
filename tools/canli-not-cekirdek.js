@@ -397,9 +397,12 @@
   // alsana. Üzerinde göstererek değişiklikler yaparız."*): çerçevedeki program değil programın
   // ÜRETTİĞİ belge — `hazirla` programı derler, belgeyi gerçek tarayıcıda üretir (canli-not.js →
   // BELGE_URET), köprü ve künye belgeye girer. Bileşen yok (`tip` yok); belge kendini açar.
+  // Çözücü (kullanıcı 2026-11-13: *"çözücü bileşeninde yaptığımız değişiklikleri takip
+  // edebileceğim bir 'canlı not' sistemi kuralım"*) — Takoz'un Çözücü penceresi.
   var ODAKLAR = {
     parametrik: { ad: 'Parametrik Analiz', baslik: 'Canlı Not · Parametrik Analiz', tip: 'mnt-parametric', taban: 1000 },
-    'param-html': { ad: 'HTML raporu', baslik: 'Canlı Not · HTML raporu', belge: true, taban: 2000 }
+    'param-html': { ad: 'HTML raporu', baslik: 'Canlı Not · HTML raporu', belge: true, taban: 2000 },
+    cozucu: { ad: 'Çözücü', baslik: 'Canlı Not · Çözücü', tip: 'mnt-solver', taban: 3000 }
   };
   function odakBul(ad) {
     return ad && Object.prototype.hasOwnProperty.call(ODAKLAR, String(ad)) ? ODAKLAR[String(ad)] : null;

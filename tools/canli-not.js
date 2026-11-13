@@ -892,7 +892,7 @@ async function sonuc(o) {
     }
     // Odaklı sayfanın notu: sayfanın açtığı yerin AYNISI — köprünün tarifi metin olarak.
     if (o.odak && !belge) {
-      await sayfa.evaluate('(' + require('./canli-not-kopru.js').ODAKLAR[o.odak].toString() + ')(window)');
+      await sayfa.evaluate(require('./canli-not-kopru.js').odakKaynak(o.odak) + '(window)');
       await sayfa.waitForTimeout(400);
     }
     if (hazirlik) await sayfa.evaluate('(async () => { const bekle = (ms) => new Promise((r) => setTimeout(r, ms));\n' + hazirlik + '\n})()');
