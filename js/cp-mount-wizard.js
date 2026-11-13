@@ -81,7 +81,7 @@ var VE_MW_GOVDE_ALAN = ['mass', 'cgx', 'cgy', 'cgz', 'Ixx', 'Iyy', 'Izz', 'Ixy',
 var VE_MW_TAKOZ_ALAN = ['x', 'y', 'z', 'kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd', 'maxLoad', 'libKey',
                         'fitX', 'fitY', 'fitZ', 'curveX', 'curveY', 'curveZ'];
 // Askı yayının alanları — Askı Yayı bileşeninin verisi (cp-mount.js → _mntGatherForSolver)
-var VE_MW_ASKI_ALAN = ['x', 'y', 'z', 'yay', 'k', 'L0', 'Lc', 'd', 'D', 'n', 'Rm', 'kurulum', 'montajF', 'montajL', 'tasarimL'];
+var VE_MW_ASKI_ALAN = ['x', 'y', 'z', 'yay', 'k', 'L0', 'Lc', 'd', 'D', 'n', 'Rm', 'kurulum', 'montajF', 'montajL', 'onyukF', 'tasarimL'];
 // Tork zinciri alanları ve onları TAŞIYAN gövde (Motor / Şanzıman / Transfer
 // panelinin bölümleriyle aynı yer). Toplayıcı (`_mntGatherTorque`) alanı hangi
 // gövdede bulursa okur; dağıtım yalnız panelde doğru yerde görünsün diye.
@@ -730,9 +730,17 @@ function veMntWizAskiYay(key, yayKey){
 }
 function veMntWizAskiKurulum(key, val){
   var a = _mwSatir('aski', key);
-  var K = (typeof MNT_ASKI_KURULUM !== 'undefined') ? MNT_ASKI_KURULUM : ['kuvvet', 'boy', 'tasarim'];
-  if(!a || K.indexOf(val) < 0) return;
+  if(!a || _mwAskiKurulumlar().indexOf(val) < 0) return;
   a.kurulum = val;
+  veMntWizRender();
+}
+// Resmin ön yükü: tasarım konumundaki ön yük = katalog yayının resmindeki ilk kuvvet.
+function veMntWizAskiResimOnYuk(key){
+  var a = _mwSatir('aski', key);
+  var e = (a && a.yay && typeof veMntYay === 'function') ? veMntYay(a.yay) : null;
+  var ilk = e && (e.noktalar || []).filter(function(p){ return p.ad === 'ilk'; })[0];
+  if(!ilk) return;
+  a.kurulum = 'onyuk'; a.onyukF = ilk.F;
   veMntWizRender();
 }
 function veMntWizSec(tur, key){
@@ -2458,7 +2466,7 @@ function _mwStepTakoz(c){
 
 // ── 4 · ŞANZIMAN ASKISI ──────────────────────────────────────────────────
 function _mwAskiDurum(a){
-  var kur = a.kurulum || 'kuvvet', alan = kur === 'tasarim' ? 'tasarimL' : (kur === 'boy' ? 'montajL' : 'montajF');
+  var kur = a.kurulum || 'kuvvet', alan = _MW_ASKI_KUR_ALAN[kur] || 'montajF';
   var tamam = _mwVar(a.x) && _mwVar(a.y) && _mwVar(a.z) && _mwNum(a.k) > 0 && _mwNum(a.L0) > 0 && _mwVar(a.Lc) && _mwVar(a[alan]);
   return tamam ? 'ok' : 'err';
 }
@@ -2485,27 +2493,53 @@ function _mwYayKatalogHTML(a){
       }).join('')
     + '</select>';
 }
-// Kurulumun karşılığı — Askı Yayı penceresinin bağıntısı: kuvvet [kgf] ↔ statik boy [mm] (L = L0 − F·g/k)
+// Kurulumun karşılığı — Askı Yayı penceresinin bağıntısı (cp-mount.js → _mntAskiKarsilik):
+// kuvvet [kgf] ↔ boy [mm], L = L0 − F·g/k; statik biçimlerde statik dengedeki, ön yük ve
+// tasarım boyunda tasarım konumundaki.
+var _MW_ASKI_KUR_ALAN = { kuvvet:'montajF', boy:'montajL', onyuk:'onyukF', tasarim:'tasarimL' };
+var _MW_ASKI_KUR = ['kuvvet', 'boy', 'onyuk', 'tasarim'];
+var _MW_ASKI_KUR_AD = { kuvvet:'Statik montaj kuvveti', boy:'Statik montaj boyu', onyuk:'Tasarım konumundaki ön yük',
+                        tasarim:'Tasarım konumundaki boy' };
+function _mwAskiKurulumlar(){ return (typeof MNT_ASKI_KURULUM !== 'undefined') ? MNT_ASKI_KURULUM : _MW_ASKI_KUR; }
 function _mwAskiKarsiAd(kur){
-  return kur === 'boy' ? 'Statik kuvvet <u>[kgf]</u>' : (kur === 'tasarim' ? 'Tasarımdaki kuvvet <u>[kgf]</u>' : 'Statik boy <u>[mm]</u>');
+  return kur === 'boy' ? 'Statik kuvvet <u>[kgf]</u>' : kur === 'onyuk' ? 'Tasarım boyu <u>[mm]</u>'
+       : kur === 'tasarim' ? 'Ön yük <u>[kgf]</u>' : 'Statik boy <u>[mm]</u>';
 }
 function _mwAskiKarsi(a){
   var k = _mwNum(a.k), L0 = _mwNum(a.L0), g = 9.81, kur = a.kurulum || 'kuvvet';
   if(!(k > 0) || !(L0 > 0)) return '—';
   if(kur === 'boy'){ var L = _mwNum(a.montajL); return L > 0 ? _mwFmt(k * (L0 - L) / g, 1) : '—'; }
   if(kur === 'tasarim'){ var Ld = _mwNum(a.tasarimL); return Ld > 0 ? _mwFmt(Math.max(0, k * (L0 - Ld) / g), 1) : '—'; }
+  if(kur === 'onyuk'){ var P = _mwNum(a.onyukF); return P >= 0 ? _mwFmt(L0 - P * g / k, 2) : '—'; }
   var F = _mwNum(a.montajF); return F >= 0 ? _mwFmt(L0 - F * g / k, 2) : '—';
 }
+// Katalog yayının resmi: kuvvet–boy noktaları (veri) ve "Resmin ön yükü" — penceredekinin aynısı
+// (cp-mount.js → _mntAskiResimBolum · veMntAskiResimOnYuk).
+function _mwAskiResimHTML(a){
+  var e = (a.yay && typeof veMntYay === 'function') ? veMntYay(a.yay) : null;
+  if(!e || !e.noktalar || !e.noktalar.length) return '';
+  var AD = { ilk:'İlk', montaj:'Montaj', st:'Blok' }, ilk = null;
+  var sat = e.noktalar.map(function(p){
+    if(p.ad === 'ilk') ilk = p;
+    return '<div class="ve-fw-read"><span>' + _mwEsc(AD[p.ad] || p.ad) + '</span><b>' + _mwFmt(p.L, 0) + ' mm' + (p.ad === 'st' ? ' min' : '') + ' · '
+      + _mwFmt(p.F, (p.F % 1) ? 1 : 0) + (p.tol ? ' ± ' + _mwFmt(p.tol, 0) : '') + ' kgf</b></div>';
+  }).join('');
+  var ayni = (a.kurulum === 'onyuk') && ilk && _mwNum(a.onyukF) === ilk.F;
+  return '<div class="ve-fw-reads" aria-label="Resmin noktaları">' + sat + '</div>'
+    + (ilk ? '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn"'
+      + (ayni ? ' aria-disabled="true" title="Ön yük resmin ilk kuvvetinde."' : ' onclick="veMntWizAskiResimOnYuk(\'' + a.key + '\')"')
+      + '>' + _mwIkon('check') + ' Resmin ön yükü</button></div>' : '');
+}
 function _mwAskiKurulumHTML(a){
-  var K = (typeof MNT_ASKI_KURULUM !== 'undefined') ? MNT_ASKI_KURULUM : ['kuvvet', 'boy', 'tasarim'];
-  var AD = (typeof MNT_ASKI_KURULUM_AD !== 'undefined') ? MNT_ASKI_KURULUM_AD
-    : { kuvvet:'Statik montaj kuvveti', boy:'Statik montaj boyu', tasarim:'Tasarım konumundaki boy' };
+  var K = _mwAskiKurulumlar();
+  var AD = (typeof MNT_ASKI_KURULUM_AD !== 'undefined') ? MNT_ASKI_KURULUM_AD : _MW_ASKI_KUR_AD;
   var kur = K.indexOf(a.kurulum) >= 0 ? a.kurulum : 'kuvvet', P = 'aski.' + a.key + '.';
   var sel = '<select class="ve-fw-inp" onchange="veMntWizAskiKurulum(\'' + a.key + '\', this.value)" aria-label="Kurulum biçimi">'
     + K.map(function(k){ return '<option value="' + k + '"' + (kur === k ? ' selected' : '') + '>' + _mwEsc(AD[k]) + '</option>'; }).join('')
     + '</select>';
   var alan = kur === 'tasarim' ? _mwAlan('Boy <u>[mm]</u>', _mwInp(P + 'tasarimL', a.tasarimL, { ph:'zorunlu', baslik:'Tasarım boyu' }))
            : kur === 'boy'     ? _mwAlan('Boy <u>[mm]</u>', _mwInp(P + 'montajL', a.montajL, { ph:'zorunlu', baslik:'Statik boy' }))
+           : kur === 'onyuk'   ? _mwAlan('Ön yük <u>[kgf]</u>', _mwInp(P + 'onyukF', a.onyukF, { ph:'zorunlu', baslik:'Ön yük' }))
            :                     _mwAlan('Kuvvet <u>[kgf]</u>', _mwInp(P + 'montajF', a.montajF, { ph:'zorunlu', baslik:'Statik kuvvet' }));
   return _mwAlan('Biçim', sel) + alan
     + '<div class="ve-fw-reads"><div class="ve-fw-read"><span>' + _mwAskiKarsiAd(kur) + '</span>'
@@ -2518,11 +2552,12 @@ function _mwAskiEditorHTML(a){
     + _mwBolum('Konum <u>[mm]</u>',
         _mwUclu('Bağlantı noktası', P, a, [['x', 'Konum x'], ['y', 'Konum y'], ['z', 'Konum z']], ['x', 'y', 'z']))
     + _mwBolum('Yay',
-        _mwAlan('Katalog', _mwYayKatalogHTML(a))
+        _mwAlan('Katalog' + ((typeof _mntAskiResimDugme === 'function') ? _mntAskiResimDugme(a.yay) : ''), _mwYayKatalogHTML(a))
       + _mwAlan('Yay sabiti <u>[N/mm]</u>', _mwInp(P + 'k', a.k, { ph:'zorunlu', baslik:'Yay sabiti' }))
       + _mwAlan('Serbest boy <u>[mm]</u>', _mwInp(P + 'L0', a.L0, { ph:'zorunlu', baslik:'Serbest boy' }))
       + _mwAlan('Blok boyu <u>[mm]</u>', _mwInp(P + 'Lc', a.Lc, { ph:'zorunlu', baslik:'Blok boyu' })))
     + _mwBolum('Kurulum', _mwAskiKurulumHTML(a))
+    + (function(r){ return r ? _mwBolum('Resmin noktaları', r) : ''; })(_mwAskiResimHTML(a))
     + '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizAskiSil(\'' + k + '\')">'
     + _mwIkon('trash') + ' Sil</button></div></div>';
 }
@@ -3263,7 +3298,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizNokta: veMntWizNokta, veMntWizTakozEkle: veMntWizTakozEkle, veMntWizTakozSil: veMntWizTakozSil,
     veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizAskili: veMntWizAskili, veMntWizAskiEkle: veMntWizAskiEkle, veMntWizAskiSil: veMntWizAskiSil,
-    veMntWizAskiYay: veMntWizAskiYay, veMntWizAskiKurulum: veMntWizAskiKurulum, VE_MW_ASKI_ALAN: VE_MW_ASKI_ALAN,
+    veMntWizAskiYay: veMntWizAskiYay, veMntWizAskiKurulum: veMntWizAskiKurulum, veMntWizAskiResimOnYuk: veMntWizAskiResimOnYuk,
+    _mwAskiResimHTML: _mwAskiResimHTML, _mwAskiKarsi: _mwAskiKarsi, VE_MW_ASKI_ALAN: VE_MW_ASKI_ALAN,
     _mwStepAski: _mwStepAski, _mwAskiListeHTML: _mwAskiListeHTML, _mwAskiKarsi: _mwAskiKarsi, _mwMasaSec: _mwMasaSec,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
     veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, veMntWizTransferKatalog: veMntWizTransferKatalog, _mwTransferKatalogHTML: _mwTransferKatalogHTML, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,

@@ -25,6 +25,7 @@ global.veMountCore = core;
 const cp = require('../../js/cp-mount.js');
 Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
 Object.assign(global, require('../../js/mount-yay.js'));
+global.veMntYayCiz = require('../../js/mount-yay-ciz.js');
 global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
 const W = require('../../js/cp-mount-wizard.js');
 
@@ -103,7 +104,7 @@ describe('ADIM — Şanzıman askısı, takozlardan sonra', () => {
     const ed = govde().querySelector('.ve-mw-ed');
     expect([...ed.querySelectorAll('.ve-mw-ed-bas')].map((b) => b.textContent)).toEqual(['Kimlik', 'Konum [mm]', 'Yay', 'Kurulum']);
     expect([...ed.querySelectorAll('select[aria-label="Yay kataloğu"] option')].map((o) => o.value)).toEqual(['', 'tta-aski']);
-    expect([...ed.querySelectorAll('select[aria-label="Kurulum biçimi"] option')].map((o) => o.value)).toEqual(['kuvvet', 'boy', 'tasarim']);
+    expect([...ed.querySelectorAll('select[aria-label="Kurulum biçimi"] option')].map((o) => o.value)).toEqual(['kuvvet', 'boy', 'onyuk', 'tasarim']);
     W.veMntWizAskiEkle();
     expect(W.veMntWizState().askilar.map((a) => a.ad)).toEqual(['Sol askı yayı', 'Sağ askı yayı', 'Askı yayı 3']);
     W.veMntWizAskiSil(W.veMntWizState().askilar[2].key);
@@ -139,6 +140,36 @@ describe('DENETİM — konum, yay ve kurulum', () => {
     expect(W._mwAskiKarsi(a)).toBe('93,6');                                // 57,39·16/9,81 kgf
     W.veMntWizAskiKurulum(a.key, 'yok');
     expect(a.kurulum).toBe('tasarim');
+  });
+});
+
+describe('ÖN YÜK ve RESİM — sihirbazda, Askı Yayı penceresinin aynısı', () => {
+  test('ön yük biçimi; resmin noktaları; Resmin ön yükü; (i); ISG\'nin ön yüksüz askısı düğüme birebir', () => {
+    W.veMntWizAc();
+    W.veMntWizAskili(true);
+    W.veMntWizGoto(ASKI);
+    const a = W.veMntWizState().askilar[0];
+    Object.assign(a, { x: 2523.3, y: -350, z: -44 });
+    W.veMntWizAskiYay(a.key, 'tta-aski');
+    const ed = () => govde().querySelector('.ve-mw-ed');
+    expect([...ed().querySelectorAll('.ve-mw-ed-bas')].map((b) => b.textContent)).toEqual(['Kimlik', 'Konum [mm]', 'Yay', 'Kurulum', 'Resmin noktaları']);
+    expect(ed().querySelector('.ve-mnt-yay-resim').dataset.yay).toBe('tta-aski');
+    expect([...ed().querySelectorAll('[aria-label="Resmin noktaları"] .ve-fw-read')].map((r) => [r.firstChild.textContent, r.lastChild.textContent]))
+      .toEqual([['İlk', '74 mm · 93,5 ± 8 kgf'], ['Montaj', '70 mm · 117 ± 10 kgf'], ['Blok', '63 mm min · 158 kgf']]);
+    W.veMntWizAskiResimOnYuk(a.key);
+    expect([a.kurulum, a.onyukF, W._mwAskiKarsi(a)]).toEqual(['onyuk', 93.5, '74,02']);
+    expect([...ed().querySelectorAll('select[aria-label="Kurulum biçimi"] option')].find((o) => o.selected).textContent).toBe('Tasarım konumundaki ön yük');
+    expect(ed().querySelector('.ve-fw-btn[aria-disabled="true"]').textContent).toContain('Resmin ön yükü');
+    a.onyukF = 300;
+    expect(sorun(W.veMntWizState())).toContain('Sol askı yayı: ön yük yayı blok boyuna indiriyor.');
+    W.veMntWizAskiYay(a.key, '');
+    expect(ed().querySelector('.ve-mnt-yay-resim')).toBeNull();
+    expect([...ed().querySelectorAll('.ve-mw-ed-bas')].map((b) => b.textContent)).not.toContain('Resmin noktaları');
+    // ISG örneğinin askısı (ön yük 0) duruma ve düğüme birebir
+    const T = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/isg430askili_topoloji.json'), 'utf8'));
+    const st = W.veMntWizFromNodes(T.nodes);
+    expect(st.askilar.map((x) => [x.kurulum, x.onyukF])).toEqual([['onyuk', 0], ['onyuk', 0]]);
+    expect(W.veMntWizNodes(st).filter((n) => n.type === 'mnt-aski').map((n) => [n.data.kurulum, n.data.onyukF])).toEqual([['onyuk', 0], ['onyuk', 0]]);
   });
 });
 
