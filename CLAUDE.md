@@ -1160,7 +1160,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
   EYLEM SATIRI (`vePencereEylem`: solda durum notu ya da süren işin çubuğu,
   sağda içeriği kadar düğme; dar kapta yapışan SATIRDIR — kullanıcı 2026-10-18:
-  *"butonu çok geniş ve büyük"*); BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Gövdenin ÜSTÜNDE
+  *"butonu çok geniş ve büyük"*); BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Dar kap BLOK
+  AKIŞI, esnek sütun değil: gövdenin son payı, gövdenin ve eylem satırının payı üst üste biner, gövde
+  ile eylem çizgisi arası tek aralık 16 px (Canlı Not 165: esnekte toplanıp 38 px'ti; kapı
+  `pencere-kabuk.test.js` → *BLOK AKIŞI*). Gövdenin ÜSTÜNDE
   banttan başka bir şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama
   kılavuzda — kılavuz da pencereyi bölüm başlığıyla anlatır, sekmeyle değil.
   Aynı bileşenin yeniden kurulması kaydırmayı korur, başka bileşen baştan açılır
