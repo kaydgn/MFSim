@@ -1734,9 +1734,7 @@ function _gmSec17(){
     ['Analiz', 'Kayıtlı takoz, aday tip (ölçülü ve tahmini rijitlik), rijitlik eksik, aday değil, taranan grup, kombinasyon',
       'Kayıtlı takoz: aday tip + rijitlik eksik + aday değil. Rijitliği eksik tip çözülmez; aday değil, '
       + 'taramanın dışında tutulan tiptir. '
-      + 'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 10’ar tip: 1.000); '
-      + 'üst sınır ' + ((typeof veMntKatalog !== 'undefined' && typeof veSayi === 'function')
-        ? veSayi(veMntKatalog.MAKS_KOMB, 0) : '200.000')]
+      + 'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 10’ar tip: 1.000)']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   return h;
 }

@@ -455,11 +455,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (gömülü · değiştirilmiş · özel tip) — eklenen ya da Takoz Özellikleri'nde tamamlanan tip kendiliğinden
   aday (`_mntParamTipSinif`). Sağda **Analiz**: kayıtlı takoz · aday tip · ölçülü · tahmini rijitlik ·
   rijitlik eksik · aday değil (aynı sınıftan, `_mntParamKutuphane`) · taranan grup · kombinasyon (grupların
-  tip sayılarının çarpımı). Aşağıdaki
+  tip sayılarının çarpımı; ÜST SINIRI YOK — kullanıcı 2026-11-13: *"program sonsuz sayıda iterasyon
+  yapabilmeli"*). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
   (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır (parktaki
   listesi tahminsiz, `_mntParamAdaylar`) — grup başına liste bağlanırken karışık tabana geçer. Kapı:
-  `mount-param.test.js` → *YERLEŞİM ve ADAYLAR* (→ *TÜM TİPLER* · *EKLENEN TİP* · *ANALİZ*) +
+  `mount-param.test.js` → *YERLEŞİM ve ADAYLAR* (→ *TÜM TİPLER* · *EKLENEN TİP* · *ANALİZ* · *SINIR YOK*) +
   `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**

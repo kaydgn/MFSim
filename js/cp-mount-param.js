@@ -128,8 +128,7 @@ function _mntParamHazirlik(node, liste){
   var eksik=!M.tak.length ? 'Takoz yok'
     : !(M.fAtes>0) ? 'Rölanti devri ve silindir sayısı yok'
     : !aday.length ? 'Aday tip yok'
-    : !N ? 'Taranacak grup yok'
-    : N>veMntKatalog.MAKS_KOMB ? 'Kombinasyon sayısı '+_mntS(veMntKatalog.MAKS_KOMB, 0)+' üstünde' : '';
+    : !N ? 'Taranacak grup yok' : '';
   return { M:M, A:A, aday:aday, sabit:sabit, N:N, eksik:eksik, ctx:_mntParamCtx(M, node), analiz:analiz };
 }
 
@@ -349,6 +348,7 @@ function _mntParamAdayKip(node){
 // Pencerenin bütün girdisi: model, gruplar, aday tipler, kütüphanenin sayıları (K), kip, özelin
 // seçimi ve kombinasyon. `say` grup başına denenecek tip sayısı (0: grup mevcut tipinde). Seçimden
 // bugün olmayan grup, aday olmayan tip ve tekrar düşer (model ya da kütüphane değişmiş olabilir).
+// Kombinasyonun üst sınırı YOK (kullanıcı 2026-11-13: *"Bu limiti kaldıralım"*; eskiden 200.000).
 function _mntParamYeni(node){
   var M=_mntParamModel(), A=_mntParamAdayTipler(M), K=_mntParamKutuphane(M), kip=_mntParamAdayKip(node);
   var ham=(node && node.data && node.data.adaylar) || {};
@@ -366,9 +366,7 @@ function _mntParamYeni(node){
   var say=M.G.map(function(g){ return kip==='ozel' ? (sec[g.anahtar] || []).length : A.length; });
   var taranan=say.filter(function(s){ return s>0; }).length;
   var N=taranan ? say.reduce(function(p, s){ return p*(s || 1); }, 1) : 0;
-  var eksik=!M.tak.length ? 'Takoz yok'
-    : !A.length ? 'Aday tip yok'
-    : N>veMntKatalog.MAKS_KOMB ? 'Kombinasyon sayısı '+_mntS(veMntKatalog.MAKS_KOMB, 0)+' üstünde' : '';
+  var eksik=!M.tak.length ? 'Takoz yok' : !A.length ? 'Aday tip yok' : '';
   return { M:M, A:A, K:K, kip:kip, sec:sec, say:say, taranan:taranan, N:N, eksik:eksik };
 }
 
@@ -650,7 +648,7 @@ function _mntParamEskiPencereHTML(node){
 }
 
 // Taramanın eksiğine çare — yalnız yolu pencerenin DIŞINDA olan iki eksik;
-// aday, sabit grup ve kombinasyon sınırı aynı pencerede.
+// aday ve sabit grup aynı pencerede.
 function _mntParamEksikYonu(eksik){
   if(eksik === 'Rölanti devri ve silindir sayısı yok') return veYon('Motor penceresinde girin.');
   if(eksik === 'Takoz yok') return veYon('Bileşenler’den takoz ekleyin.');

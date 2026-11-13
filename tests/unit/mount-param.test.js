@@ -406,13 +406,11 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
       const dis = L.filter((e) => bek.indexOf(e.key) < 0);
       expect(dis.every((e) => e.aday === false || !tam6(e))).toBe(true);
       expect([dis.some((e) => e.aday === false), dis.some((e) => e.aday !== false && !tam6(e))]).toEqual([true, true]);
-      // Tüm kombinasyonlar: her grupta bütün adaylar; sayı tarayıcının sınırını aşar, durum bir kez
+      // Tüm kombinasyonlar: her grupta bütün adaylar (sınır yok — aşağıda SINIR YOK)
       const G = Y.M.G.length, d = dom(P.getMntParamPropertiesHTML(n));
       expect([Y.say, Y.N]).toEqual([Y.M.G.map(() => bek.length), bek.length ** G]);
       expect(d.querySelector('.ve-fp-kat[data-k="aday"] .ve-fp-sect em').textContent).toBe(binlik(bek.length) + ' tip');
       expect(yan(d)).toEqual([G + ' / ' + G, binlik(bek.length ** G)]);
-      expect(d.querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı ' + binlik(K.MAKS_KOMB) + ' üstünde');
-      expect(d.querySelectorAll('.ve-fp-durum').length).toBe(1);
       // Özel kombinasyonun araması aynı listeden: boş sorgu bütün adaylar, tahminli tip adıyla bulunur
       const S = P._mntParamListeSira(Y.A);
       expect(P._mntParamAra(S, '', []).map((a) => a.key).sort()).toEqual(bek.slice().sort());
@@ -549,7 +547,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     expect(n.data).toEqual({ adaylarKip: 'ozel' });
   });
 
-  test('KOMBİNASYON: Tüm kombinasyonlarda tip sayısının grup sayısınca kuvveti; özelde seçili grupların çarpımı, seçilmeyen grup mevcut tipinde; sınırı aşınca durum', () => {
+  test('KOMBİNASYON: Tüm kombinasyonlarda tip sayısının grup sayısınca kuvveti; özelde seçili grupların çarpımı, seçilmeyen grup mevcut tipinde', () => {
     const n = kur('tulga'), G = P._mntParamYeni(n).M.G, A = P._mntParamYeni(n).A;
     expect(P._mntParamYeni(n).N).toBe(A.length ** G.length);
     n.data = { adaylarKip: 'ozel', adaylar: { [G[0].anahtar]: A.slice(0, 4).map((a) => a.key), [G[2].anahtar]: A.slice(0, 6).map((a) => a.key) } };
@@ -561,20 +559,41 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     // bugün aday olmayan tip, tekrar ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
     n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key, A[0].key], 'x|y': [A[1].key] };
     expect(P._mntParamYeni(n).say).toEqual([1, 0, 0]);
-    // sınır: Kombinasyon sayısı … üstünde — sağ sütunda tek durum, iki kipte
-    const maks = K.MAKS_KOMB;
-    try {
-      K.MAKS_KOMB = 1000;
-      n.data = {};
-      d = dom(P.getMntParamPropertiesHTML(n));
-      expect(d.querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
-      expect(d.querySelectorAll('.ve-fp-durum').length).toBe(1);
-      n.data = { adaylarKip: 'ozel', adaylar: Object.fromEntries(G.map((g) => [g.anahtar, A.slice(0, 11).map((a) => a.key)])) };
-      expect(P._mntParamYeni(n).N).toBe(1331);
-      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
-      n.data.adaylar[G[0].anahtar] = A.slice(0, 8).map((a) => a.key);
-      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('.ve-fp-durum')).toBeNull();
-    } finally { K.MAKS_KOMB = maks; }
+  });
+
+  // SINIR YOK (kullanıcı 2026-11-13: "Bu limiti kaldıralım, yani program sonsuz sayıda iterasyon
+  // yapabilmeli. Zaten onun için de bir gösterge ekleyeceğiz."): kombinasyon sayısının üst sınırı ve
+  // "Kombinasyon sayısı … üstünde" durumu YOK — Tulga gerçek kütüphaneyle, sentetik kütüphane üç ve
+  // altı grupla; sayı Analiz'de bütünüyle, binlik noktalı; iki kipte, eski pencerede de.
+  test('SINIR YOK: büyük kombinasyon sayısı durum üretmez — Tulga gerçek kütüphaneyle, sentetik 10⁹ ve 10¹⁸; sayı bütünüyle, binlik noktalı', () => {
+    expect(K).not.toHaveProperty('MAKS_KOMB');
+    const durumsuz = (n) => {
+      const d = dom(P.getMntParamPropertiesHTML(n));
+      expect([P._mntParamYeni(n).eksik, d.querySelector('#ve-mnt-param-durum-py').textContent, d.querySelector('.ve-fp-durum')]).toEqual(['', '', null]);
+      return yan(d);
+    };
+    kutuphaneyle(TAM_KUTUPHANE, () => {
+      const n = kur('tulga'), Y = P._mntParamYeni(n), a = Y.A.length;
+      expect(Y.N).toBe(a ** 3);
+      expect(Y.N).toBeGreaterThan(200000);                                       // eski sınır
+      expect(durumsuz(n)).toEqual(['3 / 3', binlik(a ** 3)]);
+      // Özel kombinasyon: her grupta bütün adaylar — aynı sayı, durum yok
+      n.data = { adaylarKip: 'ozel', adaylar: Object.fromEntries(Y.M.G.map((g) => [g.anahtar, Y.A.map((x) => x.key)])) };
+      expect(durumsuz(n)).toEqual(['3 / 3', binlik(a ** 3)]);
+    });
+    // sentetik kütüphane: 1.000 tam tip → üç grupta 10⁹, altı grupta 10¹⁸
+    const SENT = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => ['s' + i,
+      { marka: 'Diğer', name: 'Sentetik ' + i, sx: 500, sy: 500, sz: 300, dx: 650, dy: 650, dz: 390 }]));
+    kutuphaneyle(SENT, () => {
+      const n = kur('tulga');
+      expect(durumsuz(n)).toEqual(['3 / 3', '1.000.000.000']);
+      // üç tek takoz daha: altı grup
+      const m = global.nodes.find((x) => x.type === 'mnt-mount');
+      [1, 2, 3].forEach((k) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
+        { id: 'ek' + k, customName: 'Ek takoz ' + k, data: Object.assign({}, m.data, { x: 1600 + 300 * k, y: 0, z: 500 }) })));
+      expect(P._mntParamYeni(n).M.G.length).toBe(6);
+      expect(durumsuz(n)).toEqual(['6 / 6', '1.000.000.000.000.000.000']);
+    });
   });
 
   test('ARAMA: sorgunun her sözcüğü adda ya da markada (sırası serbest); Türkçe harf katlaması; eklenmiş tip düşer; sıra verilen listenin', () => {
@@ -833,7 +852,7 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     expect(P._mntParamAd('Mount 1 40 ShA')).toBe('Mount 1 <span class="ve-mnt-nw">40 ShA</span>');
   });
 
-  test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
+  test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit; kombinasyonun sınırı yok', () => {
     global.nodes = [];
     expect(P._mntParamHazirlik(node()).eksik).toBe('Takoz yok');
     modelKur('tulga');
@@ -845,17 +864,18 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     expect(P._mntParamHazirlik(n).eksik).toBe('Taranacak grup yok');
     const dom1 = dom(P._mntParamEskiPencereHTML(n));
     expect(dom1.querySelector('.ve-fp-solve').disabled).toBe(true);
-    // dört grup → 24⁴ = 331.776 > sınır
+    // dört grup → 24⁴ = 331.776: sınır yok (SINIR YOK), Tara açık
     modelKur('kamyon');
     const m = global.nodes.find((x) => x.type === 'mnt-mount');
     [[1, 'Sağ Orta'], [2, 'Sol Orta']].forEach(([k, ad]) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
       { id: 'ek' + k, customName: ad, data: Object.assign({}, m.data, { x: 300, y: k === 1 ? 350 : -350, z: 500 }) })));
     [[3, 'Sağ Kuyruk'], [4, 'Sol Kuyruk']].forEach(([k, ad]) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
       { id: 'ek' + k, customName: ad, data: Object.assign({}, m.data, { x: 1500, y: k === 3 ? 350 : -350, z: 500 }) })));
-    const H4 = P._mntParamHazirlik(node());
+    const n4 = node(), H4 = P._mntParamHazirlik(n4);
     expect(H4.M.G.length).toBe(4);
     expect(H4.N).toBe(331776);
-    expect(H4.eksik).toMatch(/^Kombinasyon sayısı 200\.000 üstünde$/);
+    expect(H4.eksik).toBe('');
+    expect(dom(P._mntParamEskiPencereHTML(n4)).querySelector('.ve-fp-solve').disabled).toBe(false);
   });
 });
 
