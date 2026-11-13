@@ -113,12 +113,12 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
     modelKur('kamyon');
     const t = global.nodes.find((n) => n.type === 'mnt-mount');
     const d = dom(cp.getMntMountPropertiesHTML(t));
-    const gr = [...d.querySelectorAll('optgroup')].map((g) => g.getAttribute('label'));
-    // Takoz Özellikleri'nin Marka listesiyle aynı gruplar (Canlı Not 106)
-    expect(gr).toEqual(expect.arrayContaining(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer']));
-    expect(gr).not.toContain('Katalog');
-    expect(gr).not.toContain('Gömülü');
-    const say = (ad) => d.querySelector('optgroup[label="' + ad + '"]').querySelectorAll('option').length;
+    // Takoz Özellikleri'nin Marka listesi (Canlı Not 106 · 160), sonunda Elle
+    const gr = [...d.querySelectorAll('select.mntlib-marka option')].map((o) => o.textContent);
+    expect(gr).toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer', 'Elle']);
+    // Tip listesi seçili markanın tipleri, sayaçsız: her marka kendi uzunluğunda
+    const say = (ad) => { t.data.libKey = cp.veMntLibMarkalar(cp.veMntGetLibraryList()).find((g) => g.ad === ad).girdiler[0].key;
+      const x = dom(cp.getMntMountPropertiesHTML(t)); return x.querySelectorAll('.mntlib-opt').length; };
     expect([say('AMC Mecanocaucho'), say('Angst+Pfister'), say('LASPAR'), say('Diğer')]).toEqual([148, 86, 53, 4]);   // js/mount-amc.js · mount-ap.js · mount-laspar.js
     const bas = [...d.querySelectorAll('.ve-fp-sect')].find((x) => /Takoz tipi/i.test(x.textContent));
     expect(bas.textContent).not.toMatch(/gömülü|\d+\s*özel/);

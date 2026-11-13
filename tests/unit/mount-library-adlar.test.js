@@ -50,6 +50,14 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
       expect([e.name, /BMC|FEA|8x8|çalışma noktası|parça no|·/i.test(e.name)]).toEqual([e.name, false]));
   });
 
+  // Canlı not 2011 ("Şu programda tanımlı olan 'mount 1, mount 2' gibi garip isimli takozların ne
+  // olduğunu araştırabilir misin? Tam isimlerini koyalım."): kaynağın SIRA ETİKETİ ad olamaz — FEA
+  // raporunun "Mount 1"i LASPAR LMT-1433-20 adıyla durur (mount-library-lmt1433.test.js → KİMLİK).
+  test('ad kaynağın sıra etiketi değil: "Mount 1" · "Takoz 2" gibi numaralı ad yok', () => {
+    expect(Object.values(L).filter((e) => /^(mount|takoz|isolator)\s*\d/i.test(e.name)).map((e) => e.name)).toEqual([]);
+    expect(L['bmc-mount1-55sh'].name).toBe('LMT-1433-20 55 ShA');
+  });
+
   test('sertliği yazılmayan AMC ürünü: ad = ürün + (AMC kod) — Cone 100 A/B/C, Cone 200 A/B', () => {
     expect(SERTLIKSIZ.sort()).toEqual(['amc137213', 'amc137214', 'amc137215', 'amc137437', 'amc137438']);
     SERTLIKSIZ.forEach((k) => expect(L[k].name).toMatch(/^Cone (100|200) [ABC] \(AMC 1\d{5}\)$/));
@@ -98,7 +106,7 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
 
 describe('Kaldırılan girdiye bağlı kayıtlı takoz', () => {
   // Kayıtlı proje takozu libKey ile bağlar; '-calc' girdileri artık yok. Değerler
-  // düğümün kendisinde: sonuç değişmez, liste "— elle gir —", not sebebi söyler.
+  // düğümün kendisinde: sonuç değişmez, Marka Elle (Tip satırı yok), not sebebi söyler.
   test('değerler yerinde, eşleşme yok, not "girdi artık yok" der', () => {
     const d = { libKey: 'amc137963-calc', kxs: 2670, kys: 1065, kzs: 1180, kxd: 4265, kyd: 1690, kzd: 1715 };
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: Object.assign({}, d) };
@@ -107,8 +115,8 @@ describe('Kaldırılan girdiye bağlı kayıtlı takoz', () => {
     expect(cp._mntKutuphaneEslesme(n)).toBeNull();
     const h = document.createElement('div');
     h.innerHTML = cp._mntTakozTipGovde(n);
-    const sel = h.querySelector('select[id="ve-mnt-libKey-m1"]');
-    expect(sel.options[sel.selectedIndex].value).toBe('');
+    expect(h.querySelector('select[id="mntlib-marka-m1"]').value).toBe('');
+    expect(h.querySelector('.mntlib-trigger')).toBeNull();
     expect(h.querySelector('#ve-mnt-libnot-m1').textContent).toContain('Seçili kütüphane girdisi artık yok');
     expect(n.data).toEqual(d);
   });

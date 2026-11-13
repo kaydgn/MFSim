@@ -168,6 +168,9 @@ test('Takoz Özellikleri: Tip satırının okları tipler arasında gezer, yerin
     return n.id;
   });
   await page.waitForSelector('#mntlib-adim-sonraki-' + id, { timeout: 10000 });
+  // Pencere sütuna 0,18 sn'lik geçişle gelir (translateX 14 px → 0): ilk ölçüm geçiş BİTİNCE —
+  // geçişin ortasında alınan ilk yer okları 1–3 px kaymış gösteriyordu (CI, #1382'den beri).
+  await page.waitForFunction(() => document.getElementById('ve-properties').getAnimations().length === 0);
   const durum = () => page.evaluate((i) => {
     const n = nodes.find((x) => x.id === i), b = document.getElementById('mntlib-adim-sonraki-' + i).getBoundingClientRect();
     const sec = document.querySelector('#mntlib-list-' + i + ' .mntlib-opt.sel');
@@ -547,6 +550,94 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
   await page.mouse.move(4, 4);
   await page.waitForTimeout(150);
   expect(await page.locator('#ve-properties .ve-mnt-foy-odak tr.ve-ak-satir').count()).toBe(0);
+  await page.evaluate(AKSO3B_SIFIR);
+});
+
+// TIK SEÇER (kullanıcı 2026-11-13, Canlı Not 163: "Görünüşte bileşenlere tıkladığımda, sanki
+// seçmişim gibi renklensin ve aşağıdaki tabloda rengi belli olsun. Değişiklik yapmaya hazır
+// olsun yani."). Önce: çizimde tık hiçbir şey yapmıyordu. Gerçek fare: Şanzıman'ın GÖRÜNEN bir
+// noktasına tık parçayı perdenin üstüne alır, föyün satırı seçimin renginde ve X girdisi odakta
+// (yazısı seçili); yazılan sayı + Enter modele TEK geri-al adımıyla girer, seçim yerinde; çizimin
+// boşluğuna tık bırakır, pencere açık kalır. Node'daki kapı: mount-akso.test.js → TIK SEÇER.
+test('Görünümler: TIK SEÇER — Şanzıman\'a tık satırını seçili renkte işaretler ve X\'i odaklar; yazılan değer modele girer; boşluğa tık bırakır', async ({ page }) => {
+  await bootApp(page);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  await page.evaluate(AKSO3B_SIFIR);
+  await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+  await page.waitForTimeout(900);
+  const sel = '#ve-properties .ve-mnt-akso-kap svg.ve-mnt2d-akso';
+  await page.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), sel);
+  await page.mouse.move(2, 2);
+  await page.waitForTimeout(150);
+  // tarayıcının isabetiyle: parçanın ve zeminin görünen bir noktası (arkada kalan yüzey sayılmaz)
+  const nokta = (k) => page.evaluate(([q, kk]) => {
+    const sv = document.querySelector(q);
+    const els = kk ? sv.querySelectorAll('.ve-ak-hareket [data-ak="' + kk + '"]') : [sv];
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      for (let i = 1; i < 12; i++) for (let j = 1; j < 12; j++) {
+        const x = r.left + r.width * i / 12, y = r.top + r.height * j / 12, e = document.elementFromPoint(x, y);
+        const a = e && e.closest && e.closest('svg.ve-mnt2d-akso [data-ak]');
+        if (kk ? (a && a.getAttribute('data-ak') === kk) : (e && e.matches && e.matches('rect.ve-ak-zem'))) return { x, y };
+      }
+    }
+    return null;
+  }, [sel, k]);
+  const sz = await page.evaluate((q) => {
+    const sv = document.querySelector(q), c = _mntAksoCizim[sv.closest('.ve-mnt-akso-kap').id];
+    const g = c.m.govde.find((x) => /Şanzıman/.test(x.ad));
+    return { k: g.k, id: g.id, cgx: nodes.find((n) => n.id === g.id).data.cgx };
+  }, sel);
+  const durum = () => page.evaluate((q) => {
+    const sv = document.querySelector(q), tr = [...document.querySelectorAll('#ve-properties .ve-mnt-foy-odak tr.ve-ak-sec')], ae = document.activeElement;
+    return { satir: tr.map((t) => t.getAttribute('data-ak')), perde: !!sv.querySelector(':scope > rect.ve-ak-perde'),
+      odakta: [...new Set([...sv.querySelectorAll(':scope > g.ve-ak-odak [data-ak]')].map((e) => e.getAttribute('data-ak')))],
+      zemin: tr[0] ? getComputedStyle(tr[0].querySelector('td:nth-child(2)')).backgroundColor : null,
+      kenar: tr[0] ? getComputedStyle(tr[0].querySelector('td')).boxShadow : null,
+      odak: ae && ae.id, etiket: ae && ae.tagName.toLowerCase(), secim: ae && ae.tagName === 'INPUT' ? [ae.selectionStart, ae.selectionEnd, ae.value.length] : null,
+      geriAl: undoStack.length, acik: getComputedStyle(document.getElementById('ve-properties')).display !== 'none' };
+  }, sel);
+  const p = await nokta(sz.k);
+  expect(p).not.toBeNull();
+  const once = await durum();
+  expect([once.satir, once.perde]).toEqual([[], false]);
+  await page.mouse.click(p.x, p.y);
+  await page.waitForTimeout(250);
+  const s1 = await durum();
+  expect([s1.satir, s1.perde, s1.odakta]).toEqual([[sz.k], true, [sz.k]]);
+  expect(s1.odak).toBe('ve-mnt-cgx-' + sz.id);
+  expect(s1.secim[0]).toBe(0);
+  expect(s1.secim[1]).toBe(s1.secim[2]);                                         // yazısı seçili: yazmak yerine geçer
+  expect(s1.zemin).not.toBe('rgba(0, 0, 0, 0)');
+  expect(s1.kenar).toMatch(/inset/);
+  expect(s1.geriAl).toBe(once.geriAl);                                            // seçim geri-al adımı değil
+  // yaz + Enter: değer modele, TEK adım; satır seçili, odak girdide, çizim yeni konumla
+  const sv0 = await page.evaluate((q) => document.querySelector(q).outerHTML, sel);
+  await page.keyboard.type('350');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(300);
+  const s2 = await durum();
+  expect(await page.evaluate((id) => nodes.find((n) => n.id === id).data.cgx, sz.id)).toBe('350');
+  expect(sz.cgx).not.toBe('350');
+  expect(s2.geriAl).toBe(once.geriAl + 1);
+  expect([s2.satir, s2.perde, s2.odak]).toEqual([[sz.k], true, 've-mnt-cgx-' + sz.id]);
+  expect(await page.evaluate((q) => document.querySelector(q).outerHTML, sel)).not.toBe(sv0);
+  // çizimin boşluğuna tık: perde kalkar, satır işaretsiz, pencere açık
+  await page.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), sel);
+  const bos = await nokta(null);
+  expect(bos).not.toBeNull();
+  await page.mouse.click(bos.x, bos.y);
+  await page.waitForTimeout(250);
+  const s3 = await durum();
+  expect([s3.satir, s3.perde, s3.acik, s3.etiket]).toEqual([[], false, true, 'svg']);
+  // sürükleme seçmez
+  const p2 = await nokta(sz.k);
+  await page.mouse.move(p2.x, p2.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 6; i++) await page.mouse.move(p2.x + i * 8, p2.y);
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect((await durum()).satir).toEqual([]);
   await page.evaluate(AKSO3B_SIFIR);
 });
 

@@ -22,6 +22,9 @@
 const H = require('../helpers/takoz-dogrulama.js');
 
 const { cp, rp } = H.kur();
+// GERÇEK KÜTÜPHANE (donmadan önceki girdilerin kopyası): Canlı Not 1008'in kapısı onunla koşar —
+// tahmini rijitlikli, rijitliği eksik ve aday olmayan tipler donmuş kümede yok.
+const TAM_KUTUPHANE = Object.fromEntries(Object.entries(cp.VE_MOUNT_LIBRARY).map(([k, e]) => [k, Object.assign({}, e)]));
 // KATALOG ONAY ANINDAKİ 24 TİP: tarama testleri kütüphanenin ilk 24 girdisiyle (2026-11-10'a
 // dek tam tiplerin hepsi) koşar — beklenen sayılar ve onaylı Excel o kümenin. Teknik
 // resimlerle tamamlanan AMC kodları (137061 · 137062 · 137961) adayları 27'ye çıkarır;
@@ -292,16 +295,33 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
 // Takoz, 24 tip × 3 grup = 13.824 kombinasyon — Canlı Not 1005'ten beri varsayılan Tüm kombinasyonlar).
 // Pencere Canlı Not 1001'de boşaltıldı, adım adım kuruluyor: tarama henüz bağlı değil; eski pencere
 // aşağıda PARKTA (_mntParamEskiPencereHTML).
-describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
+// Canlı Not 1008 (kullanıcı 2026-11-13: "Tüm kombinasyonlara 'tüm takozların' dahil olduğundan ve
+// takoz eklendiğinde kombinasyona dahil olduğundan emin olalım … programda kayıtlı olan takoz
+// sayısını vs yazalım"): aday kütüphanenin ÇÖZÜLEBİLEN her tipi (tahmini rijitlikli de), liste
+// haritadan türer; Analiz kütüphanenin sayılarını taşır. Kapılar GERÇEK kütüphaneyle (TAM_KUTUPHANE).
+describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   const kur = (ad, data) => { modelKur(ad); const n = { id: 'py', type: 'mnt-parametric', data: data || {} }; global.nodes.push(n); return n; };
-  const yan = (d) => [...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value);
+  // Analiz'in alanları, etiketiyle; `yan` taranan grup ve kombinasyon
+  const analiz = (d) => Object.fromEntries([...d.querySelectorAll('.ve-fp-side .ve-fp-f')]
+    .map((f) => [f.querySelector('.ve-fp-l').textContent, f.querySelector('input').value]));
+  const yan = (d) => { const A = analiz(d); return [A['Taranan grup'], A['Kombinasyon']]; };
+  // Bağımsız hakem: altı rijitliğin hepsi > 0 (çözücünün kuralı) · binlik noktalı tam sayı
+  const tam6 = (e) => ['sx', 'sy', 'sz', 'dx', 'dy', 'dz'].every((f) => Number(e[f]) > 0);
+  const binlik = (v) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Kütüphane geçici olarak başka girdilerle (donmuş küme sonunda geri gelir)
+  const kutuphaneyle = (L, fn) => {
+    const lib = cp.VE_MOUNT_LIBRARY, eski = Object.assign({}, lib);
+    const koy = (X) => { Object.keys(lib).forEach((k) => { delete lib[k]; }); Object.assign(lib, X); };
+    koy(Object.fromEntries(Object.entries(L).map(([k, e]) => [k, Object.assign({}, e)])));
+    try { return fn(); } finally { koy(eski); }
+  };
   // çizimin modeli: takozun numarası ve rengi grubunki (Canlı Not 1003 · 1006)
   const cizimModeli = (n) => cp._mntAksoModel(P._mntParamAksoVeri(n.id)).takoz.map((t) => [t.ad, t.no, t.renk]);
 
   test('YERLEŞİM: Tulga’nın üç grubu Excel’in sütunları; çizim güç grubunun aksonometrisi, takozun çipi ve rengi grubunki', () => {
     const n = kur('tulga'), d = dom(P.getMntParamPropertiesHTML(n));
-    expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Beklenen takoz sehimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
     expect(satir).toEqual([
       ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA'],
@@ -370,6 +390,106 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
     expect(n.data).toEqual({});
   });
 
+  // TÜM TİPLER (Canlı Not 1008): aday kütüphanenin çözülebilen HER tipi — tahmini rijitlikli de
+  // (Canlı Not 113'ün tahmini; eski liste tahminsizdi); rijitliği eksik tip (çözücü reddeder) ve
+  // aday:false tip (Canlı Not 133) dışarıda. Tüm kombinasyonlar ve Özel kombinasyonun araması AYNI listeden.
+  test('TÜM TİPLER (Canlı Not 1008): aday kütüphanenin çözülebilen her tipi, tahminli dâhil; rijitliği eksik ve aday olmayan tip dışarıda; kombinasyon ve arama aynı listeden', () => {
+    kutuphaneyle(TAM_KUTUPHANE, () => {
+      const n = kur('tulga'), Y = P._mntParamYeni(n), L = Object.values(cp.veMntGetLibraryMap());
+      const bek = L.filter((e) => e.aday !== false && tam6(e)).map((e) => e.key);
+      expect(Y.A.map((a) => a.key)).toEqual(bek);                                  // kütüphane sırası
+      // tahmini rijitlikli tip aday — üç üreticide de
+      const tah = Y.A.filter((a) => (a.e.tahmin || []).length);
+      expect(tah.length).toBeGreaterThan(0);
+      expect([...new Set(tah.map((a) => a.e.marka))].sort()).toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR']);
+      // dışarıda yalnız iki sınıf: rijitliği eksik ve aday olmayan — ikisi de kütüphanede var
+      const dis = L.filter((e) => bek.indexOf(e.key) < 0);
+      expect(dis.every((e) => e.aday === false || !tam6(e))).toBe(true);
+      expect([dis.some((e) => e.aday === false), dis.some((e) => e.aday !== false && !tam6(e))]).toEqual([true, true]);
+      // Tüm kombinasyonlar: her grupta bütün adaylar (sınır yok — aşağıda SINIR YOK)
+      const G = Y.M.G.length, d = dom(P.getMntParamPropertiesHTML(n));
+      expect([Y.say, Y.N]).toEqual([Y.M.G.map(() => bek.length), bek.length ** G]);
+      expect(d.querySelector('.ve-fp-kat[data-k="aday"] .ve-fp-sect em').textContent).toBe(binlik(bek.length) + ' tip');
+      expect(yan(d)).toEqual([G + ' / ' + G, binlik(bek.length ** G)]);
+      // Özel kombinasyonun araması aynı listeden: boş sorgu bütün adaylar, tahminli tip adıyla bulunur
+      const S = P._mntParamListeSira(Y.A);
+      expect(P._mntParamAra(S, '', []).map((a) => a.key).sort()).toEqual(bek.slice().sort());
+      expect(P._mntParamAra(S, tah[0].name, []).map((a) => a.key)).toContain(tah[0].key);
+    });
+  });
+
+  // EKLENEN TİP (Canlı Not 1008: "takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"):
+  // liste her kurulumda haritadan türer — gömülü kataloğa giren tip, Takoz Özellikleri'nde eklenen
+  // özel tip ve rijitliği Takoz Özellikleri'nde tamamlanan tip kendiliğinden aday; aramada bulunur,
+  // kombinasyona girer, Analiz'de sayılır.
+  test('EKLENEN TİP (Canlı Not 1008): kataloğa giren, Takoz Özellikleri’nde eklenen ve rijitliği tamamlanan tip kendiliğinden aday — aramada, kombinasyonda, Analiz’de', () => {
+    kutuphaneyle(TAM_KUTUPHANE, () => {
+      const n = kur('tulga'), G = P._mntParamYeni(n).M.G.length, say = (s) => Number(s.replace(/\./g, ''));
+      const durum = () => {
+        const Y = P._mntParamYeni(n), A = analiz(dom(P.getMntParamPropertiesHTML(n)));
+        return { A: Y.A.map((a) => a.key), N: Y.N, kayitli: say(A['Kayıtlı takoz']), aday: say(A['Aday tip']),
+          tahmini: say(A['Tahmini rijitlik']), eksik: say(A['Rijitlik eksik']), komb: say(A['Kombinasyon']) };
+      };
+      const ara = (q) => P._mntParamAra(P._mntParamListeSira(P._mntParamYeni(n).A), q, []).map((a) => a.key);
+      const s0 = durum(), n0 = s0.A.length;
+      expect([s0.aday, s0.komb]).toEqual([n0, n0 ** G]);
+      // (a) gömülü kataloğa giren tip — tahmini rijitlikli
+      cp.VE_MOUNT_LIBRARY['zz-yeni'] = { marka: 'LASPAR', name: 'Zeta konik 60 ShA', sx: 900, sy: 900, sz: 450,
+        dx: 1170, dy: 1170, dz: 585, tahmin: ['sx', 'sy', 'dx', 'dy', 'dz'] };
+      let s = durum();
+      expect(s.A).toEqual(s0.A.concat(['zz-yeni']));
+      expect([s.N, s.komb, s.kayitli, s.aday, s.tahmini]).toEqual([(n0 + 1) ** G, (n0 + 1) ** G, s0.kayitli + 1, n0 + 1, s0.tahmini + 1]);
+      expect(ara('zeta')).toEqual(['zz-yeni']);
+      // (b) Takoz Özellikleri'nde eklenen özel tip
+      const lib = global.nodes.find((x) => x.type === 'mnt-library');
+      lib.data.mounts = [{ key: 'ozel-kasa', name: 'Kasa takozu', sx: 300, sy: 300, sz: 600, dx: 390, dy: 390, dz: 780 }];
+      s = durum();
+      expect(s.A.slice(-1)).toEqual(['ozel-kasa']);
+      expect([s.N, s.kayitli, s.aday]).toEqual([(n0 + 2) ** G, s0.kayitli + 2, n0 + 2]);
+      expect(P._mntParamYeni(n).A.find((a) => a.key === 'ozel-kasa').e.marka).toBe('Özel takozlar');
+      expect(ara('kasa')).toEqual(['ozel-kasa']);
+      global.saveState = jest.fn();                                                // … Özel kombinasyonda gruba eklenir
+      n.data = { adaylarKip: 'ozel' };
+      expect(P.veMntParamGrupAday('py', 1, 'ozel-kasa', true)).toBe(true);
+      expect(P._mntParamYeni(n).say).toEqual([1].concat(Array(G - 1).fill(0)));
+      n.data = {};
+      // (c) rijitliği eksik tip aday değil; Takoz Özellikleri'nde boş rijitlikleri girilince aday
+      const e = Object.values(cp.veMntGetLibraryMap()).find((x) => x.aday !== false && !tam6(x));
+      const bos = ['sx', 'sy', 'sz', 'dx', 'dy', 'dz'].filter((f) => !(Number(e[f]) > 0));
+      expect(durum().A).not.toContain(e.key);
+      lib.data.overrides = { [e.key]: Object.fromEntries(bos.map((f, i) => [f, 400 + 100 * i])) };
+      s = durum();
+      expect(s.A).toContain(e.key);
+      expect([s.N, s.aday, s.eksik]).toEqual([(n0 + 3) ** G, n0 + 3, s0.eksik - 1]);
+    });
+  });
+
+  // ANALİZ (Canlı Not 1008: "programda kayıtlı olan takoz sayısını vs yazalım. Kullanıcı bilgilensin"):
+  // okunur alanlar — kayıtlı takoz · aday tip · ölçülü ve tahmini rijitlik · rijitlik eksik · aday değil
+  // (kütüphanenin sınıfları, bağımsız hakemle) · taranan grup · kombinasyon; binlik noktalı Türkçe sayı.
+  // Çözümsüz: eleme yok — en düşük takoz yükü ve elenen boş (eleme: mount-param-eleme.test.js).
+  test('ANALİZ (Canlı Not 1008): kayıtlı takoz, aday tip, ölçülü ve tahmini rijitlik, rijitlik eksik, aday değil — kütüphanenin sınıfları; okunur, Türkçe sayı', () => {
+    kutuphaneyle(TAM_KUTUPHANE, () => {
+      cp._veMntLast = null;
+      const n = kur('tulga'), L = Object.values(cp.veMntGetLibraryMap()), d = dom(P.getMntParamPropertiesHTML(n));
+      const aday = L.filter((e) => e.aday !== false && tam6(e)), tah = aday.filter((e) => (e.tahmin || []).length).length;
+      const bek = [['Kayıtlı takoz', L.length], ['Aday tip', aday.length], ['Ölçülü rijitlik', aday.length - tah],
+        ['Tahmini rijitlik', tah], ['Rijitlik eksik', L.filter((e) => e.aday !== false && !tam6(e)).length],
+        ['Aday değil', L.filter((e) => e.aday === false).length]];
+      // sınıflar ayrık ve kütüphanenin tamamı; hiçbiri boş değil
+      expect(bek[1][1] + bek[4][1] + bek[5][1]).toBe(bek[0][1]);
+      bek.forEach(([, v]) => expect(v).toBeGreaterThan(0));
+      const G = P._mntParamYeni(n).M.G.length;
+      expect(Object.entries(analiz(d))).toEqual(bek.map(([k, v]) => [k, binlik(v)])
+        .concat([['En düşük takoz yükü [kg]', '—'], ['Elenen', '—'], ['Taranan grup', G + ' / ' + G], ['Kombinasyon', binlik(aday.length ** G)]]));
+      expect(analiz(d)['Kombinasyon']).toMatch(/^\d{1,3}(\.\d{3})+$/);
+      // okunur alanlar; bölüm bütünüyle yerinde tazelenir
+      const sec = d.querySelector('#ve-mnt-param-ozet-py');
+      expect(sec.hasAttribute('data-tazele')).toBe(true);
+      expect([...sec.querySelectorAll('input')].map((i) => i.readOnly)).toEqual(Array(10).fill(true));
+    });
+  });
+
   test('KİP: Özel kombinasyon alanı yazar, Tüm kombinasyonlar siler; özelin seçimi korunur; aynı kip adım düşürmez', () => {
     const n = kur('tulga');
     global.saveState = jest.fn(); global.showNodeProperties = jest.fn();
@@ -429,7 +549,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
     expect(n.data).toEqual({ adaylarKip: 'ozel' });
   });
 
-  test('KOMBİNASYON: Tüm kombinasyonlarda tip sayısının grup sayısınca kuvveti; özelde seçili grupların çarpımı, seçilmeyen grup mevcut tipinde; sınırı aşınca durum', () => {
+  test('KOMBİNASYON: Tüm kombinasyonlarda tip sayısının grup sayısınca kuvveti; özelde seçili grupların çarpımı, seçilmeyen grup mevcut tipinde', () => {
     const n = kur('tulga'), G = P._mntParamYeni(n).M.G, A = P._mntParamYeni(n).A;
     expect(P._mntParamYeni(n).N).toBe(A.length ** G.length);
     n.data = { adaylarKip: 'ozel', adaylar: { [G[0].anahtar]: A.slice(0, 4).map((a) => a.key), [G[2].anahtar]: A.slice(0, 6).map((a) => a.key) } };
@@ -441,20 +561,41 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
     // bugün aday olmayan tip, tekrar ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
     n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key, A[0].key], 'x|y': [A[1].key] };
     expect(P._mntParamYeni(n).say).toEqual([1, 0, 0]);
-    // sınır: Kombinasyon sayısı … üstünde — sağ sütunda tek durum, iki kipte
-    const maks = K.MAKS_KOMB;
-    try {
-      K.MAKS_KOMB = 1000;
-      n.data = {};
-      d = dom(P.getMntParamPropertiesHTML(n));
-      expect(d.querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
-      expect(d.querySelectorAll('.ve-fp-durum').length).toBe(1);
-      n.data = { adaylarKip: 'ozel', adaylar: Object.fromEntries(G.map((g) => [g.anahtar, A.slice(0, 11).map((a) => a.key)])) };
-      expect(P._mntParamYeni(n).N).toBe(1331);
-      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
-      n.data.adaylar[G[0].anahtar] = A.slice(0, 8).map((a) => a.key);
-      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('.ve-fp-durum')).toBeNull();
-    } finally { K.MAKS_KOMB = maks; }
+  });
+
+  // SINIR YOK (kullanıcı 2026-11-13: "Bu limiti kaldıralım, yani program sonsuz sayıda iterasyon
+  // yapabilmeli. Zaten onun için de bir gösterge ekleyeceğiz."): kombinasyon sayısının üst sınırı ve
+  // "Kombinasyon sayısı … üstünde" durumu YOK — Tulga gerçek kütüphaneyle, sentetik kütüphane üç ve
+  // altı grupla; sayı Analiz'de bütünüyle, binlik noktalı; iki kipte, eski pencerede de.
+  test('SINIR YOK: büyük kombinasyon sayısı durum üretmez — Tulga gerçek kütüphaneyle, sentetik 10⁹ ve 10¹⁸; sayı bütünüyle, binlik noktalı', () => {
+    expect(K).not.toHaveProperty('MAKS_KOMB');
+    const durumsuz = (n) => {
+      const d = dom(P.getMntParamPropertiesHTML(n));
+      expect([P._mntParamYeni(n).eksik, d.querySelector('#ve-mnt-param-durum-py').textContent, d.querySelector('.ve-fp-durum')]).toEqual(['', '', null]);
+      return yan(d);
+    };
+    kutuphaneyle(TAM_KUTUPHANE, () => {
+      const n = kur('tulga'), Y = P._mntParamYeni(n), a = Y.A.length;
+      expect(Y.N).toBe(a ** 3);
+      expect(Y.N).toBeGreaterThan(200000);                                       // eski sınır
+      expect(durumsuz(n)).toEqual(['3 / 3', binlik(a ** 3)]);
+      // Özel kombinasyon: her grupta bütün adaylar — aynı sayı, durum yok
+      n.data = { adaylarKip: 'ozel', adaylar: Object.fromEntries(Y.M.G.map((g) => [g.anahtar, Y.A.map((x) => x.key)])) };
+      expect(durumsuz(n)).toEqual(['3 / 3', binlik(a ** 3)]);
+    });
+    // sentetik kütüphane: 1.000 tam tip → üç grupta 10⁹, altı grupta 10¹⁸
+    const SENT = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => ['s' + i,
+      { marka: 'Diğer', name: 'Sentetik ' + i, sx: 500, sy: 500, sz: 300, dx: 650, dy: 650, dz: 390 }]));
+    kutuphaneyle(SENT, () => {
+      const n = kur('tulga');
+      expect(durumsuz(n)).toEqual(['3 / 3', '1.000.000.000']);
+      // üç tek takoz daha: altı grup
+      const m = global.nodes.find((x) => x.type === 'mnt-mount');
+      [1, 2, 3].forEach((k) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
+        { id: 'ek' + k, customName: 'Ek takoz ' + k, data: Object.assign({}, m.data, { x: 1600 + 300 * k, y: 0, z: 500 }) })));
+      expect(P._mntParamYeni(n).M.G.length).toBe(6);
+      expect(durumsuz(n)).toEqual(['6 / 6', '1.000.000.000.000.000.000']);
+    });
   });
 
   test('ARAMA: sorgunun her sözcüğü adda ya da markada (sırası serbest); Türkçe harf katlaması; eklenmiş tip düşer; sıra verilen listenin', () => {
@@ -510,7 +651,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
     [{}, { adaylarKip: 'ozel' }].forEach((data) => {
       n.data = data;
       const d = dom(P.getMntParamPropertiesHTML(n));
-      expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
+      expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Beklenen takoz sehimi', 'Adaylar']);
       expect(d.querySelector('.ve-prm-ak')).toBeNull();
       expect(d.querySelectorAll('.ve-fp-main table, .ve-fp-main input, .ve-fp-main button').length).toBe(0);
       expect(d.textContent.match(/Takoz yok/g).length).toBe(1);
@@ -547,7 +688,7 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
     expect(document.querySelector('#ve-mnt-param-ak-py')).toBe(cizim);                   // çizim yerinde
     expect(satir(1)).toEqual([bek[1].key]);
     expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe('1 tip');
-    expect([...document.querySelectorAll('#ve-mnt-param-ozet-py input')].map((i) => i.value)).toEqual(['1 / 3', '1']);
+    expect(yan(document)).toEqual(['1 / 3', '1']);
     // eklenen tip yeni aramada yok; satıra tık ekler (kayıt kütüphane sırası), odak kutuda
     yaz('cone 60');
     expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.filter((a, i) => i !== 1).map((a) => a.key));
@@ -710,10 +851,10 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
     expect(P._mntParamAd('Cone 121 NG 55 ShA (AMC 137830)'))
       .toBe('Cone 121 <span class="ve-mnt-nw">NG 55 ShA</span> <span class="ve-mnt-ek">(<span class="ve-mnt-nw">AMC 137830)</span></span>');
-    expect(P._mntParamAd('Mount 1 40 ShA')).toBe('Mount 1 <span class="ve-mnt-nw">40 ShA</span>');
+    expect(P._mntParamAd('LMT-1433-20 40 ShA')).toBe('<span class="ve-mnt-nw">LMT-1433-20</span> <span class="ve-mnt-nw">40 ShA</span>');
   });
 
-  test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
+  test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit; kombinasyonun sınırı yok', () => {
     global.nodes = [];
     expect(P._mntParamHazirlik(node()).eksik).toBe('Takoz yok');
     modelKur('tulga');
@@ -725,17 +866,18 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     expect(P._mntParamHazirlik(n).eksik).toBe('Taranacak grup yok');
     const dom1 = dom(P._mntParamEskiPencereHTML(n));
     expect(dom1.querySelector('.ve-fp-solve').disabled).toBe(true);
-    // dört grup → 24⁴ = 331.776 > sınır
+    // dört grup → 24⁴ = 331.776: sınır yok (SINIR YOK), Tara açık
     modelKur('kamyon');
     const m = global.nodes.find((x) => x.type === 'mnt-mount');
     [[1, 'Sağ Orta'], [2, 'Sol Orta']].forEach(([k, ad]) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
       { id: 'ek' + k, customName: ad, data: Object.assign({}, m.data, { x: 300, y: k === 1 ? 350 : -350, z: 500 }) })));
     [[3, 'Sağ Kuyruk'], [4, 'Sol Kuyruk']].forEach(([k, ad]) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
       { id: 'ek' + k, customName: ad, data: Object.assign({}, m.data, { x: 1500, y: k === 3 ? 350 : -350, z: 500 }) })));
-    const H4 = P._mntParamHazirlik(node());
+    const n4 = node(), H4 = P._mntParamHazirlik(n4);
     expect(H4.M.G.length).toBe(4);
     expect(H4.N).toBe(331776);
-    expect(H4.eksik).toMatch(/^Kombinasyon sayısı 200\.000 üstünde$/);
+    expect(H4.eksik).toBe('');
+    expect(dom(P._mntParamEskiPencereHTML(n4)).querySelector('.ve-fp-solve').disabled).toBe(false);
   });
 });
 

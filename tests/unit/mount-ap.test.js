@@ -16,7 +16,7 @@
  *     (Sh+20)/50, CR H-takozda AMC-EO'nun NR medyanı — çözülür, taramaya aday değil;
  *     marine ve jeneratörde X · Y yayımlanmıyor → eksik, girilince dinamiği aynı oranla;
  *   • LMT-1433-00 (LASPAR kataloğunda, js/mount-laspar.js) ↔ konik yatak 026 S 1 (flanş ölçüsü) —
- *     LASPAR künyesinde "A+P eşi"; "Mount 1"e eş yazılmaz;
+ *     LASPAR künyesinde "A+P eşi"; LMT-1433-20'ye (FEA'nın "Mount 1"i) eş yazılmaz;
  *   • görsel yalnız tipin teknik resmi, Tip satırının (i) düğmesinde (Canlı Not 111);
  *     Takoz Özellikleri'nde kapasite yazılmaz (Canlı Not 65).
  */

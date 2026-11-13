@@ -285,16 +285,19 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
 // kutusu (3B'nin kutusu) izdüşümüyle; nokta kütle yalnız dairesiyle.
 describe('DÜZ GÖRÜNÜŞTE GÖVDENİN ÇERÇEVESİ (Canlı Not 79)', () => {
   const EKS = { x: 0, y: 1, z: 2 };
-  test.each(['ust', 'yan', 'on'])('Tulga · %s: kutusu olan her gövdeye bir çerçeve, ölçüsü kutunun izdüşümü, ağırlık merkezi ortasında', (g) => {
+  // Canlı Not 158'den beri çerçeve KUTUNUN merkezinde (kc): zincir gövdesinde yanalda 0; ağırlık
+  // merkezinin dairesi gerçek yerinde — Y'li görünüşte (üstten, önden) aradaki fark CG'nin Y'si kadar.
+  test.each(['ust', 'yan', 'on'])('Tulga · %s: kutusu olan her gövdeye bir çerçeve, ölçüsü kutunun izdüşümü, ortası kutunun merkezi, daire ağırlık merkezinde', (g) => {
     const c = tulga();
     const G = cp.VE_MNT2D_GORUNUS[g];
     const kutulu = c.veri.comps.filter((x) => x.kutu);
     expect(kutulu.length).toBeGreaterThanOrEqual(2);
     expect(c.veri.comps.filter((x) => !x.kutu).length).toBeGreaterThan(0);              // nokta kütleler
+    expect(kutulu.map((k) => [k.name, k.kc[1]])).toEqual([['Motor', 0], ['Şanzıman', 0], ['Transfer Kutusu', 0]]);
     const d = div(cp.veMnt2BSayfa(c.veri, 1000, 700, { secim: true }).svg).querySelector('[data-mnt2b="' + g + '"]');
     const rect = [...d.querySelectorAll('.ve-mnt2d-kutu > rect')];
     expect(rect).toHaveLength(kutulu.length);
-    // ölçek: iki çerçevenin genişlik oranı kutuların oranı; ağırlık merkezi çerçevenin ortasında
+    // ölçek: iki çerçevenin genişlik oranı kutuların oranı; daire ile çerçevenin ortası arası (CG − kc)·ölçek
     const r = (i) => ({ x: +rect[i].getAttribute('x'), y: +rect[i].getAttribute('y'), w: +rect[i].getAttribute('width'), h: +rect[i].getAttribute('height') });
     const s = r(0).w / kutulu[0].kutu[EKS[G.h]];
     kutulu.forEach((k, i) => {
@@ -302,8 +305,10 @@ describe('DÜZ GÖRÜNÜŞTE GÖVDENİN ÇERÇEVESİ (Canlı Not 79)', () => {
       expect(r(i).h / k.kutu[EKS[G.v]]).toBeCloseTo(s, 1);
       const cer = rect[i].parentNode.getAttribute('data-mnt-sec');
       const daire = [...d.querySelectorAll('[data-mnt-sec="' + cer + '"] circle')][0];
-      expect(Math.abs(+daire.getAttribute('cx') - (r(i).x + r(i).w / 2))).toBeLessThan(0.6);
-      expect(Math.abs(+daire.getAttribute('cy') - (r(i).y + r(i).h / 2))).toBeLessThan(0.6);
+      const dh = (k[G.h] - k.kc[EKS[G.h]]) * s, dv = -(k[G.v] - k.kc[EKS[G.v]]) * s;
+      expect(Math.abs(+daire.getAttribute('cx') - (r(i).x + r(i).w / 2) - dh)).toBeLessThan(0.6);
+      expect(Math.abs(+daire.getAttribute('cy') - (r(i).y + r(i).h / 2) - dv)).toBeLessThan(0.6);
+      if (g !== 'yan' && k.name !== 'Motor') expect(Math.abs(dh || dv)).toBeGreaterThan(5);   // Şanzıman 40,8 · Transfer 54,4 mm kayık
     });
     // çerçeveler işaretlerin altında: ilk takozdan önce çizilir
     const html = d.innerHTML;

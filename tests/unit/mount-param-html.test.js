@@ -46,17 +46,17 @@ function E_(buyuk) {
         kriter: [true, true, true, true], d: 5.9178, f: [6.82, 7.98, 11.41, 12.04, 14.21, 15.21], T: 0.121701,
         takozTip: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
         vakalar: [vaka('Static', [-3.9, -5.43, -5.92])], modlar: [{ f: 6.82, ad: 'roll' }] },
-      { K: 2, tipler: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
+      { K: 2, tipler: ['LMT-1433-20 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
         kriter: [true, true, true, true], d: 6.0128, f: [5.69, 7.03, 7.86, 10.53, 11.06, 13.16], T: 0.051,
-        takozTip: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)', 'Cone 39 50 ShA (AMC 137982)'],
+        takozTip: ['LMT-1433-20 70 ShA', 'Cone 39 50 ShA (AMC 137982)', 'Cone 39 50 ShA (AMC 137982)'],
         vakalar: [vaka('Static', [-3.1, -6.0, -6.01])], modlar: [{ f: 5.69, ad: 'yaw+lateral' }] }
     ],
     tarama: {
-      N: 4, gruplar: [1], adaylar: [['Cone 121 NP 55 ShA (AMC 137829)', 'Cone 39 50 ShA (AMC 137982)', 'Mount 1 40 ShA']],
+      N: 4, gruplar: [1], adaylar: [['Cone 121 NP 55 ShA (AMC 137829)', 'Cone 39 50 ShA (AMC 137982)', 'LMT-1433-20 40 ShA']],
       satirlar: [
         { tipler: ['Cone 121 NP 55 ShA (AMC 137829)'], f: [6.82, 7.98, 11.41, 12.04, 14.21, 15.21], fB: 9.1, T: 0.1217, d: 5.9178, k: [true, true, true, true], yuk: [210], azami: [null] },
         { tipler: ['Cone 39 50 ShA (AMC 137982)'], f: [3.58, 4.45, 6.0, 7.78, 10.11, 12.13], fB: 8.2, T: 0.2, d: 15.0, k: [true, false, true, false], yuk: [205], azami: [null] },
-        { tipler: ['Mount 1 40 ShA'], f: [3.7, 4.42, 6.0, 7.01, 8.9, 12.0], fB: 7.4, T: 0.31, d: 15.1, k: [true, false, false, false], yuk: [199], azami: [null] }
+        { tipler: ['LMT-1433-20 40 ShA'], f: [3.7, 4.42, 6.0, 7.01, 8.9, 12.0], fB: 7.4, T: 0.31, d: 15.1, k: [true, false, false, false], yuk: [199], azami: [null] }
       ],
       veri: { vakaAdlari: ['Static', 'Max Bump'], nT: 3, nM: 6, kod, modF, modAd, modAdlar: ['bounce+pitch', 'roll'] }
     }
@@ -92,7 +92,7 @@ describe('VERİ', () => {
     expect(D.konfig.map((k) => [k.K, k.u, k.tip])).toEqual([
       [0, 'Uygun değil', ['ASFAT takozu B', 'ASFAT takozu A']],
       [1, 'En uygun', ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)']],
-      [2, 'Uygun', ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)']]]);
+      [2, 'Uygun', ['LMT-1433-20 70 ShA', 'Cone 39 50 ShA (AMC 137982)']]]);
     expect(D.konfig[0].k).toBe(0b1011);                                       // dört kriter bit bit
     expect(D.konfig[0].mod.map((m) => m[0])).toEqual([5.11, 5.7]);            // modlar frekansa göre
     expect(D.gruplar).toEqual(['Ön takoz', 'Sağ/Sol arka takoz']);
@@ -351,9 +351,9 @@ describe('SAYFA', () => {
       ac_(d, 'g0');
       expect(p.hidden).toBe(false);
       expect([...p.querySelectorAll('label[data-deger]')].map((l) => [l.getAttribute('data-deger'), metin(l.querySelector('.say'))])).toEqual([
-        ['Cone 39 50 ShA (AMC 137982)', '1'], ['Cone 121 NP 55 ShA (AMC 137829)', '1'], ['Mount 1 40 ShA', '1']]);
+        ['Cone 39 50 ShA (AMC 137982)', '1'], ['Cone 121 NP 55 ShA (AMC 137829)', '1'], ['LMT-1433-20 40 ShA', '1']]);
       expect(p.querySelector('[data-suz-hep]').checked).toBe(true);
-      isaret(w, p.querySelector('input[data-suz-deger="Mount 1 40 ShA"]'), false);
+      isaret(w, p.querySelector('input[data-suz-deger="LMT-1433-20 40 ShA"]'), false);
       expect(p.querySelector('[data-suz-hep]').indeterminate).toBe(true);
       p.querySelector('[data-suz-is="tamam"]').click();
       expect(p.hidden).toBe(true);
@@ -409,7 +409,7 @@ describe('SAYFA', () => {
       w.location.hash = '#tarama'; w.veRapor.goster();
       ac_(d, 'g0');
       p.querySelector('[data-suz-is="azalan"]').click();
-      expect(no(d)).toEqual(['3', '2']);                                  // Mount › Cone 39 (Z'den A'ya)
+      expect(no(d)).toEqual(['3', '2']);                                  // LMT-1433-20 › Cone 39 (Z'den A'ya)
       ac_(d, 'g0');
       d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(p.hidden).toBe(true);
@@ -446,7 +446,7 @@ describe('SAYFA', () => {
       expect(takoz().hasAttribute('aria-sort')).toBe(false);
       expect(sehim().getAttribute('aria-sort')).toBe('descending');
       ac_(d, 'g0');
-      p.querySelector('[data-suz-is="artan"]').click();                  // A'dan Z'ye: Cone 39 · Cone 121 · Mount
+      p.querySelector('[data-suz-is="artan"]').click();                  // A'dan Z'ye: Cone 39 · Cone 121 · LMT-1433-20
       expect(no(d)).toEqual(['2', '1', '3']);
       expect(takoz().getAttribute('aria-sort')).toBe('ascending');
       takoz().click();                                                    // başlık yönü çevirmez

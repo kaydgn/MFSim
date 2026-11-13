@@ -2431,7 +2431,7 @@ function _mwTakozEditorHTML(t){
       + _mwUclu('Dinamik', P, t, [['kxd', 'Dinamik kx'], ['kyd', 'Dinamik ky'], ['kzd', 'Dinamik kz']], ['x', 'y', 'z'])
       + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni · katalogdan</div>' : ''))
     + _mwBolum('Kapasite <u>[kg]</u>',
-        _mwAlan('Maks. yük', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'isteğe bağlı', baslik:'Kapasite' })))
+        _mwAlan('Maks. yük', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'katalogdan', baslik:'Kapasite' })))
     + '<div class="ve-fw-ed-ops">'
     + '<button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizTakozSil(\'' + k + '\')">' + _mwIkon('trash') + ' Sil</button>'
     + '</div></div>';

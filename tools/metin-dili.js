@@ -18,6 +18,8 @@
  *   gerekce    neden · çünkü · aksi hâlde · karşı olgu (olurdu, silerdi, çıkmazdı)
  *   gelistirme ölçüldü · kapı · çekilir · sessizce · cümle içinde BÜYÜK HARFLE vurgu
  *   tarif      ≥ 4 sözcüklü metinde emir kipi (ekle · seçin · sürükle · oku)
+ *   aciklama   alanın hesaptaki yeri: isteğe bağlı · opsiyonel · zorunlu değil ·
+ *              hesaba girmez (Canlı Not 161 — bölüm başlığının yanındaki ek)
  *   uzun       ≥ ESIK sözcüklü düz yazı
  *   yon        yönlendirme yuvasındaki metnin BİÇİMİ bozuk (yonBicim)
  *
@@ -98,6 +100,14 @@ const SOZLUK = {
     new RegExp('(?<![\\p{L}\\p{N}_-])(?:ekle|seç|sürükle|tıkla|gir|kur|aç|kapat|kullan|bak|ver|oku|yaz|değiştir|düzelt|dene|çalıştır|hesapla|yükle|kaydet|sil|taşı|bırak|çöz|başla|dön|tanımla|belirle|işaretle|onayla|bağla|güncelle|ayarla|sırala|çevir|çiz|ölç|incele|tut|bas)'
       + '(?:in|ın|un|ün|yin|yın|yun|yün)?(?=\\s*(?:[.;:!)…]|$)|\\s+(?:ya da|veya|ve|ile|sonra)(?![\\p{L}]))', 'gu'),
     S('kaydedin')
+  ],
+  // Alanın hesaptaki yeri (Canlı Not 161: Kapasite başlığının yanında "isteğe bağlı ·
+  // hesaba girmez"). Geniş zaman bir kuraldır = açıklama; şimdiki zaman ("hesaba
+  // girmiyor") bir modelin DURUMUdur, sayılmaz. Açıklamanın yeri kılavuz, mühendislik
+  // hükmü belgede: iki profil de bunu saymaz.
+  aciklama: [
+    S('isteğe bağlı\\p{L}*|opsiyonel\\p{L}*|zorunlu değil\\p{L}*'),
+    S('(?:hesab|hesap|çözüm|çözücü|fiziğ)\\p{L}* (?:girmez|katılmaz|alınmaz|kullanılmaz)')
   ]
 };
 // Cümle içinde büyük harfle vurgu ("bir KAPIDIR"). Bütünü büyük harf olan metin
@@ -108,10 +118,10 @@ const VURGU = new Set(['ASLA', 'AYNI', 'SADECE', 'YALNIZ', 'TAMAMI', 'KALIR', 'A
 const AD_BUYUK = new Set(['KİRPİ', 'ŞİMŞEK', 'GÜÇ', 'SİPER']);
 
 const PROFIL_ISARET = {
-  arayuz: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'tarif', 'uzun'],
+  arayuz: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'tarif', 'aciklama', 'uzun'],
   belge: ['sohbet', 'gerekce', 'gelistirme', 'tarif'],
   kilavuz: ['sohbet', 'gerekce', 'gelistirme'],
-  yon: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'yon']
+  yon: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'aciklama', 'yon']
 };
 
 // ── YÖNLENDİRME YUVASI ─────────────────────────────────────────────────────

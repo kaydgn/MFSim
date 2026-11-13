@@ -34,7 +34,8 @@
 //     dökümündeki 10 kodda ve teknik resimlerin 3 kodunda ölçülü (EO · RESIM);
 //     öteki kodlarda TAHMİNİ (aşağıda
 //     RADYAL TAHMİN — Canlı Not 113): tip çözülür, Takoz Özellikleri'nde girilen
-//     değer tahminin yerine geçer; tahminli tip taramaya aday olmaz.
+//     değer tahminin yerine geçer; tahminli tip Parametrik Analiz'in adayıdır
+//     (Canlı Not 1008).
 //   • DSM çift rijitlikli (ön sıkıştırma · statik · dinamik bölge): yük–sehim
 //     eğrisi doğrusal değil, kz YAZILMADI.
 //   • BMC TEKNİK RESİMLERİ (kullanıcı 2026-11-10, dokuz resim): AMC'nin kendi

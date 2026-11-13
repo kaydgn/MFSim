@@ -286,6 +286,12 @@ function _gmKes(html, tut, yanYok){
     dizi('.ve-fp-kat').forEach(function(kat){
       if(!kat.querySelector('section')) kat.parentNode.removeChild(kat);
     });
+    // Eksik bandının satırı kesilen kategorinin ise düşer: bağlantısı şekilde olmayan bölüme gider.
+    dizi('.ve-fp-eksik-s').forEach(function(sat){
+      var b = sat.querySelector('button'), m = b && /,'([^']+)'/.exec(b.getAttribute('onclick') || '');
+      if(m && !k.querySelector('.ve-fp-kat[data-k="' + m[1] + '"]')) sat.parentNode.removeChild(sat);
+    });
+    dizi('.ve-fp-eksik').forEach(function(e){ if(!e.querySelector('.ve-fp-eksik-s')) e.parentNode.removeChild(e); });
   }
   if(yanYok){
     dizi('.ve-fp-side').forEach(function(y){ y.parentNode.removeChild(y); });
@@ -461,7 +467,7 @@ var _GM_PALET = [
   { k: 'motor', ad: 'Motor', not: 'Tuvale sürüklenir.', yer: 'sag' },
   { k: 'takoz', ad: 'Takoz', not: 'Her takoz için bir tane.', yer: 'sag' },
   { k: 'ozellik', ad: 'Takoz Özellikleri', not: 'Takoz tiplerinin kataloğu.', yer: 'sag' },
-  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Takozların yerleşimi ve grup başına aday tipler.', yer: 'sag' },
+  { k: 'parametrik', ad: 'Parametrik Analiz', not: 'Takozların yerleşimi, beklenen sehimle eleme ve aday tipler.', yer: 'sag' },
   { k: 'daralt', ad: 'Daralt', not: 'Sütunu kapatır.', yer: 'sol-orta' },
   { k: 'tuval', ad: 'Tuval', not: 'Bileşen buraya bırakılır.', cerceve: false, yer: 'sol-orta' }
 ];
@@ -500,7 +506,7 @@ var _GM_SANZ = [
 ];
 
 var _GM_TAKOZ = [
-  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Künye seçimi rijitliği, kapasiteyi ve yasayı doldurur.' },
+  { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka ve tip; seçilen tip rijitliği, kapasiteyi ve yasayı doldurur.' },
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Üç eksen: statik ve dinamik (N/mm), dinamik/statik oranı.' },
   { k: 'kapasite', bolum: 'Kapasite', ad: 'Kapasite', not: 'Azami eksenel yük (kg).' },
   { k: 'durdurucu', bolum: 'Durdurucu', ad: 'Durdurucu', not: 'Yanal boşluk (mm): yanal sehim bu boşlukta metal-metal temasa oturur; boşsa yanal durdurucu yok.' },
@@ -508,19 +514,35 @@ var _GM_TAKOZ = [
   { k: 'yer', bolum: 'Güç grubundaki yeri', ad: 'Güç grubundaki yeri', yer: 'sag', not: 'Takozun modeldeki yeri.' }
 ];
 
+// Takoz Özellikleri iki şekil (Özet gelince tek şekil A4 sayfasından uzundu): Özet · Takoz tipi ·
+// Öneri, sonra seçili tipin Rijitlik · Kuvvet–sehim'i.
 var _GM_KUTUPHANE = [
+  { k: 'ozet', bolum: 'Özet', ad: 'Özet', not: 'Marka başına aile, tip ve takoz sayısı; altta toplamı.' },
   { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir, oklar listede gezer.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
-  { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
+  { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' }
+];
+
+var _GM_KUTUPHANE_TIP = [
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
   { k: 'egri', bolum: 'Kuvvet–sehim', ad: 'Kuvvet–sehim', not: 'Üç eksen tek diyagramda; z-eğrisi özel takozda girilir.' }
 ];
 
 var _GM_PARAM = [
   { k: 'yerlesim', bolum: 'Takoz yerleşimi', ad: 'Takoz yerleşimi', not: 'Takozlar yerlerine göre gruplu: çizim ve grupların föyü.' },
-  { k: 'plan', s: '.ve-prm-ak', ad: 'Çizim', yer: 'sag', not: 'Güç grubu; takozun çipi grubun numarası, küpü grubun rengi. Sürükle döndürür.' },
-  { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Taranan grup ve kombinasyon sayısı.' }
+  { k: 'plan', s: '.ve-prm-ak', ad: 'Çizim', yer: 'sag', not: 'Güç grubu; takozun çipi grubun numarası, küpü grubun rengi. Sürükle döndürür.' }
 ];
+
+var _GM_PARAM_SEHIM = [
+  { k: 'sehim', bolum: 'Beklenen takoz sehimi', ad: 'Beklenen takoz sehimi',
+    not: 'En az ve en çok sehim; sehimi aralığın dışında kalan tip elenir.' },
+  { k: 'analiz', bolum: 'Analiz', ad: 'Analiz', yer: 'sag', not: 'Kütüphanenin tip sayıları, taranan grup ve kombinasyon sayısı.' },
+  { k: 'yuk', metin: 'En düşük takoz yükü [kg]', ust: '.ve-fp-f', ad: 'En düşük takoz yükü', yer: 'sol-orta',
+    not: 'Statik durumda takozların en küçük düşey yükü; takozun adı ipucunda.' },
+  { k: 'elenen', metin: 'Elenen', ust: '.ve-fp-f', ad: 'Elenen', yer: 'ic-sag', not: 'Sehimi aralığın dışında kalan aday tip sayısı.' }
+];
+// Şeklin aralığı: örnek çözülmüş hâlde, 3–5 mm.
+var _GM_PARAM_ARALIK = { alt: 3, ust: 5 };
 
 var _GM_PARAM_ADAY = [
   { k: 'aday', bolum: 'Adaylar', ad: 'Adaylar', not: 'Başlıkta aday tip sayısı.' },
@@ -537,6 +559,7 @@ var _GM_PARAM_ADAY = [
 // birinci grup mevcut tipi ve listenin ilk tipi, ikinci grup bir tip, kalan gruplar mevcut tipinde.
 function _gmParamOzel(){
   if(typeof _mntParamYeni !== 'function' || typeof _mntParamListeSira !== 'function') return { adaylarKip: 'ozel' };
+  // eleme yok (örnek çözülmemiş): aday listesi kütüphanenin bütün çözülebilen tipleri
   var Y = _mntParamYeni({ data: {} }), S = _mntParamListeSira(Y.A), G = Y.M.G, ad = {};
   var tip = function(g, i){ return (S.filter(function(a){ return a.key !== g.tip; })[i] || {}).key; };
   if(G[0]) ad[G[0].anahtar] = [G[0].tip, tip(G[0], 0)].filter(Boolean);
@@ -859,7 +882,7 @@ function _gmSec5(){
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
       + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', _gmB('cad')],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', _gmB('rapor')],
-    ['<strong>Parametrik Analiz</strong>', 'Takozların yerleşimi ve grup başına aday tipler', _gmB('parametrik')]
+    ['<strong>Parametrik Analiz</strong>', 'Takozların yerleşimi, beklenen sehimle eleme ve grup başına aday tipler', _gmB('parametrik')]
   ], ['Bileşen', 'Ne', 'Not']);
   h += _gmH3('Girdiler ve türeyenler', 'girdi');
   h += _gmAlanTablo('Girdi / türeyen ayrımı', [
@@ -1014,9 +1037,12 @@ function _gmSec8(){
   h += _gmSahne('takoz', _gmPencere('mnt-mount'), 'Takoz penceresi, örneğin bir takozu.', null, _GM_TAKOZ);
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
-    _gmN(_GM_TAKOZ, 'tip') + ' <strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum hariç bütün '
-      + 'alanlar dolar (' + _gmB('kutuphane') + '). Altındaki durum satırı değerlerin kaçının künyeyle aynı '
-      + 'kaldığını söyler. Altı rijitliği bir künyeyle birebir aynı olan takozda liste o künyeyi gösterir.',
+    _gmN(_GM_TAKOZ, 'tip') + ' <strong>Takoz tipi</strong> bölümünde önce <strong>Marka</strong>, sonra '
+      + '<strong>Tip</strong> seçin — konum hariç bütün alanlar dolar. Seçici Takoz Özellikleri’ninkidir ('
+      + _gmB('kutuphane') + '): Tip listesinde arama, teknik resmi olan tipte (i), <strong>Önceki tip</strong> · '
+      + '<strong>Sonraki tip</strong> okları; her seçim tipi takoza uygular. Altındaki durum satırı değerlerin '
+      + 'kaçının tiple aynı kaldığını söyler. Altı rijitliği bir tiple birebir aynı olan takozda seçici o tipi '
+      + 'gösterir. Marka listesinin <strong>Elle</strong>’si tip bağını kaldırır, değerler yerinde kalır.',
     _gmN(_GM_TAKOZ, 'konum') + ' <strong>Konum</strong> föyüne takozun x / y / z koordinatını yazın (mm, modelin '
       + 'ortak çerçevesinde).',
     'Künye kütüphanede yoksa ' + _gmN(_GM_TAKOZ, 'rijitlik') + ' <strong>Rijitlik</strong> föyüne üç eksenin '
@@ -1079,12 +1105,20 @@ function _gmSec9(){
   var h = _gmH2('m9');
   h += _gmH3('Takoz Özellikleri', 'ozellikler');
   h += '<p><strong>Takoz Özellikleri</strong> bileşeni takoz tiplerinin kataloğunu taşır: '
-    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). Tipler markaya '
-    + 'göre ayrılır: önce <strong>Marka</strong>, sonra o markanın tipi seçilir. Seçilen tip takoza '
-    + 'uygulanınca rijitlikler dolar; <strong>konum dolmaz</strong> — o motorun verisidir, parçanın '
-    + 'değil.</p>';
-  h += _gmSahne('kutuphane', _gmPencere('mnt-library'), 'Takoz Özellikleri penceresi.', null, _GM_KUTUPHANE);
+    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). <strong>Özet</strong> '
+    + 'markaların takoz sayılarını verir. Tipler markaya göre ayrılır: önce <strong>Marka</strong>, sonra '
+    + 'o markanın tipi seçilir; seçili tipin rijitliği ve kuvvet–sehim eğrisi alttaki bölümlerdedir ('
+    + _gmS('kutuphane-tip') + '). Seçilen tip takoza uygulanınca rijitlikler dolar; <strong>konum '
+    + 'dolmaz</strong> — o motorun verisidir, parçanın değil.</p>';
+  h += _gmSahne('kutuphane', _gmPencere('mnt-library', { tut: ['Özet', 'Takoz tipi', 'Öneri'] }),
+    'Takoz Özellikleri penceresi: Özet, Takoz tipi ve Öneri.', null, _GM_KUTUPHANE);
+  h += _gmSahne('kutuphane-tip', _gmPencere('mnt-library', { tut: ['Rijitlik', 'Kuvvet–sehim'] }),
+    'Takoz Özellikleri penceresi: seçili tipin Rijitlik ve Kuvvet–sehim bölümleri.', null, _GM_KUTUPHANE_TIP);
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
+    ['Özet', 'Marka başına aile, tip ve takoz sayısı; <strong>Toplam</strong> satırı',
+      'Takoz sayısı markanın <strong>Tip</strong> listesindeki satır sayısıdır; eklenen özel takozlar '
+      + '<strong>Özel takozlar</strong> satırında sayılır. Aile ve tip üreticinin kataloğundan sayılır; '
+      + 'kataloğu olmayan markada (Diğer, Özel takozlar) ikisi de boş kalır (—)'],
     ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi, <strong>Önceki tip</strong> · '
       + '<strong>Sonraki tip</strong> okları ve <strong>Yeni takoz</strong>; özel tipte ad alanı ve '
       + '<strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler seçili tipin adını '
@@ -1118,7 +1152,7 @@ function _gmSec9(){
     + 'değiştiği için oran tipin özelliğidir (Cone 39’un üç sertliğinde 1,86 · 1,91 · 1,78). Oran sırayla '
     + 'aynı tipin AMC değerinden, yoksa aynı ailenin AMC-EO’daki tiplerinden, yoksa AMC-EO’daki bütün '
     + 'tiplerden (medyan) gelir; dinamik değer statik × dinamik/statik oranıdır. Tahminli tip çözülür, '
-    + 'raporda değeri ≈ ile yazılır; katalog taramasına aday olmaz. Üreticinin değeri girilince o eksen '
+    + 'raporda değeri ≈ ile yazılır ve Parametrik Analiz’in aday tiplerine girer. Üreticinin değeri girilince o eksen '
     + 'tahmin olmaktan çıkar.');
   h += _gmH3('Nonlineer z-eğrisi', 'egri');
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
@@ -1138,8 +1172,8 @@ function _gmSec9(){
     + 'takoz kuvvetini <strong>az</strong> gösterir. Raporun <em>Lineerlik (±10 mm)</em> '
     + 'satırı bunu bildirir; aşım varsa eğri girin.');
   h += _gmNot('Eğrinin noktaları',
-      'z-eğrisi özel bir takoz tipinde, ' + _gmN(_GM_KUTUPHANE, 'egri') + ' <strong>Takoz Özellikleri → '
-    + 'Kuvvet–sehim</strong> bölümünde tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
+      'z-eğrisi özel bir takoz tipinde, <strong>Takoz Özellikleri → Kuvvet–sehim</strong> bölümünde '
+    + _gmNS('kutuphane-tip', _GM_KUTUPHANE_TIP, 'egri') + ' tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
     + 'Çözücü noktaları sehime (δ) göre sıralar; monoton bir eğri girin (basma eksi).');
   return h;
 }
@@ -1706,21 +1740,35 @@ function _gmSec16(){
 }
 
 // ═══ 17 — PARAMETRİK ANALİZ ═══════════════════════════════════════════════
-// Pencere adım adım kuruluyor (Canlı Not 1001 · 1002 · 1005): bugün Takoz yerleşimi ve
-// Adaylar; tarama ve sonuç pencereye bağlandıkça yazılır.
+// Pencere adım adım kuruluyor (Canlı Not 1001 · 1002 · 1005): bugün Takoz yerleşimi, Beklenen
+// takoz sehimi (eleme, 2026-11-13) ve Adaylar; tarama ve sonuç pencereye bağlandıkça yazılır.
 function _gmSec17(){
   var h = _gmH2('m17');
   h += '<p><strong>Parametrik Analiz</strong> bileşeni <strong>Bileşenler</strong> sütunundan tuvale '
     + 'sürüklenir (' + _gmS('palet') + ', ' + _gmN(_GM_PALET, 'parametrik') + '); çift tık penceresini açar '
     + '(' + _gmS('parametrik-p') + '). <strong>Takoz yerleşimi</strong> modelin takozlarını yerlerine göre '
     + 'gruplar: aynı adın sağ ve sol takozu ya da y’de aynalı iki takoz bir çifttir, kalanı tek takozdur; '
-    + 'grupların numarası önden arkaya artar. <strong>Adaylar</strong> taramanın tiplerini belirler '
+    + 'grupların numarası önden arkaya artar.</p>';
+  h += '<p><strong>Beklenen takoz sehimi</strong> aday tipleri eler (' + _gmS('parametrik-sehim') + '). Eleme '
+    + 'Çözücü’nün çözümünden: model önce Çözücü penceresinde <strong>Hesapla</strong> ile çözülür. Çözüm, Statik '
+    + 'durumda takozların en küçük düşey yükünü (<strong>En düşük takoz yükü</strong>) ve kütüphanenin her aday '
+    + 'tipinin o yükteki statik sehimini bulur; sehim tipin kendi kuvvet–sehim eğrisinden, eğrisiz tipte k<sub>z</sub> '
+    + 'statik rijitlikten. <strong>En az</strong> ve <strong>En çok</strong> girilince sehimi aralığın dışında kalan '
+    + 'tip elenir: Tüm kombinasyonlar, Özel kombinasyonun araması ve sayılar kalan tiplerden. Model hesaptan sonra '
+    + 'değişirse alanlar kapanır ve eleme durur; yeniden <strong>Hesapla</strong> ile çözülür. Aralık boşken bölüm '
+    + 'eksik bandında sorulur.</p>';
+  h += '<p><strong>Adaylar</strong> taramanın tiplerini belirler '
     + '(' + _gmS('parametrik-aday') + '): <strong>Tüm kombinasyonlar</strong> (varsayılan) her grupta bütün '
     + 'aday tipleri dener; <strong>Özel kombinasyon</strong> seçilince her grubun tipleri arama kutusundan '
     + 'eklenir — yazılan sözcükler tipin adında ve markasında aranır, satıra tık ya da Enter tipi gruba ekler. '
-    + 'Tip eklenmeyen grup mevcut tipinde kalır.</p>';
-  h += _gmSahne('parametrik-p', _gmPencere('mnt-parametric', { tut: ['Takoz yerleşimi'] }),
-    'Parametrik Analiz penceresi, örnek model: Takoz yerleşimi ve Analiz.', null, _GM_PARAM);
+    + 'Tip eklenmeyen grup mevcut tipinde kalır. Takoz Özellikleri’nde eklenen ya da rijitliği tamamlanan '
+    + 'tip kendiliğinden aday olur. <strong>Analiz</strong> kütüphanenin tip sayılarını, en düşük takoz '
+    + 'yükünü, elenen tip sayısını, taranan grup ve kombinasyon sayısını yazar.</p>';
+  h += _gmSahne('parametrik-p', _gmPencere('mnt-parametric', { tut: ['Takoz yerleşimi'], yan: false }),
+    'Parametrik Analiz penceresi, örnek model: Takoz yerleşimi.', null, _GM_PARAM);
+  h += _gmSahne('parametrik-sehim', _gmPencere('mnt-parametric', { tut: ['Beklenen takoz sehimi'], coz: true,
+      yeni: { type: 'mnt-parametric', data: { sehim: _GM_PARAM_ARALIK } } }),
+    'Parametrik Analiz penceresi, örnek çözülmüş hâlde: Beklenen takoz sehimi 3–5 mm ve Analiz.', null, _GM_PARAM_SEHIM);
   h += _gmSahne('parametrik-aday', _gmPencere('mnt-parametric', { tut: ['Adaylar'], yan: false,
       yeni: { type: 'mnt-parametric', data: _gmParamOzel } }),
     'Parametrik Analiz penceresinin Adaylar bölümü: Özel kombinasyon.', 640, _GM_PARAM_ADAY);
@@ -1728,13 +1776,17 @@ function _gmSec17(){
     ['Takoz yerleşimi', 'Güç grubunun çizimi (takozun çipi grubun numarası, küpü grubun rengi); grupların föyü: numara, ad, adet, ortalama x, mevcut tip',
       'Çift: ad sağ/sol eşi ya da y’de aynalı konum (±10 mm). Mevcut tip, takozun değerlerini '
       + 'birebir taşıyan kütüphane tipidir'],
+    ['Beklenen takoz sehimi', 'En az ve en çok sehim [mm]',
+      'Çözücü’nün güncel çözümüyle: en düşük takoz yükünde sehimi aralığın dışında kalan tip elenir. Çözüm '
+      + 'yoksa ya da model hesaptan sonra değiştiyse alanlar kapalı, eleme yok'],
     ['Adaylar', 'Kip (Tüm kombinasyonlar · Özel kombinasyon); özelde grup başına numara, ad, tip sayısı, '
       + 'arama kutusu ve eklenen tipler (ad, kz, kaldır)',
-      'Aday: altı rijitliği tam ve tahminsiz kütüphane tipi. Tip eklenmeyen grup mevcut tipinde kalır'],
-    ['Analiz', 'Taranan grup, kombinasyon',
-      'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 24’er tip: 13.824); '
-      + 'üst sınır ' + ((typeof veMntKatalog !== 'undefined' && typeof veSayi === 'function')
-        ? veSayi(veMntKatalog.MAKS_KOMB, 0) : '200.000')]
+      'Aday: altı rijitliği tam kütüphane tipi, tahmini rijitlikli tip de. Tip eklenmeyen grup mevcut tipinde kalır'],
+    ['Analiz', 'Kayıtlı takoz, aday tip (ölçülü ve tahmini rijitlik), rijitlik eksik, aday değil, en düşük takoz yükü, '
+      + 'elenen, taranan grup, kombinasyon',
+      'Kayıtlı takoz: aday tip + elenen + rijitlik eksik + aday değil; aday tip elemeden sonra. Rijitliği eksik tip çözülmez; aday değil, '
+      + 'taramanın dışında tutulan tiptir. '
+      + 'Kombinasyon, grupların denenecek tip sayılarının çarpımıdır (örneğin üç grupta 10’ar tip: 1.000)']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   return h;
 }
@@ -1974,6 +2026,7 @@ function _gmEkA(){
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Yük durumları; kaldırım ve şok darbesi standart, ileri yön ve tork yönü kendiliğinden', 'Çözücü', '<strong>Yük kitabı</strong>'],
       ['Takoz grupları', 'Parametrik Analiz', '<strong>Takoz yerleşimi</strong>'],
+      ['Beklenen takoz sehimi (eleme)', 'Parametrik Analiz', '<strong>Beklenen takoz sehimi</strong>'],
       ['Aday tipler: tüm ya da özel kombinasyon', 'Parametrik Analiz', '<strong>Adaylar</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],

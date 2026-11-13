@@ -29,7 +29,7 @@
 // (±%20); marine ve jeneratörde yalnız Z (Fz/Sz · yazılı Cz). Kapasite = statik Fz
 // (N/9,81 kg).
 // DİNAMİK TAHMİN (Canlı Not 113'ün kuralı: yayımlanmayan değer modeli reddettirmez,
-// tahminle çözülür ve işaretlenir; tahminli tip taramaya aday olmaz). A+P dinamik
+// tahminle çözülür ve işaretlenir; tahminli tip Parametrik Analiz'in adayıdır — Canlı Not 1008). A+P dinamik
 // rijitlik yayımlamıyor: NR takozda (konik · HD · marine · jeneratör) din./stat. =
 // (Sh+20)/50 — AMC'nin NR konilerinde doğal frekans grafiklerinden ölçülen yasa
 // (js/mount-amc.js; sertlik A+P'nin yaklaşık değeri, "~45 Shore A"). H-takoz CR ve
@@ -41,9 +41,11 @@
 // diyor; AMC'nin bütün oranları > 1) — tip eksik kalır; Takoz Özellikleri'nden girilen
 // X · Y'nin dinamiği aynı oranla kurulur (tamamla).
 //
-// PROGRAMDAKİ BMC GİRDİLERİ (LMT-1433-00 · LMT-1433-37 · "Mount 1") LASPAR'ın: LMT-1433-00
+// PROGRAMDAKİ BMC GİRDİLERİ (LMT-1433-00 · LMT-1433-37 · LMT-1433-20) LASPAR'ın: LMT-1433-00
 // LASPAR kataloğunda (js/mount-laspar.js). Ölçüsü konik yatak 026'nınki (107 × 90, delik
 // 80 × 65; radyal X = Y → 026 S 1) — LASPAR künyesinde "A+P eşi" (mount-laspar.js → AP_ESI).
+// LMT-1433-20 (FEA raporunun "Mount 1"i, X > Y) 026 S 3'ün desenini taşır (Canlı not 2011,
+// js/cp-mount.js); ölçüsü yayımlanmadığından künyesine eş yazılmaz.
 //
 // ANAHTAR 'ap' + makale no (10 hane) — kayıtlı projeler takozu node.data.libKey ile
 // bağlar, DEĞİŞMEZ. Ad: "<ürün> <tip> <sertlik> ShA (A+P 12.2140.2503)"; H-takozda

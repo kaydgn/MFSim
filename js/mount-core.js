@@ -1339,8 +1339,9 @@ var veMountCore = (function() {
   // dönme). Zarf STATİK konuma göre: Δd = d(durum) − d(Statik) — yerleşim statik
   // konumda çizilir. Noktalar her gövdenin ağırlık merkezi ve nokta kütle olmayan
   // gövdenin eşdeğer kutusunun (equivalentBox, köşegen atalet, global eksenler —
-  // raporun mod şekilleriyle aynı) sekiz köşesi.
-  // components: SI ({name, mass, cg [m], I, pointMass}); cases: [{name, res}];
+  // raporun mod şekilleriyle aynı) sekiz köşesi. Kutunun merkezi `kc` (ops.; zincir
+  // gövdesinde yanalda 0 — Canlı Not 158), verilmezse ağırlık merkezi.
+  // components: SI ({name, mass, cg [m], kc? [m], I, pointMass}); cases: [{name, res}];
   // cg: birleşik ağırlık merkezi [m]; qRef: Statik çözümün q'su (yoksa sıfır).
   // Döner (m): { govde:[{ name, min:[3], max:[3], minAt:[3], maxAt:[3] }], toplam:{…} }
   // — ...At: { durum, nokta, govde }; nokta 'ag' (ağırlık merkezi) ya da [±1,±1,±1]
@@ -1365,8 +1366,9 @@ var veMountCore = (function() {
       const nokta = [{ nokta:'ag', p:c.cg }];
       const I = c.I || [[0,0,0],[0,0,0],[0,0,0]];
       const kutu = equivalentBox(c.mass, [[I[0][0],0,0],[0,I[1][1],0],[0,0,I[2][2]]], c.pointMass);
+      const km = (Array.isArray(c.kc) && c.kc.length === 3) ? c.kc : c.cg;
       if(kutu) [-1, 1].forEach(sx => [-1, 1].forEach(sy => [-1, 1].forEach(sz => nokta.push({ nokta:[sx, sy, sz],
-        p:[c.cg[0] + sx*kutu[0]/2, c.cg[1] + sy*kutu[1]/2, c.cg[2] + sz*kutu[2]/2] }))));
+        p:[km[0] + sx*kutu[0]/2, km[1] + sy*kutu[1]/2, km[2] + sz*kutu[2]/2] }))));
       const z = bos();
       nokta.forEach(n => {
         const r = [n.p[0]-cg[0], n.p[1]-cg[1], n.p[2]-cg[2]];

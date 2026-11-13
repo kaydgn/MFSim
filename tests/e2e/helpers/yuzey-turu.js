@@ -355,6 +355,24 @@ async function takozTuru(page, olc) {
   expect(ara.satir).toBeGreaterThanOrEqual(2);
   expect(ara.secenek).toBeGreaterThan(0);
   await olc('#ve-properties', 'mnt-parametric · Özel kombinasyon');
+  // BEKLENEN TAKOZ SEHİMİ (2026-11-13): Çözücü'nün çözümüyle (Hesapla'nın çağrısı) ve 3–5 mm aralıkla —
+  // alanlar açık, Analiz en düşük takoz yükü ve elenen sayısıyla.
+  const eleme = await page.evaluate(async () => {
+    const n = nodes.find((x) => x.type === 'mnt-parametric');
+    veMntParamAdayKip(n.id, 'hepsi');
+    await veMntSolverCompute(nodes.find((x) => x.type === 'mnt-solver').id);
+    veMntParamSehim(n.id, 'alt', '3');
+    veMntParamSehim(n.id, 'ust', '5');
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
+    await new Promise((r) => setTimeout(r, 450));
+    const b = document.querySelector('#ve-properties .ve-fp-kat[data-k="sehim"]');
+    if (b) b.scrollIntoView({ block: 'start' });
+    await new Promise((r) => setTimeout(r, 150));
+    const alt = document.getElementById('ve-mnt-param-sehim-alt-' + n.id);
+    return { aktif: _mntParamYeni(n).E.aktif, acik: !!alt && !alt.disabled };
+  });
+  expect(eleme).toEqual({ aktif: true, acik: true });
+  await olc('#ve-properties', 'mnt-parametric · Beklenen takoz sehimi');
   await page.evaluate(() => veTogglePropertiesPanel(false));
 }
 

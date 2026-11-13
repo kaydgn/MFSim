@@ -243,8 +243,11 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
       global.nodes.filter((n) => n.type === 'mnt-mount').forEach((n) => {
         if (n.data.libKey) bagli++;
         const E = cp._mntKutuphaneEslesme(n), bek = E ? E.e.key : '';
-        const d = dom(cp._mntTakozTipGovde(n));
-        expect([f, n.id, d.querySelector('select').value]).toEqual([f, n.id, bek]);
+        const d = dom(cp._mntTakozTipGovde(n)), tr = d.querySelector('.mntlib-trigger');
+        // Seçici Takoz Özellikleri'ninki (Canlı Not 160): tipli takozda Marka tipin markası ve Tip o
+        // tip; tipsizde Marka Elle ve Tip satırı yok.
+        expect([f, n.id, tr ? tr.getAttribute('data-k') : '', d.querySelector('select.mntlib-marka').value])
+          .toEqual([f, n.id, bek, E ? E.e.marka : '']);
         if (bek) {
           tipli++;
           expect(d.querySelector('[id^="ve-mnt-libnot-"]').textContent).toContain(E.e.name + ' ile 6/6 değer aynı');
@@ -254,9 +257,9 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect([tipli, tipsiz, bagli]).toEqual([35, 11, 0]);                // iki 10 Ton TTA'nın on ikisi ASFAT'ın tipleri (Canlı Not 68; askılı 2026-11-11); ISG 430'un altısı AMC Cone (2026-11-13)
   });
 
-  test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince "— elle gir —"', () => {
+  test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince Elle', () => {
     tulga();
-    const t = onTakoz(), sec = () => dom(cp._mntTakozTipGovde(t)).querySelector('select').value;
+    const t = onTakoz(), sec = () => { const tr = dom(cp._mntTakozTipGovde(t)).querySelector('.mntlib-trigger'); return tr ? tr.getAttribute('data-k') : ''; };
     expect(sec()).toBe('TK050');
     t.data.kzs = '300';
     expect(sec()).toBe('');
@@ -266,7 +269,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect(sec()).toBe('');
   });
 
-  test('"— elle gir —" seçimi kütüphane BAĞINI kaldırır, değerlere dokunmaz', () => {
+  test('Elle seçimi kütüphane BAĞINI kaldırır, değerlere dokunmaz', () => {
     tulga();
     const t = onTakoz();
     t.data.libKey = 'TK050';
@@ -478,7 +481,9 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     const id = onTakoz().id;
     expect(html).toContain('id="ve-fp-panes-' + id + '"');
     expect(html).not.toContain('ve-fp-tabs');
-    expect(html).not.toMatch(/role="tabpanel"|\shidden[\s>]/);
+    expect(html).not.toMatch(/role="tabpanel"/);
+    // Gizli öğe yalnız Takoz tipinin kapalı açılır listesi (Canlı Not 160: Takoz Özellikleri'nin seçicisi)
+    expect([...dom(html).querySelectorAll('[hidden]')].filter((e) => !e.closest('.mntlib-dd'))).toEqual([]);
     expect(html).toMatch(/<div class="ve-fp-kat" data-k="konum" data-d="ok" tabindex="-1" aria-label="Konum">/);
   });
 
@@ -500,5 +505,125 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     expect(b.hasAttribute('aria-busy')).toBe(false);
     expect(document.querySelector('.ve-fp-ilerleme')).toBeNull();
     expect(document.querySelector('.ve-fp-yurut').hasAttribute('data-is')).toBe(false);
+  });
+});
+
+// KAPASİTE · DURDURUCU SATIRDA (Canlı Not 161, kullanıcı: *"Bunlar neden aşağıda ve neden sağ
+// tarafta 'isteğe bağlı · hesaba girmez' gibi garip açıklamalar var?"*). Önce: Kapasite ve
+// Durdurucu başlığının yanında alanın hesaptaki yeri yazıyordu, alan etiketinin ALTINDA yarım
+// genişlikte duruyordu. Şimdi başlığın yanında yalnız birim ya da veri; tek değerli alan föyün
+// satırında — etiket solda, girdi aynı satırın değer hücresinde.
+describe('KAPASİTE · DURDURUCU SATIRDA — başlıkta açıklama yok, alan föyün satırında (Canlı Not 161)', () => {
+  const MD = require('../../tools/metin-dili.js');
+  const sagOn = () => bul((n) => n.customName === 'Sağ Ön Takoz');
+  const ac = (t) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntMountPropertiesHTML(t) + '</div>'; };
+  const bolum = (ad) => [...document.querySelectorAll('.ve-fp-card')]
+    .find((s) => { const b = s.querySelector(':scope > .ve-fp-sect > b'); return b && b.textContent === ad; });
+
+  test('bölüm başlıklarının yanında açıklama yok: Kapasite ve Durdurucu eksiz, öteki ekler açıklama değil', () => {
+    tulga(); ac(sagOn());
+    ['Kapasite', 'Durdurucu'].forEach((ad) => expect([ad, bolum(ad).querySelector('.ve-fp-sect em')]).toEqual([ad, null]));
+    const ekler = [...document.querySelectorAll('.ve-fp-sect em')].map((e) => e.textContent);
+    expect(ekler.length).toBeGreaterThan(0);                                   // birim ekleri (Rijitlik · Konum) durur
+    ekler.forEach((e) => expect([e, MD.isaretle(e, 'arayuz')]).toEqual([e, []]));
+  });
+
+  test('alan etiketiyle AYNI satırda: etiket solda ve girdiye bağlı, üstte yığılmış etiket yok', () => {
+    tulga(); const t = sagOn(); ac(t);
+    [['maxLoad', 'Kapasite', 'Maks. eksenel yük [kg]'], ['bosY', 'Durdurucu', 'Yanal boşluk [mm]']].forEach(([k, ad, etiket]) => {
+      const b = bolum(ad), g = document.getElementById('ve-mnt-' + k + '-' + t.id);
+      expect([ad, b.contains(g), b.querySelectorAll('.ve-fp-l, .ve-fp-f').length, b.querySelectorAll('tr').length]).toEqual([ad, true, 0, 1]);
+      const tr = g.closest('tr'), l = tr.cells[0].querySelector('label');
+      expect([tr.cells.length, l.textContent, l.htmlFor, tr.cells[1].contains(g)]).toEqual([2, etiket, g.id, true]);
+      expect(g.getAttribute('inputmode')).toBe('decimal');                     // Türkçe sayı alanı
+    });
+    const bosY = document.getElementById('ve-mnt-bosY-' + t.id);
+    expect([bosY.value, bosY.title]).toEqual(['12', t.data.bosYKaynak]);       // değer ve künyesi girdide
+  });
+
+  test('yazmak bileşenin alanını değiştirir; kayıt değişiklikten SONRA ve alan başına tek adım', () => {
+    tulga(); const t = sagOn(); ac(t);
+    global.veMntSet = cp.veMntSet;
+    const kayit = [];
+    stubs.saveState.mockImplementation(() => kayit.push([t.data.maxLoad, t.data.bosY]));
+    try {
+      const g = document.getElementById('ve-mnt-maxLoad-' + t.id);
+      g.value = '650'; g.dispatchEvent(new Event('change'));
+      const y = document.getElementById('ve-mnt-bosY-' + t.id);
+      y.value = ''; y.dispatchEvent(new Event('change'));
+      expect(kayit).toEqual([['650', '12'], ['650', '']]);
+    } finally {
+      stubs.saveState.mockReset();
+      delete global.veMntSet;
+    }
+  });
+});
+
+// KONUM YAN YANA (Canlı Not 162, kullanıcı: *"Bu kısmı daha da güzelleştirelim. Yapabilirsek yan
+// yana yapalım bunları."*). Önce: Eksen | Konum | CG'ye Δ sütunları, eksen başına bir satır (X · Y ·
+// Z alt alta). Şimdi sütunlar X · Y · Z, satırlar Konum (üç girdi) ve CG'ye Δ (türetilen, oyuk) —
+// kimlikler, yazıcı ve geri-al adımı aynı. Askı Yayı aynı gövdeyi taşır.
+describe('KONUM YAN YANA (Canlı Not 162)', () => {
+  const sagOn = () => bul((n) => n.customName === 'Sağ Ön Takoz');
+  const ac = (html) => { document.body.innerHTML = '<div class="ve-properties-content">' + html + '</div>'; };
+  // Föyün biçimi: başlık X · Y · Z, Konum satırında üç girdi, CG'ye Δ satırında üç türetilen hücre.
+  function yanYana(t) {
+    const tab = document.querySelector('table[aria-label="Konum"]');
+    const bas = [...tab.tHead.rows[0].cells].map((c) => c.textContent);
+    const [konum, fark, ...fazla] = [...tab.tBodies[0].rows];
+    const cg = cp._mntCanliModel().mp.cg, F = { d: ['x', 'y', 'z'].map((k, i) => Number(t.data[k]) - cg[i] * 1000) };
+    expect([bas, fazla.length]).toEqual([['', 'X', 'Y', 'Z'], 0]);
+    expect([konum.cells.length, konum.cells[0].textContent, konum.cells[0].querySelector('label').htmlFor])
+      .toEqual([4, 'Konum', 've-mnt-x-' + t.id]);
+    ['x', 'y', 'z'].forEach((k, i) => {
+      const g = konum.cells[i + 1].querySelector('input');
+      expect([g.id, g.value, g.getAttribute('inputmode'), g.getAttribute('aria-label')])
+        .toEqual(['ve-mnt-' + k + '-' + t.id, String(t.data[k]), 'decimal', 'Konum ' + k.toUpperCase()]);
+    });
+    expect([fark.cells.length, fark.cells[0].textContent, fark.querySelectorAll('input').length]).toEqual([4, 'CG\'ye Δ', 0]);
+    [0, 1, 2].forEach((i) => {
+      const c = fark.cells[i + 1];
+      expect([c.id, c.className, c.hasAttribute('data-tazele'), c.textContent])
+        .toEqual(['ve-mnt-tamd-' + i + '-' + t.id, 'cz', true, veSayi(F.d[i], 1, { eksi: '−' })]);
+    });
+    expect(tab.textContent).not.toContain('Eksen');                            // eksen sütunu yok
+  }
+
+  test('Takoz penceresinde başlık X · Y · Z; Konum satırında üç girdi, CG\'ye Δ satırında üç türetilen hücre', () => {
+    tulga(); const t = sagOn();
+    ac(cp.getMntMountPropertiesHTML(t));
+    yanYana(t);
+    expect(document.getElementById('ve-mnt-tamd-0-' + t.id).textContent).toBe('−142,5');   // notun ekranındaki sayı
+  });
+
+  test('yazmak bileşenin alanını değiştirir; kayıt değişiklikten SONRA, alan başına tek adım; fark yerinde tazelenir', () => {
+    tulga(); const t = sagOn();
+    ac(cp.getMntMountPropertiesHTML(t));
+    global.veMntSet = cp.veMntSet;
+    const kayit = [];
+    stubs.saveState.mockImplementation(() => kayit.push([t.data.x, t.data.y, t.data.z]));
+    try {
+      const y = document.getElementById('ve-mnt-y-' + t.id), y0 = Number(t.data.y);
+      const fark0 = document.getElementById('ve-mnt-tamd-1-' + t.id);
+      y.value = '400'; y.dispatchEvent(new Event('change'));
+      expect(kayit).toEqual([[t.data.x, '400', t.data.z]]);
+      expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
+      expect(document.getElementById('ve-mnt-y-' + t.id)).toBe(y);                    // girdi yerinde
+      const fark1 = document.getElementById('ve-mnt-tamd-1-' + t.id);
+      // takoz kütle taşımaz: birleşik CG yerinde, fark kayma kadar
+      expect(veSayiOku(fark1.textContent) - veSayiOku(fark0.textContent)).toBeCloseTo(400 - y0, 0);
+      yanYana(t);
+    } finally {
+      stubs.saveState.mockReset();
+      delete global.veMntSet;
+    }
+  });
+
+  test('Askı Yayı penceresi aynı föyü taşır', () => {
+    const TTA = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tta10askili_topoloji.json'), 'utf8'));
+    global.nodes = JSON.parse(JSON.stringify(TTA.nodes)).map((n) => Object.assign(n, { def: componentDefs[n.type] }));
+    const a = bul((n) => n.type === 'mnt-aski');
+    ac(cp.getMntAskiPropertiesHTML(a));
+    yanYana(a);
   });
 });

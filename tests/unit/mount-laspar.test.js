@@ -219,7 +219,7 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(satirlar(kunye('lp-lmt-0154-01-tk55').querySelector('.ve-mnt-amc'))).toContainEqual(['Ölçüler', 'Ø120 mm · iç Ø20']);
     expect(satirlar(kunye('lp-lmt-0608-04-tk45').querySelector('.ve-mnt-amc'))).toContainEqual(['Ölçüler', '100 × 60 mm · delik 60 · M12']);
   });
-  test('programın LASPAR takozu: TK040\'ta model kodu ve kaynak; LMT-1433-00\'da katalog tipi ve (i); "Mount 1"de künye yok', () => {
+  test('programın LASPAR takozu: TK040\'ta model kodu ve kaynak; LMT-1433-00\'da katalog tipi ve (i); LMT-1433-20\'de kod ve kaynak', () => {
     const tk = kunye('TK040');
     expect(satirlar(tk.querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR MLMT-0216-33-TK040'], ['Sertlik', '45 ShA']]);
     // ailesiz künyede kaynak Kod satırının (i)'sinde
@@ -233,7 +233,14 @@ describe('KÜNYE — Takoz Özellikleri', () => {
     expect(lm.querySelector('.ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · BMC FEA raporu · 02.10.2018 · 12.02.2019');
     expect(lm.querySelector('.mntlib-bilgi').getAttribute('data-lp-eski')).toBe('lmt1433-00-55sh');
     expect(satirlar(kunye('amc55sha').querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR LMT-1433-37'], ['Sertlik', '55 ShA']]);
-    expect([kunye('bmc-mount1-55sh').querySelector('.ve-mnt-amc'), kunye('bmc-mount1-55sh').querySelector('.mntlib-bilgi')]).toEqual([null, null]);
+    // Canlı not 2011 ("'mount 1, mount 2' gibi garip isimli takozların … Tam isimlerini koyalım"):
+    // FEA raporunun "Mount 1"i LMT-1433-20 — kod, sertlik, kaynak; ölçüsü ve resmi yayımlanmadı
+    const m1 = kunye('bmc-mount1-55sh');
+    expect(satirlar(m1.querySelector('.ve-mnt-amc'))).toEqual([['Kod', 'LASPAR LMT-1433-20'], ['Sertlik', '55 ShA']]);
+    expect(m1.querySelector('.ve-mnt-kaynak-i').getAttribute('data-ipucu')).toBe('Kaynak · BMC FEA raporu · 02.10.2018 · 12.02.2019');
+    expect(m1.querySelector('.mntlib-bilgi')).toBeNull();
+    expect(['bmc-mount1-40sh', 'bmc-mount1-70sh'].map((k) => [P.ESKI[k].kod, P.ESKI[k].sh, P.ESKI[k].tip])).toEqual([
+      ['LMT-1433-20', 40, undefined], ['LMT-1433-20', 70, undefined]]);
   });
   test('Rijitlik: konikte radyal ve dinamik tahmini, mobilde dinamik tahmini ve X · Y boş (zorunlu)', () => {
     const d = kunye('lp-lmt-1433-00-tk60');

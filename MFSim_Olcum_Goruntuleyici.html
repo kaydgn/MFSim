@@ -4539,6 +4539,10 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .mntlib-adim[aria-disabled="true"] .mf-ico{ opacity:.35; }
 .mntlib-adim .mf-ico{ width:14px; height:14px; }
 .mntlib-sec > .mntlib-add{ grid-area:1 / 3; }
+/* Takoz penceresinin seçicisi (Canlı Not 160): Yeni takoz yok — Marka ve Tip satırı aynı genişlikte
+   (üçüncü sütun ve aralığı yok); altındaki durum satırı seçiciye yakın. */
+.mntlib-sec--takoz{ grid-template-columns:auto minmax(0,1fr); margin-bottom:6px; }
+.mntlib-sec--takoz > .mntlib-tip{ grid-area:2 / 2; }
 .mntlib-trigger{
   display:flex;align-items:center;gap:8px;width:100%;height:26px;
   padding:0 8px;cursor:pointer;text-align:left;
@@ -9812,6 +9816,9 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    olurdu — ortak yüzey kuralı, `.ve-fp-l u` ile aynı). */
 .ve-mnt-foy th u{ text-decoration:none; text-transform:none; letter-spacing:normal; }
 .ve-mnt-foy .ve-fp-sym{ font-style:normal; text-transform:none; letter-spacing:normal; }
+/* TEK DEĞERLİ ALANIN SATIRI (`--satir`, Canlı Not 161): birim satırın adında, alan
+   etiketinin birimi gibi (`.ve-fp-l u`) — altı çizilmez, soluk. */
+.ve-mnt-foy td u{ text-decoration:none; color:var(--text-muted); }
 .ve-properties-content .ve-mnt-foy td{
   text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   border-bottom:1px solid var(--border-light);
@@ -9844,6 +9851,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-properties-content .ve-mnt-foy--sik td{ padding-left:3px !important; padding-right:3px !important; }
 .ve-properties-content .ve-mnt-foy--sik th:first-child,
 .ve-properties-content .ve-mnt-foy--sik td:first-child{ padding-left:6px !important; }
+/* YAN YANA föy (`--yan`, Canlı Not 162): sütunlar eksen, satırlar girdi ve türetilen. Türetilen
+   satır girdinin satırıyla AYNI boyda: girdi hücresi 1 + çerçeve 1 + iç dolgu 2 = 4 px (3 px'te
+   satır 21, girdininki 23 px'ti). */
+.ve-properties-content .ve-mnt-foy--yan td.cz{ padding-top:4px !important; padding-bottom:4px !important; }
 /* Sütun başı uzun ad taşıyorsa (parça adları) kırpılmaz, alt satıra iner. */
 .ve-properties-content .ve-mnt-foy--sar th{ white-space:normal; vertical-align:bottom; overflow-wrap:anywhere; }
 /* AD HÜCRESİ SARAR (`td.sar`): tip adının ayırt eden kısmı sonda ("… · BMC
@@ -10464,6 +10475,14 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    parçanın üstündeyken satırı da aynı tonda (.ve-ak-satir, Canlı Not 48). */
 .ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td,
 .ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-satir td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
+/* TIK SEÇER (Canlı Not 163): tıkla seçilen parçanın satırı seçimin renginde — fare üstünden
+   koyu vurgu zemini ve vurgu renginde sol kenar; zorunlu ve boş hücre kendi tonunda kalır.
+   Satırın yazıları bu zeminde AA (iki tema; mount-akso.test.js → TIK SEÇER). Seçimi beyan
+   eden çizimde parça tıklanır. */
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-sec td:not(.zor){ background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input)); }
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-sec td:first-child{ box-shadow:inset 3px 0 0 var(--accent-primary); }
+.ve-mnt-akso-kap[data-tik-sec] svg.ve-mnt2d-akso [data-ak]{ cursor:pointer; }
+.ve-mnt-akso-kap[data-tik-sec].ve-ak3b-surukle svg.ve-mnt2d-akso [data-ak]{ cursor:grabbing; }
 .ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
