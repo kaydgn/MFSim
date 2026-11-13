@@ -25,7 +25,7 @@ Object.assign(global, require('../../js/mount-yay.js'));
 const K = global.veMntKatalog;
 
 const SECILEN = ['TK040', 'amc137963', 'amc137963'];
-const ASFAT = ['57RS313774-sr116', '57RS313773-sr116', '57RS313773-sr116'];
+const ASFAT = ['asfat-b', 'asfat-a', 'asfat-a'];
 
 // Örneğin topolojisi, tipler ve yay başına ön yük [kgf] uygulanmış
 function topo(tipler, F) {

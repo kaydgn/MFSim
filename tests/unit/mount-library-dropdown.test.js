@@ -23,6 +23,14 @@
  * İŞARETSİZ (kullanıcı 2026-11-11, Canlı Not 122: *"Baştaki mavi butonlara ne
  * gerek var … sağ kısımdaki kırmızı ve mavi tike de ne gerek var"*): satırda ve
  * tetikleyicide yalnız ad ve kz; seçili satır zeminiyle ve kalın adıyla belli.
+ *
+ * OKLAR (kullanıcı 2026-11-11, Canlı Not 155: *"Şuraya pratik olarak takozlar
+ * arasında gezebileceğimiz iki ok tuşu istiyorum, yukarı aşağı"*): Tip satırının
+ * sonunda Önceki tip · Sonraki tip; listenin GÖRÜNEN sırasıyla komşu tipi seçer,
+ * seçim listeden seçmenin aynısı (geri-al adımı yazmaz), uçta ok kapalı ve sebebi
+ * ipucunda, tek tipli markada ok yok, odak yeniden kurulan okta kalır. Gerçek
+ * yerleşim (oklar (i) gelip gidince yerinde) tests/e2e/mount-pencere.spec.js →
+ * *Takoz Özellikleri*.
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
@@ -283,6 +291,123 @@ describe('seçim', () => {
     cp.veMntLibFilter('lib1');
     cp.veMntLibSearchKey({ key: 'Enter', preventDefault() {} }, 'lib1');
     expect(node.data._selKey).toBeUndefined();
+  });
+});
+
+describe('OKLAR — Tip satırında önceki · sonraki tip (Canlı Not 155)', () => {
+  const ok = (yon) => document.getElementById('mntlib-adim-' + (yon < 0 ? 'onceki' : 'sonraki') + '-lib1');
+  // Listenin GÖRÜNEN sırası: satırın tıkladığı anahtar (onclick'in ikinci bağımsız değişkeni)
+  const siraAnahtar = (list) => Array.from(list.querySelectorAll('.mntlib-opt'))
+    .map((o) => /veMntLibSelect\('lib1','([^']+)'\)/.exec(o.getAttribute('onclick'))[1]);
+  // Pencerenin yeniden kurulması: showNodeProperties paneli aynı yere yeniden basar
+  function yenidenKur() {
+    stubs.showNodeProperties.mockImplementation((n) => {
+      document.getElementById('host').innerHTML = cp.getMntLibraryPropertiesHTML(n);
+    });
+  }
+  afterEach(() => stubs.showNodeProperties.mockReset());
+  beforeEach(() => { window.veMntLibAdim = cp.veMntLibAdim; });
+
+  test('Tip satırının sonunda, (i)nin sağında bitişik iki ok: adları, ikonları, ipuçları', () => {
+    const el = mountPanel(libNode([], 'amc137982'));
+    const tip = el.trigger.closest('.mntlib-tip');
+    expect(Array.from(tip.children).map((c) => c.classList[0])).toEqual(['mntlib-picker', 'mntlib-bilgi', 'mntlib-adimlar']);
+    const [on, so] = Array.from(tip.querySelectorAll('.mntlib-adimlar > button'));
+    expect([on.getAttribute('aria-label'), on.title, on.getAttribute('aria-disabled')]).toEqual(['Önceki tip', 'Önceki tip', null]);
+    expect([so.getAttribute('aria-label'), so.title, so.getAttribute('aria-disabled')]).toEqual(['Sonraki tip', 'Sonraki tip', null]);
+    expect(on.querySelector('.mf-ico').classList.contains('mf-ico-arrow-up')).toBe(true);     // ikon ailesinden, karakter değil
+    expect(so.querySelector('.mf-ico').classList.contains('mf-ico-arrow-down')).toBe(true);
+    expect(on.textContent.trim() + so.textContent.trim()).toBe('');
+  });
+
+  test('ok listenin GÖRÜNEN sırasında komşu tipi seçer — satırı tıklamakla aynı sonuç, geri-al adımı yok', () => {
+    const node = libNode([], 'amc137982');
+    let el = mountPanel(node);
+    const sira = siraAnahtar(el.list);
+    const i = sira.indexOf('amc137982');
+    expect(i).toBeGreaterThan(0);
+    expect(i).toBeLessThan(sira.length - 1);
+    // Beklenen: listede bir alttaki satırın tıkı
+    el.list.querySelectorAll('.mntlib-opt')[i + 1].click();
+    const satirla = JSON.stringify(node.data);
+    expect(node.data._selKey).toBe(sira[i + 1]);
+    // Aynı başlangıçtan ok
+    node.data._selKey = 'amc137982';
+    resetStubs(stubs);
+    el = mountPanel(node);
+    ok(1).click();
+    expect(JSON.stringify(node.data)).toBe(satirla);
+    expect(stubs.showNodeProperties).toHaveBeenCalledTimes(1);
+    expect(stubs.showNodeProperties).toHaveBeenCalledWith(node);
+    expect(stubs.saveState).not.toHaveBeenCalled();             // listeden seçim gibi: görünüm durumu
+    // Önceki tip iki adım geri: bir üstteki satır
+    el = mountPanel(node);
+    ok(-1).click();
+    el = mountPanel(node);
+    ok(-1).click();
+    expect(node.data._selKey).toBe(sira[i - 1]);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  test('uçta ok kapalı (aria-disabled), sebebi ipucunda; tıkı bir şey yapmaz', () => {
+    let node = libNode();                                       // seçim yok → listenin ilk tipi
+    let el = mountPanel(node);
+    const sira = siraAnahtar(el.list);
+    expect(el.list.querySelector('.mntlib-opt').classList.contains('sel')).toBe(true);
+    expect([ok(-1).getAttribute('aria-disabled'), ok(-1).title, ok(-1).getAttribute('aria-label')])
+      .toEqual(['true', 'İlk tip seçili.', 'Önceki tip']);
+    expect(ok(1).getAttribute('aria-disabled')).toBeNull();
+    ok(-1).click();
+    expect(cp.veMntLibAdim('lib1', -1)).toBe(false);
+    expect(node.data._selKey).toBeUndefined();
+    expect(stubs.showNodeProperties).not.toHaveBeenCalled();
+    node = libNode([], sira[sira.length - 1]);                  // listenin son tipi
+    el = mountPanel(node);
+    expect([ok(1).getAttribute('aria-disabled'), ok(1).title, ok(1).getAttribute('aria-label')])
+      .toEqual(['true', 'Son tip seçili.', 'Sonraki tip']);
+    expect(ok(-1).getAttribute('aria-disabled')).toBeNull();
+    ok(1).click();
+    expect(node.data._selKey).toBe(sira[sira.length - 1]);      // dönmez: listenin başına sarmaz
+    expect(stubs.showNodeProperties).not.toHaveBeenCalled();
+  });
+
+  test('ok yalnız seçili markanın tiplerinde gezer; tek tipli markada ok yok', () => {
+    const tek = mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
+    expect(tek.trigger.closest('.mntlib-tip').querySelector('.mntlib-adimlar')).toBeNull();
+    const node = libNode([{ key: 'k1', name: 'Özel A', sz: 640 }, { key: 'k2', name: 'Özel B', sz: 700 }]);
+    mountPanel(node);
+    expect(ok(-1).getAttribute('aria-disabled')).toBe('true');
+    ok(1).click();
+    expect(node.data._selKey).toBe('k2');                       // Özel takozlar içinde
+    mountPanel(node);
+    expect(ok(1).getAttribute('aria-disabled')).toBe('true');   // markanın sonu: katalog tipine geçmez
+    expect(cp.veMntLibAdim('lib1', 1)).toBe(false);
+    expect(node.data._selKey).toBe('k2');
+  });
+
+  test('pencere yeniden kurulunca odak AYNI okta kalır (art arda basmak yerinden kaymaz)', () => {
+    const node = libNode([], 'amc137982');
+    const el = mountPanel(node);
+    const sira = siraAnahtar(el.list), i = sira.indexOf('amc137982');
+    yenidenKur();
+    let eski = ok(1);
+    eski.focus();
+    eski.click();
+    expect(ok(1)).not.toBe(eski);                               // pencere gerçekten yeniden kuruldu
+    expect(document.activeElement).toBe(ok(1));
+    eski = ok(1);
+    eski.click();
+    expect(node.data._selKey).toBe(sira[i + 2]);
+    expect(document.activeElement).toBe(ok(1));
+    // Tetikleyici ve listenin seçili satırı yeni tipi gösterir
+    const sec = document.querySelector('#mntlib-list-lib1 .mntlib-opt.sel');
+    expect(/veMntLibSelect\('lib1','([^']+)'\)/.exec(sec.getAttribute('onclick'))[1]).toBe(sira[i + 2]);
+    expect(document.getElementById('mntlib-tr-lib1').textContent).toContain(cp.veMntGetLibraryMap()[sira[i + 2]].name);
+    // Odak okta değilse (Safari'de tık odak vermez) oka TAŞINMAZ
+    document.getElementById('mntlib-marka-lib1').focus();
+    ok(-1).click();
+    expect(node.data._selKey).toBe(sira[i + 1]);
+    expect(document.activeElement.classList.contains('mntlib-adim')).toBe(false);
   });
 });
 

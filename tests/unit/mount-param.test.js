@@ -289,9 +289,10 @@ describe('SÜRÜNME · TOLERANS · DARBE — literatür kısıtlarının ölçü
 // yerlerine göre parametrik analize katılacak takozları seçecek. İstediği kadar takoz
 // seçebilir. Ardından seçilen tüm takozlar, kendi aralarında kombinasyon yapılıp … çözdürülecek";
 // Excel'i Tulga_takoz_konfigurasyonlari: grup sütunları Ön Takoz · Sağ/Sol Ön Takoz · Sağ/Sol Arka
-// Takoz, 24 tip × 3 grup = 13.824 kombinasyon). Pencere Canlı Not 1001'de boşaltıldı, adım adım
-// kuruluyor: tarama henüz bağlı değil; eski pencere aşağıda PARKTA (_mntParamEskiPencereHTML).
-describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
+// Takoz, 24 tip × 3 grup = 13.824 kombinasyon — Canlı Not 1005'ten beri varsayılan Tüm kombinasyonlar).
+// Pencere Canlı Not 1001'de boşaltıldı, adım adım kuruluyor: tarama henüz bağlı değil; eski pencere
+// aşağıda PARKTA (_mntParamEskiPencereHTML).
+describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005', () => {
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   const kur = (ad, data) => { modelKur(ad); const n = { id: 'py', type: 'mnt-parametric', data: data || {} }; global.nodes.push(n); return n; };
   const yan = (d) => [...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value);
@@ -303,11 +304,11 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
     expect(satir).toEqual([
-      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA (57RS326612M)'],
-      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA (57RS329001M)'],
-      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA (57RS328045)']]);
+      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA'],
+      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA'],
+      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA']]);
     expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
-    // föyün numarası grubun renginde rozet
+    // föyün numarası grubun renginde (kare + düz yazı — NUMARA BALONSUZ)
     expect([...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')].map((e) => [e.textContent, e.dataset.renk]))
       .toEqual([['1', '1'], ['2', '2'], ['3', '3']]);
     // çizim: Görünümler'in bileşeni, bu pencerenin kaynağıyla; tam ekranı yok (Görünümler'in modelini kurardı)
@@ -332,105 +333,253 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002', () => {
     expect([1, 2, 3, 4, 5, 6, 9].map(P._mntParamRenk)).toEqual([1, 2, 3, 4, 1, 2, 1]);
   });
 
-  test('ADAYLAR: satır aday tip (marka marka), sütun grup; mevcut tipin hücresi grubun sütununda', () => {
+  // NUMARA BALONSUZ (kullanıcı 2026-11-11, Canlı Not 1007: "bunları baloncuk yapmana gerek yok.
+  // Çocukça duruyor"): grubun numarası düz yazı; renk önündeki keskin köşeli küçük karede.
+  test('NUMARA BALONSUZ: numara düz yazı, grubun rengi önündeki karede; zemin ve yuvarlak köşe yok', () => {
+    const d = dom(P.getMntParamPropertiesHTML(kur('tulga')));
+    const no = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')];
+    expect(no.length).toBe(3);
+    no.forEach((e) => {
+      expect([...e.children].map((c) => [c.className, c.getAttribute('aria-hidden'), c.textContent])).toEqual([['ve-prm-kare', 'true', '']]);
+      expect([e.lastChild.nodeType, e.lastChild.nodeValue]).toEqual([Node.TEXT_NODE, e.textContent]);
+    });
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const kural = (s) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((m) => m[1].split(',').some((x) => x.trim() === s)).map((m) => m[2]).join(';');
+    expect(kural('.ve-prm-no')).toMatch(/color:/);                            // kural bulundu
+    expect(kural('.ve-prm-no')).not.toMatch(/background|border|radius/);
+    expect(kural('.ve-prm-kare')).toMatch(/background:\s*var\(--grup-renk/);
+    expect(kural('.ve-prm-kare')).not.toMatch(/radius/);
+  });
+
+  // ADAYLAR (Canlı Not 1005: "adaylar alt penceresini kaldıralım … Program default olarak TÜM TAKOZ
+  // KOMBİNASYONLARINI analiz etsin … kullanıcının gireceği özel kombinasyonu seçebilsin … her konum
+  // için takoz aratarak girecek"): tip × grup işaret tablosunun yerine iki kip.
+  test('ADAYLAR: varsayılan Tüm kombinasyonlar — her grupta bütün aday tipler (Excel’in taraması); tablo ve alan yok', () => {
     const n = kur('tulga'), Y = P._mntParamYeni(n), d = dom(P.getMntParamPropertiesHTML(n));
     expect(Y.A.length).toBe(24);
-    const tip = [...d.querySelectorAll('.ve-prm-mx tbody tr:not(.ve-prm-mx-marka):not(.ve-prm-mx-say)')];
-    expect(tip.length).toBe(24);
-    tip.forEach((r) => expect(r.querySelectorAll('input[type="checkbox"]').length).toBe(3));
-    expect(d.querySelectorAll('.ve-prm-mx tr.ve-prm-mx-marka').length).toBe(P._mntParamMarkalar(Y.A).length);
-    // sütun başı grubun numarası, ipucu adı
-    expect([...d.querySelectorAll('.ve-prm-mx thead th.ve-mnt-sec')].map((t) => [t.textContent, t.title]))
-      .toEqual([['1', 'Ön Takoz'], ['2', 'Sağ/Sol Ön Takoz'], ['3', 'Sağ/Sol Arka Takoz']]);
-    expect([...d.querySelectorAll('td[data-mevcut]')].map((td) => [td.parentNode.cells[0].textContent.split(' ')[0], td.cellIndex - 1]))
-      .toEqual([['TK035', 3], ['TK040', 2], ['TK050', 1]]);
-    // her kutunun adı tip · grup (adsız denetim yok)
-    d.querySelectorAll('.ve-prm-mx input').forEach((i) => expect(i.getAttribute('aria-label')).toMatch(/ · /));
-    expect(yan(d)).toEqual(['0 / 3', '0']);
+    expect([Y.kip, Y.say, Y.taranan, Y.N]).toEqual(['hepsi', [24, 24, 24], 3, 24 ** 3]);
+    expect(yan(d)).toEqual(['3 / 3', '13.824']);
+    const kat = d.querySelector('.ve-fp-kat[data-k="aday"]');
+    expect(kat.querySelector('.ve-fp-sect em').textContent).toBe('24 tip');
+    expect([...kat.querySelectorAll('.ve-prm-kip button')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]))
+      .toEqual([['Tüm kombinasyonlar', 'true'], ['Özel kombinasyon', 'false']]);
+    expect(kat.querySelectorAll('table, input, .ve-prm-oz').length).toBe(0);
     expect(d.querySelector('.ve-fp-durum')).toBeNull();
     expect(d.querySelector('.ve-fp-solve')).toBeNull();                       // tarama henüz pencereye bağlı değil
+    expect(n.data).toEqual({});
   });
 
-  test('SEÇİM: grup başına; kütüphane sırasında yazılır, boşalan grup ve alan silinir; marka yalnız o grubun', () => {
+  test('KİP: Özel kombinasyon alanı yazar, Tüm kombinasyonlar siler; özelin seçimi korunur; aynı kip adım düşürmez', () => {
     const n = kur('tulga');
     global.saveState = jest.fn(); global.showNodeProperties = jest.fn();
-    const Y = P._mntParamYeni(n), G = Y.M.G, A = Y.A;
-    P.veMntParamGrupAday('py', 2, A[5].key, true);
-    P.veMntParamGrupAday('py', 2, A[1].key, true);
-    expect(n.data.adaylar).toEqual({ [G[1].anahtar]: [A[1].key, A[5].key] });
-    expect(global.saveState).toHaveBeenCalledTimes(2);
-    P.veMntParamGrupAday('py', 2, A[1].key, true);                          // ikinci kez: tekrar yok
-    expect(n.data.adaylar[G[1].anahtar]).toEqual([A[1].key, A[5].key]);
-    const amc = A.filter((a) => a.e.marka === 'AMC Mecanocaucho').map((a) => a.key);
-    expect(amc.length).toBeGreaterThan(1);
-    P.veMntParamGrupMarka('py', 3, 'AMC Mecanocaucho', true);
-    expect(n.data.adaylar[G[2].anahtar]).toEqual(amc);
-    expect(n.data.adaylar[G[0].anahtar]).toBeUndefined();
+    const Y0 = P._mntParamYeni(n), G = Y0.M.G, A = Y0.A;
+    P.veMntParamAdayKip('py', 'ozel');
+    expect(n.data).toEqual({ adaylarKip: 'ozel' });
+    expect(global.saveState).toHaveBeenCalledTimes(1);
     expect(global.showNodeProperties).toHaveBeenCalledWith(n);
-    let d = dom(P.getMntParamPropertiesHTML(n));
-    const markaKutu = (g) => d.querySelector('tr.ve-prm-mx-marka input[data-marka="AMC Mecanocaucho"][aria-label$="' + G[g].ad + '"]');
-    expect(markaKutu(2).checked).toBe(true);
-    P.veMntParamGrupAday('py', 3, amc[0], false);                            // bir tipi bırakınca marka kutusu düşer
-    d = dom(P.getMntParamPropertiesHTML(n));
-    expect(markaKutu(2).checked).toBe(false);
-    P.veMntParamGrupMarka('py', 3, 'AMC Mecanocaucho', false);
-    P.veMntParamGrupAday('py', 2, A[1].key, false);
-    P.veMntParamGrupAday('py', 2, A[5].key, false);
-    expect(n.data.adaylar).toBeUndefined();
-    P.veMntParamGrupAday('py', 9, A[0].key, true);                           // olmayan grup: yazılmaz
-    P.veMntParamGrupAday('yok', 1, A[0].key, true);
-    expect(n.data.adaylar).toBeUndefined();
+    P.veMntParamAdayKip('py', 'ozel');                                         // aynı kip: yazılmaz
+    expect(global.saveState).toHaveBeenCalledTimes(1);
+    // özelde tip eklenmeyen grup mevcut tipinde: taranan grup yok
+    const Y = P._mntParamYeni(n), d = dom(P.getMntParamPropertiesHTML(n));
+    expect([Y.kip, Y.say, Y.taranan, Y.N]).toEqual(['ozel', [0, 0, 0], 0, 0]);
+    expect(yan(d)).toEqual(['0 / 3', '0']);
+    expect(d.querySelector('.ve-fp-durum')).toBeNull();
+    expect([...d.querySelectorAll('.ve-prm-kip button[aria-pressed="true"]')].map((b) => b.dataset.kip)).toEqual(['ozel']);
+    // her grubun bloğu: numarası, adı, sayısı ve arama kutusu (adıyla)
+    expect([...d.querySelectorAll('.ve-prm-oz')].map((b) => [b.dataset.no, b.querySelector('.ve-prm-oz-bas .ve-prm-oz-ad').textContent,
+      b.querySelector('.ve-prm-oz-n').textContent, b.querySelector('.ve-prm-ara-k input').getAttribute('aria-label'),
+      b.querySelectorAll('.ve-prm-oz-t li').length]))
+      .toEqual(G.map((g) => [String(g.no), g.ad, 'Mevcut tip', 'Takoz ara · ' + g.ad, 0]));
+    d.querySelectorAll('.ve-prm-ara-k input').forEach((i) => expect(i.getAttribute('placeholder')).toBe('Takoz ara'));
+    P.veMntParamGrupAday('py', 1, A[0].key, true);
+    P.veMntParamAdayKip('py', 'hepsi');
+    expect(n.data).toEqual({ adaylar: { [G[0].anahtar]: [A[0].key] } });       // özelin seçimi korunur …
+    expect(P._mntParamYeni(n).N).toBe(24 ** 3);                                  // … Tüm kombinasyonlarda sayılmaz
+    P.veMntParamAdayKip('py', 'ozel');
+    expect(P._mntParamYeni(n).N).toBe(1);
+    P.veMntParamAdayKip('py', 'xyz');                                            // tanınmayan kip: Tüm kombinasyonlar
+    expect(n.data.adaylarKip).toBeUndefined();
+    const adim = global.saveState.mock.calls.length;
+    P.veMntParamAdayKip('yok', 'ozel');                                          // olmayan düğüm
+    expect(global.saveState).toHaveBeenCalledTimes(adim);
   });
 
-  test('KOMBİNASYON: seçili grupların tip sayılarının çarpımı; seçilmeyen grup mevcut tipinde; sınırı aşınca durum', () => {
-    const n = kur('tulga'), Y0 = P._mntParamYeni(n), G = Y0.M.G, A = Y0.A;
-    const sec = (g, k) => A.slice(0, k).map((a) => a.key);
-    n.data.adaylar = { [G[0].anahtar]: sec(0, 4), [G[2].anahtar]: sec(2, 6) };
+  test('SEÇİM: grup başına; kütüphane sırasında yazılır, tekrar yok; boşalan grup ve alan silinir; aday olmayan tip, olmayan grup ve değişmeyen seçim yazılmaz', () => {
+    const n = kur('tulga', { adaylarKip: 'ozel' });
+    global.saveState = jest.fn();
+    const Y = P._mntParamYeni(n), G = Y.M.G, A = Y.A;
+    expect(P.veMntParamGrupAday('py', 2, A[5].key, true)).toBe(true);
+    expect(P.veMntParamGrupAday('py', 2, A[1].key, true)).toBe(true);
+    expect(n.data.adaylar).toEqual({ [G[1].anahtar]: [A[1].key, A[5].key] });
+    expect(global.saveState).toHaveBeenCalledTimes(2);
+    expect(P.veMntParamGrupAday('py', 2, A[1].key, true)).toBe(false);          // ikinci kez: tekrar yok
+    expect(P.veMntParamGrupAday('py', 2, 'yok', true)).toBe(false);             // aday olmayan tip
+    expect(P.veMntParamGrupAday('py', 9, A[0].key, true)).toBe(false);          // olmayan grup
+    expect(P.veMntParamGrupAday('yok', 1, A[0].key, true)).toBe(false);         // olmayan düğüm
+    expect(P.veMntParamGrupAday('py', 1, A[3].key, false)).toBe(false);         // eklenmemiş tip
+    expect(global.saveState).toHaveBeenCalledTimes(2);
+    expect(n.data.adaylar).toEqual({ [G[1].anahtar]: [A[1].key, A[5].key] });
+    P.veMntParamGrupAday('py', 3, A[0].key, true);
+    expect(P._mntParamYeni(n).say).toEqual([0, 2, 1]);
+    P.veMntParamGrupAday('py', 2, A[1].key, false);
+    P.veMntParamGrupAday('py', 2, A[5].key, false);
+    expect(n.data.adaylar).toEqual({ [G[2].anahtar]: [A[0].key] });
+    P.veMntParamGrupAday('py', 3, A[0].key, false);
+    expect(n.data).toEqual({ adaylarKip: 'ozel' });
+  });
+
+  test('KOMBİNASYON: Tüm kombinasyonlarda tip sayısının grup sayısınca kuvveti; özelde seçili grupların çarpımı, seçilmeyen grup mevcut tipinde; sınırı aşınca durum', () => {
+    const n = kur('tulga'), G = P._mntParamYeni(n).M.G, A = P._mntParamYeni(n).A;
+    expect(P._mntParamYeni(n).N).toBe(A.length ** G.length);
+    n.data = { adaylarKip: 'ozel', adaylar: { [G[0].anahtar]: A.slice(0, 4).map((a) => a.key), [G[2].anahtar]: A.slice(0, 6).map((a) => a.key) } };
     let Y = P._mntParamYeni(n), d = dom(P.getMntParamPropertiesHTML(n));
     expect([Y.say, Y.taranan, Y.N]).toEqual([[4, 0, 6], 2, 24]);
     expect(yan(d)).toEqual(['2 / 3', '24']);
-    expect([...d.querySelectorAll('tr.ve-prm-mx-say td.ve-mnt-sec')].map((t) => t.textContent)).toEqual(['4', '0', '6']);
-    // Excel'in taraması: 24 tip × 3 grup
-    n.data.adaylar = Object.fromEntries(G.map((g) => [g.anahtar, A.map((a) => a.key)]));
-    expect(yan(dom(P.getMntParamPropertiesHTML(n)))).toEqual(['3 / 3', '13.824']);
-    // bugün aday olmayan tip ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
-    n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key], 'x|y': [A[1].key] };
-    expect(P._mntParamYeni(n).N).toBe(1);
-    // sınır: Kombinasyon sayısı … üstünde (sağ sütunda tek durum)
-    n.data.adaylar = Object.fromEntries(G.map((g) => [g.anahtar, A.map((a) => a.key)]));
+    expect([...d.querySelectorAll('.ve-prm-oz-n')].map((t) => t.textContent)).toEqual(['4 tip', 'Mevcut tip', '6 tip']);
+    expect([...d.querySelectorAll('.ve-prm-oz-t')].map((u) => u.querySelectorAll('li').length)).toEqual([4, 0, 6]);
+    // bugün aday olmayan tip, tekrar ve olmayan grup sayılmaz (model ya da kütüphane değişmiş olabilir)
+    n.data.adaylar = { [G[0].anahtar]: ['yok', A[0].key, A[0].key], 'x|y': [A[1].key] };
+    expect(P._mntParamYeni(n).say).toEqual([1, 0, 0]);
+    // sınır: Kombinasyon sayısı … üstünde — sağ sütunda tek durum, iki kipte
     const maks = K.MAKS_KOMB;
     try {
       K.MAKS_KOMB = 1000;
+      n.data = {};
       d = dom(P.getMntParamPropertiesHTML(n));
       expect(d.querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
       expect(d.querySelectorAll('.ve-fp-durum').length).toBe(1);
+      n.data = { adaylarKip: 'ozel', adaylar: Object.fromEntries(G.map((g) => [g.anahtar, A.slice(0, 11).map((a) => a.key)])) };
+      expect(P._mntParamYeni(n).N).toBe(1331);
+      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('#ve-mnt-param-durum-py').textContent).toBe('Kombinasyon sayısı 1.000 üstünde');
+      n.data.adaylar[G[0].anahtar] = A.slice(0, 8).map((a) => a.key);
+      expect(dom(P.getMntParamPropertiesHTML(n)).querySelector('.ve-fp-durum')).toBeNull();
     } finally { K.MAKS_KOMB = maks; }
   });
 
-  test('takozsuz model: bölümler başlıklı ve boş, durum sağ sütunda bir kez', () => {
+  test('ARAMA: sorgunun her sözcüğü adda ya da markada (sırası serbest); Türkçe harf katlaması; eklenmiş tip düşer; sıra verilen listenin', () => {
+    const n = kur('tulga'), A = P._mntParamYeni(n).A;
+    const anahtar = (L) => L.map((a) => a.key);
+    expect(P._mntParamAra(A, '', [])).toEqual(A);                               // boş sorgu: hepsi
+    expect(anahtar(P._mntParamAra(A, '  ', [A[0].key, A[2].key]))).toEqual(anahtar(A.filter((a, i) => i !== 0 && i !== 2)));
+    const amc = A.filter((a) => a.e.marka === 'AMC Mecanocaucho');
+    expect(amc.length).toBeGreaterThan(1);
+    expect(P._mntParamAra(A, 'MECANOCAUCHO', [])).toEqual(amc);                // marka
+    // iki sözcük: ikisini de taşıyanlar, sözcüklerin sırası serbest (kaba hakem: düz küçük harf)
+    const iki = A.filter((a) => /cone/i.test(a.name) && /60/.test(a.name));
+    expect(iki.length).toBeGreaterThan(1);
+    expect(P._mntParamAra(A, '60 CONE', [])).toEqual(iki);
+    expect(P._mntParamAra(A, 'cone 60', [iki[0].key])).toEqual(iki.slice(1));
+    expect(P._mntParamAra(A, 'cone zzz', [])).toEqual([]);
+    const ters = A.slice().reverse();
+    expect(P._mntParamAra(ters, 'cone 60', [])).toEqual(iki.slice().reverse());  // verilen listenin sırası
+    // Türkçe: I · ı · İ · i eşdeğer, ş · s eşdeğer
+    const T = [{ key: 'a', name: 'IŞIK 40 ShA', e: { marka: 'Diğer' } }, { key: 'b', name: 'İnce 50 ShA', e: { marka: 'Diğer' } },
+      { key: 'c', name: 'Kasa', e: { marka: 'Özel takozlar' } }];
+    const ad = (q, h) => P._mntParamAra(T, q, h || []).map((a) => a.key).join('');
+    expect(['ışık', 'isik', 'IŞIK', 'Işık'].map((q) => ad(q))).toEqual(['a', 'a', 'a', 'a']);
+    expect(['ince', 'İNCE', 'ınce', 'INCE'].map((q) => ad(q))).toEqual(['b', 'b', 'b', 'b']);
+    expect([ad('özel'), ad('ozel takoz'), ad('sha'), ad('sha', ['a'])]).toEqual(['c', 'c', 'ab', 'b']);
+  });
+
+  test('SIRA: özelin listeleri Takoz Özellikleri’nin Tip listesinin sırasıyla (marka, markanın sırası); kayıt kütüphane sırasında', () => {
+    const n = kur('tulga', { adaylarKip: 'ozel' }), Y = P._mntParamYeni(n), A = Y.A, G = Y.M.G;
+    const S = P._mntParamListeSira(A);
+    expect(S.map((a) => a.key).sort()).toEqual(A.map((a) => a.key).sort());
+    expect(S.map((a) => a.key)).toEqual(cp.veMntLibMarkalar(A.map((a) => a.e)).flatMap((m) => m.girdiler.map((e) => e.key)));
+    expect(S.map((a) => a.key)).not.toEqual(A.map((a) => a.key));            // sıra gerçekten başka
+    global.saveState = jest.fn();
+    [...A].reverse().forEach((a) => P.veMntParamGrupAday('py', 1, a.key, true));
+    expect(n.data.adaylar[G[0].anahtar]).toEqual(A.map((a) => a.key));       // kayıt: kütüphane sırası
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    expect([...d.querySelectorAll('#ve-mnt-param-oz-py-1 li button')].map((b) => b.dataset.key)).toEqual(S.map((a) => a.key));
+    // satır: ad, kz (Tip listesinin yazımı), mevcut tip işaretli, kaldır düğmesi adıyla
+    const li = [...d.querySelectorAll('#ve-mnt-param-oz-py-1 li')];
+    li.forEach((r, i) => {
+      expect(r.querySelector('.ve-prm-kz').textContent).toBe('kz ' + cp._mntS(S[i].e.sz, 0));
+      expect(r.querySelector('button').getAttribute('aria-label')).toBe('Kaldır · ' + S[i].name);
+      expect(r.querySelector('button .mf-ico-x')).not.toBeNull();
+    });
+    expect(li.filter((r) => r.querySelector('.ve-prm-mev')).map((r) => r.querySelector('button').dataset.key)).toEqual([G[0].tip]);
+  });
+
+  test('takozsuz model: bölümler başlıklı ve boş, durum sağ sütunda bir kez — iki kipte', () => {
     modelKur('tulga');
     global.nodes = global.nodes.filter((x) => !/^mnt-mount$/.test(x.type));
     const n = { id: 'py', type: 'mnt-parametric', data: {} }; global.nodes.push(n);
-    const d = dom(P.getMntParamPropertiesHTML(n));
-    expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
-    expect(d.querySelector('.ve-prm-ak')).toBeNull();
-    expect(d.querySelectorAll('.ve-fp-main table').length).toBe(0);
-    expect(d.textContent.match(/Takoz yok/g).length).toBe(1);
-    expect(d.querySelector('.ve-fp-durum').textContent).toMatch(/^Takoz yok\. /);
+    [{}, { adaylarKip: 'ozel' }].forEach((data) => {
+      n.data = data;
+      const d = dom(P.getMntParamPropertiesHTML(n));
+      expect([...d.querySelectorAll('.ve-fp-kat .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Takoz yerleşimi', 'Adaylar']);
+      expect(d.querySelector('.ve-prm-ak')).toBeNull();
+      expect(d.querySelectorAll('.ve-fp-main table, .ve-fp-main input, .ve-fp-main button').length).toBe(0);
+      expect(d.textContent.match(/Takoz yok/g).length).toBe(1);
+      expect(d.querySelector('.ve-fp-durum').textContent).toMatch(/^Takoz yok\. /);
+    });
   });
 
-  test('yerinde tazeleme: tip işaretlenince sayı, marka kutusu ve özet pencere kurulmadan değişir; çizim yerinde', () => {
-    const n = kur('tulga'), Y = P._mntParamYeni(n), A = Y.A;
+  test('YERİNDE TAZELEME: yazınca liste açılır; ↓ ve Enter ekler — arama kutusu aynı öğe ve odakta, satırlar, sayı ve özet pencere kurulmadan değişir; tık ekler; Esc temizler; kaldır odağı yerinde bırakır', () => {
+    const n = kur('tulga', { adaylarKip: 'ozel' }), Y = P._mntParamYeni(n), G = Y.M.G, A = Y.A;
     global.saveState = () => cp.veMntPencereTazele();
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
     const govde = document.querySelector('#ve-fp-panes-py'), cizim = document.querySelector('#ve-mnt-param-ak-py');
-    const lp = A.filter((a) => a.e.marka === 'LASPAR');
-    lp.forEach((a) => P.veMntParamGrupAday('py', 1, a.key, true));
+    const kutu = document.getElementById('ve-mnt-param-ara-py-1'), liste = document.getElementById('ve-mnt-param-ara-l-py-1');
+    const sonuc = () => [...liste.querySelectorAll('[role="option"]')];
+    const yaz = (q) => { kutu.value = q; kutu.dispatchEvent(new Event('input', { bubbles: true })); };
+    const tus = (key) => { const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }); kutu.dispatchEvent(e); return e; };
+    const satir = (no) => [...document.querySelectorAll('#ve-mnt-param-oz-py-' + no + ' li button')].map((b) => b.dataset.key);
+    kutu.focus();
+    expect([document.activeElement === kutu, liste.hidden]).toEqual([true, true]);
+    // yazınca: sonuçlar Tip listesinin sırasıyla, ilk satır etkin
+    const bek = P._mntParamAra(P._mntParamListeSira(A), 'cone 60', []);
+    expect(bek.length).toBeGreaterThan(2);
+    yaz('cone 60');
+    expect([liste.hidden, kutu.getAttribute('aria-expanded')]).toEqual([false, 'true']);
+    expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.map((a) => a.key));
+    expect(kutu.getAttribute('aria-activedescendant')).toBe(sonuc()[0].id);
+    tus('ArrowDown');
+    expect(sonuc().map((o) => o.getAttribute('aria-selected'))).toEqual(bek.map((a, i) => String(i === 1)));
+    expect(tus('Enter').defaultPrevented).toBe(true);
+    expect(n.data.adaylar).toEqual({ [G[0].anahtar]: [bek[1].key] });
+    expect(document.getElementById('ve-mnt-param-ara-py-1')).toBe(kutu);                 // kutu tazelenmedi
+    expect([document.activeElement === kutu, kutu.value, liste.hidden]).toEqual([true, '', true]);
+    expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);                        // pencere kurulmadı
+    expect(document.querySelector('#ve-mnt-param-ak-py')).toBe(cizim);                   // çizim yerinde
+    expect(satir(1)).toEqual([bek[1].key]);
+    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe('1 tip');
+    expect([...document.querySelectorAll('#ve-mnt-param-ozet-py input')].map((i) => i.value)).toEqual(['1 / 3', '1']);
+    // eklenen tip yeni aramada yok; satıra tık ekler (kayıt kütüphane sırası), odak kutuda
+    yaz('cone 60');
+    expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.filter((a, i) => i !== 1).map((a) => a.key));
+    sonuc()[0].click();
+    expect(n.data.adaylar[G[0].anahtar]).toEqual(A.filter((a) => a.key === bek[0].key || a.key === bek[1].key).map((a) => a.key));
+    expect(satir(1)).toEqual([bek[0].key, bek[1].key]);
+    expect([document.activeElement === kutu, kutu.value, liste.hidden]).toEqual([true, '', true]);
+    // ↓ boş sorguda bütün tipleri açar (eklenenler hariç)
+    tus('ArrowDown');
+    expect(sonuc().length).toBe(A.length - 2);
+    // Esc aramayı temizler ve listeyi kapatır; olay pencereye gitmez
+    yaz('zzz');
+    expect([sonuc().length, liste.textContent]).toEqual([0, 'Eşleşen takoz yok.']);
+    expect(tus('Enter').defaultPrevented).toBe(true);                                  // eşleşme yok: eklenmez
+    expect(satir(1).length).toBe(2);
+    expect(tus('Escape').defaultPrevented).toBe(true);
+    expect([kutu.value, liste.hidden, kutu.getAttribute('aria-expanded')]).toEqual(['', true, 'false']);
+    // odak kutudan çıkınca liste kapanır
+    yaz('cone');
+    expect(liste.hidden).toBe(false);
+    kutu.blur();
+    expect(liste.hidden).toBe(true);
+    // kaldır: satır gider; odak aynı sıradaki satırın düğmesine, satır kalmayınca arama kutusuna
+    document.querySelector('#ve-mnt-param-oz-py-1 li button').click();
+    expect(satir(1)).toEqual([bek[1].key]);
+    expect(document.activeElement).toBe(document.querySelector('#ve-mnt-param-oz-py-1 li button'));
+    document.querySelector('#ve-mnt-param-oz-py-1 li button').click();
+    expect(satir(1)).toEqual([]);
+    expect(document.getElementById('ve-mnt-param-oz-n-py-1').textContent).toBe('Mevcut tip');
+    expect(document.activeElement).toBe(kutu);
+    expect(n.data).toEqual({ adaylarKip: 'ozel' });
     expect(document.querySelector('#ve-fp-panes-py')).toBe(govde);
-    expect([...document.querySelectorAll('#ve-mnt-param-mx-say-py td.ve-mnt-sec')].map((t) => t.textContent)).toEqual([String(lp.length), '0', '0']);
-    expect([...document.querySelectorAll('#ve-mnt-param-ozet-py input')].map((i) => i.value)).toEqual(['1 / 3', String(lp.length)]);
-    expect(document.querySelector('tr.ve-prm-mx-marka input[data-marka="LASPAR"][aria-label$="Ön Takoz"]').checked).toBe(true);
-    expect(document.querySelector('#ve-mnt-param-ak-py')).toBe(cizim);                     // seçim çizimi değiştirmez
   });
 });
 
@@ -554,10 +703,10 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     });
     const ek = (k) => (aday[keys.indexOf(k)].querySelector('.ve-mnt-ek') || {}).textContent;
     expect(ek('amc137731')).toBe('(AMC 137731)');
-    expect(ek('57RS313773-sr116')).toBe('(ASR-SR-116)');
+    expect(aday[keys.indexOf('asfat-a')].querySelector('.ve-mnt-ek')).toBeNull();      // ASFAT takozu A: künyesiz (Canlı Not 1004)
     expect(aday[keys.indexOf('amc55sha')].querySelector('.ve-mnt-ek')).toBeNull();     // LMT-1433-37 55 ShA: künyesiz
     const nw = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] .ve-mnt-nw, .ve-fp-kat[data-k="grup"] .ve-mnt-nw')].map((e) => e.textContent);
-    ['(ASR-SR-116)', 'AMC 137731)', 'LMT-1433-00', 'LMT-1433-37', 'Sağ/Sol', '60 ShA', 'NG 55 ShA', '45 ShA'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
+    ['AMC 137731)', 'LMT-1433-00', 'LMT-1433-37', 'Sağ/Sol', '60 ShA', 'NG 55 ShA', '45 ShA'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
     expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
     expect(P._mntParamAd('Cone 121 NG 55 ShA (AMC 137830)'))
       .toBe('Cone 121 <span class="ve-mnt-nw">NG 55 ShA</span> <span class="ve-mnt-ek">(<span class="ve-mnt-nw">AMC 137830)</span></span>');
@@ -778,7 +927,7 @@ describe('KOŞUCU', () => {
 
 describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki grafik; diyagramlar galeride', () => {
   // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon; dört kesin kriteri sağlayan var.
-  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const ADAY = ['a26-a', 'amc137731', 'bmc-mount1-55sh', 'asfat-a', 'asfat-b', 'bmc-mount1-40sh'];
   const KR = ['k1', 'k1a', 'k1b', 'k2'];
   const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
   function kur(data) {
@@ -1252,7 +1401,7 @@ describe('SONUÇ — Excel’in kuralı: K0 ve K1…K9, seçilen K, modlar, iki 
 // katmaz (Excel'in kuralı): ASFAT'ın, altı adayla, Cone 67 50 ShA'lı kombinasyonu
 // dört kesin kriteri sağlar ve E9'a takılmaz; kapasite Excel'in Tarama'sında veridir.
 describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); pencere sıralamaya katmaz', () => {
-  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const ADAY = ['a26-a', 'amc137731', 'bmc-mount1-55sh', 'asfat-a', 'asfat-b', 'bmc-mount1-40sh'];
   const tara2 = (ctx) => {
     modelKur('asfat');
     const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
@@ -1282,8 +1431,8 @@ describe('AMC KAPASİTESİ — katalog yükü E4 · E9\'u ölçtürür (motor); 
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133 · Parametrik Analiz › Adaylar › Diğer:
 // dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): taramanın aday listesinde yoklar;
 // Takoz Özellikleri'nin Tip listesinde, örneklerin eşleşmesinde ve anahtarla çözümde dururlar.
-describe('ADAY OLMAYAN TİP — dört 57RS taramanın adayı değil', () => {
-  const DORT = ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116'];
+describe('ADAY OLMAYAN TİP — A26 · ASR-SR-116\'nın dört tipi taramanın adayı değil', () => {
+  const DORT = ['a26-a', 'a26-b', 'asfat-a', 'asfat-b'];
   test('kütüphanede aday:false; birleşik haritada aday değil, Tip listesinde var', () => {
     const kod = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-mount.js'), 'utf8');
     DORT.forEach((k) => expect(kod).toMatch(new RegExp("'" + k + "':\\s*\\{ marka:'Diğer', aday:false,")));

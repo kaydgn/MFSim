@@ -56,7 +56,7 @@ async function ornek(page, k, imza) {
   await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
   await page.waitForTimeout(700);
 }
-const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS']];
+const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', 'Orta Takoz']];
 
 // BAŞLANGIÇ SİHİRBAZI BİLEŞENİ (kullanıcı 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen
 // kaldıralım … Onun yerine sihirbazı açan bir bileşen oluşturalım. Sembolü de sihirli falan"*):
@@ -108,13 +108,17 @@ test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili 
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
   });
   await page.waitForSelector('#ve-properties .mntlib-bilgi', { timeout: 10000 });
+  // Satırın sonunda tipler arasında gezen oklar (Canlı Not 155), (i) okların solunda
   const satir = await page.evaluate(() => {
     const P = document.getElementById('ve-properties'), r = (e) => e.getBoundingClientRect();
     const tr = P.querySelector('.mntlib-tip .mntlib-trigger'), bi = P.querySelector('.mntlib-tip .mntlib-bilgi'), ek = P.querySelector('.mntlib-add');
+    const ok = P.querySelector('.mntlib-tip .mntlib-adimlar');
     return { img: P.querySelectorAll('img').length, bilgi: [Math.round(r(bi).width), Math.round(r(bi).height)],
-      ayniSatir: Math.abs(r(bi).top - r(tr).top) < 0.5, solunda: r(tr).right <= r(bi).left, sagKenar: Math.abs(r(bi).right - r(ek).right) < 0.5 };
+      ayniSatir: Math.abs(r(bi).top - r(tr).top) < 0.5 && Math.abs(r(ok).top - r(tr).top) < 0.5, solunda: r(tr).right <= r(bi).left,
+      oklar: [Math.round(r(ok).width), Math.round(r(ok).height)], okSagda: r(bi).right <= r(ok).left,
+      sagKenar: Math.abs(r(ok).right - r(ek).right) < 0.5 };
   });
-  expect(satir).toEqual({ img: 0, bilgi: [26, 26], ayniSatir: true, solunda: true, sagKenar: true });
+  expect(satir).toEqual({ img: 0, bilgi: [26, 26], ayniSatir: true, solunda: true, oklar: [43, 26], okSagda: true, sagKenar: true });
   for (let tur = 0; tur < 2; tur++) {
     await page.click('#ve-properties .mntlib-trigger');
     const L = await page.evaluate(() => {
@@ -131,17 +135,69 @@ test('Takoz Özellikleri: (i) teknik resmi pencerede açar; Tip listesi seçili 
   }
   await page.click('#ve-properties .mntlib-bilgi');
   await page.waitForFunction(() => { const i = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 10000 });
+  // Canlı Not 154 ("Teknik resimler çok büyük geliyor. Ufak gelsin."): 640 × 1078'lik resim uzun
+  // kenarı 480 px'te, oranı korunarak (çerçeve dâhil 286 × 480); pencere resmin ölçüsünde, ortada.
   const pen = await page.evaluate(() => {
     const p = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere').getBoundingClientRect();
-    return { baslik: document.getElementById('ve-bas-buyuk-baslik').textContent, en: document.querySelector('#ve-bas-buyuk-perde img').naturalWidth,
+    const im = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'), r = im.getBoundingClientRect();
+    return { baslik: document.getElementById('ve-bas-buyuk-baslik').textContent, en: im.naturalWidth,
+      resim: [Math.round(r.width), Math.round(r.height)], pencereG: Math.round(p.width) <= Math.round(r.width) + 28,
+      ortada: Math.abs((p.left + p.right) / 2 - innerWidth / 2) < 1 && Math.abs((p.top + p.bottom) / 2 - innerHeight / 2) < 1,
       sigar: p.left >= 0 && p.top >= 0 && p.right <= innerWidth && p.bottom <= innerHeight,
       kapat: !!document.querySelector('#ve-bas-buyuk-perde .ve-settings-header .ve-settings-close .mf-ico-x') };
   });
-  expect(pen).toEqual({ baslik: 'Cone 39 · teknik resim', en: 640, sigar: true, kapat: true });
+  expect(pen).toEqual({ baslik: 'Cone 39 · teknik resim', en: 640, resim: [286, 480], pencereG: true, ortada: true, sigar: true, kapat: true });
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => [!!document.getElementById('ve-bas-buyuk-perde'),
     !!(document.activeElement && document.activeElement.classList.contains('mntlib-bilgi')),
     document.getElementById('ve-properties-overlay').classList.contains('visible')])).toEqual([false, true, true]);
+});
+
+// OKLAR (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu
+// istiyorum, yukarı aşağı"*): gerçek fareyle AYNI noktaya art arda tık listede aşağı iner. LASPAR'ın
+// ilk tiplerinde teknik resim (i) gelip gider; oklar (i)'nin sağında olduğu için yerinde kalır — solunda
+// olsalardı ikinci tık (i)'ye düşerdi. Odak okta kalır, geri-al adımı yazılmaz, listenin seçili satırı
+// izler, ilk tipte Önceki tip kapalı.
+test('Takoz Özellikleri: Tip satırının okları tipler arasında gezer, yerinden kaymaz', async ({ page }) => {
+  await bootApp(page);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  const id = await page.evaluate(() => {
+    const n = nodes.find((x) => x.type === 'mnt-library') || createNode('mnt-library', 500, 300);
+    n.data = n.data || {}; delete n.data._selKey;                       // listenin ilk tipi
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
+    return n.id;
+  });
+  await page.waitForSelector('#mntlib-adim-sonraki-' + id, { timeout: 10000 });
+  const durum = () => page.evaluate((i) => {
+    const n = nodes.find((x) => x.id === i), b = document.getElementById('mntlib-adim-sonraki-' + i).getBoundingClientRect();
+    const sec = document.querySelector('#mntlib-list-' + i + ' .mntlib-opt.sel');
+    return { sel: n.data._selKey || null, yer: [Math.round(b.left), Math.round(b.top)], bilgi: !!document.getElementById('mntlib-bilgi-' + i),
+      liste: sec ? /veMntLibSelect\('[^']+','([^']+)'\)/.exec(sec.getAttribute('onclick'))[1] : null,
+      odak: document.activeElement ? document.activeElement.id : '', geri: undoStack.length };
+  }, id);
+  const once = await durum();
+  expect(await page.evaluate((i) => {
+    const b = document.getElementById('mntlib-adim-onceki-' + i);
+    return [b.getAttribute('aria-disabled'), b.title];
+  }, id)).toEqual(['true', 'İlk tip seçili.']);
+  const kutu = await page.locator('#mntlib-adim-sonraki-' + id).boundingBox();
+  const izler = [];
+  for (let k = 0; k < 6; k++) {
+    await page.mouse.click(kutu.x + kutu.width / 2, kutu.y + kutu.height / 2);
+    izler.push(await durum());
+  }
+  expect(new Set(izler.map((d) => d.sel)).size).toBe(6);                   // her tık bir sonraki tip
+  expect(izler.every((d) => d.liste === d.sel)).toBe(true);                 // listenin seçili satırı izler
+  expect(new Set(izler.map((d) => d.bilgi)).size).toBe(2);                 // (i) gelip gitti …
+  expect(izler.filter((d) => d.yer.join() !== once.yer.join())).toEqual([]); // … oklar yerinde
+  expect(izler.every((d) => d.odak === 'mntlib-adim-sonraki-' + id)).toBe(true);
+  expect(izler.every((d) => d.geri === once.geri)).toBe(true);             // listeden seçim gibi: geri-al adımı yok
+  // Klavye: odak oktayken Enter bir sonrakine, Önceki tip geri getirir
+  await page.keyboard.press('Enter');
+  const enter = await durum();
+  expect(enter.sel).not.toBe(izler[5].sel);
+  await page.click('#mntlib-adim-onceki-' + id);
+  expect((await durum()).sel).toBe(izler[5].sel);
 });
 
 // Tam ekranda düz görünüşler YOK (2026-10-16); işaretler adlarıyla, koordinat
@@ -504,7 +560,7 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
 test('Görünümler: kutunun arkasındaki takoz örtülü — tarayıcının isabeti 3B ışınla aynı, yazısı yok', async ({ page }) => {
   await bootApp(page);
   const sonuc = [], hata = [];
-  for (const [ad, isaret, acilar] of [['tulga', 'Ön Takoz Braketi', [[249.3, 19.5], [140, 30], [60, -30]]], ['asfat', '57RS', [[100, -60], [160, -50], [20, 20]]]]) {
+  for (const [ad, isaret, acilar] of [['tulga', 'Ön Takoz Braketi', [[249.3, 19.5], [140, 30], [60, -30]]], ['asfat', 'Orta Takoz', [[100, -60], [160, -50], [20, 20]]]]) {
     await ornek(page, ad, isaret);
     await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview') || createNode('mnt-2dview', 100, 40); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
     await page.waitForTimeout(700);

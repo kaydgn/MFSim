@@ -217,12 +217,12 @@ describe('ORTA NOKTA — STEP\'te aksesuarın ağırlık merkezi dış ölçüle
 
 // ── KATALOG ────────────────────────────────────────────────────────────────
 // Programda kayıtlı aksesuarların (js/fead-accessories.js — FEAD künyesi,
-// anahtar BMC parça numarası) kütlesi üreticinin belgesinden; klima
+// anahtar modelin adından; parça numarası yok — Canlı Not 1004) kütlesi üreticinin belgesinden; klima
 // kompresöründe kavramalı. Bulunamayan null ve listede görünmez.
 describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
   const ACC = require('../../js/fead-accessories.js');
-  const KLIMA = [['57RS321633', 'Valeo TM21', 8.1], ['55100000130', 'Valeo TM31', 15.5],
-                 ['57RS319930', 'Sanden 7H15', 6.9], ['57RS322530', 'Valeo TM31', 15.5]];
+  const KLIMA = [['valeo-tm21', 'Valeo TM21', 8.1], ['valeo-tm31', 'Valeo TM31', 15.5],
+                 ['sanden-7h15', 'Sanden 7H15', 6.9]];
 
   test('klima kompresörleri: kavramalı kütle üreticinin belgesinden, kaynağıyla', () => {
     expect(STP.veMntStpAksKatalog('mnt-ac').map((a) => [a.key, a.ad, a.kg])).toEqual(KLIMA);
@@ -231,17 +231,17 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
 
   // Alternatör: AYNI AKIM AYNI ALTERNATÖR (kullanıcı: "hepsi 180A ise aynıdır.
   // Fark yoktur."); kütle akımın Prestolite 24 V ailesinden
-  const ALT = [['57RS317093', 'Prestolite 180A', 9.8], ['57RS309791', 'Prestolite 120A', 8.16],
-               ['57RS309036', 'Prestolite 155A', 16.18], ['57RS309348', 'Prestolite 155A', 16.18],
-               ['57RS318932', 'Prestolite 180A', 9.8], ['57RS320300', 'Prestolite 180A', 9.8],
-               ['54100000001', 'Prestolite 250A', 17.7], ['57RS322565', 'Prestolite 600A', 42]];
-  test('alternatör: sekiz kayıt kütleli (Prestolite 24 V aileleri); 140 A ve Tepaş 350 A boş', () => {
+  const ALT = [['prestolite-180a', 'Prestolite 180A', 9.8], ['prestolite-120a', 'Prestolite 120A', 8.16],
+               ['prestolite-155a', 'Prestolite 155A', 16.18],
+               ['prestolite-250a', 'Prestolite 250A', 17.7], ['prestolite-600a', 'Prestolite 600A', 42]];
+  test('alternatör: beş kayıt kütleli (Prestolite 24 V aileleri); 140 A ve Tepaş 350 A boş', () => {
     expect(STP.veMntStpAksKatalog('mnt-alternator').map((a) => [a.key, a.ad, a.kg])).toEqual(ALT);
     expect(ACC.VE_FEAD_ACC_DB.filter((a) => a.tip === 'alternator' && !(a.kg > 0)).map((a) => a.ad))
       .toEqual(['Tepaş 350A', 'Prestolite 140A']);
     STP.veMntStpAksKatalog('mnt-alternator').forEach((a) => expect(a.kgKaynak).toMatch(/^Prestolite · /));
   });
 
+  // Aynı akımın birebir aynı satırları tek kayıt (Canlı Not 1004): ad tekil, kütle tek.
   test('AYNI AD AYNI KÜTLE: aynı akımdaki (aynı adlı) kayıtların kütlesi ve kaynağı aynı', () => {
     const grup = {};
     ACC.VE_FEAD_ACC_DB.forEach((a) => { (grup[a.ad] = grup[a.ad] || []).push(a); });
@@ -250,7 +250,7 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
       expect({ ad, kg: [...new Set(L.map((a) => a.kg == null ? null : a.kg))] }).toEqual({ ad, kg: [L[0].kg == null ? null : L[0].kg] });
       expect({ ad, kaynak: [...new Set(L.map((a) => a.kgKaynak || null))].length }).toEqual({ ad, kaynak: 1 });
     });
-    expect(grup['Prestolite 180A'].length).toBe(3);
+    expect(grup['Prestolite 180A'].length).toBe(1);
   });
 
   test('kütlesi bilinmeyen kayıt listede yok; kütle ya null ya pozitif; yalnız iki aile', () => {
@@ -264,12 +264,12 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
   });
 
   test('anahtar yalnız kendi ailesinde geçerli; kütle kaynağı "katalog", atalet yok', () => {
-    expect(STP.veMntStpAks('57RS321633', 'mnt-ac').kg).toBe(8.1);
-    expect(STP.veMntStpAks('57RS321633', 'mnt-alternator')).toBe(null);
+    expect(STP.veMntStpAks('valeo-tm21', 'mnt-ac').kg).toBe(8.1);
+    expect(STP.veMntStpAks('valeo-tm21', 'mnt-alternator')).toBe(null);
     expect(STP.veMntStpAks('yok', 'mnt-ac')).toBe(null);
     const b = { tip: 'mnt-ac', kaynak: 'orta', kapali: true, V: 1e6, J: [[1, 0, 0], [0, 1, 0], [0, 0, 1]] };
-    expect(STP.veMntStpKutle(b, '20', '57RS321633')).toMatchObject({ kaynak: 'katalog', m: 8.1, I: null,
-      not: 'Valeo TM21 · 57RS321633' });
+    expect(STP.veMntStpKutle(b, '20', 'valeo-tm21')).toMatchObject({ kaynak: 'katalog', m: 8.1, I: null,
+      not: 'Valeo TM21' });
   });
 
   test('pencere: "Kayıtlı aksesuar" seçimi kütleyi yazar (TEK geri-al adımı); "— elle gir —" yalnız bağı çözer', () => {
@@ -278,8 +278,8 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
     el.innerHTML = cp.getMntMassPropertiesHTML(global.nodes[0]);
     const sec = el.querySelector('#ve-mnt-aks-k1');
     expect(Array.from(sec.options).map((o) => o.value)).toEqual([''].concat(KLIMA.map((k) => k[0])));
-    expect(cp.veMntAksUygula('k1', '57RS321633')).toBe(true);
-    expect(global.nodes[0].data).toMatchObject({ aksKatalog: '57RS321633', mass: 8.1 });
+    expect(cp.veMntAksUygula('k1', 'valeo-tm21')).toBe(true);
+    expect(global.nodes[0].data).toMatchObject({ aksKatalog: 'valeo-tm21', mass: 8.1 });
     expect(stubs.saveState).toHaveBeenCalledTimes(1);
     expect(cp.veMntAksUygula('k1', 'yok')).toBe(false);
     expect(cp.veMntAksUygula('k1', '')).toBe(true);
@@ -294,11 +294,11 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
   test('STEP kütle kaynağı: klima rolünde "Katalog" grubu; başka rolün anahtarı kayda yazılmaz', () => {
     const b = { tip: 'mnt-ac', dugum: 7, ad: 'Klima', kapali: false, V: 0, say: { ag: 1, dosya: 0, nokta: 0 }, yogSay: 0 };
     const el = document.createElement('div');
-    el.innerHTML = _mwStpKaynakSecHTML({ yogunluk: {} }, b, '57RS319930');
+    el.innerHTML = _mwStpKaynakSecHTML({ yogunluk: {} }, b, 'sanden-7h15');
     const g = el.querySelector('optgroup[label="Katalog"]');
     expect(Array.from(g.querySelectorAll('option')).map((o) => [o.value, o.textContent]))
-      .toEqual(KLIMA.map((k) => [k[0], k[1] + ' · ' + k[0]]));
-    expect(g.querySelector('option[value="57RS319930"]').selected).toBe(true);
+      .toEqual(KLIMA.map((k) => [k[0], k[1]]));
+    expect(g.querySelector('option[value="sanden-7h15"]').selected).toBe(true);
   });
 });
 
@@ -326,8 +326,8 @@ describe('3B DİZİSİ — kayıtlı aksesuarın listesi', () => {
     const dizi = (i) => { const el = document.createElement('div'); el.innerHTML = M3.veMntWiz3bAltHTML(s, i, {}); return el; };
     const liste = (i) => Array.from(dizi(i).querySelectorAll('#ve-mw-3b-katalog option')).map((o) => o.textContent);
     const ALT = STP.veMntStpAksKatalog('mnt-alternator'), KL = STP.veMntStpAksKatalog('mnt-ac');
-    expect(liste(d('Alternatör'))).toEqual(['—'].concat(ALT.map((a) => a.ad + ' · ' + a.key)));
-    expect(liste(d('Klima kompresörü'))).toEqual(['—'].concat(KL.map((a) => a.ad + ' · ' + a.key)));
+    expect(liste(d('Alternatör'))).toEqual(['—'].concat(ALT.map((a) => a.ad)));
+    expect(liste(d('Klima kompresörü'))).toEqual(['—'].concat(KL.map((a) => a.ad)));
     expect(dizi(d('Alternatör braketi')).querySelector('#ve-mw-3b-katalog')).toBe(null);
     expect(dizi(d('Motor bloğu')).querySelector('#ve-mw-3b-katalog')).toBe(null);
     // seçim pencerenin seçicisiyle AYNI yoldan: kaynak yazılır, kütle katalogdan
@@ -346,15 +346,15 @@ describe('KAYITLI ROLLER — kayıtlı aksesuarın modeli ve kütlesi', () => {
     const son = STP.veMntStpOku(stp);
     const i = son.agac.findIndex((d) => d.ad === 'Klima kompresörü');
     const roller = son.agac.map((d, j) => (j === i ? 'mnt-ac' : null));
-    const k = STP.veMntStpRolKaydi(son, roller, {}, {}, {}, { [i]: '57RS321633' }, {});
-    expect(k.roller.filter((r) => r.rol === 'mnt-ac')[0].yog).toBe('57RS321633');
+    const k = STP.veMntStpRolKaydi(son, roller, {}, {}, {}, { [i]: 'valeo-tm21' }, {});
+    expect(k.roller.filter((r) => r.rol === 'mnt-ac')[0].yog).toBe('valeo-tm21');
     const el = document.createElement('div');
     el.innerHTML = CAD._mntCadKayitHTML(k);
     const satir = Array.from(el.querySelectorAll('tr')).filter((tr) => tr.cells[0] && tr.cells[0].textContent === 'Klima kompresörü')[0];
     expect([satir.cells[2].firstChild.textContent, satir.cells[2].querySelector('.ve-mnt-cad-kaynak').textContent]).toEqual(['8,1', 'Valeo TM21']);
     // alternatör rolünde klima anahtarı geçersiz: kayda girmez
     const roller2 = son.agac.map((d, j) => (j === i ? 'mnt-alternator' : null));
-    const k2 = STP.veMntStpRolKaydi(son, roller2, {}, {}, {}, { [i]: '57RS321633' }, {});
+    const k2 = STP.veMntStpRolKaydi(son, roller2, {}, {}, {}, { [i]: 'valeo-tm21' }, {});
     expect(k2.roller.filter((r) => r.rol === 'mnt-alternator')[0].yog).toBeUndefined();
   });
 });

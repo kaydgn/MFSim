@@ -6,7 +6,8 @@
 // alt · sol · sağ) · port düzeni (portlu bileşende) · Sil. Seçili değilse bileşen seçilir; Çoğalt,
 // Kopyala, Boyut, Ad ve Sil SEÇİMİN TAMAMINA uygulanır (kısayollarla aynı işlev). Menü her açılışta
 // durumdan kurulur (seçili boyut ve ad konumu basılı; silinmez tipte Sil kapalı, sebebi ipucunda).
-// Kapı: bilesen-menusu.test.js.
+// Sağ tık bileşen penceresini AÇMAZ ve konusunu DEĞİŞTİRMEZ (Canlı Not 156); pencereyi Aç açar.
+// Kapı: bilesen-menusu.test.js + sag-tik-pencere.test.js.
 // ============================================================================
 var nodeContextMenu = null;
 var nodeContextTarget = null;
@@ -103,10 +104,11 @@ function showNodeContextMenu(e, node) {
   hidePortContextMenu();
   if(typeof hideLabelContextMenu === 'function') hideLabelContextMenu();
   if(!nodeContextMenu || !nodeContextMenu.isConnected) createNodeContextMenu();
-  // Seçili değilse bileşen seçilir; seçimin içindeyse seçim korunur (işlem seçime uygulanır)
+  // Seçili değilse bileşen seçilir; seçimin içindeyse seçim korunur (işlem seçime uygulanır).
+  // Sağ tık yalnız menüyü açar: pencere ne açılır ne konusunu değiştirir (Canlı Not 156) — açan Aç.
   if(typeof selectedNodes !== 'undefined' && selectedNodes.indexOf(node) < 0 && typeof clearSelection === 'function'){
     clearSelection();
-    if(typeof addToSelection === 'function') addToSelection(node);
+    if(typeof addToSelection === 'function') addToSelection(node, { pencere: false });
   }
   nodeContextTarget = node;
   nodeContextMenu.innerHTML = veBilesenMenuHTML(node, _veBmSecim(node));
@@ -144,15 +146,15 @@ function veBilesenMenuEylem(eylem, node){
       if(node.type === 'mount-analysis' && typeof veMntOpenEditor === 'function'){ veMntOpenEditor(node.id); return true; }
       if(node.type === 'fead-analysis' && typeof veFeadOpenEditor === 'function'){ veFeadOpenEditor(node.id); return true; }
       if(typeof veTekTikEylem === 'function' && veTekTikEylem(node)) return true;
-      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+      // Önce konu, sonra açılış (çift tıkın sırası): sütunu açan çağrı konuyu kadrajda tutar.
       if(typeof showNodeProperties === 'function') showNodeProperties(node);
+      if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
       return true;
     case 'adlandir': return veBilesenAdDuzenle(node);
     case 'cogalt': return (typeof veSeciliCogalt === 'function') ? veSeciliCogalt() : false;
     case 'kopyala': return (typeof veSeciliKopyala === 'function') ? veSeciliKopyala() : false;
     case 'boyut':
       if(!VE_BILESEN_BOYUT[p[1]] || typeof veNodeDefaultSize !== 'function') return false;
-      if(typeof saveState === 'function') saveState();
       secim.forEach(function(x){
         var d = veNodeDefaultSize(x.type), m = (typeof veNodeMinSize === 'function') ? veNodeMinSize(x) : { w:0, h:0 };
         x.width = Math.max(m.w, Math.round(d.w * VE_BILESEN_BOYUT[p[1]]));
@@ -162,16 +164,17 @@ function veBilesenMenuEylem(eylem, node){
       if(typeof updateAllConnections === 'function') updateAllConnections();
       if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
       if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+      if(typeof saveState === 'function') saveState();  // kayıt değişiklikten SONRA (yığının tepesi = şimdiki hâl)
       return true;
     case 'ad':
       if(['top', 'bottom', 'left', 'right'].indexOf(p[1]) < 0) return false;
-      if(typeof saveState === 'function') saveState();
       secim.forEach(function(x){
         if(!x.data) x.data = {};
         if(p[1] === 'bottom') delete x.data.labelPos; else x.data.labelPos = p[1];
         applyNodeLabelPos(x);
       });
       if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+      if(typeof saveState === 'function') saveState();
       return true;
     case 'sil':
       if(typeof deleteSelectedNodes === 'function') deleteSelectedNodes();
@@ -199,11 +202,13 @@ function veBilesenAdDuzenle(node){
     if(bitti) return; bitti = true;
     var yeni = uygula ? inp.value.trim() : eski;
     if(!yeni) yeni = def.name || eski;
-    if(uygula && yeni !== eski){ if(typeof saveState === 'function') saveState(); node.customName = yeni; }
+    var degisti = uygula && yeni !== eski;
+    if(degisti) node.customName = yeni;
     lbl.textContent = node.customName || def.name || '';
     var gor = document.getElementById('ve-node-name-display-' + node.id);
     if(gor) gor.textContent = lbl.textContent;
     if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+    if(degisti && typeof saveState === 'function') saveState();  // kayıt değişiklikten SONRA (yığının tepesi = şimdiki hâl)
   };
   inp.addEventListener('keydown', function(e){
     e.stopPropagation();
@@ -220,9 +225,7 @@ function handleNodeContextAction(action) {
   var node = nodeContextTarget;
   if(!node.data) node.data = {};
   if(!node.data.portPositions) node.data.portPositions = {};
-  
-  saveState();
-  
+
   var pp = node.data.portPositions;
   var inSide = pp.input ? pp.input.side : 'left';
   var outSide = pp.output ? pp.output.side : 'right';
@@ -283,6 +286,7 @@ function handleNodeContextAction(action) {
     });
   }
   updateAllConnections();
+  saveState();  // kayıt değişiklikten SONRA (yığının tepesi = şimdiki hâl)
 }
 
 // ============================================================================
@@ -592,15 +596,14 @@ function handleLabelContextAction(action){
   if(!labelContextTarget) return;
   var node = labelContextTarget.node, el = labelContextTarget.el;
   if(!node.data) node.data = {};
-  if(typeof saveState === 'function') saveState();
   if(action === 'reset') delete node.data.labelPos;
   else node.data.labelPos = action;   // top / bottom / left / right
   applyNodeLabelPos(node, el);
   // Sınır çerçevesi adın taşmasını da sarıyor (canvas-space.js
-  // veNodeLabelOverflow) → ad kenar değiştirince ÇERÇEVE DE değişmeli.
-  // saveState() burada mutasyondan ÖNCE çağrılıyor (geri-al yığını), yani
-  // tazelemeyi o üstlenemez; tek tazeleme noktası veUpdateBoundary.
+  // veNodeLabelOverflow) → ad kenar değiştirince ÇERÇEVE DE değişmeli;
+  // tek tazeleme noktası veUpdateBoundary.
   if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
+  if(typeof saveState === 'function') saveState();   // kayıt değişiklikten SONRA (bileşen menüsünün Ad'ı gibi)
 }
 
 // ============================================================================

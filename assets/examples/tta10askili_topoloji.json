@@ -302,7 +302,7 @@
       "y": 467,
       "width": 50,
       "height": 46,
-      "customName": "Ön sol takoz · TK040",
+      "customName": "Sol ön takoz",
       "data": {
         "x": -636.668,
         "y": -48.971,
@@ -348,7 +348,7 @@
       "y": 351,
       "width": 50,
       "height": 46,
-      "customName": "Ön sağ takoz · TK040",
+      "customName": "Sağ ön takoz",
       "data": {
         "x": -636.471,
         "y": 52.629,
@@ -394,7 +394,7 @@
       "y": 611,
       "width": 50,
       "height": 46,
-      "customName": "Sol ön takoz · AMC 137963",
+      "customName": "Sol orta takoz",
       "data": {
         "x": 532,
         "y": -335,
@@ -419,7 +419,7 @@
       "y": 215,
       "width": 50,
       "height": 46,
-      "customName": "Sağ ön takoz · AMC 137963",
+      "customName": "Sağ orta takoz",
       "data": {
         "x": 532,
         "y": 335,
@@ -444,7 +444,7 @@
       "y": 611,
       "width": 50,
       "height": 46,
-      "customName": "Sol arka takoz · AMC 137963",
+      "customName": "Sol arka takoz",
       "data": {
         "x": 642,
         "y": -335,
@@ -469,7 +469,7 @@
       "y": 215,
       "width": 50,
       "height": 46,
-      "customName": "Sağ arka takoz · AMC 137963",
+      "customName": "Sağ arka takoz",
       "data": {
         "x": 642,
         "y": 335,
@@ -497,12 +497,12 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "customName": "Sol askı yayı · 2K60377",
+      "customName": "Sol askı yayı",
       "data": {
         "x": 1365,
         "y": -350,
         "z": 672.503,
-        "yay": "bmc-2k60377",
+        "yay": "tta-aski",
         "k": 57.39,
         "L0": 90,
         "Lc": 63,
@@ -525,12 +525,12 @@
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "customName": "Sağ askı yayı · 2K60377",
+      "customName": "Sağ askı yayı",
       "data": {
         "x": 1365,
         "y": 350,
         "z": 672.501,
-        "yay": "bmc-2k60377",
+        "yay": "tta-aski",
         "k": 57.39,
         "L0": 90,
         "Lc": 63,

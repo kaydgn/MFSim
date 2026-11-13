@@ -1,7 +1,7 @@
 /**
  * mount-simge.test.js — TAKOZ MODÜLÜNÜN BİLEŞEN SİMGELERİ (kullanıcı 2026-11-11)
  * ─────────────────────────────────────────────────────────────────────────
- * Çözücü (Canlı Not 147) · Takoz (149) · Braket (150).
+ * Çözücü (Canlı Not 147) · Takoz (157; 149'un kesitinin yerine) · Braket (150).
  *
  * ÇÖZÜCÜ'NÜN SİMGESİ (Canlı Not 147)
  * ─────────────────────────────────────────────────────────────────────────
@@ -57,21 +57,34 @@ describe('ÇÖZÜCÜ SİMGESİ (Canlı Not 147)', () => {
   });
 });
 
-describe('TAKOZ SİMGESİ (Canlı Not 149)', () => {
-  // "Bir sürü takoz teknik resmimiz var artık, oralardan bir yerlerden referans alarak güzel
-  // bir resim koyalım." Önce: üst plaka + iki zikzak yay + zemin taraması.
+describe('TAKOZ SİMGESİ (Canlı Not 157)', () => {
+  // "Takoz resimlerini beğenmedim. Çok teknik olmuş. Böyle daha tatlı, daha şekilsel olabilir."
+  // Önce (149): konik takozun kesiti — iç koni, iki kauçuk yarısı, manşon, kesik-noktalı eksen;
+  // 38 px'te kova gibi okunuyordu. Şimdi yandan tombul takoz, kalın dolu biçimler.
   const s = simge('mnt-mount');
-  test('konik takozun kesiti: iki kauçuk yarısı yeşil, metal gri, eksen çizgisi; yay ve tarama yok', () => {
-    expect(s).not.toMatch(/Q32 33 44 38/);                                   // yay yok
-    expect((s.match(/<line/g) || []).length).toBe(1);                        // tarama çizgisi yok, yalnız eksen
-    expect(s).toMatch(/<line x1="50" y1="3" x2="50" y2="97"[^>]*stroke-dasharray/);
-    expect((s.match(/fill="var\(--accent-success/g) || []).length).toBe(2); // kauçuk: iki yarı
-    expect(s).toMatch(/H24 L32\.5 85 H67\.5 L76 44/);                        // dış manşon + flanş
+  const kaucuk = s.match(/<g fill="var\(--accent-success, #1a7f37\)"[^>]*>(.*?)<\/g>/);
+  const rulolar = kaucuk ? [...kaucuk[1].matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]) : [];
+
+  test('kesit değil: eksen, tarama ve ince çizgi yok', () => {
+    expect(s).not.toMatch(/stroke-dasharray/);                               // eksen çizgisi yok
+    expect(s).not.toMatch(/<line/);                                          // eksen ve tarama yok
+    expect(s).not.toMatch(/H24 L32\.5 85/);                                  // manşon + flanş kesiti yok
+    const kalinlik = [...s.matchAll(/stroke-width="([\d.]+)"/g)].map((m) => Number(m[1]));
+    expect(kalinlik.filter((k) => k < 4)).toEqual([]);
   });
-  test('palet kopyası aynı kesit, tek renk', () => {
+
+  test('kauçuk iki dolu yeşil rulo; saplamalı kapak ve delikli flanş metal', () => {
+    expect(rulolar).toHaveLength(2);                                         // iki yuvarlak uçlu rulo
+    rulolar.forEach((d) => expect(d).toMatch(/ A[\d.]+ [\d.]+ 0 0 1 /));
+    expect((s.match(/<rect[^>]*fill="var\(--text-secondary/g) || []).length).toBe(3); // saplama · kapak · flanş
+    expect((s.match(/<circle[^>]*fill="var\(--bg-tertiary/g) || []).length).toBe(2);  // flanşın iki deliği
+  });
+
+  test('palet kopyası aynı rulolar, tek renk', () => {
     const p = palet('mnt-mount');
-    expect(p).toMatch(/H24 L32\.5 85 H67\.5 L76 44/);
-    expect(p).not.toMatch(/var\(--/);
+    expect(rulolar).toHaveLength(2);                                         // boşuna geçmesin
+    rulolar.forEach((d) => expect(p).toContain('d="' + d + '"'));
+    expect(p).not.toMatch(/var\(--|stroke-dasharray|<line/);
   });
 });
 

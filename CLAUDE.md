@@ -114,10 +114,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   masanın görünüşü 3B · **2B**: Yandan · Önden · Üstten TEK sayfada, ortak ölçek ve merkezle (X sütunu,
   Z satırı ortak); yakınlaştırma ve kaydırma sayfayı YENİDEN çizer — yazı ve çerçeve yerinde, değerler
   görünen aralıktan; ızgara yok, yer bulamayan etiket yazılmaz (Canlı Not 137, `veMnt2BSayfa`; kapı
-  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
-  Tuvaldeki model kartında ve Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
+  `mount-sihirbaz-doku.test.js` → *2B SAYFASI* + `mount-sihirbaz.spec.js` → *2B SAYFASI*); **masada boşluğa tık
+  seçimi BIRAKIR**, 3B'de ve 2B'de (kullanıcı 2026-11-11, Canlı Not 153: *"boş yere tıkladığımda tıklamamdan vaz
+  geçemiyorum"*): perde kalkar, Seçili gövde · Seçili takoz bölümü çekilir, liste kalır; sürükleme tık değil
+  (`_mwMasaBirak`; kapı `mount-sihirbaz-doku.test.js` · `mount-sihirbaz.spec.js` → *BOŞLUĞA TIK*); Aynalı eşini ekle YOK (Canlı Not 120). Tuvalden açılan sihirbaz tuvalin ÖRNEĞİNİ adıyla gösterir —
+  Örnek listesinin seçilisinde (Canlı Not 135: *"sanki sıfırdan … açmışım gibi"*;
   anahtar sihirbaz bileşeninin `data.ornek`'inde, örnek yüklenince yazılır, kurulumda güncellenir; kapı
-  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*). **İlk hâl** —
+  `mount-wizard.test.js` → *TUVALİN ÖRNEĞİ*); "Tuvaldeki model" kartı YOK (kullanıcı 2026-11-11, Canlı Not 151:
+  *"Zaten aşağıda yazıyor"*; kapı `mount-wizard.test.js` → *TUVALDEKİ MODEL KARTI YOK*); Örnek alanının kartı
+  BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de kaldıralım."*; kapı
+  `mount-wizard.test.js` → *ÖRNEK KARTI BAŞLIKSIZ*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
@@ -378,14 +384,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (ilk 24'ün sırası taramanın kombinasyon sırası, korunur); kapasite yalnız üreticinin
   tablosundan (E4 · E9'u ölçtürür). Görsel YALNIZ tipin teknik resmi (Canlı Not 111: *"Sadece
   teknik resmi kalsa yeter"* — ürün ve uygulama fotoğrafı yok), pencerede değil Tip satırının
-  (i) düğmesiyle pencere ailesinin penceresinde; `tools/takoz-gorsel.js`ten, elle düzenlenmez;
+  (i) düğmesiyle pencere ailesinin penceresinde, KÜÇÜK: uzun kenarı en çok 480 px, oranı korunur,
+  pencere resmin ölçüsünde (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+  Ufak gelsin."*; son değişikliklerin görseli dosyanın ölçüsünde kalır; kapı `mount-amc.test.js` →
+  *TEKNİK RESİM* · *KÜÇÜK*); `tools/takoz-gorsel.js`ten, elle düzenlenmez;
   derleme gömer (`__MFSIM_TAKOZ`); Takoz Özellikleri'nin künyesinde kapasite yazılmaz
   (Canlı Not 65), Kaynak satırı YOK — kaynak Ürün ailesi satırının (i)'sinin ipucunda (ailesizde Kod
-  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil). **BMC teknik
+  satırında; Canlı Not 139, `_mntKaynakI`); Tip listesi seçili tipin satırında açılır (Canlı Not 112), satırı yalnız ad + kz (tür noktası, eğri ve seçim ikonu yok — Canlı Not 122), AMC tipleri adın SAYI sırasıyla (Cone 00 · 01 … 141 · DSM · Hydraulic Cone — Canlı Not 134; liste sırası, taramanın sırası değil); Tip satırının SONUNDA Önceki tip · Sonraki tip okları listenin sırasıyla gezer — listeden seçmenin aynısı, uçta ok kapalı (sebebi ipucunda), (i) okların solunda: (i) gelip gidince oklar yerinde (kullanıcı 2026-11-11, Canlı Not 155: *"takozlar arasında gezebileceğimiz iki ok tuşu"*). **BMC teknik
   resimleri** (kullanıcı 2026-11-10, `RESIM`): AMC'nin kutusu 137061 · 137062 · 137961'i ölçülü
   tam tipe çevirir, 137961'e Z basma eğrisi; resmin kendisi ve BMC parça numarası ne ekranda ne
   kodda (kullanıcı: *"Bunu da kaldır"*). Kapı: `mount-amc.test.js` (→ *GÖRSELLER* · *TEKNİK
-  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* · *İŞARETSİZ* +
+  RESİM* · *RADYAL TAHMİN*) + `mount-library-dropdown.test.js` → *SEÇİLİ SATIR* · *İŞARETSİZ* · *OKLAR* +
   `mount-pencere.spec.js` → *Takoz Özellikleri* + `mount-param.test.js` → *AMC KAPASİTESİ*.
 - `js/mount-ap.js` + `assets/takoz/ap/` — **Angst+Pfister APSOvib® takoz veritabanı** (kullanıcı
   2026-11-10: *"kayıtlı olan Angst-Pfister takozlarını da araştır"*): konik · HD konik · H-takoz ·
@@ -430,15 +439,22 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
   Canlı Not 1002 (*"takoz yerlerine göre parametrik analize katılacak takozları seçecek"*):
   **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; çizim Görünümler'in BİLEŞENİ — Canlı Not 1003:
-  *"Çok sade olmuş"*; takozun çipi grubun NUMARASI, küpü ve çipin kenarı grubun RENGİ, föyün rozetiyle aynı —
-  Canlı Not 1006, `--seri-1…4`, dörtten sonra döner; kaynağı pencere `_mntAksoKaynak` → `P.duzelt`, tam ekranı
+  *"Çok sade olmuş"*; takozun çipi grubun NUMARASI, küpü ve çipin kenarı grubun RENGİ — Canlı Not 1006,
+  `--seri-1…4`, dörtten sonra döner; föyde numara DÜZ YAZI, rengi önündeki keskin köşeli küçük karede, BALON
+  YOK — Canlı Not 1007: *"Çocukça duruyor"*, kapı `mount-param.test.js` → *NUMARA BALONSUZ*; kaynağı pencere
+  `_mntAksoKaynak` → `P.duzelt`, tam ekranı
   yok; kapı `mount-akso.test.js` → *GRUBUN RENGİ*) + **Adaylar** (tip × grup
-  işaret tablosu; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında; işaretsiz
-  grup mevcut tipinde) + sağda taranan grup · kombinasyon (grup sayılarının çarpımı). Aşağıdaki
+  işaret tablosunun yerine İKİ KİP — Canlı Not 1005: *"kullanıcı bunları tek tek seçerek uğraşmasın"*):
+  **Tüm kombinasyonlar** varsayılan (her grupta bütün aday tipler) · **Özel kombinasyon** (`node.data.adaylarKip
+  = 'ozel'`; konum başına ARAMA kutusu — sorgunun her sözcüğü adda ya da markada, harf katlaması Takoz
+  Özellikleri'ninki (`_mntLibNorm`); tık ya da Enter ekler, Esc temizler; kutu yerinde tazelenmez, odak ve
+  imleç kalır; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
+  silinmez; tipi eklenmeyen grup mevcut tipinde) + sağda taranan grup · kombinasyon (grupların tip
+  sayılarının çarpımı). Aşağıdaki
   pencere, tarama, Sonuç, Excel ve rapor kodda ve testli ama pencereye BAĞLI DEĞİL
   (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır — grup
   başına liste bağlanırken karışık tabana geçer. Kapı: `mount-param.test.js` → *YERLEŞİM ve
-  ADAYLAR*. İlk analizi **Katalogdan seçim** (kullanıcı
+  ADAYLAR* + `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
@@ -447,7 +463,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Excel'in Tarama'sı ayrı: kriter sayısı → sehim). Pencerede ek kısıt (E1–E9), sürünme payı, amaç ağırlığı,
   uzlaşı ve yakın seçenek YOK — motor ölçer, pencere sıralamaya katmaz (`_mntParamCtx`; eski
   projenin alanları okunmaz); tek ayar rijitlik toleransı; adaylar markaya göre açılır kapanır
-  gruplarda; 57RS'nin dört tipi (A26 · ASR-SR-116) aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
+  gruplarda; A26 ve ASFAT takozlarının dört tipi aday DEĞİL (`aday:false`, Canlı Not 133 — Tip
   listesinde ve örneklerde durur; kapı `mount-param.test.js` → *ADAY OLMAYAN TİP*). Ayrıntılı rapor AYRI belgede, ana rapora eklenmez; K listesi pencereninki.
   Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar; pencerenin taraması tam DEĞİL (ikinci aşama
   yalnız kesin kriterleri sağlayanlarda). **Kriter 2'nin sınırı TR < %15** (kullanıcı 2026-11-11:
@@ -522,16 +538,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/fead-tensioners.js` — FEAD otomatik gergi künye kütüphanesi (14 kayıt, 2 aile).
   DOM'suz saf veri; **14 Gates raporundan ölçülerek** çıkarıldı, parça numarası
   uydurulmadı. Bant kayıtlardan TÜRETİLİR, elle yazılmaz.
-- `js/fead-engines.js` — FEAD **motor kataloğu** (24 kayıt). DOM'suz saf veri;
+- `js/fead-engines.js` — FEAD **motor kataloğu** (23 kayıt; anahtar `motor-NN`, ad modelin adı). DOM'suz saf veri;
   BMC'nin KIRPI II FEAD hesap defterinin "Motor Bilgileri" sayfasından çıkarıldı:
   dört devir sınırı, FEAD kasnak çapları, tam yük tork/güç eğrisi. Eksik alan
   `null` — sıfır yazmak olmayan bir kasnak iddia etmek olurdu.
-- `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (10 alternatör + 4 klima
-  kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
+- `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (7 alternatör + 3 klima
+  kompresörü; anahtar modelin adından). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
   maksimum) — aşağıdaki iki kapı onlarsız kurulamaz. Kütle (`kg` + `kgKaynak`,
-  üreticinin belgesinden; klima kompresöründe kavramalı; alternatörde AYNI AKIM AYNI
-  ALTERNATÖR — kullanıcı kararı, aynı adlı kayıtlar aynı kütle) Takoz'un aksesuarı
+  üreticinin belgesinden; klima kompresöründe kavramalı; AYNI MODEL TEK KAYIT — defterde
+  parça koduyla ayrılan aynı model birleşti, Canlı Not 1004) Takoz'un aksesuarı
   için; FEAD okumaz.
 - `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
   (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
@@ -848,6 +864,18 @@ olmayan bir kurulumda çalışma anında çekilen her varlık **yok** demektir; 
 bir incelik değil, özelliğin hiç olmaması demek. Bu yüzden ağır varlıklar
 (WASM, font, KaTeX) uygulamanın İÇİNE gömülür ve **talep üzerine** açılır.
 
+### PROGRAMDA PARÇA KODU YOK
+
+Kullanıcı kararı (2026-11-11, Canlı Not 1004: *"Programda ne BMC parça kodu
+varsa, hepsini kaldır. Olmayacak kardeşim programda, OLMAYACAK."*): BMC parça
+kodu programa giren HİÇBİR dosyada yazılmaz — ne ad, ne katalog anahtarı, ne
+yorum, ne örnek. Kayıt modelin adıyla anılır (A26 takozu A · Prestolite 180A;
+motorun anahtarı sıra numarası, `motor-NN`); aynı modelin kodla ayrılmış
+satırları TEK kayıt, aynı adlı motorlar kasnak çapıyla ayrışır. Eski projenin kod anahtarları şema 10 göçüyle yeni
+anahtara geçer (askı yayınınki şema 11'de); göç tablosu kodun yalnız ÖZETİNİ taşır (`js/state.js` →
+`VE_PARCA_GOC`), eski kodlar yalnız testte. Donmuş arşiv (`programlar/`) kapsam
+dışı. Kapı: `parca-kodu.test.js` (→ *KAYNAK* · *GÖÇ* · *ETİKET*).
+
 ### Ortak yüzey kuralları
 
 Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
@@ -911,7 +939,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile
   sarılır, yoksa Ctrl+Z modeli düğüm düğüm söker. Bir topolojinin AÇILIŞ
   durumu geri alınamaz (`veStateResetBaseline`) — modüle girip araçları almak
-  bir düzenleme değil. Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
+  bir düzenleme değil. Bileşen SİLMEK de bir adımdır (`deleteSelectedNodes` sonunda yazar;
+  yazmıyordu, Ctrl+Z bir önceki düzenlemeyi de geri alıyordu — `sil-geri-al.test.js`); bileşen
+  menüsünün işlemleri (adlandır · boyut · ad · port düzeni) ve adın menüsü kaydı değişiklikten SONRA alır — önce
+  alınan kayıt değişikliği yığına sokmuyordu (`bilesen-menusu.test.js` → *GERİ-AL KAYDI DEĞİŞİKLİKTEN SONRA*).
+  Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
   `fead-wizard.test.js` / `fead-cizim-masasi.test.js` (kurucular ve çizimde
   ekleme o mekanizmadan geçiyor mu).
 - **YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR.** Geri-al / ileri-al yığındaki
@@ -973,7 +1005,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sağ) · port düzeni (portlu bileşende) · Sil (silinmez tipte kapalı, sebebi ipucunda); işlem SEÇİMİN
   tamamına, kısayolun işlevinden (`veSeciliCogalt` · `veSeciliKopyala` · `deleteSelectedNodes`). Sağ tık
   TEK bağlayıcıdan (`veNodeSagTik`): createNode ve restoreState — örnekten ve geri-al'dan gelen bileşende
-  sağ tık hiçbir şey açmıyordu. Kapı: `bilesen-menusu.test.js` + `bilesen-menusu.spec.js`.
+  sağ tık hiçbir şey açmıyordu. **Sağ tık yalnız menüyü açar** (kullanıcı 2026-11-11, Canlı Not 156:
+  *"Sağ tıklayınca sağda pencere açılıyor sanki sol tık yapmışım gibi"*): seçilmeyen bileşen seçilir ama
+  pencere açılmaz, açıksa konusu değişmez (`addToSelection(n, { pencere: false })`); pencereyi menünün Aç'ı
+  açar; kayıt turu (Ctrl+S, otomatik yedek) pencereyi seçimden değil konusundan kurar. Kapı:
+  `bilesen-menusu.test.js` + `bilesen-menusu.spec.js` + `sag-tik-pencere.test.js` +
+  `subtopology-keepview.test.js` → *KONU*.
 - **EYLEM ARACI KENDİNİ BEYAN EDER** (`componentDefs.eylem` = global işlevin adı →
   `js/ui-core.js` `veTekTikEylem`, `js/cp-core.js` `showNodeProperties`): işi pencere değil eylem
   olan araç (Takoz'un Başlangıç Sihirbazı) çift tıkta eylemi çalıştırır; özellikler

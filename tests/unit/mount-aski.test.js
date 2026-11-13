@@ -2,10 +2,10 @@
  * mount-aski.test.js — ASKI YAYI: ŞANZIMANIN KUYRUĞUNU ŞASİYE ASAN ÖN YÜKLÜ YAY (2026-11-11)
  * ─────────────────────────────────────────────────────────────────────────
  * Kullanıcının dosyaları: askılı föy + Cummins aracı (tests/fixtures/excel-tta-askili.js),
- * yay resmi 2K60377 ve malzemesi BRS170582 (js/mount-yay.js), Adams sunumu
+ * yay resmi ve malzeme belgesi (BMC; js/mount-yay.js), Adams sunumu
  * (tests/fixtures/adams-isg-askili.js). Kapılar:
  *
- *   · KATALOG — 2K60377'nin resmindeki üç kuvvet–boy noktası F = k(L0 − L)'nin
+ *   · KATALOG — yay resmindeki üç kuvvet–boy noktası F = k(L0 − L)'nin
  *     üstünde; geometriden yay sabiti resminkinin toleransında; EN 13906-1 gerilmesi.
  *   · ELLE HESAP — tek gövde, dört takoz, ağırlık merkezinde bir askı: kapalı biçim.
  *   · AKTİF KÜME — yay açılır (F = 0, askısızın çözümü) ve blok boyuna iner.
@@ -51,8 +51,8 @@ const coz1 = (ms, cg, m, lc) => core.solveCaseStop(core.buildK(ms, cg, false), m
 
 beforeEach(() => resetStubs(stubs));
 
-describe('KATALOG — 2K60377 (BMC, yayın 3) ve EN 13906-1', () => {
-  const e = YAY.veMntYay('bmc-2k60377');
+describe('KATALOG — askı yayının resmi (BMC, yayın 3) ve EN 13906-1', () => {
+  const e = YAY.veMntYay('tta-aski');
   test('resmin üç noktası F = k(L0 − L) doğrusunun üstünde (toleransıyla)', () => {
     expect(e).toBeTruthy();
     expect(e.noktalar.map((p) => p.ad)).toEqual(['ilk', 'montaj', 'st']);
@@ -288,7 +288,7 @@ describe('TTA ASKILI — örnek, programın yolundan', () => {
     tak.slice(2).forEach((n) => expect(alti(n.data).concat(n.data.maxLoad)).toEqual([1800, 1210, 1150, 2880, 1936, 1840, 650]));
     const as = TOPO.nodes.filter((n) => n.type === 'mnt-aski');
     expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(XA.yay.map((y) => [y[1], y[2], y[3]]));
-    as.forEach((n) => expect(n.data).toMatchObject({ yay: 'bmc-2k60377', kurulum: 'kuvvet', montajF: 80, L0: 90, Lc: 63 }));
+    as.forEach((n) => expect(n.data).toMatchObject({ yay: 'tta-aski', kurulum: 'kuvvet', montajF: 80, L0: 90, Lc: 63 }));
     const M = core.getMountExample('tta10askili').model;
     expect(M.askilar.map((a) => a.pos)).toEqual(as.map((n) => [n.data.x, n.data.y, n.data.z]));
     expect(M.mounts.map((m) => m.kstat.concat(m.kdyn))).toEqual(tak.map((n) => alti(n.data)));
@@ -361,8 +361,8 @@ describe('PENCERE — kategoriler ve doğrulama', () => {
     expect(h).toMatch(/ve-mnt-askikarsi-n24"[^>]*/);
     expect(h).toContain('value="76,33"');
     n.data = { x: 1, y: 2, z: 3 };
-    cp.veMntAskiYay(n.id, 'bmc-2k60377');
-    expect(n.data).toMatchObject({ yay: 'bmc-2k60377', k: 57.39, L0: 90, Lc: 63, d: 9, D: 61, n: 5, Rm: 1481 });
+    cp.veMntAskiYay(n.id, 'tta-aski');
+    expect(n.data).toMatchObject({ yay: 'tta-aski', k: 57.39, L0: 90, Lc: 63, d: 9, D: 61, n: 5, Rm: 1481 });
     expect(stubs.saveState).toHaveBeenCalled();
   });
   test('doğrulama: eksik yay sabiti, blok boyunu aşan kuvvet modeli durdurur', () => {
@@ -370,8 +370,8 @@ describe('PENCERE — kategoriler ve doğrulama', () => {
     t.nodes.find((x) => x.id === 'n24').data.montajF = 200;           // 200 kgf → L 55,8 < Lc
     t.nodes.find((x) => x.id === 'n25').data.k = '';
     const R = coz(t);
-    expect(R.error.join(' ')).toContain('Sol askı yayı · 2K60377: montaj kuvveti yayı blok boyuna indiriyor.');
-    expect(R.error.join(' ')).toContain('Sağ askı yayı · 2K60377: yay sabiti girilmedi.');
+    expect(R.error.join(' ')).toContain('Sol askı yayı: montaj kuvveti yayı blok boyuna indiriyor.');
+    expect(R.error.join(' ')).toContain('Sağ askı yayı: yay sabiti girilmedi.');
   });
 });
 

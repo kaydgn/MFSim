@@ -118,7 +118,7 @@ const INPUT = {
 };
 
 // TR için motor: ataleti Cummins X15 veri sayfasıyla birebir; rölanti ve silindir
-// programın FEAD motor kataloğundan (X15E3 600 · 57RS303308) — örneğin Motor'unda
+// programın FEAD motor kataloğundan (X15E3 600 · motor-22) — örneğin Motor'unda
 const ENGINE = { ad: 'Cummins X15', idleRpm: 700, cylinders: 6 };
 
 // Bulgu 3: kitabın kaldırım darbesi (yanal g, virajla aynı yönde)

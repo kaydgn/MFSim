@@ -76,7 +76,7 @@ describe('KATALOG LİSTESİ — örnekten doldurulan satır tipini gösterir', (
     expect(st.takozlar.every((t) => !t.libKey)).toBe(true);
     const sec = (t) => { const d = document.createElement('div'); d.innerHTML = W._mwKatalogSecHTML(t); return d.querySelector('select').value; };
     expect(st.takozlar.map(sec)).toEqual(st.takozlar.map((t) => cp._mntKutuphaneEslesme({ data: t }).e.key));
-    expect([...new Set(st.takozlar.map(sec))].sort()).toEqual(['57RS313773-sr116', '57RS313774-sr116']);
+    expect([...new Set(st.takozlar.map(sec))].sort()).toEqual(['asfat-a', 'asfat-b']);
     st.takozlar[0].kzs = 999;
     expect(sec(st.takozlar[0])).toBe('');
   });
@@ -152,21 +152,22 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(css).toMatch(/\.ve-fw-yan \.ve-fw-card-b > \.ve-fw-field\.ve-mw-ornek\{ grid-template-columns:auto minmax\(0, 1fr\); \}/);
     expect(css).toMatch(/\.ve-mw-ornek-d > \.ve-fw-seednav\{ flex:none; margin-top:0; \}/);
     W.veMntWizKapat(true);
-    // tuvaldeki modelden: kartın başlığı adlandırır, satır yalnız sayılar
+    // tuvaldeki modelden de "yüklendi" yok (kartı da yok — Canlı Not 151, aşağıda)
     global.nodes = [{ id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },
       { id: 't1', type: 'mnt-mount', x: 0, y: 0, data: { x: 0, y: 300, z: 500, kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } }];
     global.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     W.veMntWizAc();
     const tuval = document.getElementById('ve-mw-yan');
     expect(tuval.textContent).not.toMatch(/yüklendi/);
-    expect(tuval.querySelector('.ve-fw-seeded').textContent.trim()).toBe('1 gövde · 1 takoz');
     W.veMntWizKapat(true);
+    global.nodes = [];
   });
   // TUVALİN ÖRNEĞİ (kullanıcı 2026-11-11, Canlı Not 135: *"BMC Siper örneğini açtım … 'başlangıç
   // sihirbazı' bileşenini açtığım zaman, sanki sıfırdan bir başlangıç sihirbazı açmışım gibi oluyor
   // … seçilen örneğin ne olduğu belli olsun. Kullanıcı değiştirmek isterse daha sonra değiştirir"*):
   // örnek yüklenince anahtarı sihirbaz bileşenine yazılır; tuvalden açılan sihirbaz örneği adıyla
   // gösterir, liste ve gezinme o örnekte — yeniden doldurmaz (tuvaldeki değişiklik kalır).
+  // Ad listenin seçilisinde; "Tuvaldeki model" kartı Canlı Not 151'de kalktı (aşağıda).
   test('TUVALİN ÖRNEĞİ: örnekten kurulan tuvalde sihirbaz örneğin adıyla açılır; liste ve gezinme o örnekte', () => {
     global.nodes = [{ id: 'w1', type: 'mnt-wizard', x: 0, y: 0, data: {} },
       { id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },
@@ -178,10 +179,9 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(cp.veMntTuvalOrnegi()).toBe('siper');
     W.veMntWizAc();
     const yan = document.getElementById('ve-mw-yan');
-    expect(yan.querySelector('.ve-fw-seeded b').textContent).toMatch(/Siper/);
-    expect(yan.querySelector('.ve-fw-seeded').textContent.trim()).toMatch(/· 1 gövde · 1 takoz$/);
     const sec = yan.querySelector('select[aria-label="Örnek"]');
-    expect(sec.value).toBe('siper');                                           // liste örnekte
+    expect(sec.value).toBe('siper');                                           // liste örnekte, adıyla
+    expect(sec.options[sec.selectedIndex].textContent).toMatch(/Siper/);
     expect(sec.options[0].textContent).toBe('— değiştir —');
     expect(yan.querySelector('.ve-fw-seednav-n').textContent).toMatch(/^[1-9]\d* \/ \d+$/);
     expect(W.veMntWizState().govdeler).toHaveLength(1);                        // tuvalin modeli, örneğin değil
@@ -193,6 +193,50 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(cp.veMntOrnekIsaretle(null)).toBe(true);                            // STEP'ten ya da boştan kurulum siler
     expect(global.nodes[0].data.ornek).toBeUndefined();
     global.nodes = [];
+  });
+  // TUVALDEKİ MODEL KARTI YOK (kullanıcı 2026-11-11, Canlı Not 151: *"Bunu da kaldıralım, gerek
+  // yok. Zaten aşağıda yazıyor."*). Önce: tuvalden açılan sihirbazın Başlangıç sütununun başında
+  // "Tuvaldeki model" kartı ("✓ BMC Siper · 5 gövde · 6 takoz") — aynı ad ve sayılar Örnek
+  // listesinin seçilisinde. Şimdi sütun STEP'ten başla ile başlar; örneksiz tuvalde de kart yok.
+  test('TUVALDEKİ MODEL KARTI YOK: tuvalden açılan sihirbazda sütun STEP\'ten başla ile başlar; ad listenin seçilisinde', () => {
+    const basliklar = () => [...document.querySelectorAll('#ve-mw-yan > .ve-fw-card > .ve-fw-card-h')].map((h) => h.textContent);
+    for (const ornek of ['siper', null]) {
+      global.nodes = [{ id: 'w1', type: 'mnt-wizard', x: 0, y: 0, data: {} },
+        { id: 'g1', type: 'mnt-motor', x: 0, y: 0, data: { mass: 1000, cgx: 0, cgy: 0, cgz: 600 } },
+        { id: 't1', type: 'mnt-mount', x: 0, y: 0, data: { x: 0, y: 300, z: 500, kxs: 1, kys: 1, kzs: 1, kxd: 1, kyd: 1, kzd: 1 } }];
+      global.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+      if (ornek) cp.veMntOrnekIsaretle(ornek);
+      W.veMntWizAc();
+      expect(W.veMntWizState().seededFrom).toBe('tuval');
+      const yan = document.getElementById('ve-mw-yan');
+      expect(basliklar()).not.toContain('Tuvaldeki model');
+      expect(basliklar()[0]).toBe('STEP\'ten başla');
+      expect(yan.querySelector('.ve-fw-seeded')).toBeNull();                    // modelin satırı da yok
+      expect(yan.textContent).not.toMatch(/1 gövde · 1 takoz/);                 // tuvalin sayıları yazılmaz
+      const sec = yan.querySelector('select[aria-label="Örnek"]');
+      expect(sec.options[sec.selectedIndex].textContent).toMatch(ornek ? /Siper\s+·\s+\d+ gövde · \d+ takoz$/ : /^— örnek seç —$/);
+      W.veMntWizKapat(true);
+    }
+    global.nodes = [];
+  });
+  // ÖRNEK KARTI BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de
+  // kaldıralım."*). Önce: Örnek alanının kartı "Örnekten doldur" başlığını taşıyordu; şimdi kartta
+  // başlık bandı yok, alanın adı Örnek; kılavuz da alanı bu adla anar. FEAD sihirbazının kartı ayrı.
+  test('ÖRNEK KARTI BAŞLIKSIZ: Örnek alanının kartında başlık bandı yok; "Örnekten doldur" ne sihirbazda ne kılavuzda', () => {
+    W.veMntWizAc();
+    W.veMntWizOrnekSec('siper');
+    const yan = document.getElementById('ve-mw-yan');
+    const kart = yan.querySelector('.ve-mw-ornek').closest('.ve-fw-card');
+    expect(kart.parentElement).toBe(yan);
+    expect([...kart.children].map((e) => e.className)).toEqual(['ve-fw-card-b']);   // başlık bandı yok
+    expect(kart.querySelector('.ve-mw-ornek > .ve-fw-lbl').textContent).toBe('Örnek');
+    expect([...yan.querySelectorAll(':scope > .ve-fw-card > .ve-fw-card-h')].map((h) => h.textContent))
+      .toEqual(['STEP\'ten başla', 'Seçilen örnek']);
+    expect(document.getElementById('ve-mw-body').textContent).not.toMatch(/Örnekten doldur/);
+    W.veMntWizKapat(true);
+    const kil = require('fs').readFileSync(require('path').join(__dirname, '../../js/guide-mount.js'), 'utf8');
+    expect(kil).not.toMatch(/Örnekten doldur/);
+    expect(kil).toMatch(/\{ k: 'ornek', ad: 'Örnek', /);
   });
   // Canlı Not 81 · 82 · 83 (kullanıcı 2026-11-09): "Arada bir boşluk var. Fazla satırlı bir boşluk
   // o." · "Açıklamayı yana alalım." · "Açıklamaları düzeltelim, gereksiz açıklamaları kaldıralım."
@@ -683,8 +727,8 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     // iki ön takoz (y = −49 · +53 mm, föyün Mount 1 · 2'si — Canlı Not 68) hattın sırasında,
     // şasinin çerçevesinin dışında yan yana (çerçeve gövdeleri adlarıyla sarar + 26 px); adları
     // altta ve çerçeveye değmez (dış yanında zeminin taraması); yan takozlar dış sıralarda
-    const onler = L.filter((n) => n.rol === 'takoz' && /^Ön /.test(n.customName));
-    expect(onler.map((n) => n.customName)).toEqual(['Ön sol takoz · 57RS313774', 'Ön sağ takoz · 57RS313774']);
+    const onler = L.filter((n) => n.rol === 'takoz' && / ön takoz$/.test(n.customName));
+    expect(onler.map((n) => n.customName)).toEqual(['Sol ön takoz', 'Sağ ön takoz']);
     const cerceveSol = Math.min(...govde.map((n) => { const w = veNodeDefaultSize(n.type).w, g = Math.max(60, n.customName.length * 7.8);
       return n.lx + Math.min(0, w / 2 - g / 2); })) - 26;
     const tw = veNodeDefaultSize('mnt-mount').w;

@@ -41,21 +41,22 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // Ad = ürün tipi + sertlik + (parça no), üreticinin kataloğundaki adla; üretici
 // kodu üreticisiyle yazılır: "Cone 38 60 ShA (AMC 137963)" — tek başına altı
 // haneli kod ekranda binliksiz sayı okunur. Proje, rapor ve not ada girmez —
-// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki 57RS
-// çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
+// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki A26 ·
+// ASR-SR-116 çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
 //
 // ── AYNI PARÇA KODU, FARKLI TAKOZ ────────────────────────────────────────────
-// 57RS313773 ve 57RS313774 kodları İKİ AYRI kaynakta, İKİ AYRI takoz için
-// geçiyor (kullanıcı teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden
-// her biri AYRI girdi olarak tutulur; hangisinin kullanılacağına kullanıcı
-// açılır listede karar verir. Girdi adı KOD + KAYNAK taşır — başka bir şey değil.
+// İki parça kodu İKİ AYRI kaynakta, İKİ AYRI takoz için geçiyor (kullanıcı
+// teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden her biri AYRI girdi
+// olarak tutulur; hangisinin kullanılacağına kullanıcı açılır listede karar verir.
+// Parça kodu programda YOK (kullanıcı 2026-11-11, Canlı Not 1004): girdi adı
+// KAYNAK + harf — aynı harf iki kaynakta aynı parça kodu.
 //
-//   kaynak       | kod        | statik x/y/z    | dinamik x/y/z
-//   -------------|------------|-----------------|-----------------
-//   A26          | 57RS313773 |  334/ 334/2300  |  435/ 435/3000
-//   A26          | 57RS313774 | 1200/1200/2400  |  950/ 950/1900
-//   ASR-SR-116   | 57RS313773 |  462/ 462/2200  |  630/ 630/3000
-//   ASR-SR-116   | 57RS313774 | 1045/1045/1800  | 1045/1045/1800
+//   kaynak       | takoz | statik x/y/z    | dinamik x/y/z
+//   -------------|-------|-----------------|-----------------
+//   A26          | A     |  334/ 334/2300  |  435/ 435/3000
+//   A26          | B     | 1200/1200/2400  |  950/ 950/1900
+//   ASR-SR-116   | A     |  462/ 462/2200  |  630/ 630/3000
+//   ASR-SR-116   | B     | 1045/1045/1800  | 1045/1045/1800
 //
 // ÖN/ARKA gibi KONUM etiketleri girdi adına KONMAZ: bir takozun ön mü arka mı
 // olduğu takozun değil, monte edildiği yerin özelliğidir — araçtan araca
@@ -68,9 +69,9 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // o dokümanın Tablo 8 (sehim) ve Tablo 11 (sönüm) sonuçları bu değerlerle
 // yeniden üretilebilir — bkz. tests/unit/mount-library-sources.test.js.
 //
-// ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar;
-// mevcut '57RS313773'/'57RS313774' anahtarları A26 girdilerinde KALIR, yeni
-// kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
+// ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar.
+// Dört girdinin anahtarı parça koduydu (Canlı Not 1004'e dek): 'a26-a' · 'a26-b' ·
+// 'asfat-a' · 'asfat-b'; eski proje açılışta göç eder (js/state.js → veParcaKoduGoc).
 //
 // ── AMC MECANOCAUCHO® KONİK TAKOZLAR ────────────────────────────────────────
 // İKİ VERİ TABANI VAR; İKİSİ DE DOĞRU, AMA AYNI ŞEY DEĞİL:
@@ -182,8 +183,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //    70 |  2500  |  2500  |  1150
 //
 // TEK TABAN — sx = dx KASITLI: kaynak statik/dinamik ayrımı yapmıyor, sertlik
-// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (57RS313774-sr116 de
-// tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
+// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (ASFAT takozu B
+// de tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
 //
 // DEĞERLER RAPORUN KENDİ MODAL SONUCUNU VERİYOR (ölçüldü): Konsept 2 = 3 konum ×
 // 2 adet LMT-1433-00 + Z'de 110 N/mm yay. Takoz konumları raporlarda YOK, ama
@@ -231,8 +232,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
 //     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
 //
-// İnternette bulunmayanlar (2026-10-19): 57RS…, TK035/040/050, LMT-1433 ve
-// "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
+// İnternette bulunmayanlar (2026-10-19): A26 · ASR-SR-116 takozları, TK035/040/050,
+// LMT-1433 ve "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
 // ── maxLoad — TAŞIMA KAPASİTESİ [kg], opsiyonel ─────────────────────────────
 // Üretici kataloğunun verdiği en büyük statik EKSENEL (basma, z) yük. Birim
 // KİLOGRAM'dır: AMC, Angst+Pfister ve benzeri kataloglar kapasiteyi kg olarak
@@ -283,37 +284,37 @@ var _MNT_LP = (typeof VE_MNT_LASPAR !== 'undefined') ? VE_MNT_LASPAR
 //     raporunun "Mount 1"i; TK035/040/050 = MLMT-0216-33-TK0xx (LASPAR'ın kod kuralı:
 //     "LMT/MLMT-xxxx-yy-TKnn", TKnn Shore sertliği — kullanıcı 2026-11-11). Raporların
 //     çizimindeki A+P logosu A+P'nin Bursa ortaklığından (LASPAR ile, 2012).
-//   • Diğer — 57RS… (A26): kaynak belgelerde marka yazılı değil.
+//   • Diğer — A26 · ASR-SR-116 takozları: kaynak belgelerde marka yazılı değil.
 // Özel takozların markası "Özel takozlar" (listede katalog markalarından sonra).
 // Anahtarlar ve adlar DEĞİŞMEZ (kayıtlı projeler). Kapı: mount-library-marka.test.js.
 // ADAY OLMAYAN TİP (kullanıcı 2026-11-11, Canlı Not 133: Parametrik Analiz'in Diğer adaylarında
-// dört 57RS tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
+// A26 ve ASR-SR-116'nın dört tipi işaretlendi — *"Şu takozları kaldır."*): `aday:false` tip Tip listesinde,
 // örneklerde ve eşleşmede durur, taramanın aday listesinde YOK (tahminli tip gibi). Kapı:
 // mount-param.test.js → *ADAY OLMAYAN TİP*.
 var VE_MNT_LIB_MARKALAR = ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer'];
 var VE_MNT_LIB_MARKA_OZEL = 'Özel takozlar';
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { marka:'LASPAR', name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { marka:'Diğer', aday:false, name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { marka:'Diğer', aday:false, name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { marka:'Diğer', aday:false, name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { marka:'Diğer', aday:false, name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
-  // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
-  'TK035': { marka:'LASPAR', name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+  'a26-a':            { marka:'Diğer', aday:false, name:'A26 takozu A',              sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  'a26-b':            { marka:'Diğer', aday:false, name:'A26 takozu B',              sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  'asfat-a':          { marka:'Diğer', aday:false, name:'ASFAT takozu A',       sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  'asfat-b':          { marka:'Diğer', aday:false, name:'ASFAT takozu B',       sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  // TK035 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
+  'TK035': { marka:'LASPAR', name:'TK035 35 ShA', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
       z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
-  // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
-  'TK040': { marka:'LASPAR', name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+  // TK040 · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
+  'TK040': { marka:'LASPAR', name:'TK040 45 ShA', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
       z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
-  // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
-  'TK050': { marka:'LASPAR', name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+  // TK050 · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
+  'TK050': { marka:'LASPAR', name:'TK050 50 ShA', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
@@ -1917,7 +1918,7 @@ function _mntAksSecili(node){
 function _mntAksSection(node){
   var L=_mntAksKatalog(node.type), sec=_mntAksSecili(node);
   var opt=function(a){ return '<option value="'+_mntEsc(a.key)+'"'+(sec===a?' selected':'')+'>'
-    + _mntEsc(a.ad+' · '+a.key+' · '+_mntS(a.kg,1)+' kg')+'</option>'; };
+    + _mntEsc(a.ad+' · '+_mntS(a.kg,1)+' kg')+'</option>'; };
   var sel='<select class="ve-fp-sel" id="ve-mnt-aks-'+node.id+'" onchange="veMntAksUygula(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>'+L.map(opt).join('')+'</select>';
   var h=_mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kayıtlı aksesuar</span>'+sel+'</label>');
@@ -4441,7 +4442,8 @@ function _mntLibDropdown(node, girdiler, sel){
 }
 // SEÇİCİ — Marka listesi, onun altında seçili markanın tipleri ve Yeni takoz
 // (Canlı Not 105: sıkı iki satır; 106: önce marka, sonra o markanın tipleri).
-// Tipin teknik resmi varsa Tip satırının sonunda (i) düğmesi (Canlı Not 111).
+// Tipin teknik resmi varsa Tip satırında (i) düğmesi (Canlı Not 111), satırın sonunda
+// tipler arasında gezen iki ok (Canlı Not 155, _mntLibAdimHTML).
 function _mntLibSecici(node, markalar, grup, sel){
   var mk='<select class="ve-fp-sel mntlib-marka" id="mntlib-marka-'+node.id+'" aria-label="Marka"'
     +' onchange="veMntLibMarka(\''+node.id+'\',this.value)">'
@@ -4452,9 +4454,35 @@ function _mntLibSecici(node, markalar, grup, sel){
     + '<span class="mntlib-et">Marka</span>'+mk
     + '<span class="mntlib-et">Tip</span>'
     + '<div class="mntlib-tip"><div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, grup?grup.girdiler:[], sel)+'</div>'
-    + _mntLibCizimDugme(node, sel)+'</div>'
+    + _mntLibCizimDugme(node, sel)+_mntLibAdimHTML(node, grup?grup.girdiler:[], sel)+'</div>'
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
+}
+// TİPLER ARASINDA GEZİNME (kullanıcı 2026-11-11, Canlı Not 155: *"Şuraya pratik olarak takozlar
+// arasında gezebileceğimiz iki ok tuşu istiyorum, yukarı aşağı"*): Tip satırının sonunda bitişik iki
+// ok — Önceki tip · Sonraki tip, Tip listesinin sırasıyla (seçili markanın tipleri, _mntLibSirali).
+// Adım listeden seçmenin AYNISI (veMntLibAdim → veMntLibSelect). Listenin ucunda ok kapalı
+// (aria-disabled: odak okta kalır), sebebi ipucunda; tek tipli markada ok yok. (i) okların SOLUNDA:
+// teknik resmi olmayan tipe (LASPAR'ın ilk on tipinden yedisi) geçince (i) kalkar ve oklar
+// yerinde kalır — oklar (i)'nin solunda olsaydı (i) gelince 32 px kayar, art arda ikinci tık
+// (i)'ye düşerdi. Kapı: mount-library-dropdown.test.js → *OKLAR*.
+function _mntLibAdimId(nodeId, yon){ return 'mntlib-adim-'+(yon<0 ? 'onceki' : 'sonraki')+'-'+nodeId; }
+function _mntLibSira(girdiler, sel){
+  for(var i=0; sel && i<girdiler.length; i++){ if(girdiler[i].key===sel.key) return i; }
+  return -1;
+}
+function _mntLibAdimHTML(node, girdiler, sel){
+  var i=_mntLibSira(girdiler||[], sel);
+  if(i<0 || girdiler.length<2) return '';
+  function ok(yon, ad, ikon, sebep){
+    return '<button type="button" class="mntlib-adim" id="'+_mntLibAdimId(node.id, yon)+'" aria-label="'+ad+'"'
+      + (sebep ? ' aria-disabled="true" title="'+sebep+'"' : ' title="'+ad+'"')
+      + ' onclick="veMntLibAdim(\''+node.id+'\','+yon+')">'+veIkon(ikon)+'</button>';
+  }
+  return '<span class="mntlib-adimlar">'
+    + ok(-1, 'Önceki tip', 'arrow-up', i===0 ? 'İlk tip seçili.' : '')
+    + ok(1, 'Sonraki tip', 'arrow-down', i===girdiler.length-1 ? 'Son tip seçili.' : '')
+    + '</span>';
 }
 // Kütüphane girdisinin eksenleri — takozun KENDİ eksenleri (radyal/eksenel);
 // uygulanınca takozun kxs…kzd alanlarına aynı sırayla kopyalanır.
@@ -4709,7 +4737,13 @@ function _mntLibCizimDugme(node, e){
     + ' aria-label="Teknik resim" title="Teknik resim" aria-haspopup="dialog"'
     + ' onclick="veMntLibCizimAc(this)">'+veIkon('info')+'</button>';
 }
-// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner.
+// (i) → pencere ailesinin görsel penceresi; kapanınca odak düğmeye döner. TEKNİK RESİM
+// KÜÇÜK AÇILIR (kullanıcı 2026-11-11, Canlı Not 154: *"Teknik resimler çok büyük geliyor.
+// Ufak gelsin. Göz yoruyor."*): uzun kenarı en çok VE_MNT_CIZIM_AZAMI CSS px, oranı korunur,
+// pencere resmin ölçüsünde (resimler 640 px genişlikte, boyları 307–1336 px; önce ekranın
+// boyunu dolduruyordu). Son değişikliklerin görseli dosyanın ölçüsünde kalır (Canlı Not 53).
+// Kapı: mount-amc.test.js → *TEKNİK RESİM* (→ *KÜÇÜK*).
+var VE_MNT_CIZIM_AZAMI = 480;
 function veMntLibCizimAc(dugme){
   if(!dugme) return false;
   var a=dugme.getAttribute('data-amc'), p=dugme.getAttribute('data-ap');
@@ -4719,7 +4753,7 @@ function veMntLibCizimAc(dugme){
       : l ? (_MNT_LP ? _MNT_LP.kunye(l) : null)
       : le ? (_MNT_LP ? _MNT_LP.kunyeEski(le) : null) : null;
   if(!K || !K.cizim || typeof veBasResimGoster!=='function') return false;
-  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme });
+  return veBasResimGoster({ src:K.cizim, ad:K.urun+' · teknik resim', odak:dugme, azami:VE_MNT_CIZIM_AZAMI });
 }
 // KAYNAK (i)'DE (kullanıcı 2026-11-11, Canlı Not 139: *"Kaynak kısmını kaldıralım. Kaynağı 'ürün
 // ailesi' satırına bir (i) butonu koyarak belirtelim. Kullanıcı fare ile bunun üstüne geldiğinde
@@ -4829,7 +4863,9 @@ function _mntLibGirdileri(node){
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
   return { custom:custom, builtins:builtins, hepsi:custom.concat(builtins) };
 }
-function getMntLibraryPropertiesHTML(node){
+// Pencerenin seçimi: seçili tip (yoksa ilk özel, yoksa ilk katalog tipi), markası ve o markanın
+// tipleri Tip listesinin sırasıyla — pencere ve oklar (veMntLibAdim) AYNI listeyi okur.
+function _mntLibSecim(node){
   var d=_mntLibEnsure(node);
   var G=_mntLibGirdileri(node);
   var sel=null;
@@ -4837,6 +4873,11 @@ function getMntLibraryPropertiesHTML(node){
   if(!sel) sel=G.custom[0]||G.builtins[0]||null;
   var markalar=veMntLibMarkalar(G.hepsi);
   var grup=(sel && markalar.filter(function(g){ return g.ad===sel.marka; })[0]) || markalar[0] || null;
+  return { G:G, sel:sel, markalar:markalar, grup:grup };
+}
+function getMntLibraryPropertiesHTML(node){
+  var S=_mntLibSecim(node);
+  var sel=S.sel, markalar=S.markalar, grup=S.grup;
   var secici=_mntLibSecici(node, markalar, grup, sel);
   if(!sel){
     return _mntPencereKabuk(node, [
@@ -5078,6 +5119,24 @@ function veMntLibSelect(nodeId, key){
   if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
   veMntLibDropdownClose();                 // dış-tık/Escape dinleyicileri sökülsün
   if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Ok → bir önceki (yon < 0) ya da bir sonraki tip, Tip listesinin sırasıyla (Canlı Not 155,
+// _mntLibAdimHTML). Seçim listeden seçmenin AYNISI (veMntLibSelect): pencere yerinde yeniden
+// kurulur; listeden seçim gibi görünüm durumu, geri-al adımı değil. Listenin ucunda bir şey
+// yapmaz. Odak oktaysa yeniden kurulan okta kalır: Enter ya da art arda tık yerinden kaymadan gezer.
+function veMntLibAdim(nodeId, yon){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return false;
+  var S=_mntLibSecim(node), L=S.grup ? S.grup.girdiler : [];
+  var i=_mntLibSira(L, S.sel), j=i+(yon<0 ? -1 : 1);
+  if(i<0 || j<0 || j>=L.length) return false;
+  var id=_mntLibAdimId(nodeId, yon);
+  var odak=typeof document!=='undefined' && !!document.activeElement && document.activeElement.id===id;
+  veMntLibSelect(nodeId, L[j].key);
+  if(odak){
+    var b=document.getElementById(id);
+    if(b) try{ b.focus({ preventScroll:true }); }catch(_e){}
+  }
+  return true;
 }
 
 // Marka seç → seçili tip o markanın ilk tipine geçer (seçili tip zaten o markadaysa
@@ -6446,7 +6505,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTakozTahmin: _mntTakozTahmin, _mntKutuphaneNotu: _mntKutuphaneNotu, _mntLibSirali: _mntLibSirali,
     _mntOneriYukler: _mntOneriYukler, _mntLibOneri: _mntLibOneri, _mntLibOneriHTML: _mntLibOneriHTML, VE_MNT_ONERI: VE_MNT_ONERI,
     _mntLibAmcKunyeHTML: _mntLibAmcKunyeHTML, _mntLibApKunyeHTML: _mntLibApKunyeHTML, _mntLibLpKunyeHTML: _mntLibLpKunyeHTML,
-    veMntLibCizimAc: veMntLibCizimAc,
+    veMntLibCizimAc: veMntLibCizimAc, VE_MNT_CIZIM_AZAMI: VE_MNT_CIZIM_AZAMI,
     veMntApplyLib: veMntApplyLib,
     veMntLibCurveEnable: veMntLibCurveEnable,
     veMntLibCurveDisable: veMntLibCurveDisable,
@@ -6459,6 +6518,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibSetBuiltin: veMntLibSetBuiltin,
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     veMntLibSelect: veMntLibSelect,
+    veMntLibAdim: veMntLibAdim, _mntLibAdimHTML: _mntLibAdimHTML, _mntLibSecim: _mntLibSecim,
     veMntLibDropdownToggle: veMntLibDropdownToggle,
     veMntLibDropdownClose: veMntLibDropdownClose,
     veMntLibFilter: veMntLibFilter,

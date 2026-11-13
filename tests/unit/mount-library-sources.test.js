@@ -1,7 +1,7 @@
 /**
  * Takoz kütüphanesi — aynı parça kodu, farklı takoz
  * ─────────────────────────────────────────────────
- * 57RS313773 / 57RS313774 kodları iki ayrı kaynakta iki AYRI takoz için geçiyor:
+ * a26-a / a26-b kodları iki ayrı kaynakta iki AYRI takoz için geçiyor:
  *
  *   A26        (powerpack_mount_analysis_A26.html)  — modülün türetildiği araç
  *   ASR-SR-116 (BMC ASFAT 8x8 Obüs, 04.08.2021)     — Tablo 9
@@ -30,13 +30,13 @@ beforeEach(() => { resetStubs(stubs); global.nodes = []; });
 
 // ── ASR-SR-116 Tablo 9 (kaynağa karşı altın referans) ────────────────────────
 const SR116 = {
-  '57RS313773-sr116': { etiket: 'ARKA', s: [462, 462, 2200],    d: [630, 630, 3000] },
-  '57RS313774-sr116': { etiket: 'ÖN',   s: [1045, 1045, 1800],  d: [1045, 1045, 1800] },
+  'asfat-a': { etiket: 'ARKA', s: [462, 462, 2200],    d: [630, 630, 3000] },
+  'asfat-b': { etiket: 'ÖN',   s: [1045, 1045, 1800],  d: [1045, 1045, 1800] },
 };
 // ── A26 (mevcut, dokunulmadı) ────────────────────────────────────────────────
 const A26 = {
-  '57RS313773': { etiket: 'ÖN',   s: [334, 334, 2300],    d: [435, 435, 3000] },
-  '57RS313774': { etiket: 'ARKA', s: [1200, 1200, 2400],  d: [950, 950, 1900] },
+  'a26-a': { etiket: 'ÖN',   s: [334, 334, 2300],    d: [435, 435, 3000] },
+  'a26-b': { etiket: 'ARKA', s: [1200, 1200, 2400],  d: [950, 950, 1900] },
 };
 
 describe('İki kaynak ayrı girdi olarak duruyor', () => {
@@ -64,20 +64,20 @@ describe('İki kaynak ayrı girdi olarak duruyor', () => {
 
   test('ad yalnız KOD + KAYNAK taşır; konum etiketi (ÖN/ARKA) YOK', () => {
     const L = cp.VE_MOUNT_LIBRARY;
-    ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116'].forEach((k) => {
+    ['a26-a', 'a26-b', 'asfat-a', 'asfat-b'].forEach((k) => {
       // ön/arka takozun değil, monte edildiği yerin özelliğidir → adda geçmemeli
       expect(L[k].name).not.toMatch(/ÖN|ARKA|Ön|Arka/);
     });
-    expect(L['57RS313773'].name).toBe('57RS313773 (A26)');
-    expect(L['57RS313774'].name).toBe('57RS313774 (A26)');
-    expect(L['57RS313773-sr116'].name).toBe('57RS313773 (ASR-SR-116)');
-    expect(L['57RS313774-sr116'].name).toBe('57RS313774 (ASR-SR-116)');
+    expect(L['a26-a'].name).toBe('A26 takozu A');
+    expect(L['a26-b'].name).toBe('A26 takozu B');
+    expect(L['asfat-a'].name).toBe('ASFAT takozu A');
+    expect(L['asfat-b'].name).toBe('ASFAT takozu B');
   });
 
   test('aynı kodun iki sürümü adından ayırt edilebiliyor', () => {
     const L = cp.VE_MOUNT_LIBRARY;
-    expect(L['57RS313773'].name).not.toBe(L['57RS313773-sr116'].name);
-    expect(L['57RS313774'].name).not.toBe(L['57RS313774-sr116'].name);
+    expect(L['a26-a'].name).not.toBe(L['asfat-a'].name);
+    expect(L['a26-b'].name).not.toBe(L['asfat-b'].name);
     // tüm gömülü adlar tekil olmalı (listede aynı satır iki kez görünmesin)
     const names = Object.values(L).map((e) => e.name);
     expect(new Set(names).size).toBe(names.length);
@@ -85,34 +85,34 @@ describe('İki kaynak ayrı girdi olarak duruyor', () => {
 
   test('iki kaynağın değerleri birbirine karışmıyor', () => {
     const L = cp.VE_MOUNT_LIBRARY;
-    expect(L['57RS313773'].sz).not.toBe(L['57RS313773-sr116'].sz);
-    expect(L['57RS313774'].dz).not.toBe(L['57RS313774-sr116'].dz);
+    expect(L['a26-a'].sz).not.toBe(L['asfat-a'].sz);
+    expect(L['a26-b'].dz).not.toBe(L['asfat-b'].dz);
   });
 });
 
 describe('Geriye uyum — kayıtlı projeler kopmuyor', () => {
   test('eski libKey hâlâ çözülüyor ve A26 değerlerini uyguluyor', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'],
-                data: { libKey: '57RS313773' } };
+                data: { libKey: 'a26-a' } };
     global.nodes = [n];
-    expect(cp.veMntGetLibraryMap()['57RS313773']).toBeDefined();
-    cp.veMntApplyLib('m1', '57RS313773');
-    expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual(A26['57RS313773'].s);
-    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual(A26['57RS313773'].d);
+    expect(cp.veMntGetLibraryMap()['a26-a']).toBeDefined();
+    cp.veMntApplyLib('m1', 'a26-a');
+    expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual(A26['a26-a'].s);
+    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual(A26['a26-a'].d);
   });
 
   test('yeni kaynak uygulanınca ASR-SR-116 değerleri gelir', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
     global.nodes = [n];
-    cp.veMntApplyLib('m1', '57RS313774-sr116');
-    expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual(SR116['57RS313774-sr116'].s);
-    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual(SR116['57RS313774-sr116'].d);
-    expect(n.data.libKey).toBe('57RS313774-sr116');
+    cp.veMntApplyLib('m1', 'asfat-b');
+    expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual(SR116['asfat-b'].s);
+    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual(SR116['asfat-b'].d);
+    expect(n.data.libKey).toBe('asfat-b');
   });
 
   test('dördü de takoz panelinin açılır listesinde görünüyor', () => {
     const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: {} });
-    ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116']
+    ['a26-a', 'a26-b', 'asfat-a', 'asfat-b']
       .forEach((k) => expect(html).toContain('value="' + k + '"'));
   });
 });
@@ -175,7 +175,7 @@ describe('ASR-SR-116 girdileri dokümanın KENDİ sonuçlarını üretiyor', () 
   });
 
   test('A26 girdileriyle çözüm BELİRGİN ŞEKİLDE farklı (karışırsa fark edilir)', () => {
-    const a26 = HP.map((h) => { const e = cp.VE_MOUNT_LIBRARY[h[4] === 'ÖN' ? '57RS313773' : '57RS313774'];
+    const a26 = HP.map((h) => { const e = cp.VE_MOUNT_LIBRARY[h[4] === 'ÖN' ? 'a26-a' : 'a26-b'];
       return { name: h[0], pos: [h[1], h[2], h[3]].map(mm),
                kstat: [e.sx, e.sy, e.sz].map((v) => v * 1000),
                kdyn:  [e.dx, e.dy, e.dz].map((v) => v * 1000) }; });

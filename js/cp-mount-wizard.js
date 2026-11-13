@@ -88,7 +88,8 @@ var VE_MW_TORK = [
 var _mwState = null;          // oturumluk durum (açık sihirbazın)
 var _mwStep = 0;
 var _mwSeq = 0;               // satır anahtarı üreteci
-var _mwSec = { govde:null, takoz:null };   // seçili satır (anahtar)
+// seçili satır (anahtar); null: adım ilk satırı seçer, '': seçim bırakıldı (masada boşluğa tık, Canlı Not 153)
+var _mwSec = { govde:null, takoz:null };
 // masanın görünüşü: '3b' (aksonometri — Görünümler'in çizimi, Canlı Not 37) | 'ust' | 'yan' | 'on'
 var _mwGorunus = '3b';
 var VE_MW_AKSO = 've-mw-akso';   // 3B çizimin kabı (cp-mount.js → _mntAksoKur)
@@ -858,8 +859,10 @@ function veMntWizStepHTML(step, c){
 // `baslikHTML`: başlıkta birim/simge varsa (özet panelinde başlık BÜYÜK HARFLE
 // yazılıyor, "1 g" → "1 G" oluyordu) birim `<u>` içinde verilir — CSS onu
 // dönüştürmez (kökteki kural: BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ ÇEVİRMEZ).
+// Başlık boşsa başlık bandı çizilmez (Örnek alanının kartı, Canlı Not 152).
 function _mwCard(baslik, inner, baslikHTML){
-  return '<section class="ve-fw-card"><header class="ve-fw-card-h"><span>' + (baslikHTML || _mwEsc(baslik)) + '</span></header>'
+  var bas = baslikHTML || (baslik ? _mwEsc(baslik) : '');
+  return '<section class="ve-fw-card">' + (bas ? '<header class="ve-fw-card-h"><span>' + bas + '</span></header>' : '')
     + '<div class="ve-fw-card-b">' + inner + '</div></section>';
 }
 function _mwInp(path, v, opt){
@@ -908,17 +911,12 @@ function _mwStepKaynak(c){
   var st = _mwState, h = '';
   // "YÜKLENDİ" SATIRI YOK (kullanıcı 2026-11-09, Canlı Not 69: *"Şu 'yüklendi' açıklamasına
   // gerek var mı? … altta olmasına gerek var mı?"*): örneğin adını listenin seçilisi, sırasını
-  // gezinme ("3 / 7") zaten söylüyor; tuvalin kartında başlık modeli adlandırır, satır yalnız
-  // sayılar. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
+  // gezinme ("3 / 7") zaten söylüyor. Kapı: mount-wizard.test.js → *YÜKLENDİ YOK*.
+  // TUVALDEKİ MODEL KARTI YOK (kullanıcı 2026-11-11, Canlı Not 151: *"Bunu da kaldıralım, gerek
+  // yok. Zaten aşağıda yazıyor."*): tuvalden açılan sihirbazda örneğin adı ve sayıları listenin
+  // seçilisinde (Canlı Not 135). Kapı: mount-wizard.test.js → *TUVALDEKİ MODEL KARTI YOK*.
   var liste = (typeof veMountCore !== 'undefined' && veMountCore.getMountExampleList) ? veMountCore.getMountExampleList() : [];
   var yuklu = _mwOrnekGosterilen(st);
-  if(st.seededFrom === 'tuval'){
-    // Tuvalin örneği adıyla (Canlı Not 135): "sıfırdan açılmış gibi" görünmesin
-    var to = st.tuvalOrnek ? liste.filter(function(e){ return String(e.id) === String(st.tuvalOrnek); })[0] : null;
-    h += _mwCard('Tuvaldeki model', '<div class="ve-fw-seeded">' + _mwIkon('check') + ' '
-      + (to ? '<b>' + _mwEsc(to.vehicle || to.name) + '</b> · ' : '')
-      + st.govdeler.length + ' gövde · ' + st.takozlar.length + ' takoz</div>');
-  }
   h += _mwCard('STEP\'ten başla', _mwStpKartHTML());
   var sec = '<select class="ve-fw-inp" onchange="veMntWizOrnekSec(this.value)" aria-label="Örnek">'
     + '<option value="__">' + (yuklu === null ? '— örnek seç —' : '— değiştir —') + '</option>';
@@ -938,7 +936,9 @@ function _mwStepKaynak(c){
   var ex = (yuklu && typeof veMountCore !== 'undefined') ? veMountCore.getMountExample(yuklu) : null;
   // Gezinme listenin SATIRINDA, yanında (kullanıcı 2026-11-09, Canlı Not 78: *"Bir satır aşağıda
   // olmasının bir anlamı yok"*). Kapı: mount-wizard.test.js → *GEZİNME LİSTENİN SATIRINDA*.
-  h += _mwCard('Örnekten doldur', '<div class="ve-fw-field ve-mw-ornek"><span class="ve-fw-lbl">Örnek</span>'
+  // KART BAŞLIKSIZ (kullanıcı 2026-11-11, Canlı Not 152: *"Örnekten doldur ifadesini de
+  // kaldıralım."*): alanın adı Örnek. Kapı: mount-wizard.test.js → *ÖRNEK KARTI BAŞLIKSIZ*.
+  h += _mwCard('', '<div class="ve-fw-field ve-mw-ornek"><span class="ve-fw-lbl">Örnek</span>'
     + '<div class="ve-mw-ornek-d">' + sec + gez + '</div></div>');
   if(ex){
     var ih = ex.description ? '<div class="ve-fw-exnote">' + _mwEsc(ex.description) + '</div>' : '';
@@ -1574,7 +1574,7 @@ function _mwStpKaynakSecHTML(s, b, y){
     + ' onchange="veMntWizStpYogunluk(' + b.dugum + ', this.value)">'
     + sec.map(se).join('')
     + (vs.length ? '<optgroup label="' + _mwEsc(_mwStpModelAd(b.tip)) + '">' + vs.map(function(v){ return se([v.k, v.ad]); }).join('') + '</optgroup>' : '')
-    + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad + ' · ' + a.key]); }).join('') + '</optgroup>' : '')
+    + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad]); }).join('') + '</optgroup>' : '')
     + '</select>';
 }
 // Kütle hücresi: elle → alan; veri sayfası → sayfanın ıslak kütlesi, YAZILMAZ
@@ -2263,7 +2263,7 @@ function _mwGovdeEditorHTML(g){
 function _mwStepGovde(c){
   var st = _mwState;
   if(_mwSec.govde && !_mwSatir('govde', _mwSec.govde)) _mwSec.govde = null;
-  if(!_mwSec.govde && st.govdeler.length) _mwSec.govde = st.govdeler[0].key;
+  if(_mwSec.govde == null && st.govdeler.length) _mwSec.govde = st.govdeler[0].key;   // '' bırakılmış: seçilmez
   var ekle = '<select class="ve-fw-inp" onchange="if(this.value){veMntWizGovdeEkle(this.value);}" aria-label="Gövde ekle">'
     + '<option value="">Gövde ekle…</option>'
     + VE_MW_GOVDE_TIPLERI.map(function(t){ return '<option value="' + t + '">' + _mwEsc(_mwAd(t)) + '</option>'; }).join('')
@@ -2337,7 +2337,7 @@ function _mwTakozEditorHTML(t){
 function _mwStepTakoz(c){
   var st = _mwState;
   if(_mwSec.takoz && !_mwSatir('takoz', _mwSec.takoz)) _mwSec.takoz = null;
-  if(!_mwSec.takoz && st.takozlar.length) _mwSec.takoz = st.takozlar[0].key;
+  if(_mwSec.takoz == null && st.takozlar.length) _mwSec.takoz = st.takozlar[0].key;   // '' bırakılmış: seçilmez
   var h = _mwCard('Takozlar', '<div class="ve-mw-liste" id="ve-mw-liste">' + _mwTakozListeHTML(c) + '</div>'
     + '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn" onclick="veMntWizTakozEkle()">' + _mwIkon('plus') + ' Takoz ekle</button></div>');
   var t = _mwSatir('takoz', _mwSec.takoz);
@@ -2771,6 +2771,30 @@ function _mw2BNokta(e){
   var r = svg.getBoundingClientRect();
   return { x:e.clientX - r.left, y:e.clientY - r.top };
 }
+// BOŞLUĞA TIK SEÇİMİ BIRAKIR (kullanıcı 2026-11-11, Canlı Not 153: *"bileşene tıkladıktan sonra,
+// boş yere tıkladığımda tıklamamdan vaz geçemiyorum. Yani kalıyor öyle."*): gövde ve takoz adımında
+// masanın çiziminde işaret olmayan yere tık — 3B'de ve 2B'de — seçimi bırakır: perde ve halka
+// kalkar, liste yerinde, Seçili gövde · Seçili takoz bölümü çekilir. Çizimin dışı (çip, düğmeler,
+// gösterge) bırakmaz. Kapı: mount-sihirbaz-doku.test.js → *BOŞLUĞA TIK*.
+function _mwMasaBirak(){
+  var k = VE_MW_STEPS[_mwStep].key;
+  if((k !== 'govde' && k !== 'takoz') || !_mwSec[k]) return false;
+  _mwSec[k] = '';
+  veMntWizRender();
+  return true;
+}
+// SÜRÜKLEME TIK DEĞİL: basıştan beri eşiği aşan hareket — imleç basılan yere dönse de — seçmez,
+// bırakmaz. Eşik görünüşün kendi elininki: 2B'nin kaydırması 3 px'ten uzun, 3B çiziminin döndürmesi
+// |dx| + |dy| ≥ 3 (cp-mount.js → _mntAkso3bBagla): dönen çizimde seçim oynamaz.
+var VE_MW_TIK = 3;
+function _mwSurukleme(dx, dy, uc){
+  return uc ? Math.abs(dx) + Math.abs(dy) >= VE_MW_TIK : Math.hypot(dx, dy) > VE_MW_TIK;
+}
+// Tıkın hedefi: yakalama olayın hedefini değiştirdiği için nokta sorulur (jsdom'da nokta yok)
+function _mwTikHedefi(e){
+  return (typeof document !== 'undefined' && document.elementFromPoint) ? document.elementFromPoint(e.clientX, e.clientY) : e.target;
+}
+function _mwCizimde(el){ return !!(el && el.closest && el.closest('#ve-mw-masa-cizim')); }
 // Dinleyiciler masanın KABINA bir kez bağlanır (çizim her yamada yenilenir).
 function _mwMasaBagla(){
   if(typeof document === 'undefined') return;
@@ -2787,40 +2811,45 @@ function _mwMasaBagla(){
     if(!m.hasAttribute('data-gezin') || e.button !== 0) return;
     if(e.target.closest && e.target.closest('button, .ve-fw-cip')) return;
     var n = _mw2BNokta(e), p = n ? _mw2BPanel(n.x, n.y) : null;
-    _mwKaydir = { x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, id:e.pointerId, g:p ? p.g : 'yan' };
+    _mwKaydir = { x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, id:e.pointerId, g:p ? p.g : 'yan', oynadi:false };
     try { m.setPointerCapture(e.pointerId); } catch(er){}
   });
   m.addEventListener('pointermove', function(e){
     if(!_mwKaydir) return;
     var dx = e.clientX - _mwKaydir.x, dy = e.clientY - _mwKaydir.y;
     _mwKaydir.x = e.clientX; _mwKaydir.y = e.clientY;
-    if(Math.hypot(e.clientX - _mwKaydir.x0, e.clientY - _mwKaydir.y0) > 3) m.classList.add('kayiyor');
+    if(_mwSurukleme(e.clientX - _mwKaydir.x0, e.clientY - _mwKaydir.y0)){ _mwKaydir.oynadi = true; m.classList.add('kayiyor'); }
     if(dx || dy) _mw2BKaydir(_mwKaydir.g, dx, dy);
   });
   var bitir = function(e){
     if(!_mwKaydir) return;
-    var hareket = Math.hypot(e.clientX - _mwKaydir.x0, e.clientY - _mwKaydir.y0);
+    var oynadi = _mwKaydir.oynadi || _mwSurukleme(e.clientX - _mwKaydir.x0, e.clientY - _mwKaydir.y0);
     try { m.releasePointerCapture(_mwKaydir.id); } catch(er){}
     _mwKaydir = null; m.classList.remove('kayiyor');
-    if(hareket > 3) return;
-    // TIKLAMA: işaretin üstündeyse seç (yakalama hedefi değiştirdiği için nokta sorulur).
-    var hedef = document.elementFromPoint ? document.elementFromPoint(e.clientX, e.clientY) : e.target;
+    if(oynadi) return;
+    // TIKLAMA: işaretin üstündeyse seç, çizimin boşluğundaysa seçimi bırak (Canlı Not 153).
+    var hedef = _mwTikHedefi(e);
     var g = hedef && hedef.closest ? hedef.closest('[data-mnt-sec]') : null;
     if(g) _mwMasaSec(g.getAttribute('data-mnt-sec'));
+    else if(_mwCizimde(hedef)) _mwMasaBirak();
   };
   m.addEventListener('pointerup', bitir);
   m.addEventListener('pointercancel', function(){ _mwKaydir = null; m.classList.remove('kayiyor'); });
-  // 3B: sürükleme döndürür (çizimin kendi eli); kımıldamadan tık işaretin satırını seçer
-  // (yakalama hedefi değiştirdiği için nokta sorulur)
+  // 3B: sürükleme döndürür (çizimin kendi eli); kımıldamadan tık işaretin satırını seçer,
+  // işaretsiz yerde seçimi bırakır (Canlı Not 153)
   var uc3 = null;
-  m.addEventListener('pointerdown', function(e){ uc3 = (m.getAttribute('data-gorunus') === '3b' && e.button === 0) ? { x:e.clientX, y:e.clientY } : null; }, true);
+  m.addEventListener('pointerdown', function(e){ uc3 = (m.getAttribute('data-gorunus') === '3b' && e.button === 0) ? { x:e.clientX, y:e.clientY, oynadi:false } : null; }, true);
+  m.addEventListener('pointermove', function(e){
+    if(uc3 && _mwSurukleme(e.clientX - uc3.x, e.clientY - uc3.y, true)) uc3.oynadi = true;
+  }, true);
   m.addEventListener('pointerup', function(e){
     if(!uc3) return;
-    var h = Math.hypot(e.clientX - uc3.x, e.clientY - uc3.y); uc3 = null;
-    if(h > 3) return;
-    var hedef = document.elementFromPoint ? document.elementFromPoint(e.clientX, e.clientY) : e.target;
+    var oynadi = uc3.oynadi || _mwSurukleme(e.clientX - uc3.x, e.clientY - uc3.y, true); uc3 = null;
+    if(oynadi) return;
+    var hedef = _mwTikHedefi(e);
     var ak = hedef && hedef.closest ? hedef.closest('svg.ve-mnt2d-akso [data-ak]') : null;
-    if(ak) _mwMasa3BSec(ak.getAttribute('data-ak'));
+    if(ak && _mwMasa3BSec(ak.getAttribute('data-ak'))) return;
+    if(_mwCizimde(hedef)) _mwMasaBirak();
   });
   if(typeof ResizeObserver !== 'undefined'){
     if(_mwMasaRO){ try { _mwMasaRO.disconnect(); } catch(er){} }
@@ -3003,7 +3032,7 @@ function veMntWizKur(){
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
-    _mw3B: _mw3B, _mwMasa3BSec: _mwMasa3BSec, _mwAksoDugumler: _mwAksoDugumler, VE_MW_AKSO: VE_MW_AKSO,
+    _mw3B: _mw3B, _mwMasa3BSec: _mwMasa3BSec, _mwMasaBirak: _mwMasaBirak, _mwAksoDugumler: _mwAksoDugumler, VE_MW_AKSO: VE_MW_AKSO,
     VE_MW_STEPS: VE_MW_STEPS, VE_MW_GOVDE_TIPLERI: VE_MW_GOVDE_TIPLERI, VE_MW_TORK: VE_MW_TORK, _mwOrnekGosterilen: _mwOrnekGosterilen,
     veMntWizDefault: veMntWizDefault, veMntWizState: veMntWizState, veMntWizFromNodes: veMntWizFromNodes,
     veMntWizNodes: veMntWizNodes, veMntWizSorunlar: veMntWizSorunlar, veMntWizCoz: veMntWizCoz,

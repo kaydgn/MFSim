@@ -706,7 +706,7 @@ function _mntRepAskiAralik(R){
   return o;
 }
 function _mntRepAskiHal(h){ return h==='acik' ? 'açık' : (h==='blok' ? 'blok' : 'normal'); }
-// Sütun başlığı: adın parça numarasından önceki kısmı ("Sol askı yayı · 2K60377" → "Sol askı yayı")
+// Sütun başlığı: adın " · " ayracından önceki kısmı ("Sol askı yayı · arka" → "Sol askı yayı")
 function _mntRepAskiKisa(ad){ return _mntRepShort(String(ad||'askı').split(' · ')[0], 16); }
 function _mntRepAski(R){
   var A=R.askilar;

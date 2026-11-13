@@ -2447,10 +2447,9 @@ var VE_FEAD_EXAMPLES = {
       { key:'IDR2', type:'fead-idler',       name:'Avara 2',
         data:{ od:75,  x:0,        y:267.40, contact:'back',    inertia:0.00087 } },
       // DEVİR SINIRLARI ADI SÖYLEDİĞİ İÇİN YAZILABİLİYOR. Örneğin kendi adı
-      // modeli veriyor ("155 A") ve aksesuar kataloğunda o modelin İKİ kaydı
-      // var (57RS309036 · 57RS309348); ikisi de aynı üç sınırı taşıyor, yani
-      // sayı belirli, parça numarası değil. Bu yüzden `accLib` YAZILMAZ — bir
-      // parça numarası iddia etmek olurdu, üstelik künye uygulamak örneğin
+      // modeli veriyor ("155 A") ve aksesuar kataloğunda o model TEK kayıt
+      // (defterin iki satırı birebir aynıydı), yani sayı belirli. Bu yüzden
+      // `accLib` YAZILMAZ — bir katalog bağı iddia etmek olurdu, üstelik künye uygulamak örneğin
       // rapordan ölçülmüş kW eğrisini de ezerdi.
       { key:'ALT',  type:'fead-alternator',  name:'Alternatör (155 A)',
         data:{ od:57,  x:-281.00,  y:259.50, contact:'grooved', inertia:0.0144,
@@ -2654,7 +2653,7 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
       // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
       // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
-      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // 7H15 kaydı var, yani üç sınır da belirli.
       // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
       // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
       // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
@@ -2698,7 +2697,7 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
       // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
       // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
-      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // 7H15 kaydı var, yani üç sınır da belirli.
       // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
       // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
       // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
@@ -2742,7 +2741,7 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:175.01, x:0, y:0, contact:'grooved', driver:true, inertia:0.5 } },
       // MODEL RAPORUN KENDİSİNDE YAZILI: bileşen dosyası `SD7H15-AC.cmp`,
       // tasarım adı da "Secondary AC (SD7H15) Drive". Katalogda tek Sanden
-      // 7H15 kaydı var (57RS319930), yani üç sınır da belirli.
+      // 7H15 kaydı var, yani üç sınır da belirli.
       // AD KATALOĞUN YAZIMIYLA: rapor `SD7H15` (Sanden'in kendi kodu), katalog
       // "Sanden 7H15" diyor. Aynı parça — ama adı katalogla aynı yazmak, bağı
       // gizli bir eşleme tablosu olmadan MAKİNEYLE denetlenebilir kılıyor.
@@ -2791,7 +2790,7 @@ var VE_FEAD_EXAMPLES = {
       { key:'IDR', type:'fead-idler', name:"Avara",
         data:{ od:75, x:-200, y:150, contact:'back', inertia:0.0002 } },
       // Bileşen dosyası `AG810-250Amp-ALT.cmp` — akım raporun kendisinde
-      // yazılı. Katalogda tek 250 A kaydı var (54100000001 Prestolite 250A).
+      // yazılı. Katalogda tek 250 A kaydı var (Prestolite 250A).
       { key:'ALT', type:'fead-alternator', name:"Alternatör (250 A)",
         data:{ od:55, x:-391, y:131, contact:'grooved', inertia:0.014,
                optimumRpm:6000, maxContRpm:8000, maxPeakRpm:12000 } },
@@ -2911,7 +2910,7 @@ var VE_FEAD_EXAMPLES = {
       // "Valeo TM21 AC ø127 Drive". Bir dönem burada "rapor yalnız
       // `7_9kW_A_C.cmp` diyor, model yok" yazıyordu: satır okuyucu hücrenin
       // yalnız SON parçasını görüyordu (hücre beş ayrı çizim çağrısı).
-      // Katalogda tek Valeo TM21 kaydı var (57RS321633), yani üç sınır da
+      // Katalogda tek Valeo TM21 kaydı var, yani üç sınır da
       // belirli. `accLib` yine YAZILMAZ — bkz. AG0868 kayıtlarındaki not.
       // AD KISA: "Klima (TM21)". Bu düzende klimanın adı kol konumu
       // künyesinin hemen yanına düşüyor ve tam ad adayların hepsini
@@ -3004,15 +3003,15 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:159, x:0, y:0, contact:'grooved', driver:true } },
       { key:'IDR1', type:'fead-idler', name:"Avara 1",
         data:{ od:75, x:143, y:140, contact:'back' } },
-      // Adı modeli veriyor; katalogdaki iki Valeo TM31 kaydı (55100000130 ·
-      // 57RS322530) aynı üç sınırı taşıyor. Bkz. ALT kaydındaki gerekçe.
+      // Adı modeli veriyor; katalogda tek Valeo TM31 kaydı var (defterin iki
+      // satırı birebir aynıydı). Bkz. ALT kaydındaki gerekçe.
       { key:'TM31', type:'fead-ac', name:"Klima Kompresörü (TM31)",
         data:{ od:152, x:184, y:314.6, contact:'grooved',
                optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'IDR2', type:'fead-idler', name:"Avara 2",
         data:{ od:75, x:0, y:272.5, contact:'back' } },
-      // Bileşen dosyası `SD7H15.cmp`; katalogda tek Sanden 7H15 kaydı var
-      // (57RS319930). Ad kataloğun yazımıyla — bkz. AG0868 kayıtlarındaki not.
+      // Bileşen dosyası `SD7H15.cmp`; katalogda tek Sanden 7H15 kaydı var.
+      // Ad kataloğun yazımıyla — bkz. AG0868 kayıtlarındaki not.
       { key:'SD7H15', type:'fead-ac', name:"Klima Kompresörü (Sanden 7H15)",
         data:{ od:119, x:-267.4, y:241, contact:'grooved',
                optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },

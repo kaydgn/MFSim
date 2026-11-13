@@ -88,9 +88,9 @@ describe('Sihirbaz — BMC motor kataloğu', () => {
 
   test('seçim silindiri, dört devri ve birinci kademe çaplarını yazar', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
+    wiz.veFeadWizEngineLib('motor-10');
     const s = wiz.veFeadWizState().solver;
-    expect(s.engineLib).toBe('57RS303234');
+    expect(s.engineLib).toBe('motor-10');
     expect(s.cylinders).toBe(6);
     expect(s.idleRpm).toBe(700);
     expect(s.governedRpm).toBe(2100);
@@ -103,7 +103,7 @@ describe('Sihirbaz — BMC motor kataloğu', () => {
 
   test('boş seçim yalnız BAĞI çözer, alanları silmez', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
+    wiz.veFeadWizEngineLib('motor-10');
     wiz.veFeadWizEngineLib('');
     const s = wiz.veFeadWizState().solver;
     expect(s.engineLib).toBeUndefined();
@@ -120,7 +120,7 @@ describe('Sihirbaz — BMC motor kataloğu', () => {
 
   test('satır katalogdan sapmayı ADIYLA yazar', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
+    wiz.veFeadWizEngineLib('motor-10');
     const s = wiz.veFeadWizState().solver;
     expect(wiz._fwEngineLibRow(s)).toContain('birebir');
     s.governedRpm = 2200;
@@ -142,8 +142,8 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
   test('künye üç sınırı ve devir→kW eğrisini satıra yazar', () => {
     bmcKur();
     const p = altSatiri();
-    wiz.veFeadWizAccLib(p.key, '57RS309348');
-    expect(p.accLib).toBe('57RS309348');
+    wiz.veFeadWizAccLib(p.key, 'prestolite-155a');
+    expect(p.accLib).toBe('prestolite-155a');
     expect(p.optimumRpm).toBe(6000);
     expect(p.maxContRpm).toBe(8000);
     expect(p.maxPeakRpm).toBe(12000);
@@ -156,7 +156,7 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
     const p = altSatiri();
     const kendi = [{ rpm: 2000, kw: 3.1 }];
     p.pwrCurve = kendi;
-    wiz.veFeadWizAccLib(p.key, '57RS309791');       // Prestolite 120A — eğrisi yok
+    wiz.veFeadWizAccLib(p.key, 'prestolite-120a');       // Prestolite 120A — eğrisi yok
     expect(p.pwrCurve).toBe(kendi);
     expect(p.maxContRpm).toBe(9000);                // sınırlar yine geldi
   });
@@ -164,7 +164,7 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
   test('bağı çözmek alanları bırakır', () => {
     bmcKur();
     const p = altSatiri();
-    wiz.veFeadWizAccLib(p.key, '57RS309348');
+    wiz.veFeadWizAccLib(p.key, 'prestolite-155a');
     wiz.veFeadWizAccLib(p.key, '');
     expect(p.accLib).toBeUndefined();
     expect(p.maxContRpm).toBe(8000);
@@ -173,7 +173,7 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
   test('elle girilen sınır katalogtan üstün, kaynak "elle" okunur', () => {
     bmcKur();
     const p = altSatiri();
-    wiz.veFeadWizAccLib(p.key, '57RS309348');
+    wiz.veFeadWizAccLib(p.key, 'prestolite-155a');
     expect(A.veFeadAccLimits(p).maxCont).toEqual({ rpm: 8000, kaynak: 'katalog' });
     p.maxContRpm = 7500;
     expect(A.veFeadAccLimits(p).maxCont).toEqual({ rpm: 7500, kaynak: 'elle' });
@@ -200,7 +200,7 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
     const k = A.veFeadAccList('fead-alternator')[0].key;
     wiz.veFeadWizAccModel(alt.key, 'bmc:' + k);
     const not = sinirlar(kart()).map((s) => s.textContent).join(' ');
-    expect(not).toContain(k);
+    expect(not).toContain('künye ' + A.veFeadAccOf(k).ad);          // ad, parça kodu değil (Canlı Not 1004)
     // Defterde OLMAYAN bir tipte sınır alanı yine var.
     wiz.veFeadWizPulleyAdd('fead-waterpump');
     const h2 = kart();
@@ -219,10 +219,10 @@ describe('veFeadWizNodes — altı yeni alan taşınıyor', () => {
   test('kasnakta accLib ve üç sınır', () => {
     bmcKur();
     const p = altSatiri();
-    wiz.veFeadWizAccLib(p.key, '57RS309348');
+    wiz.veFeadWizAccLib(p.key, 'prestolite-155a');
     const pack = wiz.veFeadWizNodes();
     const n = pack.nodes.filter((x) => x.id === 'wz-' + p.key)[0];
-    expect(n.data.accLib).toBe('57RS309348');
+    expect(n.data.accLib).toBe('prestolite-155a');
     expect(n.data.accLibVer).toBe(A.VE_FEAD_ACC_LIB_VERSION);
     expect(n.data.optimumRpm).toBe(6000);
     expect(n.data.maxContRpm).toBe(8000);
@@ -240,9 +240,9 @@ describe('veFeadWizNodes — altı yeni alan taşınıyor', () => {
 
   test('çözücüde engineLib ve dört motor devri', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
+    wiz.veFeadWizEngineLib('motor-10');
     const sd = wiz.veFeadWizNodes().nodes.filter((x) => x.id === 'wz-solver')[0].data;
-    expect(sd.engineLib).toBe('57RS303234');
+    expect(sd.engineLib).toBe('motor-10');
     expect(sd.engineLibVer).toBe(E.VE_FEAD_ENGINE_LIB_VERSION);
     expect(sd.idleRpm).toBe(700);
     expect(sd.governedRpm).toBe(2100);
@@ -322,9 +322,9 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
 
   test('motor + iki künye verilince kapılar hüküm veriyor', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
-    wiz.veFeadWizAccLib(altSatiri().key, '57RS309348');
-    wiz.veFeadWizAccLib(acSatiri().key, '57RS322530');
+    wiz.veFeadWizEngineLib('motor-10');
+    wiz.veFeadWizAccLib(altSatiri().key, 'prestolite-155a');
+    wiz.veFeadWizAccLib(acSatiri().key, 'valeo-tm31');
     const { R } = kapilar();
     expect(R.centerDistance.rows.length).toBe(6);
     expect(R.ratioWindow.rows.length).toBe(2);
@@ -339,9 +339,9 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
   // hükmüyle AYNI olmak zorunda. Alanlardan biri taşınmasaydı burası ayrışırdı.
   test('sihirbazın hükmü ile KURULAN modelin hükmü birebir', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
-    wiz.veFeadWizAccLib(altSatiri().key, '57RS309348');
-    wiz.veFeadWizAccLib(acSatiri().key, '57RS322530');
+    wiz.veFeadWizEngineLib('motor-10');
+    wiz.veFeadWizAccLib(altSatiri().key, 'prestolite-155a');
+    wiz.veFeadWizAccLib(acSatiri().key, 'valeo-tm31');
     const sihirbaz = kapilar().R;
 
     // Kurulan modelin yolu: aynı düğüm listesi köprüden geçiyor.
@@ -361,9 +361,9 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
 
   test('kart üç kapıyı da basıyor ve durumu öznitelikte taşıyor', () => {
     bmcKur();
-    wiz.veFeadWizEngineLib('57RS303234');
-    wiz.veFeadWizAccLib(altSatiri().key, '57RS309348');
-    wiz.veFeadWizAccLib(acSatiri().key, '57RS322530');
+    wiz.veFeadWizEngineLib('motor-10');
+    wiz.veFeadWizAccLib(altSatiri().key, 'prestolite-155a');
+    wiz.veFeadWizAccLib(acSatiri().key, 'valeo-tm31');
     const h = wiz._fwChecksCard(wiz.veFeadWizBuild());
     expect(h).toContain('data-ve-fw-checks');
     expect(h).toContain('Kasnak merkez mesafesi');

@@ -34,17 +34,17 @@ function E_(buyuk) {
   return {
     baslik: 'Takoz konfigürasyonları', arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4500 SP',
     fAtes: 35, trSinir: 0.15, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
-    gruplar: ['Ön takoz · 57RS313774', 'Sağ/Sol arka takoz · 57RS313773'],
-    takozlar: [{ ad: 'Ön takoz · 57RS313774', grup: 0 }, { ad: 'Sağ arka takoz · 57RS313773', grup: 1 }, { ad: 'Sol arka takoz · 57RS313773', grup: 1 }],
+    gruplar: ['Ön takoz', 'Sağ/Sol arka takoz'],
+    takozlar: [{ ad: 'Ön takoz', grup: 0 }, { ad: 'Sağ arka takoz', grup: 1 }, { ad: 'Sol arka takoz', grup: 1 }],
     konfig: [
-      { K: 0, mevcut: true, tipler: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'], uygunluk: 'Uygun değil',
+      { K: 0, mevcut: true, tipler: ['ASFAT takozu B', 'ASFAT takozu A'], uygunluk: 'Uygun değil',
         kriter: [true, true, false, true], d: 2.9001, f: [5.11, 5.70, 6.53, 8.49, 10.79, 15.47], T: 0.10309,
-        takozTip: ['57RS313774 (ASR-SR-116)', '57RS313773 (ASR-SR-116)', '57RS313773 (ASR-SR-116)'],
+        takozTip: ['ASFAT takozu B', 'ASFAT takozu A', 'ASFAT takozu A'],
         vakalar: [vaka('Static', [-2.69, -2.66, -2.9]), vaka('Max Bump', [-15.1, -8.9, -9.7])],
         modlar: [{ f: 5.70, ad: 'roll' }, { f: 5.11, ad: 'pitch+bounce' }] },
-      { K: 1, tipler: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
+      { K: 1, tipler: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)'], uygunluk: 'En uygun',
         kriter: [true, true, true, true], d: 5.9178, f: [6.82, 7.98, 11.41, 12.04, 14.21, 15.21], T: 0.121701,
-        takozTip: ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
+        takozTip: ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'Cone 121 NP 55 ShA (AMC 137829)'],
         vakalar: [vaka('Static', [-3.9, -5.43, -5.92])], modlar: [{ f: 6.82, ad: 'roll' }] },
       { K: 2, tipler: ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)'], uygunluk: 'Uygun',
         kriter: [true, true, true, true], d: 6.0128, f: [5.69, 7.03, 7.86, 10.53, 11.06, 13.16], T: 0.051,
@@ -90,8 +90,8 @@ describe('VERİ', () => {
     expect(html.startsWith('<!doctype html>\n<html lang="tr">')).toBe(true);
     expect(html).toMatch(/<title>10 Ton TTA — Takoz konfigürasyonları<\/title>/);
     expect(D.konfig.map((k) => [k.K, k.u, k.tip])).toEqual([
-      [0, 'Uygun değil', ['57RS313774', '57RS313773']],                        // "ASR…" eki yazılmaz
-      [1, 'En uygun', ['TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)']],
+      [0, 'Uygun değil', ['ASFAT takozu B', 'ASFAT takozu A']],
+      [1, 'En uygun', ['TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)']],
       [2, 'Uygun', ['Mount 1 70 ShA', 'Cone 39 50 ShA (AMC 137982)']]]);
     expect(D.konfig[0].k).toBe(0b1011);                                       // dört kriter bit bit
     expect(D.konfig[0].mod.map((m) => m[0])).toEqual([5.11, 5.7]);            // modlar frekansa göre
@@ -155,7 +155,7 @@ describe('SAYFA', () => {
     expect(tr.map((r) => metin(r.children[0]))).toEqual(['K0', 'K1', 'K2']);
     expect(tr.map((r) => r.querySelector('.u-en, .u-uy') ? r.querySelector('.u-en, .u-uy').className : '')).toEqual(['', 'sol u-en', 'sol u-uy']);
     const c = [...tr[0].children].map(metin);
-    expect(c.slice(1, 5)).toEqual(['57RS313774', '57RS313773', 'Uygun değil', '2,90']);
+    expect(c.slice(1, 5)).toEqual(['ASFAT takozu B', 'ASFAT takozu A', 'Uygun değil', '2,90']);
     expect(c.slice(5, 9)).toEqual(['✓', '✓', '✗', '✓']);
     expect(c[9]).toBe('%10,3');
     // Canlı not 2004 ("Daha güzel bir şekilde … yayalım bu bilgileri"): künye ad · değer hücreleri
@@ -212,7 +212,7 @@ describe('SAYFA', () => {
     expect(w.location.hash).toBe('#T2');
     expect(d.getElementById('v-sonuc').hidden).toBe(false);
     expect(metin(d.querySelector('#ve-sonuc h2'))).toBe('No 2');
-    expect(metin(d.querySelector('#ve-sonuc .tipler'))).toBe('Ön takoz: 57RS313774 · Sağ/Sol arka takoz: Cone 39 50 ShA (AMC 137982)');
+    expect(metin(d.querySelector('#ve-sonuc .tipler'))).toBe('Ön takoz: ASFAT takozu B · Sağ/Sol arka takoz: Cone 39 50 ShA (AMC 137982)');
     const [sehim, mod] = d.querySelectorAll('#ve-sonuc table');
     // Canlı not 2002 ("Sonuç kısmını aynı Excel gibi … Sütun aralarını çizgili … Yük durumu sütununu da
     // ayıralım"): iki tablo ızgara, Yük durumu sütunu ayrık (başlığı ve her satırın ilk hücresi)
@@ -221,8 +221,9 @@ describe('SAYFA', () => {
     expect([...sehim.querySelectorAll('tbody tr')].map((r) => r.children[0].classList.contains('yuk'))).toEqual([true, true]);
     expect(sehim.querySelector('thead th').classList.contains('yuk')).toBe(true);
     const st = [...sehim.querySelectorAll('tbody tr')].map((r) => [...r.children].map(metin));
-    expect(st[0]).toEqual(['Static', '−0,12', '0,00', '−15,00', '0,02', '0,00', '−12,00', '0,02', '0,00', '−12,10']);
-    expect(st[1].slice(1)).toEqual(Array(9).fill('—'));                      // sonuç yok
+    // takozların blokları arasında boş sütun (Canlı not 2009, aşağıda)
+    expect(st[0]).toEqual(['Static', '−0,12', '0,00', '−15,00', '', '0,02', '0,00', '−12,00', '', '0,02', '0,00', '−12,10']);
+    expect(st[1].slice(1)).toEqual(['—', '—', '—', '', '—', '—', '—', '', '—', '—', '—']);   // sonuç yok
     expect([...mod.querySelectorAll('tbody tr')].map((r) => [...r.children].map(metin))[0]).toEqual(['1', 'Bounce + Pitch', '3,58']);
     const a = [...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => [metin(x), x.getAttribute('href')]);
     expect(a).toEqual([['← Tarama', '#tarama'], ['← No 1', '#T1'], ['No 3 →', '#T3']]);
@@ -243,6 +244,81 @@ describe('SAYFA', () => {
     expect(st[1].slice(1, 4)).toEqual(['0,20', '0,00', '−15,10']);
     expect([...d.querySelectorAll('#ve-sonuc .arac a')].map((x) => x.getAttribute('href'))).toEqual(['#ozet', '#K1']);
     expect(metin(d.querySelector('#ve-sonuc .izgara div'))).toBe('UygunlukUygun değil');
+  });
+
+  // Canlı not 2009: "Her takoz çiftini ayır. Yan yana olunca okuması zorlanıyor. Arada bir sütun kadar
+  // boşluk olsun. Okunması kolay olsun." — Sehim tablosunda her takozun X · Y · Z bloğu bir sonrakinden
+  // boş bir sütunla ayrık: iki başlık satırında ve her yük durumunda aynı sütunda; Yük durumu ile ilk
+  // takoz arasında boşluk yok (ilk takozun Z'si satırın 4. hücresi). Boşluk yazısız, çizgisiz, sayfanın
+  // zemininde (satırın üstündeki fare de boyamaz), genişliği bir sayı sütunu kadar; kap çerçevesiz,
+  // bloklar kendi ızgarasıyla. Modlar tablosu aynı.
+  test('Sehim: takozların blokları arasında bir sütunluk boşluk — iki başlık satırında ve her satırda; çizgisiz, sayfanın zemininde; Modlar aynı', () => {
+    const w = ac(html, '#T2'), d = w.document, cs = (e) => w.getComputedStyle(e);
+    const [sehim, mod] = d.querySelectorAll('#ve-sonuc table');
+    // satırın dizilişi: Y = Yük durumu, x = takozun bir sütunu (grup başlığı üç), | = boşluk
+    const dizilis = (r) => [...r.children].map((c) => (c.classList.contains('bosluk') ? '|' : c.classList.contains('yuk') ? 'Y' : 'x'.repeat(c.colSpan))).join('');
+    const SATIRLAR = ['Yxxx|xxx|xxx', 'xxx|xxx|xxx', 'Yxxx|xxx|xxx', 'Yxxx|xxx|xxx'];   // ikinci başlık satırı Yük durumunun altında
+    expect([...sehim.rows].map(dizilis)).toEqual(SATIRLAR);
+    expect([...ac(html, '#K0').document.querySelector('#ve-sonuc table').rows].map(dizilis)).toEqual(SATIRLAR);
+    const bos = [...sehim.querySelectorAll('td.bosluk')];
+    expect(bos.length).toBe(2 * 4);                                           // iki aralık × dört satır
+    expect(bos.every((c) => c.textContent === '' && c.colSpan === 1 && c.rowSpan === 1)).toBe(true);
+    expect(metin(sehim.tBodies[0].rows[0].children[3])).toBe('−15,00');
+    const b = bos[0], kok = cs(d.documentElement);
+    const px = (v) => { const m = /^var\((--[\w-]+)\)$/.exec(v); return parseFloat(m ? kok.getPropertyValue(m[1]) : v); };   // jeton ya da değer
+    expect(['Top', 'Right', 'Bottom', 'Left'].map((k) => cs(b)['border' + k + 'Width'])).toEqual(['0px', '0px', '0px', '0px']);
+    // zeminsiz: boşluktan sayfaya dek her kap saydam (aralıkta sayfanın zemini görünür); sayının hücresi zeminli
+    const saydam = (e) => /^(rgba\(0, 0, 0, 0\)|transparent|none)(\s|$)/.test(cs(e).background);
+    for (let e = b; e !== d.body; e = e.parentElement) expect([e.tagName, e.className, saydam(e)]).toEqual([e.tagName, e.className, true]);
+    expect(saydam(d.body)).toBe(false);
+    expect(saydam(sehim.tBodies[0].rows[0].children[1])).toBe(false);
+    const kural = [...d.styleSheets].flatMap((s) => [...s.cssRules]).find((r) => /td\.bosluk/.test(r.selectorText || ''));
+    expect(kural.selectorText).toMatch(/tr:hover td\.bosluk/);
+    const sutun = px(cs(sehim.tBodies[0].rows[0].children[1]).minWidth), bosluk = px(cs(b).minWidth);
+    expect(bosluk / sutun).toBeGreaterThanOrEqual(0.8);
+    expect(bosluk).toBeLessThanOrEqual(sutun);
+    expect(['Top', 'Right', 'Bottom', 'Left'].map((k) => cs(sehim.parentElement)['border' + k + 'Width'])).toEqual(['0px', '0px', '0px', '0px']);
+    expect(mod.querySelectorAll('.bosluk').length).toBe(0);
+    expect(mod.parentElement.className).toBe('kap dar');
+  });
+
+  // Canlı not 2010: "Şuradaki kalın çizginin amacı ne? Diğerleri gibi olsun, kalın olmasın." — Yük
+  // durumu sütununun sağındaki kalın, koyu çizgi (Canlı not 2002) yok: sütunun iki kenarı öteki
+  // hücrelerin çizgisiyle (ızgaranın kalınlığı ve rengi), hücrenin İÇİNDE (iç gölge; birleşik kenarlık
+  // bastırılır) — birleşik kenarlık yapışık hücreyle gitmez, gerçek tarayıcıda tablo yana kayınca sütunun
+  // iki kenarı da kayboluyordu. Sütun yapışık, kalın yazılı, gri zeminde kalır. Belgenin hiçbir tablo
+  // kuralında ızgaradan kalın ya da koyu çizgi yok (Modlar · Özet · Tarama dâhil).
+  test('Sehim: Yük durumu sütununun çizgisi öteki hücrelerinki gibi — kalın çizgi yok; sütun yapışık, kalın yazılı, gri zeminde', () => {
+    const w = ac(html, '#T2'), d = w.document, cs = (e) => w.getComputedStyle(e);
+    const kurallar = [...d.styleSheets].flatMap((s) => [...s.cssRules]).filter((r) => r.selectorText);
+    // öteki hücrelerin çizgisi: kalınlık · tür · renk
+    const izgara = kurallar.find((r) => r.selectorText.replace(/\s*,\s*/g, ',') === 'table.izg th,table.izg td').style.getPropertyValue('border');
+    expect(izgara).toBe('1px solid var(--cizgi)');
+    const [kal, , renk] = izgara.split(' ');
+    const yuk = [...d.querySelector('#ve-sonuc table').querySelectorAll('.yuk')];
+    expect(yuk.map((c) => c.tagName)).toEqual(['TH', 'TD', 'TD']);              // başlık + iki yük durumu
+    // hücreye uyan kuralların bildirdiği değer (jsdom'un hesabı değişkenli kısa yazımın yanında
+    // kenarın türünü vermiyor)
+    const bildirim = (c, ad) => kurallar.filter((r) => c.matches(r.selectorText)).map((r) => r.style.getPropertyValue(ad)).filter(Boolean);
+    yuk.forEach((c) => {
+      const s = cs(c);
+      expect([bildirim(c, 'border-left-style'), bildirim(c, 'border-right-style')]).toEqual([['hidden'], ['hidden']]);
+      expect(s.boxShadow.split(/,\s*/)).toEqual(['inset ' + kal + ' 0 0 ' + renk, 'inset -' + kal + ' 0 0 ' + renk]);
+      expect([s.position, s.left, s.fontWeight, s.background]).toEqual(['sticky', '0px', '600', 'var(--zemin)']);
+    });
+    // belgenin tablo kuralları: hiçbir çizgi ızgaradan kalın ya da koyu değil
+    const tablo = /(^|[\s,>+~])(table|thead|tbody|tr|th|td)\b|\.(yuk|izg)\b/;
+    const cizgi = [], kalin = [];
+    kurallar.filter((r) => tablo.test(r.selectorText)).forEach((r) => {
+      for (let i = 0; i < r.style.length; i++) {
+        const ad = r.style[i], v = r.style.getPropertyValue(ad);
+        if (!/^(border|box-shadow|outline)/.test(ad)) continue;
+        cizgi.push(ad);
+        if ((v.match(/\d*\.?\d+px/g) || []).some((x) => parseFloat(x) > parseFloat(kal)) || /cizgi-koyu/.test(v)) kalin.push(r.selectorText + ' → ' + ad + ': ' + v);
+      }
+    });
+    expect(kalin).toEqual([]);
+    expect(cizgi).toEqual(expect.arrayContaining(['border', 'border-bottom', 'box-shadow']));   // tarama boş değil
   });
 
   // Belge Canlı Not'ta çerçevede (srcdoc) açılır: "#tarama" üst sayfanın adresine çözülür ve

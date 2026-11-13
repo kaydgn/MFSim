@@ -711,8 +711,8 @@ var veMountCore = (function() {
   }
 
   // ═══════════════════ Askı yayı — ön yüklü, sınırlı (2026-11-11) ═══════════════════
-  // Şanzımanın kuyruğunu şasiye asan helisel basma yayı (kullanıcı 2026-11-11,
-  // BMC 2K60377): yalnız DÜŞEY kuvvet taşır, gövdeyi +z iter. Kuvvet boydan:
+  // Şanzımanın kuyruğunu şasiye asan helisel basma yayı (kullanıcı 2026-11-11):
+  // yalnız DÜŞEY kuvvet taşır, gövdeyi +z iter. Kuvvet boydan:
   //   F = k·(L0 − L),  L = Ld + δz
   // δz yay noktasının düşey yer değiştirmesi, Ld tasarım konumundaki (takozlar
   // yüksüzken) boy. L ≥ L0 → AÇIK (F = 0); L ≤ Lc → BLOK, yay rijit dayanağa
@@ -2388,7 +2388,7 @@ var veMountCore = (function() {
   const ASFAT_EXAMPLE = {
     g: 9.81,
     components: [
-      {name:'Motor — Cummins 57RS303308',      mass:1600, cg:[-314.940,  -0.127, 857.560], Ixx:110.7,  Iyy:260.2,  Izz:205.9,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor',     at:[336,238]},
+      {name:'Motor — Cummins X15E3 600',      mass:1600, cg:[-314.940,  -0.127, 857.560], Ixx:110.7,  Iyy:260.2,  Izz:205.9,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor',     at:[336,238]},
       {name:'Şanzıman + Retarder — Allison 4700', mass:600, cg:[945.373, -9.970, 680.960], Ixx:16.43,  Iyy:68.15,  Izz:64.91,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox',   at:[536,247]},
       {name:'Şaft',                            mass:16,   cg:[2246.000, 156.000,   0.000], Ixx:0.042,  Iyy:1.16,   Izz:1.16,   Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-shaft',     at:[686,247]},
       {name:'Sol Motor Braketi',               mass:48,   cg:[ 760.963,-300.631, 736.392], Ixx:0.315,  Iyy:4.392,  Izz:4.211,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-bracket',   at:[336,356]},
@@ -2396,16 +2396,16 @@ var veMountCore = (function() {
       {name:'Top PTO Grubu',                   mass:97,   cg:[1058.064,  77.013, 894.726], Ixx:0.45,   Iyy:6.515,  Izz:6.15,   Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-pto-group', at:[442,154]},
       {name:'Side PTO Grubu',                  mass:46,   cg:[ 855.340,-269.520, 473.300], Ixx:0.136,  Iyy:0.915,  Izz:0.915,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-pto-group', at:[220,354]}
     ],
-    // ÖN ikili 57RS313774 statik = dinamik (Tablo 9 böyle verir — elastomer için
-    // atipiktir ama dokümandan aynen alınmıştır). ARKA dörtlü 57RS313773 dinamik
+    // ÖN ikili (ASFAT takozu B) statik = dinamik (Tablo 9 böyle verir — elastomer için
+    // atipiktir ama dokümandan aynen alınmıştır). ARKA dörtlü (ASFAT takozu A) dinamik
     // olarak sertleşir: 462→630 (x,y) ve 2200→3000 (z).
     mounts: [
-      {name:'Ön Sol · 57RS313774',   pos:[-953.45, -50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 89,187]},
-      {name:'Ön Sağ · 57RS313774',   pos:[-953.45,  50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 85,303]},
-      {name:'Sol Ön · 57RS313773',   pos:[ 535.31,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[336,468]},
-      {name:'Sağ Ön · 57RS313773',   pos:[ 535.31, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[337, 41]},
-      {name:'Sol Arka · 57RS313773', pos:[ 636.80,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428,469]},
-      {name:'Sağ Arka · 57RS313773', pos:[ 636.80, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428, 40]}
+      {name:'Sol Ön Takoz',          pos:[-953.45, -50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 89,187]},
+      {name:'Sağ Ön Takoz',          pos:[-953.45,  50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 85,303]},
+      {name:'Sol Orta Takoz',        pos:[ 535.31,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[336,468]},
+      {name:'Sağ Orta Takoz',        pos:[ 535.31, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[337, 41]},
+      {name:'Sol Arka Takoz',        pos:[ 636.80,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428,469]},
+      {name:'Sağ Arka Takoz',        pos:[ 636.80, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428, 40]}
     ],
     loadCases: defaultLoadCases()
   };
@@ -2443,7 +2443,7 @@ var veMountCore = (function() {
   //     + o parçaların nokta kütle payı. 4500 SP'nin ataleti Allison 4000 §11
   //     (6 vites · PTO · retardersiz).
   //   rijitlik → iki kitapta da YOK; ASFAT'ın takozları (kullanıcı kararı 2026-11-06):
-  //     ön 57RS313774, arka 57RS313773, ASR-SR-116 değerleri; ζ = 0,02 aynı belgeden.
+  //     ön ASFAT takozu B, arka A; ζ = 0,02 aynı belgeden.
   //   bağlantı yüzü → bloğun arka yüzü (Excel'in Mr düzlemi; kullanıcı kararı
   //     2026-11-06), krank ekseninde: X 428,5 (L1 ve L3'ün ikisi de verir), Y/Z
   //     Allison satırından (CG 47,0 mm eksenin altında). Sınır 1.350 N·m: ISM11
@@ -2485,12 +2485,12 @@ var veMountCore = (function() {
     ],
     // Föyün sırası (Mount 1–6); 4 · 6'nın X'i sol eşlerinin (yukarıdaki yazım hatası).
     mounts: [
-      {name:'Ön sol takoz · 57RS313774',   pos:[-636.668,  -48.971, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,389]},
-      {name:'Ön sağ takoz · 57RS313774',   pos:[-636.471,   52.629, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,273]},
-      {name:'Sol ön takoz · 57RS313773',   pos:[ 532,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,533]},
-      {name:'Sağ ön takoz · 57RS313773',   pos:[ 532,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,137]},
-      {name:'Sol arka takoz · 57RS313773', pos:[ 642,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,533]},
-      {name:'Sağ arka takoz · 57RS313773', pos:[ 642,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,137]}
+      {name:'Sol ön takoz',   pos:[-636.668,  -48.971, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,389]},
+      {name:'Sağ ön takoz',   pos:[-636.471,   52.629, 293.531], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,273]},
+      {name:'Sol orta takoz', pos:[ 532,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,533]},
+      {name:'Sağ orta takoz', pos:[ 532,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[460,137]},
+      {name:'Sol arka takoz', pos:[ 642,     -365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,533]},
+      {name:'Sağ arka takoz', pos:[ 642,      365,     535    ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[550,137]}
     ],
     torque: TTA10_TORQUE,
     cozucu: { zeta:0.02 },
@@ -2499,28 +2499,28 @@ var veMountCore = (function() {
 
   // ── 10 Ton TTA — ŞANZIMAN ASKILI (kullanıcı 2026-11-11): "6X6 YENİ KABİN - ISM TAKOZ
   // KONUMLARI - ŞANZIMAN ASKILI" föyü (tests/fixtures/excel-tta-askili.js): arka takozların Y'si
-  // ±335, iki askı yayı (Spring-1 · 2'nin noktaları, BMC 2K60377). Föy takoz TİPİ vermiyor —
+  // ±335, iki askı yayı (Spring-1 · 2'nin noktaları). Föy takoz TİPİ vermiyor —
   // soru "hangi takozlar uygun" (kullanıcı 2026-11-13). Tipler ve ön yük Parametrik Analiz'in
   // motorundan, askıyla birlikte (üç grup × 23 aday = 12.167 kombinasyon): dört kesin kriter +
   // uygunluğun bütün satırları (askı çalışma aralığında) + Cummins bandı (0 ≤ M_b ≤ 0,2·sınır).
   // Föyün 50 kg'ında hiçbir kombinasyon geçmiyor (en çok torkta yay açılıyor); 80 kgf'ta altı
   // geçiyor, seçilen ±%15 rijitlik toleransında 8–10 Hz bandını ve TR < %15'i tutan:
   // ön çift TK040 (yasasıyla), arka dört AMC Cone 38 60 ShA (137963). Gövdeler ve tork askısız
-  // örneğin aynısı. Kapı: tests/unit/mount-aski.test.js → TTA ASKILI · TAKOZ SEÇİMİ.
+  // örneğin aynısı. Kapı: tests/unit/mount-aski-secim.test.js + mount-aski.test.js → TTA ASKILI.
   const _TK040 = { kstat:[515,260,242], kdyn:[740,355,335] };
   const _AMC137963 = { kstat:[1800,1210,1150], kdyn:[2880,1936,1840] };
   const TTA10_ASKILI_EXAMPLE = Object.assign({}, TTA10_EXAMPLE, {
     mounts: [
-      Object.assign({name:'Ön sol takoz · TK040',        pos:[-636.668,  -48.971, 293.531]}, _TK040),
-      Object.assign({name:'Ön sağ takoz · TK040',        pos:[-636.471,   52.629, 293.531]}, _TK040),
-      Object.assign({name:'Sol ön takoz · AMC 137963',   pos:[ 532,     -335,     535    ]}, _AMC137963),
-      Object.assign({name:'Sağ ön takoz · AMC 137963',   pos:[ 532,      335,     535    ]}, _AMC137963),
-      Object.assign({name:'Sol arka takoz · AMC 137963', pos:[ 642,     -335,     535    ]}, _AMC137963),
-      Object.assign({name:'Sağ arka takoz · AMC 137963', pos:[ 642,      335,     535    ]}, _AMC137963)
+      Object.assign({name:'Sol ön takoz',   pos:[-636.668,  -48.971, 293.531]}, _TK040),
+      Object.assign({name:'Sağ ön takoz',   pos:[-636.471,   52.629, 293.531]}, _TK040),
+      Object.assign({name:'Sol orta takoz', pos:[ 532,     -335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sağ orta takoz', pos:[ 532,      335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sol arka takoz', pos:[ 642,     -335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sağ arka takoz', pos:[ 642,      335,     535    ]}, _AMC137963)
     ],
     askilar: [
-      {name:'Sol askı yayı · 2K60377', pos:[1365, -350, 672.503], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80},
-      {name:'Sağ askı yayı · 2K60377', pos:[1365,  350, 672.501], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80}
+      {name:'Sol askı yayı', pos:[1365, -350, 672.503], yay:'tta-aski', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80},
+      {name:'Sağ askı yayı', pos:[1365,  350, 672.501], yay:'tta-aski', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80}
     ]
   });
 

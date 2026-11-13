@@ -29,10 +29,12 @@ const IDX = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
 
 // ───────────────────────────────────────────────────────── MOTOR KATALOĞU ──
 describe('Motor kataloğu — yapısal bütünlük', () => {
-  test('yirmi dört kayıt, anahtarlar tekil', () => {
-    expect(E.VE_FEAD_ENGINE_DB.length).toBe(24);
+  // Defterin 24 satırının ikisi birebir aynı motor (yalnız parça numarası ayrıydı) —
+  // tek kayıt (Canlı Not 1004: programda parça numarası yok).
+  test('yirmi üç kayıt, anahtarlar tekil', () => {
+    expect(E.VE_FEAD_ENGINE_DB.length).toBe(23);
     const keys = E.VE_FEAD_ENGINE_DB.map((e) => e.key);
-    expect(new Set(keys).size).toBe(24);
+    expect(new Set(keys).size).toBe(23);
   });
 
   test('her kaydın adı ve BMC numarası dolu', () => {
@@ -94,15 +96,15 @@ describe('Motor kataloğu — yapısal bütünlük', () => {
     const dort = E.VE_FEAD_ENGINE_DB.filter((e) => e.cyl === 4);
     expect(dort.length).toBe(1);
     expect(dort[0].ad).toMatch(/^ISB4\.5/);
-    expect(E.VE_FEAD_ENGINE_DB.filter((e) => e.cyl === 6).length).toBe(23);
+    expect(E.VE_FEAD_ENGINE_DB.filter((e) => e.cyl === 6).length).toBe(22);
   });
 });
 
 describe('Motor kataloğu — defter çıpaları', () => {
   // KIRPI II'nin kendi motoru. Defterin "Komponent Secimi" sayfası bu satırı
   // INDEX/MATCH ile çekiyor; beş sayının beşi de oradan okundu.
-  test('57RS303234 (ISL8.9E3 375) künyesi birebir', () => {
-    const e = E.veFeadEngineOf('57RS303234');
+  test('motor-10 (ISL8.9E3 375) künyesi birebir', () => {
+    const e = E.veFeadEngineOf('motor-10');
     expect(e.ad).toBe('ISL8.9E3 375/FR94882');
     expect(e.idleRpm).toBe(700);
     expect(e.governedRpm).toBe(2100);
@@ -114,8 +116,8 @@ describe('Motor kataloğu — defter çıpaları', () => {
 
   // Defterin "Motor Bilgileri" AM:AO bloğu bu eğriyi seçili motordan kopyalıyor
   // ve "Spanlardaki frekans" sayfası onu devir ekseninde kullanıyor.
-  test('57RS303234 eğrisi defterin AM:AO bloğuyla aynı', () => {
-    const e = E.veFeadEngineOf('57RS303234');
+  test('motor-10 eğrisi defterin AM:AO bloğuyla aynı', () => {
+    const e = E.veFeadEngineOf('motor-10');
     expect(e.curve.map((p) => p.rpm)).toEqual(
       [800, 1000, 1100, 1200, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100]);
     expect(e.curve.map((p) => p.nm)).toEqual(
@@ -124,17 +126,17 @@ describe('Motor kataloğu — defter çıpaları', () => {
       [80, 142, 179, 195, 227, 237, 246, 253, 260, 266, 271, 275]);
   });
 
-  test('aynı model, farklı krank çapı — üç ISL8.9E3 375 kaydı ayrışıyor', () => {
+  test('aynı model, farklı krank çapı — iki ISL8.9E3 375 kaydı ayrışıyor', () => {
     const l = E.veFeadEngineFind('ISL8.9E3 375');
     expect(l.map((e) => e.key).sort())
-      .toEqual(['57RS303234', '57RS303252', '57RS303315']);
-    // Anahtar model adı DEĞİL parça numarası: krank çapı 218,3 ↔ 197,72 ayrılıyor.
-    expect(l.find((e) => e.key === '57RS303234').crankOD).toBe(218.3);
-    expect(l.find((e) => e.key === '57RS303252').crankOD).toBe(197.72);
+      .toEqual(['motor-10', 'motor-11']);
+    // Model adı aynı, krank çapı 218,3 ↔ 197,72 ayrılıyor (etiket çapı yazar).
+    expect(l.find((e) => e.key === 'motor-10').crankOD).toBe(218.3);
+    expect(l.find((e) => e.key === 'motor-11').crankOD).toBe(197.72);
   });
 
   test('ara değerleme uçlarda SABİT tutar, ekstrapolasyon yapmaz', () => {
-    const e = E.veFeadEngineOf('57RS303234');
+    const e = E.veFeadEngineOf('motor-10');
     expect(E.veFeadEngineAt(e, 1500)).toEqual({ nm: 1508, kw: 237 });
     // Tam ortada doğrusal
     const m = E.veFeadEngineAt(e, 1550);
@@ -149,8 +151,8 @@ describe('Motor kataloğu — defter çıpaları', () => {
 describe('Motor kataloğu — uygulama sözleşmesi', () => {
   test('apply: silindir, dört devir ve birinci kademe çapları yazılır', () => {
     const sd = {};
-    E.veFeadEngineApply(sd, '57RS303234');
-    expect(sd.engineLib).toBe('57RS303234');
+    E.veFeadEngineApply(sd, 'motor-10');
+    expect(sd.engineLib).toBe('motor-10');
     expect(sd.cylinders).toBe(6);
     expect(sd.governedRpm).toBe(2100);
     expect(sd.overspeedRpm).toBe(2900);
@@ -179,7 +181,7 @@ describe('Motor kataloğu — uygulama sözleşmesi', () => {
 
   test('drift: elle değiştirilen alan raporlanır, katalogda olmayan alan sayılmaz', () => {
     const sd = {};
-    E.veFeadEngineApply(sd, '57RS303234');
+    E.veFeadEngineApply(sd, 'motor-10');
     expect(E.veFeadEngineDrift(sd).drift).toEqual([]);
     sd.governedRpm = 2200;
     const d = E.veFeadEngineDrift(sd);
@@ -201,11 +203,12 @@ describe('Motor kataloğu — uygulama sözleşmesi', () => {
 
 // ────────────────────────────────────────────────────── AKSESUAR KATALOĞU ──
 describe('Aksesuar kataloğu — yapısal bütünlük', () => {
-  test('on alternatör + dört klima kompresörü, anahtarlar tekil', () => {
-    expect(A.VE_FEAD_ACC_DB.length).toBe(14);
-    expect(A.veFeadAccList('fead-alternator').length).toBe(10);
-    expect(A.veFeadAccList('fead-ac').length).toBe(4);
-    expect(new Set(A.VE_FEAD_ACC_DB.map((a) => a.key)).size).toBe(14);
+  // Defterin 14 satırı 10 model: aynı modelin satırları birebir aynı, tek kayıt (Canlı Not 1004).
+  test('yedi alternatör + üç klima kompresörü, anahtarlar tekil', () => {
+    expect(A.VE_FEAD_ACC_DB.length).toBe(10);
+    expect(A.veFeadAccList('fead-alternator').length).toBe(7);
+    expect(A.veFeadAccList('fead-ac').length).toBe(3);
+    expect(new Set(A.VE_FEAD_ACC_DB.map((a) => a.key)).size).toBe(10);
   });
 
   test('üç devir sınırı sıralı: optimum ≤ sürekli ≤ anlık', () => {
@@ -227,17 +230,17 @@ describe('Aksesuar kataloğu — yapısal bütünlük', () => {
     });
   });
 
-  // Model adı tek başına ayırt etmiyor: üç Prestolite 180A, iki 155A, iki TM31.
-  test('etiket parça numarasını da taşır — aynı model birden çok kez geçiyor', () => {
+  // Etiket modelin adı; aynı model tek kayıt — adlar tekil (Canlı Not 1004).
+  test('etiket modelin adı, adlar tekil', () => {
     const adlar = A.VE_FEAD_ACC_DB.map((a) => a.ad);
-    expect(new Set(adlar).size).toBeLessThan(adlar.length);
-    A.veFeadAccList().forEach((r) => expect(r.label).toContain(r.key));
+    expect(new Set(adlar).size).toBe(adlar.length);
+    A.veFeadAccList().forEach((r) => expect(r.label).toBe(r.ad));
   });
 });
 
 describe('Aksesuar kataloğu — defter çıpaları', () => {
-  test('Prestolite 155A (57RS309348) künyesi ve eğrisi birebir', () => {
-    const a = A.veFeadAccOf('57RS309348');
+  test('Prestolite 155A (prestolite-155a) künyesi ve eğrisi birebir', () => {
+    const a = A.veFeadAccOf('prestolite-155a');
     expect(a.ad).toBe('Prestolite 155A');
     expect(a.optimumRpm).toBe(6000);
     expect(a.maxContRpm).toBe(8000);
@@ -248,8 +251,8 @@ describe('Aksesuar kataloğu — defter çıpaları', () => {
       [0, 1.71, 2.42, 2.85, 3.14, 3.42, 3.85, 3.99, 4.08, 4.13, 4.16, 4.19, 4.25, 4.28, 4.28, 4.28]);
   });
 
-  test('Valeo TM31 (57RS322530) künyesi ve eğrisi birebir', () => {
-    const a = A.veFeadAccOf('57RS322530');
+  test('Valeo TM31 (valeo-tm31) künyesi ve eğrisi birebir', () => {
+    const a = A.veFeadAccOf('valeo-tm31');
     expect(a.ad).toBe('Valeo TM31');
     expect(a.optimumRpm).toBe(1000);
     expect(a.maxContRpm).toBe(3000);
@@ -268,8 +271,8 @@ describe('Aksesuar kataloğu — defter çıpaları', () => {
 describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
   test('apply: sınırlar ve eğri yazılır', () => {
     const n = { data: {} };
-    A.veFeadAccApply(n, '57RS309348');
-    expect(n.data.accLib).toBe('57RS309348');
+    A.veFeadAccApply(n, 'prestolite-155a');
+    expect(n.data.accLib).toBe('prestolite-155a');
     expect(n.data.maxContRpm).toBe(8000);
     expect(n.data.pwrCurve.length).toBe(16);
   });
@@ -279,21 +282,21 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
   test('apply: boş eğri kullanıcının tablosunu SİLMEZ', () => {
     const kendi = [{ rpm: 2000, kw: 3.1 }];
     const n = { data: { pwrCurve: kendi } };
-    A.veFeadAccApply(n, '57RS309791');            // Prestolite 120A — eğrisi yok
-    expect(A.veFeadAccOf('57RS309791').curve.length).toBe(0);
+    A.veFeadAccApply(n, 'prestolite-120a');            // Prestolite 120A — eğrisi yok
+    expect(A.veFeadAccOf('prestolite-120a').curve.length).toBe(0);
     expect(n.data.pwrCurve).toBe(kendi);
     expect(n.data.maxContRpm).toBe(9000);         // sınırlar yine de geldi
   });
 
   test('apply: eğri KOPYALANIR — düğümü düzenlemek kataloğu bozmaz', () => {
     const n = { data: {} };
-    A.veFeadAccApply(n, '57RS322530');
+    A.veFeadAccApply(n, 'valeo-tm31');
     n.data.pwrCurve[0].kw = 99;
-    expect(A.veFeadAccOf('57RS322530').curve[0].kw).toBe(0.8);
+    expect(A.veFeadAccOf('valeo-tm31').curve[0].kw).toBe(0.8);
   });
 
   test('limits: ELLE girilen değer katalogtan üstün', () => {
-    const l = A.veFeadAccLimits({ data: { accLib: '57RS309348', maxContRpm: 7500 } });
+    const l = A.veFeadAccLimits({ data: { accLib: 'prestolite-155a', maxContRpm: 7500 } });
     expect(l.maxCont).toEqual({ rpm: 7500, kaynak: 'elle' });
     expect(l.maxPeak).toEqual({ rpm: 12000, kaynak: 'katalog' });
     expect(l.optimum).toEqual({ rpm: 6000, kaynak: 'katalog' });
@@ -305,7 +308,7 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
   // KATALOGTAN FARKLI OLMAK.
   test('limits: apply\'den sonra üç alan da "katalog" kaynaklı görünür', () => {
     const n = { data: {} };
-    A.veFeadAccApply(n, '57RS309348');
+    A.veFeadAccApply(n, 'prestolite-155a');
     const l = A.veFeadAccLimits(n);
     expect(l.optimum.kaynak).toBe('katalog');
     expect(l.maxCont.kaynak).toBe('katalog');
@@ -329,7 +332,7 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
     // "— elle gir —" yolu: kullanıcı künyenin değerlerini alıp düzenlemek
     // istiyor (gergi künyesi kilidinin aynı kuralı).
     const n = { data: {} };
-    A.veFeadAccApply(n, '57RS309348');
+    A.veFeadAccApply(n, 'prestolite-155a');
     A.veFeadAccUnlink(n);
     expect(n.data.accLib).toBeUndefined();
     expect(n.data.maxContRpm).toBe(8000);
@@ -343,7 +346,7 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
   describe('clearWritten: künyenin yazdığını siler, kullanıcınınkini KORUR', () => {
     test('künyenin yazdığı eğri ve üç sınır gider', () => {
       const n = { data: {} };
-      A.veFeadAccApply(n, '57RS309348');
+      A.veFeadAccApply(n, 'prestolite-155a');
       A.veFeadAccClearWritten(n);
       expect(n.data.accLib).toBeUndefined();
       expect(n.data.accLibVer).toBeUndefined();
@@ -355,7 +358,7 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
 
     test('ELLE değiştirilen eğri ve sınır KALIR', () => {
       const n = { data: {} };
-      A.veFeadAccApply(n, '57RS309348');
+      A.veFeadAccApply(n, 'prestolite-155a');
       n.data.pwrCurve = [{ rpm: 1000, kw: 1 }, { rpm: 2000, kw: 2 }];
       n.data.maxContRpm = 12345;
       A.veFeadAccClearWritten(n);
@@ -366,7 +369,7 @@ describe('Aksesuar kataloğu — uygulama sözleşmesi', () => {
 
     test('TEK BİR SAYI değişmişse eğri kullanıcınındır', () => {
       const n = { data: {} };
-      A.veFeadAccApply(n, '57RS309348');
+      A.veFeadAccApply(n, 'prestolite-155a');
       const uzun = n.data.pwrCurve.length;
       n.data.pwrCurve[0].kw += 0.001;
       A.veFeadAccClearWritten(n);

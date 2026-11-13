@@ -1438,7 +1438,7 @@ function veMntWiz3bAltHTML(s, secili, opt){
         '<select class="ve-fw-inp" id="ve-mw-3b-katalog" aria-label="Katalog" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
         + '<option value=""' + (ak ? '' : ' selected') + '>—</option>'
         + akl.map(function(a){
-            return '<option value="' + _mwEsc(a.key) + '"' + (ak && ak.key === a.key ? ' selected' : '') + '>' + _mwEsc(a.ad + ' · ' + a.key) + '</option>';
+            return '<option value="' + _mwEsc(a.key) + '"' + (ak && ak.key === a.key ? ' selected' : '') + '>' + _mwEsc(a.ad) + '</option>';
           }).join('')
         + '</select>', 'Katalog — ' + _mwEsc(so.agac[birim].ad));
     }

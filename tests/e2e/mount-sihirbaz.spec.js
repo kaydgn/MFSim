@@ -404,3 +404,91 @@ test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüy
     expect(s.yanlis / s.piksel).toBeLessThan(0.0015);                 // atılan 8 mm'lik dilim payı
   }
 });
+
+// BOŞLUĞA TIK (kullanıcı 2026-11-11, Canlı Not 153: *"Kütle gövdeleri ve Takozlar kısmında bileşene
+// tıkladıktan sonra, boş yere tıkladığımda tıklamamdan vaz geçemiyorum. Yani kalıyor öyle."*). Önce:
+// masada işaretsiz yere tık hiçbir şey yapmıyordu, seçili gövde perdenin üstünde kalıyordu. Node'da
+// koşmayan halkalar: gerçek fare, perdenin tıkı geçirmesi, elementFromPoint'in bulduğu zemin, döndürmenin
+// gerçek eşiği. Birim tarafı: mount-sihirbaz-doku.test.js → BOŞLUĞA TIK.
+test('BOŞLUĞA TIK: 3B ve 2B masada işarete tık seçer, boşluğa tık seçimi bırakır; sürükleme seçimi oynatmaz', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => veMntOrnekYukle('tulga'));
+  await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 20000 });
+  await page.evaluate(() => { veMntWizAc(); veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'govde')); });
+  await expect(page.locator('#ve-mw-akso svg.ve-mnt2d-akso')).toBeVisible();
+  const durum = () => page.evaluate(() => ({
+    secili: [...document.querySelectorAll('#ve-mw-liste .ve-fw-kl.on')].map((b) => b.getAttribute('data-mw-satir')),
+    kart: [...document.querySelectorAll('#ve-mw-yan .ve-fw-card-h')].map((h) => h.textContent),
+    perde: (document.getElementById('ve-mw-akso') || { getAttribute: () => null }).getAttribute('data-perde')
+  }));
+  // görünen işaret: kutusunun ortasındaki nokta onun öğesini veriyor (perde tıkı geçirir)
+  const isaret = (sec, haric) => page.evaluate(([sec, haric]) => [...document.querySelectorAll(sec)].map((e) => {
+    const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, u = document.elementFromPoint(x, y);
+    return { k: e.getAttribute('data-ak') || e.getAttribute('data-mnt-sec'), x, y, gorunur: !!(u && e.contains(u)) };
+  }).find((t) => t.gorunur && t.k !== haric), [sec, haric]);
+  // çizimin boşluğu: noktanın öğesi çizimde, hiçbir işaretin içinde değil
+  const bosluk = (kok) => page.evaluate((kok) => {
+    const a = document.getElementById('ve-mw-masa-cizim').getBoundingClientRect();
+    for (let fy = 0.2; fy < 0.85; fy += 0.04) for (let fx = 0.15; fx < 0.85; fx += 0.04) {
+      const x = a.left + a.width * fx, y = a.top + a.height * fy, u = document.elementFromPoint(x, y);
+      if (u && u.closest(kok) && !u.closest('[data-ak], [data-mnt-sec]')) return { x, y };
+    }
+    return null;
+  }, kok);
+  const ilk = await durum();
+  expect(ilk.secili).toHaveLength(1);
+  expect(ilk.perde).toBe('1');
+  // 3B: başka bir gövdeye tık onu seçer
+  const g = await isaret('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-g[data-ak]', ilk.secili[0]);
+  expect(g).toBeTruthy();
+  await page.mouse.click(g.x, g.y);
+  await page.waitForTimeout(300);
+  const anahtar = await page.evaluate((k) => _mntAksoCizim['ve-mw-akso'].m.govde.find((x) => x.k === k).id.replace(/^mw:/, ''), g.k);
+  expect((await durum()).secili).toEqual([anahtar]);
+  // boşluğa tık: seçim yok, perde yok, Seçili gövde yok, liste yerinde
+  const b3 = await bosluk('svg.ve-mnt2d-akso');
+  expect(b3).toBeTruthy();
+  await page.mouse.click(b3.x, b3.y);
+  await page.waitForTimeout(300);
+  expect(await durum()).toEqual({ secili: [], kart: ['Kütle gövdeleri'], perde: '0' });
+  expect(await page.locator('#ve-mw-liste .ve-fw-kl').count()).toBeGreaterThan(3);
+  // sürükleme (boşluktan başlayıp geri dönen) döndürür, seçimi oynatmaz
+  await page.mouse.click(g.x, g.y);
+  await page.waitForTimeout(300);
+  const az = await page.evaluate(() => VE_MNT_AKSO3B.az);
+  const b3b = await bosluk('svg.ve-mnt2d-akso');
+  await page.mouse.move(b3b.x, b3b.y);
+  await page.mouse.down();
+  await page.mouse.move(b3b.x + 90, b3b.y + 20, { steps: 5 });
+  await page.mouse.move(b3b.x + 1, b3b.y, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => VE_MNT_AKSO3B.az)).not.toBe(az);
+  expect((await durum()).secili).toEqual([anahtar]);
+  // takoz adımında da: ilk takoz seçili, boşluğa tık bırakır
+  await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'takoz')));
+  await page.waitForTimeout(300);
+  expect((await durum()).secili).toHaveLength(1);
+  const b3t = await bosluk('svg.ve-mnt2d-akso');
+  await page.mouse.click(b3t.x, b3t.y);
+  await page.waitForTimeout(300);
+  expect(await durum()).toEqual({ secili: [], kart: ['Takozlar'], perde: '0' });
+  // 2B: işarete tık seçer, boşluğa tık bırakır
+  await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'govde')));
+  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '2B' }).click();
+  await page.waitForSelector('#ve-mw-masa-cizim > svg.ve-mnt2b');
+  const g2 = await isaret('#ve-mw-masa-cizim > svg.ve-mnt2b [data-mnt2b="yan"] [data-mnt-sec^="govde:"]:not(.ve-mnt2d-kutu)', null);
+  expect(g2).toBeTruthy();
+  await page.mouse.click(g2.x, g2.y);
+  await page.waitForTimeout(300);
+  expect((await durum()).kart).toEqual(['Kütle gövdeleri', 'Seçili gövde']);
+  const b2 = await bosluk('svg.ve-mnt2b');
+  expect(b2).toBeTruthy();
+  await page.mouse.click(b2.x, b2.y);
+  await page.waitForTimeout(300);
+  expect((await durum()).secili).toEqual([]);
+  expect((await durum()).kart).toEqual(['Kütle gövdeleri']);
+  expect(hatalar).toEqual([]);
+});

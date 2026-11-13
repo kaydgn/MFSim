@@ -24,7 +24,7 @@ const cp = require('../../js/cp-mount.js');
 beforeEach(() => { resetStubs(stubs); global.nodes = []; global.connections = []; });
 
 // ── ASR-SR-116: takoz yükleri (Tablo 7/11) + rijitlikler (Tablo 9) ─────────
-// Ön takozlar 57RS313774 (dyn 1045/1045/1800), arka dörtlü 57RS313773 (630/630/3000).
+// Ön takozlar a26-b (dyn 1045/1045/1800), arka dörtlü a26-a (630/630/3000).
 const REF = [
   { name: 'Ön Sol',   m: 365.84, kdyn: [1045, 1045, 1800], c: [0.78, 0.78, 1.03] },
   { name: 'Ön Sağ',   m: 364.37, kdyn: [1045, 1045, 1800], c: [0.78, 0.78, 1.02] },

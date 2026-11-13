@@ -37,11 +37,11 @@ async function kur(page, nTip = 6) {
   await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
   await page.evaluate(() => { window.getMntParamPropertiesHTML = window._mntParamEskiPencereHTML; });   // parkta: eski pencere
   await page.evaluate(() => { veMntOrnekYukle('asfat'); });
-  await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('57RS') >= 0), null, { timeout: 20000 });
+  await page.waitForFunction(() => nodes.some((n) => (n.customName || '').indexOf('Orta Takoz') >= 0), null, { timeout: 20000 });
   await page.waitForTimeout(500);
   return page.evaluate((nTip) => {
-    // nTip taramanın ADAYI: aday olmayan tip (57RS — Canlı Not 133; tahminli ya da eksik tip) sayılmaz
-    const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+    // nTip taramanın ADAYI: aday olmayan tip (A26 · ASR-SR-116 — Canlı Not 133; tahminli ya da eksik tip) sayılmaz
+    const tut = ['a26-a', 'amc137731', 'bmc-mount1-55sh', 'asfat-a', 'asfat-b', 'bmc-mount1-40sh'];
     const M = veMntGetLibraryMap(), tum = Object.keys(M);
     const aday = (k) => M[k].aday !== false && _mntLibTam(M[k]) && !_mntLibTahmin(M[k]).length;
     let say = tut.filter(aday).length;
@@ -192,7 +192,7 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
     return { n: td.length, kesik: td.filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent) };
   });
   // aday satırları kütüphanenin TAM ve TAHMİNSİZ tipleri (2026-11-10: 24 → 27, teknik resimlerle ölçülen
-  // AMC kodları; tahminli tip — Canlı Not 113 — aday değil; dört 57RS tipi aday değil — Canlı Not 133)
+  // AMC kodları; tahminli tip — Canlı Not 113 — aday değil; dört A26 · ASR-SR-116 tipi aday değil — Canlı Not 133)
   const nTam = await page.evaluate(() => { const m = veMntGetLibraryMap(); return Object.keys(m).filter((k) => m[k].aday !== false && _mntLibTam(m[k]) && !_mntLibTahmin(m[k]).length).length; });
   expect(ad).toEqual({ n: 3 * 2 + nTam, kesik: [] });
   await page.click('#ve-mnt-param-btn-' + id);
