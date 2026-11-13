@@ -1162,17 +1162,23 @@ function _mntOku(etiket, deger, opt){
 // VARSAYILANLI ALAN — değer alanın KENDİSİ, yer tutucu değil; yanında 'i'
 // kaynağını söyler (FEAD kural 43). Boşaltılınca varsayılan DEĞER olarak geri
 // gelir: hesaba giren sayı hep görünür. `degis` onchange ifadesidir.
-function _mntVarsayilanAlan(node, key, etiket, varsayilan, kaynak, degis){
+// `opt.iEtikette`: 'i' adın yanında, girdi sütunun tam eninde (Canlı Not 165: *"(i) butonu
+// sönüm oranı yazısının yanında olsun"*) — yan yana alanların girdileri aynı hizada.
+// `<label>` yalnız adı sarar: içinde düğme (etiketlenebilir öğe) bulunamaz.
+function _mntVarsayilanAlan(node, key, etiket, varsayilan, kaynak, degis, opt){
+  opt=opt||{};
   var d=node.data||{}, elle=!_mntBos(d[key]);
   var id='ve-mnt-'+key+'-'+node.id;
   var t=elle ? 'Girilen değer · varsayılan '+_mntS(varsayilan)
              : 'Varsayılan — '+kaynak+'.';
-  return '<div class="ve-fp-f" data-mnt-vars="'+id+'" data-kaynak="'+(elle?'elle':'varsayilan')+'">'
-    + '<label class="ve-fp-l" for="'+id+'">'+etiket+'</label>'
-    + '<span class="ve-fp-deger"><input class="ve-fp-inp" type="text" inputmode="decimal" id="'+id+'"'
-    + ' value="'+_mntEsc(elle ? d[key] : String(varsayilan))+'" onchange="'+degis+'">'
-    + '<button type="button" class="ve-fp-i" data-kaynak="'+(elle?'elle':'varsayilan')+'"'
-    + ' data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button></span></div>';
+  var inp='<input class="ve-fp-inp" type="text" inputmode="decimal" id="'+id+'"'
+    + ' value="'+_mntEsc(elle ? d[key] : String(varsayilan))+'" onchange="'+degis+'">';
+  var i='<button type="button" class="ve-fp-i" data-kaynak="'+(elle?'elle':'varsayilan')+'"'
+    + ' data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button>';
+  var ac='<div class="ve-fp-f" data-mnt-vars="'+id+'" data-kaynak="'+(elle?'elle':'varsayilan')+'">';
+  if(opt.iEtikette) return ac+'<span class="ve-fp-l"><label for="'+id+'">'+etiket+'</label>'+i+'</span>'+inp+'</div>';
+  return ac+'<label class="ve-fp-l" for="'+id+'">'+etiket+'</label>'
+    + '<span class="ve-fp-deger">'+inp+i+'</span></div>';
 }
 // DURUM SATIRI — bir seçimin ya da hesabın SONUCU, açıklama değil (FEAD kural
 // 45: "pencere açıklama taşımaz, durum söyler"; açıklama kılavuzda). Biçim
@@ -6174,13 +6180,16 @@ function _mntCozucuAyarGovde(node){
    ['linear','Lineer (statik rijitlik)']
   ].forEach(function(o){ sel+='<option value="'+o[0]+'"'+(sm===o[0]?' selected':'')+'>'+o[1]+'</option>'; });
   sel+='</select>';
+  // YAN YANA (Canlı Not 165: *"çözüm modu ve sönüm oranı satırlarını yan yana verelim, (i)
+  // butonu sönüm oranı yazısının yanında olsun"*): iki sütun, ad üstte; ζ'nin 'i'si adının
+  // yanında. Adın yanında açıklama YOK ("tüm montaj" kalktı — kural Canlı Not 161'in).
   var h=_mntBolum('Yöntem', '',
-      _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Çözüm modu</span>'+sel+'</label>')
+      _mntIzgara(2, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Çözüm modu</span>'+sel+'</label>'
+        + _mntVarsayilanAlan(node, 'zeta', 'Sönüm oranı '+_mntSym('ζ'), _mntZetaDefault(),
+            'şirket kabulü', 'veMntSetZeta(\''+node.id+'\',this.value)', { iEtikette:true }))
     + '<div id="ve-mnt-egriyok-'+node.id+'" data-tazele>'
     + (_mntEgriYok(node) ? _mntNot('Nonlineer seçili, eğri yok: lineer çözülür.', 'warn') : '')
-    + '</div>'
-    + _mntIzgara(1, _mntVarsayilanAlan(node, 'zeta', 'Sönüm oranı '+_mntSym('ζ')+' · tüm montaj', _mntZetaDefault(),
-        'şirket kabulü', 'veMntSetZeta(\''+node.id+'\',this.value)')));
+    + '</div>');
   // Şok darbesinin bölümü YOK (Canlı Not 145: *"Aynı şekilde bunu da kaldıralım."*): standart
   // 3 g · 20 ms yarım sinüs (AMC raporlarının darbesi; örneklerin hepsi bununla).
   return h;

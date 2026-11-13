@@ -668,10 +668,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91; yeni Artifact AÇILMAZ, her yayın
   `url` ile), sahiplik kaydı (`oturum/aktif`: iki oturum aynı notu işlemez), yorum izleme,
   program ve sayfanın güncelliği (`denetle`), kuyruk. Sonucun görüntüsü
-  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz). **Her not kendi ajanında, paralel**
-  (kullanıcı 2026-11-11: *"Ajanlar eğer birbirinden etkileniyorsa, diğeri diğerini beklesinler"*):
-  ajan kendi çalışma kopyasında uygular ve commit eder, aynı yüzeye dokunan notlar zincirlenir;
-  birleştirme, tam test ve yayın sahibi oturumda — skill `canli-not` §2 · *Paralel ajanlar*.
+  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz). **Notlar sırayla, bu oturumda — ajan YOK**
+  (kullanıcı 2026-11-13: *"'ajan' muhabbetini de kaldıralım. Tokenlerim çok hızlı bitmeye
+  başladı, normal sıra sıra devam etsin"*); Agent/Workflow kullanıcı istemedikçe başlatılmaz —
+  skill `canli-not` §2.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
@@ -1160,7 +1160,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
   EYLEM SATIRI (`vePencereEylem`: solda durum notu ya da süren işin çubuğu,
   sağda içeriği kadar düğme; dar kapta yapışan SATIRDIR — kullanıcı 2026-10-18:
-  *"butonu çok geniş ve büyük"*); BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Gövdenin ÜSTÜNDE
+  *"butonu çok geniş ve büyük"*); BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Dar kap BLOK
+  AKIŞI, esnek sütun değil: gövdenin son payı, gövdenin ve eylem satırının payı üst üste biner, gövde
+  ile eylem çizgisi arası tek aralık 16 px (Canlı Not 165: esnekte toplanıp 38 px'ti; kapı
+  `pencere-kabuk.test.js` → *BLOK AKIŞI*). Gövdenin ÜSTÜNDE
   banttan başka bir şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama
   kılavuzda — kılavuz da pencereyi bölüm başlığıyla anlatır, sekmeyle değil.
   Aynı bileşenin yeniden kurulması kaydırmayı korur, başka bileşen baştan açılır

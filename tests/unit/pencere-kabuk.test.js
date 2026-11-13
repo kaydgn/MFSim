@@ -554,6 +554,22 @@ describe('KİT — kabuğun davranışı', () => {
     expect(css).toMatch(/\.ve-fp-ilerleme-c::before\{[^}]*width:var\(--ilerleme, 0%\)/);
   });
 
+  // GÖVDE İLE EYLEM ÇİZGİSİ ARASINDA TEK ARALIK (Canlı Not 165: *"Şu alttaki çizgiyi yukarıya
+  // taşıyalım, gereksiz bir boşluk var orada"*). Önce dar kap ESNEK SÜTUNDU: esnek öğe çocuklarının
+  // paylarını içinde tutar, paylar toplanır — gövdenin son öğesi 10 + gövde 16 + eylem satırı 12:
+  // Çözücü'de Sönüm oranı ile çizgi arası 38 px, gövde ile sağ sütunun ilk bölümü arası 26 px
+  // (gerçek tarayıcı, Tulga, 379 px sütun). Blok akışında paylar üst üste biner: ikisi de 16 px.
+  test('CSS: dar kap BLOK AKIŞI — gövdenin son payı, gövdenin payı ve eylem satırının payı üst üste biner (Canlı Not 165)', () => {
+    const css = oku('css/styles.css');
+    const son = css.indexOf('.ve-fp-side{ display:contents; }');
+    const dar = css.slice(css.lastIndexOf('@container vepanel (max-width:640px){', son), son);
+    const split = dar.match(/\.ve-fp-split\{([^}]*)\}/);
+    expect(split && split[1].trim()).toBe('display:block;');            // esnek sütun ya da ızgara değil
+    const govde = Number(dar.match(/\n {2}\.ve-fp-main\{ margin-bottom:(\d+)px; \}/)[1]);
+    const eylem = Number(css.slice(son).match(/\.ve-fp-side > \.ve-fp-yurut\{[^}]*margin:(\d+)px -10px -10px;/)[1]);
+    expect([govde, eylem]).toEqual([16, 12]);                           // aralık en büyüğü: 16 px
+  });
+
   test('durum YERİNDE tazelenir: kabın data-d\'si ve bant; girdiler aynı nesne, söylenmeyen durum yerinde', () => {
     document.body.innerHTML = PK.vePencereKabuk({ id: 'n6' }, kategoriler(), '', { git: 'fG' });
     const girdi = document.getElementById('f-a');

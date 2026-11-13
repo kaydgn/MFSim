@@ -9124,6 +9124,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   cursor:help;
 }
 .ve-fp-i .mf-ico{ vertical-align:0; }
+/* 'i' ADIN YANINDA (Canlı Not 165, `_mntVarsayilanAlan` → `iEtikette`): girdi sütunun
+   tam eninde kalır. Düğme adın satırını büyütmez (eksi pay) — yan yana iki alanın
+   adları ve girdileri aynı hizada. */
+.ve-fp-l > .ve-fp-i{ align-self:center; width:16px; height:16px; margin:-3px 0; }
 .ve-fp-i:hover, .ve-fp-i:focus-visible{
   color:var(--ink-accent); background:var(--bg-tertiary); outline:none; box-shadow:var(--focus-ring);
 }
@@ -9264,15 +9268,18 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    Sıra: önce düzenlenen (gövde), sonra cevabı (özet). */
 .ve-properties-content{ container-type:inline-size; container-name:vepanel; }
 @container vepanel (max-width:640px){
-  /* Tek sütunda IZGARA DEĞİL ESNEK SÜTUN: ızgara öğesinin kapsayan bloğu
+  /* Tek sütunda IZGARA DEĞİL BLOK AKIŞI: ızgara öğesinin kapsayan bloğu
      kendi HÜCRESİDİR, yapışkan konum hücrenin dışına çıkamaz — aşağıdaki
-     Hesapla hiç yapışmıyordu (ölçüldü). Esnek öğenin kapsayanı kabın kendisi. */
-  .ve-fp-split{ display:flex; flex-direction:column; gap:0; align-items:stretch; }
-  /* `align-items:stretch` ŞART: ızgaranın `start`ı esnek sütunda "yataydan
-     büzül" demek — başlık çizgileri yarıda bitiyor, uygunluk değerleri sağa
-     yaslanmıyordu. `gap:0`: özet sütunu `contents` olunca ÇOCUKLARI esnek öğe
-     oluyor ve 14 px her satırın arasına giriyordu; tek aralık düzenle özet
-     arasında. (İkisi de ekran görüntüsünde görüldü, sonra ölçüldü.) */
+     Hesapla hiç yapışmıyordu (ölçüldü). Blok akışında kapsayan kabın kendisi;
+     öğeler enine yayılır (ızgaranın `start`ı başlık çizgilerini yarıda
+     bitiriyordu) ve aralık YOK (özet sütunu `contents` olunca çocukları kabın
+     çocuğu olur; ızgaranın 14 px'i her satırın arasına giriyordu).
+     ESNEK SÜTUN DEĞİL (Canlı Not 165: *"Şu alttaki çizgiyi yukarıya taşıyalım,
+     gereksiz bir boşluk var orada"*): esnek öğe kendi çocuklarının paylarını
+     içinde tutar ve paylar TOPLANIR — gövdenin son öğesinin 10 px'i + gövdenin
+     16 px'i + eylem satırının 12 px'i, Çözücü'de Sönüm oranı ile çizgi arası
+     38 px'ti. Blok akışında üçü üst üste biner: aralık en büyüğü, 16 px. */
+  .ve-fp-split{ display:block; }
   .ve-fp-main{ margin-bottom:16px; }
   .ve-fp-split--tek > .ve-fp-main{ margin-bottom:0; }
   /* HESAPLA DÜĞMESİ ALTA YAPIŞIR. İki sütunda düğme özet sütunundaydı ve

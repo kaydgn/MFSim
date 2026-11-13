@@ -32,6 +32,9 @@
  *   ODAK       bir bileşene ayrılmış sayfa: tarifin dokunduğu her işlev programda var,
  *              tarif yerindekini kullanır, proje önce yüklenir; not numarası aralıkta
  */
+// Sayfa testleri jsdom'da sayfayı kurar: tam testin yükü altında 5 sn'lik varsayılan aşılıyordu
+// (tek başına 87/87, tam testte ODAK iki kez düştü).
+jest.setTimeout(30000);
 const fs = require('fs');
 const path = require('path');
 const CN = require('../../tools/canli-not-cekirdek.js');
