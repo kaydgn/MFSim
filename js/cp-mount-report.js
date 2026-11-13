@@ -503,6 +503,40 @@ function _mntRepNLNote(R){
     + 'yasanın parçasıdır. Yakınsama: '+conv+'.'+katalog+'</div>';
 }
 
+// ─── Sayısal çözüm ayarları (Çözücü — Canlı Not 3002) ─────────────────────────
+// Çözümün HANGİ sayısal yöntemle üretildiği — çözümün kendi kaydından (R.cozucu), canlı
+// modelden değil. Seçeneklerin adları Çözücü penceresinin listelerinden (tek ad).
+function _mntRepCozucuAyar(R){
+  var A=R && R.cozucu; if(!A) return '';
+  var S=A.statik||{}, M=A.modal||{}, F=A.frf||{}, G=A.gecici||{};
+  var ad=function(L, v){ L=L||[]; for(var i=0;i<L.length;i++) if(L[i][0]===v) return L[i][1]; return String(v==null?'—':v); };
+  var L_Y=(typeof MNT_COZ_YONTEM!=='undefined') ? MNT_COZ_YONTEM : null;
+  var L_E=(typeof MNT_COZ_ENTEGRATOR!=='undefined') ? MNT_COZ_ENTEGRATOR : null;
+  var L_T=(typeof MNT_COZ_TABAN!=='undefined') ? MNT_COZ_TABAN : null;
+  var ust=function(v){ return (v>0) ? _rEsc(veSayiUstel(v, 0)) : 'kapalı'; };
+  var nl=_mntRepSolvedNL(R);
+  var satir=function(a, b, c){ return '<tr><td class="l">'+a+'</td><td class="l">'+b+'</td><td class="l">'+c+'</td></tr>'; };
+  var ent=_rEsc(ad(L_E, G.entegrator));
+  if(G.entegrator==='hht' && Number.isFinite(G.alfa)) ent+=' (α = '+_rF(G.alfa, 3)+')';
+  if(G.entegrator==='gen-alfa' && Number.isFinite(G.rhoInf)) ent+=' (ρ<sub>∞</sub> = '+_rF(G.rhoInf, 2)+')';
+  var h='<table><caption>Tablo '+_rTbl()+' — Sayısal çözüm ayarları</caption>';
+  h+='<tr><th>Analiz</th><th>Ayar</th><th>Değer</th></tr>';
+  h+=satir('Statik denge', 'Çözüm tekniği', nl ? _rEsc(ad(L_Y, S.yontem)) : 'doğrudan çözüm (lineer model)');
+  if(nl){
+    h+=satir('', 'Doğrusal arama', S.arama===false ? 'kapalı' : 'geri izleme');
+    h+=satir('', 'Yük artımı', _rF(S.artim, 0)+' artım · en çok '+_rF(S.kesme, 0)+' bölme');
+    h+=satir('', 'Yakınsama', 'kuvvet '+ust(S.tolF)+' · moment '+ust(S.tolM)+' · yer değiştirme '+ust(S.tolU)
+      +' · en çok '+_rF(S.maxIter, 0)+' iterasyon');
+  }
+  h+=satir('', 'Temas (durdurucu)', 'ceza rijitliği '+_rF(S.stiffRatio, 0)+'·k · aktif küme en çok '+_rF(S.aktifTur, 0)+' tur');
+  h+=satir('Modal', 'Rijitlik tabanı', _rEsc(ad(L_T, M.taban)));
+  h+=satir('Frekans yanıtı', 'Tarama', _rF(F.fMin, 2)+'–'+_rF(F.fMax, 0)+' Hz · '+_rF(F.nPts, 0)+' nokta (logaritmik) · tepe inceltme '
+    +(F.incelt===false ? 'kapalı' : 'açık'));
+  h+=satir('Geçici rejim', 'Entegratör', ent);
+  h+=satir('', 'Adım', 'periyot başına '+_rF(G.adimPeriyot, 0)+' adım · Newton '+ust(G.newtonTol)+' · en çok '+_rF(G.newtonMaxIter, 0)+' iterasyon');
+  return h+'</table>';
+}
+
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────
 function _mntRepGeom(R){
   var comps=(R.gather.components||[]).map(function(c){
@@ -538,6 +572,7 @@ function _mntRepSection8(R, opts){
   var h='<h2 id="s8"><span class="no">8</span>Sayısal örnek: Bu modelin çözümü</h2>';
   h+='<p>Bölüm 2–7\'deki yöntem bu güç grubuna uygulanır: kütle birleştirme, rijitlik, statik sehim, tork süperpozisyonu, yük durumları ve modal analiz. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
   h+=_mntRepNLNote(R);
+  h+=_mntRepCozucuAyar(R);
   h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
   h+=_mntRepMountTable(R);
@@ -1438,23 +1473,38 @@ function _mntRepStep5Modal(R, C){
   var h='<h3>8.7 Adım 7 — Modal analiz</h3>';
   var modes=R.modes;
   if(!modes || !modes.length){ return h+'<p>Modal analiz üretilemedi (K tekil / kütle geçersiz olabilir).</p>'; }
+  // Rijitlik tabanı Çözücü'nün ayarı (R.cozucu.modal.taban — Canlı Not 3002): statik tabanda
+  // modlar k_stat'la çözülür, karşılaştırma sütunu k_din'in modlarıdır.
+  var tabanS=!!(R.cozucu && R.cozucu.modal && R.cozucu.modal.taban==='statik');
   var mstat=null;
-  try { if(C && C.buildK && C.buildM6 && C.solveModal){ mstat=C.solveModal(C.buildK(_mntRepDin(R),R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
-  h+='<p>Sönümsüz özdeğer problemi (7.1) dinamik rijitlikle çözülür. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir; oran, dinamik sertleşmeyi \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) mertebesinde gösterir.</p>';
+  try { if(C && C.buildK && C.buildM6 && C.solveModal){
+    // statik tabanda karşılaştırma k_din: takozlar kendi değerleriyle, askı yayları olduğu gibi
+    var dinD=_mntRepDin(R).map(function(m, i){ return i<(R.mounts||[]).length ? R.mounts[i] : m; });
+    mstat=tabanS ? C.solveModal(C.buildK(dinD,R.mp.cg,true), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg)
+                 : C.solveModal(C.buildK(_mntRepDin(R),R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
+  if(tabanS) h+='<p>Sönümsüz özdeğer problemi (7.1) statik rijitlikle çözülür (Çözücü\'nün rijitlik tabanı); frekans yanıtı, şok, sönüm ve duyarlılık aynı tabandandır. Karşılaştırma için dinamik rijitlikle hesaplanan frekanslar da verilmiştir.</p>';
+  else h+='<p>Sönümsüz özdeğer problemi (7.1) dinamik rijitlikle çözülür. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir; oran, dinamik sertleşmeyi \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) mertebesinde gösterir.</p>';
   // Sönümlü modal — mod başına ζ_r ve sönümlü frekans (varsa; §8.12 sönüm tablosu
   // üretilemediyse sütunlar hiç basılmaz, boş sütun gösterilmez).
   var zmod=R.modalDamping;
   var haveZ=!!(zmod && zmod.length===modes.length);
+  // Kesin sönümlü modlar (durum uzayı, R.kompleksModlar — Canlı Not 3002): sönümsüz modların
+  // sırasıyla; varsa ζ ve f_d sütunları kesin değerdir, izdüşüm karşılaştırma için kalır.
+  var km=R.kompleksModlar, haveK=!!(haveZ && km && km.length===modes.length);
   if(haveZ){
     h+='<p>Takoz sönümü (§8.12) modal koordinatlara <em>izdüşürülerek</em> her mod için bir sönüm oranı verir; '
       +'sönümlü doğal frekans buradan gelir:</p>';
     h+='$$ \\zeta_r=\\frac{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf C\\,\\boldsymbol\\varphi_r}'
       +'{2\\,\\omega_r\\,\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf M\\,\\boldsymbol\\varphi_r},\\qquad '
       +'f_{d,r}=f_r\\sqrt{1-\\zeta_r^{\\,2}} $$';
+    if(haveK) h+='<p>İzdüşüm modlar arası sönüm kuplajını yok sayar; <em>kesin</em> sütunlar ikinci dereceden özdeğer '
+      +'probleminin durum uzayındaki çözümüdür:</p>'
+      +'$$ \\mathbf A=\\begin{bmatrix}\\mathbf 0&\\mathbf I\\\\-\\mathbf M^{-1}\\mathbf K&-\\mathbf M^{-1}\\mathbf C\\end{bmatrix},\\qquad '
+      +'\\lambda_r=-\\zeta_r\\omega_r\\pm i\\,\\omega_r\\sqrt{1-\\zeta_r^{\\,2}} $$';
   }
   h+='<table><caption>Tablo '+_rTbl()+' — Rijit gövde modları: doğal frekanslar'+(haveZ?', mod başına sönüm':'')+' ve baskın mod şekli</caption>';
-  h+='<tr><th>Mod</th><th>f (k<sub>din</sub>) [Hz]</th><th>f (k<sub>stat</sub>) [Hz]</th>'
-    +(haveZ?'<th>ζ<sub>mod</sub></th><th>f<sub>d</sub> [Hz]</th>':'')
+  h+='<tr><th>Mod</th>'+(tabanS ? '<th>f (k<sub>stat</sub>) [Hz]</th><th>f (k<sub>din</sub>) [Hz]</th>' : '<th>f (k<sub>din</sub>) [Hz]</th><th>f (k<sub>stat</sub>) [Hz]</th>')
+    +(haveZ?(haveK?'<th>ζ<sub>mod</sub> (izdüşüm)</th><th>ζ (kesin)</th><th>f<sub>d</sub> (kesin) [Hz]</th>':'<th>ζ<sub>mod</sub></th><th>f<sub>d</sub> [Hz]</th>'):'')
     +'<th>Baskın hareket (mod şekli)</th></tr>';
   var lbl=['u<sub>x</sub>','u<sub>y</sub>','u<sub>z</sub>','θ<sub>x</sub>','θ<sub>y</sub>','θ<sub>z</sub>'];
   modes.forEach(function(md,i){
@@ -1470,8 +1520,10 @@ function _mntRepStep5Modal(R, C){
       var zr=zmod[i]||{};
       // ζ_mod ≥ 1: aşırı sönümlü — salınım yok, f_d tanımsız. Sayı GİZLENMEZ,
       // işaretlenir (NaN basmak "hesaplanamadı" gibi okunur, oysa hesaplandı).
-      zc='<td>'+(Number.isFinite(zr.zeta)?_rF(zr.zeta,4)+(zr.over?' <b title="aşırı sönümlü">≥1</b>':''):'—')+'</td>'
-        +'<td>'+(Number.isFinite(zr.f_d)?_rF(zr.f_d,3):(zr.over?'salınım yok':'—'))+'</td>';
+      zc='<td>'+(Number.isFinite(zr.zeta)?_rF(zr.zeta,4)+(zr.over?' <b title="aşırı sönümlü">≥1</b>':''):'—')+'</td>';
+      var kk=haveK ? (km[i]||{}) : zr;
+      if(haveK) zc+='<td>'+(Number.isFinite(kk.zeta)?_rF(kk.zeta,4)+(kk.over?' <b title="aşırı sönümlü">≥1</b>':''):'—')+'</td>';
+      zc+='<td>'+(Number.isFinite(kk.f_d)?_rF(kk.f_d,3):(kk.over?'salınım yok':'—'))+'</td>';
     }
     h+='<tr><td class="c">'+(i+1)+'</td>'
       +'<td>'+_rF(md.f_Hz,3)+'</td><td>'+fs+'</td>'+zc
@@ -1780,13 +1832,21 @@ function _mntRepDamping(R){
 // §8.8'deki SDOF kestiriminin GERÇEĞİ: 6 SD sönümlü sistemin harmonik kuvvet
 // iletilebilirliği, düşey tahrik/düşey çıktı. Referans: ASR-SR-116 Şekil 9.
 var _FRF_TMIN = 0.01, _FRF_TMAX = 1000, _FRF_FMIN = 0.1, _FRF_FMAX = 100;
+// Tarama Çözücü'nün ayarından (R.cozucu.frf — Canlı Not 3002); eski çözümde varsayılan.
+// Sonuçlar'ın ızgarası AYNI ayardan (mount-signals _frfAyar): iki yüzey aynı ızgara.
+function _mntRepFrfAyar(R){
+  var F=(R && R.cozucu && R.cozucu.frf) || {};
+  return { fMin:(F.fMin>0 ? F.fMin : _FRF_FMIN), fMax:(F.fMax>0 ? F.fMax : _FRF_FMAX),
+           nPts:(F.nPts>1 ? F.nPts : 240), incelt:(F.incelt!==false) };
+}
 
 // Log-log eğri grafiği (SVG). pts = { f, T, T0 }. fFire varsa dikey imleç.
 var _frfKirpNo=0;
 function _mntRepFRFChart(pts, fFire){
   var W=760, H=400, L=64, Rr=18, Tp=16, Bt=44;
   var pw=W-L-Rr, ph=H-Tp-Bt;
-  var lf0=Math.log10(_FRF_FMIN), lf1=Math.log10(_FRF_FMAX);
+  var fA=(pts.f && pts.f.length) ? pts.f[0] : _FRF_FMIN, fB=(pts.f && pts.f.length) ? pts.f[pts.f.length-1] : _FRF_FMAX;
+  var lf0=Math.log10(fA), lf1=Math.log10(fB);
   // T EKSENİ VERİDEN: sabit 0,01–1.000 aralığı eğriyi 75 Hz'ten sonra alt
   // sınırda DÜZ ÇİZGİYE çeviriyordu (kırpılmış veri) ve üst yarı boş kalıyordu.
   // Aralık SÖNÜMLÜ eğrinin onluklarına oturur (T = 1 her zaman içeride);
@@ -1805,7 +1865,7 @@ function _mntRepFRFChart(pts, fFire){
   var d, k;
   for(d=lf0; d<=lf1; d++){
     for(k=1;k<10;k++){
-      var fv=k*Math.pow(10,d); if(fv<_FRF_FMIN||fv>_FRF_FMAX) continue;
+      var fv=k*Math.pow(10,d); if(fv<fA||fv>fB) continue;
       var X=px(fv);
       s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c5cbd3" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
@@ -1853,7 +1913,7 @@ function _mntRepFRFChart(pts, fFire){
   s+='</g>';
   // ── f_ateş imleci ──
   var engel=[{ x0:L, x1:L+pw, y0:y1-1, y1:y1+1 }, { x0:L+2, x1:L+150, y0:y1-17, y1:y1 }];
-  if(Number.isFinite(fFire) && fFire>=_FRF_FMIN && fFire<=_FRF_FMAX){
+  if(Number.isFinite(fFire) && fFire>=fA && fFire<=fB){
     var XF=px(fFire);
     s+='<line x1="'+XF.toFixed(1)+'" y1="'+Tp+'" x2="'+XF.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#1b7f4b" stroke-width="1.6" stroke-dasharray="4 3"/>';   // makine: SVG koordinatı
     s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b"'+_R_HALE+'>f<tspan font-size="75%" baseline-shift="sub">ateş</tspan> = '+_rEsc(_rF(fFire,1))+' Hz</text>';   // makine: SVG koordinatı
@@ -1886,11 +1946,12 @@ function _mntRepFRF(R, opts){
   // Izgara Sonuçlar'ınkiyle AYNI (mount-signals _frfIzgara): 240 nokta + üç
   // yönün inceltilmiş tepeleri. Eskiden burada 260, orada 240 noktaydı ve tepe
   // iki yüzeyde farklı (ve ızgaraya göre düşük) okunuyordu.
+  var FA=_mntRepFrfAyar(R);
   var izgara=C.frfGrid ? C.frfGrid(_mntRepDin(R), R.mp.cg, M6, R.damping,
-    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, nPts:240, dirs:[0,1,2],
+    { fMin:FA.fMin, fMax:FA.fMax, nPts:FA.nPts, dirs:[0,1,2], incelt:FA.incelt,
       fModal:(R.modes||[]).map(function(m){ return m.f_Hz; }) }) : null;
   var pts=C.frequencyResponse(_mntRepDin(R), R.mp.cg, M6, R.damping,
-    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, dir:2, f:izgara });
+    { fMin:FA.fMin, fMax:FA.fMax, nPts:FA.nPts, dir:2, f:izgara });
   if(!pts) return '';
   var iso=_mntRepIsolation(R, opts);
   var fFire=iso.fFire;
@@ -2830,7 +2891,7 @@ function _mntRepFindCase(R, name){
 // ─── Node/Jest için dışa aç ──────────────────────────────────────────────────
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
-    veMntGenerateReport: veMntGenerateReport,
+    veMntGenerateReport: veMntGenerateReport, _mntRepCozucuAyar: _mntRepCozucuAyar, _mntRepFrfAyar: _mntRepFrfAyar,
     veMntUygunluk: veMntUygunluk, MNT_TR_SINIR: MNT_TR_SINIR,
     _mntRepAski: _mntRepAski, _mntRepAskiAralik: _mntRepAskiAralik,
     veMntRaporOpts: veMntRaporOpts,

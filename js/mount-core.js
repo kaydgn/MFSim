@@ -959,6 +959,19 @@ var veMountCore = (function() {
     return rName + '+' + tName;
   }
 
+  // ── MODAL AYARI — Çözücü'nün modal seçenekleri (kullanıcı 2026-11-13, Canlı Not 3002) ──
+  // `taban`: dinamik analizlerin (modal, frekans yanıtı, şok, sönüm, duyarlılık) rijitlik
+  // tabanı — 'dinamik' (k_din; nonlineerde statik dengedeki tanjant × k_din/k_stat — bugünkü
+  // davranış) · 'statik' (k_stat; nonlineerde statik tanjant). Tek taban hepsine birlikte
+  // gider (dynStiffBasis kuralı): biri statik, öteki dinamik olsa modal frekans ile FRF
+  // tepesi ayrışırdı. Tanınmayan değer varsayılana düşer. Kapı: mount-cozucu-ayar.test.js.
+  const MODAL_VARSAYILAN = { taban:'dinamik' };
+  const MODAL_TABANLAR = ['dinamik', 'statik'];
+  function modalAyar(ham){
+    const h = ham || {};
+    return { taban: MODAL_TABANLAR.indexOf(h.taban) >= 0 ? h.taban : MODAL_VARSAYILAN.taban };
+  }
+
   // 6 rijit gövde modu: doğal frekans + normalize mod şekli + etiket.
   // K_dyn ile çağrılır (SPEC 4.2). f≈0 modlar SESSİZCE ELENMEZ (A26
   // düzeltmesi): warning bayrağıyla döner — UI kullanıcıyı uyarır.
@@ -1504,6 +1517,25 @@ var veMountCore = (function() {
     return null;
   }
 
+  // ── FREKANS YANITI AYARI — Çözücü'nün seçenekleri (kullanıcı 2026-11-13, Canlı Not 3002) ──
+  // Tarama aralığı [fMin, fMax] Hz, logaritmik nokta sayısı ve tepe inceltme. Varsayılan
+  // bugünkü ızgara (0,1–100 Hz, 240 nokta, inceltme açık). Aralık dışı değer sınıra kırpılır,
+  // fMax ≤ fMin ise aralık varsayılana döner (boş tarama üretilmez). Sonuçlar ve rapor §8.13
+  // AYNI ayardan okur (iki yüzey aynı ızgara). Kapı: mount-cozucu-ayar.test.js.
+  const FRF_VARSAYILAN = { fMin:0.1, fMax:100, nPts:240, incelt:true };
+  const FRF_SINIR = { fMin:[0.01, 50], fMax:[1, 1000], nPts:[20, 2000] };
+  function frfAyar(ham){
+    const h = ham || {}, o = {};
+    ['fMin', 'fMax', 'nPts'].forEach(function(k){
+      const v = Number(h[k]), s = FRF_SINIR[k];
+      o[k] = Number.isFinite(v) ? Math.min(s[1], Math.max(s[0], v)) : FRF_VARSAYILAN[k];
+    });
+    o.nPts = Math.round(o.nPts);
+    if(!(o.fMax > o.fMin * 1.5)){ o.fMin = FRF_VARSAYILAN.fMin; o.fMax = FRF_VARSAYILAN.fMax; }
+    o.incelt = (h.incelt === false || h.incelt === 'kapali') ? false : true;
+    return o;
+  }
+
   // FRF IZGARASI — logaritmik nPts nokta + sönümlü eğrinin YEREL TEPELERİ.
   //
   // NEDEN: sönümü küçük modun tepesi ızgara aralığından dar. 240 noktada komşu
@@ -1518,7 +1550,7 @@ var veMountCore = (function() {
   // (ζ = 0) sönümlü eğri de tekil — inceltilecek sonlu tepe yok, taban döner.
   // Izgara bütün yönlerin tepelerini taşır: Sonuçlar'da üç yön tek X eksenini
   // paylaşır ve rapor §8.13 aynı ızgarayı kullanır (iki yüzey aynı sayı).
-  // opts: { fMin=0.1, fMax=100, nPts=240, dirs=[0,1,2], fModal=[], kBasis }
+  // opts: { fMin=0.1, fMax=100, nPts=240, dirs=[0,1,2], fModal=[], kBasis, incelt=true }
   function frfGrid(mounts, cg, M6, damping, opts){
     opts = opts || {};
     const fMin = (opts.fMin > 0) ? opts.fMin : 0.1;
@@ -1530,6 +1562,7 @@ var veMountCore = (function() {
     for(let i=0;i<nPts;i++) taban.push(Math.pow(10, lo + (hi-lo)*i/(nPts-1)));
     const cList = mounts.map(function(_, i){
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+    if(opts.incelt === false) return taban;                       // Çözücü'nün ayarı: yalnız taban ızgarası
     if(!cList.some(function(c){ return c.some(function(v){ return v > 0; }); })) return taban;
     const kb = dynStiffBasis(mounts, resolveKBasis(mounts, damping, opts.kBasis));
     const K6 = buildKfromBasis(mounts, cg, kb);
@@ -2205,6 +2238,51 @@ var veMountCore = (function() {
       if(mp) problems.push(mp);
     }
     return problems;
+  }
+
+  // ═══════════════════ Çözücü ayarı — statik denge ve geçici rejim (Canlı Not 3002) ═══════════════════
+  // Çözücü penceresinin seçenekleri; varsayılanın ve aralığın TEK kaynağı. Varsayılan bugünkü
+  // çözücüdür: tam Newton–Raphson, geri izlemeli doğrusal arama, tek artım, 1e-9 artık ölçütü,
+  // 60 iterasyon; durdurucu 100·k ve 50 aktif küme turu; şokta Newmark ortalama ivme, periyot
+  // başına 40 adım, adım başına en çok 20 Newton. Aralık dışı sayı sınıra kırpılır, tanınmayan
+  // seçenek varsayılana düşer. Kapı: mount-cozucu-ayar.test.js.
+  const STATIK_YONTEMLER = ['newton', 'modnewton', 'bfgs'];
+  const STATIK_VARSAYILAN = { yontem:'newton', arama:true, artim:1, kesme:5, tolF:NL_RTOL, tolM:NL_RTOL, tolU:0,
+                              maxIter:NL_NEWTON_MAXITER, stiffRatio:STOP_STIFF_RATIO, aktifTur:STOP_MAXITER };
+  const GECICI_ENTEGRATORLER = ['newmark-ort', 'newmark-dogrusal', 'hht', 'gen-alfa'];
+  const GECICI_VARSAYILAN = { entegrator:'newmark-ort', alfa:-0.05, rhoInf:0.8, adimPeriyot:40,
+                              newtonTol:NL_RTOL, newtonMaxIter:SHOCK_NEWTON_MAXITER };
+  function _ayarSayi(v, vars, alt, ust, tam){
+    const n = Number(v);
+    if(v === null || v === undefined || v === '' || !Number.isFinite(n)) return vars;
+    const k = Math.min(ust, Math.max(alt, n));
+    return tam ? Math.round(k) : k;
+  }
+  function statikAyar(ham){
+    const h = ham || {}, V = STATIK_VARSAYILAN;
+    return {
+      yontem: STATIK_YONTEMLER.indexOf(h.yontem) >= 0 ? h.yontem : V.yontem,
+      arama: h.arama === false ? false : true,
+      artim: _ayarSayi(h.artim, V.artim, 1, 100, true),
+      kesme: _ayarSayi(h.kesme, V.kesme, 0, 20, true),
+      tolF: _ayarSayi(h.tolF, V.tolF, 1e-14, 1e-2),
+      tolM: _ayarSayi(h.tolM, V.tolM, 1e-14, 1e-2),
+      tolU: _ayarSayi(h.tolU, V.tolU, 0, 1e-2),
+      maxIter: _ayarSayi(h.maxIter, V.maxIter, 1, 500, true),
+      stiffRatio: _ayarSayi(h.stiffRatio, V.stiffRatio, 1, 1e6),
+      aktifTur: _ayarSayi(h.aktifTur, V.aktifTur, 1, 500, true)
+    };
+  }
+  function geciciAyar(ham){
+    const h = ham || {}, V = GECICI_VARSAYILAN;
+    return {
+      entegrator: GECICI_ENTEGRATORLER.indexOf(h.entegrator) >= 0 ? h.entegrator : V.entegrator,
+      alfa: _ayarSayi(h.alfa, V.alfa, -1/3, 0),
+      rhoInf: _ayarSayi(h.rhoInf, V.rhoInf, 0, 1),
+      adimPeriyot: _ayarSayi(h.adimPeriyot, V.adimPeriyot, 4, 400, true),
+      newtonTol: _ayarSayi(h.newtonTol, V.newtonTol, 1e-14, 1e-2),
+      newtonMaxIter: _ayarSayi(h.newtonMaxIter, V.newtonMaxIter, 1, 200, true)
+    };
   }
 
   // ═══════════════════ Varsayılan yük durumu şablonu (SPEC 4.4) ═══════════════════
@@ -3232,6 +3310,7 @@ var veMountCore = (function() {
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency, frfGrid,
+    MODAL_VARSAYILAN, modalAyar, FRF_VARSAYILAN, frfAyar,
     mountLoadShares, mountDamping, sectionMoment, motionEnvelope,
     ASKI_BLOK_KAT, askiDurum, askiKuvvet, askiEleman, askiTakozlari, askiYasalari, yukeKuvvetEkle, noktaYerDegisimi, askiTasarimBoylari, solveWithHangers,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
@@ -3250,6 +3329,8 @@ var veMountCore = (function() {
     mountHasCurve, anyCurve, lawCatalogMismatch,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
+    // Çözücü ayarı — statik denge ve geçici rejim
+    STATIK_VARSAYILAN, statikAyar, GECICI_VARSAYILAN, geciciAyar,
     // Sabitler
     TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO, DEFAULT_ZETA
   };

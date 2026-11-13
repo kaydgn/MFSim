@@ -146,9 +146,16 @@ var veMntSignals = (function() {
   // (R.dinMounts, cp-mount.js); takoz başına kanallar ilk N elemandan.
   function _dinTakoz(R) { return (R && R.dinMounts) || (R && R.mounts) || []; }
 
+  // Tarama Çözücü'nün ayarından (R.cozucu.frf — Canlı Not 3002); eski çözümde varsayılan.
+  function _frfAyar(R) {
+    var F = (R && R.cozucu && R.cozucu.frf) || {};
+    return { fMin: F.fMin > 0 ? F.fMin : FRF_FMIN, fMax: F.fMax > 0 ? F.fMax : FRF_FMAX,
+             nPts: F.nPts > 1 ? F.nPts : FRF_NPTS, incelt: F.incelt !== false };
+  }
   function _frfIzgara(C, R, M6) {
+    var A = _frfAyar(R);
     return C.frfGrid ? C.frfGrid(_dinTakoz(R), R.mp.cg, M6, R.damping,
-      { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dirs: [0, 1, 2],
+      { fMin: A.fMin, fMax: A.fMax, nPts: A.nPts, dirs: [0, 1, 2], incelt: A.incelt,
         fModal: (R.modes || []).map(function(m) { return m.f_Hz; }) }) : null;
   }
 
@@ -164,8 +171,9 @@ var veMntSignals = (function() {
     var keys = _mountKeys(R.mounts);
     var izgara = _frfIzgara(C, R, M6);
     for(var dir = 0; dir < 3; dir++) {
+      var A = _frfAyar(R);
       var pts = C.frequencyResponse(_dinTakoz(R), R.mp.cg, M6, R.damping,
-        { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir, perMount: true, f: izgara });
+        { fMin: A.fMin, fMax: A.fMax, nPts: A.nPts, dir: dir, perMount: true, f: izgara });
       if(!pts || !pts.f || !pts.f.length) return null;
       if(!f) f = pts.f;
       var ax = AXIS_NAMES[dir];
@@ -510,10 +518,13 @@ var veMntSignals = (function() {
     // R.damping kayıtlarında taşınıyor ve çekirdek onu oradan çözüyor.
     var res;
     try {
-      res = C.shockResponse(_dinTakoz(R), R.mp.cg, M6, R.damping, {
+      // Entegratör ve adım Çözücü'nün ayarından (R.cozucu.gecici — Canlı Not 3002);
+      // eski çözümde çekirdeğin varsayılanı (Newmark ortalama ivme).
+      res = C.shockResponse(_dinTakoz(R), R.mp.cg, M6, R.damping, Object.assign({},
+        (R.cozucu && R.cozucu.gecici) || {}, {
         dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81,
         useStop: true, q0: R.qStatic || null, kBasis: R.kBasis || null
-      });
+      }));
     } catch(e) { res = null; }
     if(!res || !res.t || res.t.length < 2) return null;
 
