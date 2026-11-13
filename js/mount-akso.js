@@ -47,6 +47,7 @@
 //            braket, levha:{ takoz:k, govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } | null }
 //   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır],
 //            renk? (1–4: Parametrik Analiz'de grubun rengi — küp ve çip `ve-ak-renk-N`, --seri-N) }]
+//   aski  : [{ k, no, ad, x, y, z, L [mm], bilgi:[satır] }] (ops.) — askı yayının noktası ve boyu
 //   G     : { x, y, z, m, bilgi:[satır] }
 //   cgR   : [x, y, z] mm — mod şekli ve statik dengenin dönme merkezi (çözümün G'si)
 //   q     : { u:[mm ×3], t:[rad ×3] } | null — statik denge yer değiştirmesi
@@ -615,6 +616,7 @@ var veMntAkso = (function(){
       [-1, 1].forEach(function(i){ [-1, 1].forEach(function(j){ [-1, 1].forEach(function(k){ pts.push([b.x+i*h[0], b.y+j*h[1], b.z+k*h[2]]); }); }); });
     });
     m.takoz.forEach(function(t){ pts.push([t.x, t.y, t.z]); });
+    (m.aski || []).forEach(function(a){ pts.push([a.x, a.y, a.z]); });
     if(!pts.length) return 0;
     var xs=pts.map(function(p){ return p[0]; }), span=Math.max.apply(null, xs)-Math.min.apply(null, xs), maxD=0;
     pts.forEach(function(p){ var d=modDelta(phi, c, p, 1); maxD=Math.max(maxD, Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2])); });
@@ -636,6 +638,7 @@ var veMntAkso = (function(){
       else { xs.push(g.x); ys.push(g.y); zs.push(g.z); }
     });
     m.takoz.forEach(function(t){ xs.push(t.x); ys.push(t.y); zs.push(t.z); });
+    (m.aski || []).forEach(function(a){ xs.push(a.x); ys.push(a.y); zs.push(a.z, a.z-a.L); });
     if(m.G){ xs.push(m.G.x); ys.push(m.G.y); zs.push(m.G.z); }
     if(!xs.length){ xs.push(0); ys.push(0); }
     return { xmin:Math.min.apply(null, xs), xmax:Math.max.apply(null, xs), ymin:Math.min.apply(null, ys), ymax:Math.max.apply(null, ys),
@@ -691,6 +694,7 @@ var veMntAkso = (function(){
     kut.forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ nokta3.push(p); }); }); });
     nok.forEach(function(g){ nokta3.push([g.x, g.y, g.z]); });
     m.takoz.forEach(function(t){ nokta3.push([t.x, t.y, t.z]); });
+    (m.aski || []).forEach(function(a){ nokta3.push([a.x, a.y, a.z], [a.x, a.y, a.z-a.L]); });
     if(m.G) nokta3.push([m.G.x, m.G.y, m.G.z]);
     // Serbest kameranın küresi MODELİN kendisinden (zemin, duvar ve cetvel
     // hariç): döndürülen modeldir; zemin kenarda kesilebilir.
@@ -931,6 +935,27 @@ var veMntAkso = (function(){
         // çiziminde "G · z 798" ASFAT motorunun işaretinin üstüne düşüyordu).
         engel.push({ l:am[0]-5*ik, t:am[1]-5*ik, r:am[0]+5*ik, b:am[1]+5*ik });
       }
+    });
+    // ASKI YAYLARI (2026-11-13): noktasından (gövdeye bağlı, hareketle) şasideki oturağına
+    // (Z'de L aşağı, sabit) zikzak; gövdelerin üstünde, ressam sırası dışında (küçük işaret).
+    // Yazısız; künyesi ipucunda. İzdüşümde boyu kısalan yay (yukarıdan bakış) yalnız noktası.
+    (m.aski || []).forEach(function(a){
+      var ust=Ph([a.x, a.y, a.z]), alt=P([a.x, a.y, a.z-a.L]);
+      var dx=ust[0]-alt[0], dy=ust[1]-alt[1], Ln=Math.sqrt(dx*dx+dy*dy), w=3.2*tk, ucR=1.8*tk;
+      var h='<g class="ve-ak-aski"'+ak(a.k, a.bilgi)+'>', kp=[ust];
+      if(Ln>3*tk){
+        var ux=dx/Ln, uy=dy/Ln, nx=-uy, ny=ux, N=6, pay=0.14, pts=[alt, [alt[0]+dx*pay, alt[1]+dy*pay]];
+        for(var i=0;i<N;i++){ var f=pay+(1-2*pay)*(i+0.5)/N, sw=(i%2 ? -1 : 1)*w; pts.push([alt[0]+dx*f+nx*sw, alt[1]+dy*f+ny*sw]); }
+        pts.push([alt[0]+dx*(1-pay), alt[1]+dy*(1-pay)], ust);
+        var ow=w*1.6;
+        h+='<path class="a-yay" d="M'+pts.map(function(q){ return R(q[0])+' '+R(q[1]); }).join(' L')+'"/>'
+          +'<path class="a-otur" d="M'+R(alt[0]-nx*ow)+' '+R(alt[1]-ny*ow)+' L'+R(alt[0]+nx*ow)+' '+R(alt[1]+ny*ow)+'"/>';
+        kp=pts.concat([[alt[0]-nx*ow, alt[1]-ny*ow], [alt[0]+nx*ow, alt[1]+ny*ow]]);
+      }
+      h+='<circle class="a-uc" cx="'+R(ust[0])+'" cy="'+R(ust[1])+'" r="'+R(ucR)+'"/></g>';
+      koy(a.k, h);
+      var kx=kp.map(function(q){ return q[0]; }), ky=kp.map(function(q){ return q[1]; }), e=w+2;
+      engel.push({ l:Math.min.apply(null, kx)-e, t:Math.min.apply(null, ky)-e, r:Math.max.apply(null, kx)+e, b:Math.max.apply(null, ky)+e });
     });
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
     var gSvg='', gq=null, g3=null;

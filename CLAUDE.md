@@ -416,7 +416,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sönümsüz, durdurucusuz; şokta tam yasa): askısız modal Adams'tan %1,9 sapıyor. Takoz başına çıktılar listenin ilk
   N'i; yumuşatma askıyı ölçeklemez; duyarlılık askıyı da satırlar (Σe = ½). Rapor §8.20 (boy · kuvvet · EN 13906-1
   gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
-  katar. Pencere SONUÇ GÖSTERMEZ. Örnek `tta10askili`. Kapı: `mount-aski.test.js` + `mount-duyarlilik.test.js`.
+  katar. Pencere SONUÇ GÖSTERMEZ. Görünümler · Güç grubundaki yeri · raporun aksonometrisi askıyı noktasından
+  oturağına zikzakla çizer (yazısız). Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
+  taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Kapı:
+  `mount-aski.test.js` + `mount-aski-secim.test.js` + `mount-duyarlilik.test.js`.
 - **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
   kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
   kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer

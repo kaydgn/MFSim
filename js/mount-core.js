@@ -2498,17 +2498,29 @@ var veMountCore = (function() {
   };
 
   // ── 10 Ton TTA — ŞANZIMAN ASKILI (kullanıcı 2026-11-11): "6X6 YENİ KABİN - ISM TAKOZ
-  // KONUMLARI - ŞANZIMAN ASKILI" föyü (tests/fixtures/excel-tta-askili.js). Askısızdan
-  // farkı arka takozların Y'si (±335) ve iki askı yayı: Spring-1 · 2 föyün noktaları,
-  // yay BMC 2K60377 (5,85 kgf/mm · L0 90 · Lc 63 mm), statik montaj kuvveti föyün
-  // 50 kg'ı. Gövdeler, tork ve rijitlik askısız örneğin aynısı.
+  // KONUMLARI - ŞANZIMAN ASKILI" föyü (tests/fixtures/excel-tta-askili.js): arka takozların Y'si
+  // ±335, iki askı yayı (Spring-1 · 2'nin noktaları, BMC 2K60377). Föy takoz TİPİ vermiyor —
+  // soru "hangi takozlar uygun" (kullanıcı 2026-11-13). Tipler ve ön yük Parametrik Analiz'in
+  // motorundan, askıyla birlikte (üç grup × 23 aday = 12.167 kombinasyon): dört kesin kriter +
+  // uygunluğun bütün satırları (askı çalışma aralığında) + Cummins bandı (0 ≤ M_b ≤ 0,2·sınır).
+  // Föyün 50 kg'ında hiçbir kombinasyon geçmiyor (en çok torkta yay açılıyor); 80 kgf'ta altı
+  // geçiyor, seçilen ±%15 rijitlik toleransında 8–10 Hz bandını ve TR < %15'i tutan:
+  // ön çift TK040 (yasasıyla), arka dört AMC Cone 38 60 ShA (137963). Gövdeler ve tork askısız
+  // örneğin aynısı. Kapı: tests/unit/mount-aski.test.js → TTA ASKILI · TAKOZ SEÇİMİ.
+  const _TK040 = { kstat:[515,260,242], kdyn:[740,355,335] };
+  const _AMC137963 = { kstat:[1800,1210,1150], kdyn:[2880,1936,1840] };
   const TTA10_ASKILI_EXAMPLE = Object.assign({}, TTA10_EXAMPLE, {
-    mounts: TTA10_EXAMPLE.mounts.map(function(m){
-      return Math.abs(m.pos[1]) === 365 ? Object.assign({}, m, { pos:[m.pos[0], m.pos[1] < 0 ? -335 : 335, m.pos[2]] }) : m;
-    }),
+    mounts: [
+      Object.assign({name:'Ön sol takoz · TK040',        pos:[-636.668,  -48.971, 293.531]}, _TK040),
+      Object.assign({name:'Ön sağ takoz · TK040',        pos:[-636.471,   52.629, 293.531]}, _TK040),
+      Object.assign({name:'Sol ön takoz · AMC 137963',   pos:[ 532,     -335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sağ ön takoz · AMC 137963',   pos:[ 532,      335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sol arka takoz · AMC 137963', pos:[ 642,     -335,     535    ]}, _AMC137963),
+      Object.assign({name:'Sağ arka takoz · AMC 137963', pos:[ 642,      335,     535    ]}, _AMC137963)
+    ],
     askilar: [
-      {name:'Sol askı yayı · 2K60377', pos:[1365, -350, 672.503], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:50},
-      {name:'Sağ askı yayı · 2K60377', pos:[1365,  350, 672.501], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:50}
+      {name:'Sol askı yayı · 2K60377', pos:[1365, -350, 672.503], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80},
+      {name:'Sağ askı yayı · 2K60377', pos:[1365,  350, 672.501], yay:'bmc-2k60377', k:57.39, L0:90, Lc:63, kurulum:'kuvvet', montajF:80}
     ]
   });
 

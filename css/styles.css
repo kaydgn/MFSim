@@ -9867,6 +9867,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-t .t-z{ fill:color-mix(in srgb, var(--accent-success) 50%, var(--bg-input)); }
 .ve-ak-t .t-y{ fill:var(--accent-success); }
 .ve-ak-t .t-x{ fill:color-mix(in srgb, var(--accent-success) 70%, var(--text-heading)); }
+/* Askı yayı: noktasından şasideki oturağına zikzak */
+.ve-ak-aski .a-yay{ fill:none; stroke:var(--accent-success); stroke-width:1.4; stroke-linejoin:round; }
+.ve-ak-aski .a-otur{ fill:none; stroke:var(--text-muted); stroke-width:1.6; }
+.ve-ak-aski .a-uc{ fill:var(--bg-input); stroke:var(--accent-success); stroke-width:1.2; }
 .ve-ak-gam circle{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.5; }
 .ve-ak-gam path{ fill:var(--accent-danger); }
 .ve-ak-gdus{ stroke:var(--accent-danger); stroke-width:1; stroke-dasharray:3 2; }
@@ -9928,6 +9932,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-lj-gy{ fill:color-mix(in srgb, var(--text-muted) 22%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
 .ve-ak-lj-gx{ fill:color-mix(in srgb, var(--text-muted) 34%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
 .ve-ak-lj-t{ fill:var(--accent-success); }
+.ve-ak-lj-aski{ fill:none; stroke:var(--accent-success); stroke-width:1.2; stroke-linejoin:round; }
 .ve-ak-lj-g1{ fill:var(--seri-1); } .ve-ak-lj-g2{ fill:var(--seri-2); } .ve-ak-lj-g3{ fill:var(--seri-3); }
 .ve-ak-lj-G{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.4; }
 .ve-ak-lj-n{ fill:var(--accent-warning); }
@@ -10193,6 +10198,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-t[data-sec] .t-y{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); }
 .ve-ak-t[data-sec] .t-x{ fill:color-mix(in srgb, var(--accent-primary) 40%, var(--isik)); }
 .ve-ak-nokta[data-sec]{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
+.ve-ak-aski[data-sec] .a-yay, .ve-ak-aski[data-sec] .a-uc{ stroke:var(--accent-primary); stroke-width:1.8; }
 .ve-ak-sec-hale{ fill:none; stroke:var(--accent-primary); stroke-width:1.8; }
 .ve-ak-cip.sec-cip rect{ stroke:var(--accent-primary); stroke-width:1.4; }
 /* PERDE (o.perde): seçili parça aydınlık, kalan model gölgede — perde
