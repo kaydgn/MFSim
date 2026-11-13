@@ -74,6 +74,9 @@ test('BİLEŞEN MENÜSÜ: sağ tık menüyü açar ve seçer; Büyük büyütür
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => nodes.length)).toBe(once);
+  // Ctrl+Z YALNIZ silmeyi geri alır: silmeden önceki adlandırma yerinde (silme bir geri-al
+  // adımı — eskiden yığına yazılmıyordu, Ctrl+Z adlandırmayı da geri alıyordu)
+  await expect(page.locator('#' + m.id + ' .ve-node-label')).toHaveText('Ana motor');
   expect(hatalar).toEqual([]);
 });
 

@@ -931,7 +931,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile
   sarılır, yoksa Ctrl+Z modeli düğüm düğüm söker. Bir topolojinin AÇILIŞ
   durumu geri alınamaz (`veStateResetBaseline`) — modüle girip araçları almak
-  bir düzenleme değil. Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
+  bir düzenleme değil. Bileşen SİLMEK de bir adımdır (`deleteSelectedNodes` sonunda yazar;
+  yazmıyordu, Ctrl+Z bir önceki düzenlemeyi de geri alıyordu — `sil-geri-al.test.js`).
+  Kapı: `state.test.js` (mekanizma) + `cp-fead.test.js` /
   `fead-wizard.test.js` / `fead-cizim-masasi.test.js` (kurucular ve çizimde
   ekleme o mekanizmadan geçiyor mu).
 - **YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR.** Geri-al / ileri-al yığındaki
