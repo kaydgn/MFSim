@@ -1508,11 +1508,13 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     expect(Object.keys(K.ODAKLAR).sort()).toEqual(Object.keys(CN.ODAKLAR).sort());
     const js = jsKaynak();
     Object.keys(CN.ODAKLAR).forEach((ad) => {
-      const o = CN.ODAKLAR[ad], kaynak = K.ODAKLAR[ad].toString();
+      const o = CN.ODAKLAR[ad], kaynak = K.odakKaynak(ad);
       if (o.belge) return;                                              // belge odağı aşağıda (BELGE ODAĞI)
       expect(Boolean(o.ad && o.baslik && o.tip && o.taban > 0)).toBe(true);
       expect(js).toContain("'" + o.tip + "': {");
-      expect(kaynak).toContain("TIP = '" + o.tip + "'");
+      expect(K.BILESEN[ad]).toBe(o.tip);                                // köprünün tipi çekirdeğinkiyle aynı
+      expect(kaynak).toContain(JSON.stringify(o.tip));
+      expect(typeof new Function('return ' + kaynak)()).toBe('function'); // sonucun sayfasında KENDİ BAŞINA koşar
       const islevler = [...new Set([...kaynak.matchAll(/win\.([A-Za-z_$][\w$]*)\(/g)].map((m) => m[1]))]
         .filter((f) => f !== 'setTimeout');
       expect(islevler.length).toBeGreaterThan(6);
@@ -1536,7 +1538,10 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
     expect(CN.sonrakiNo([n(999)])).toBe(1000);
     expect(CN.sonrakiNo([], 'param-html')).toBe(2001);
     expect(CN.sonrakiNo([n(2001)], 'param-html')).toBe(2002);
-    expect(CN.sonrakiNo([n(1000)])).toBe(3001);                       // ana sayfa iki odağın aralığına da girmez
+    expect(CN.sonrakiNo([], 'cozucu')).toBe(3001);
+    expect(CN.sonrakiNo([n(1000)])).toBe(4001);                       // ana sayfa odakların hiçbirinin aralığına girmez
+    const tabanlar = Object.keys(CN.ODAKLAR).map((k) => CN.ODAKLAR[k].taban).sort((a, b) => a - b);
+    tabanlar.forEach((t, i) => { if (i) expect(t - tabanlar[i - 1]).toBeGreaterThanOrEqual(CN.NO_ARALIK); });  // aralıklar çakışmaz
     const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
     expect(sablon).toContain('CN.sonrakiNo(notlar, AYAR.odak)');
   });
@@ -1663,6 +1668,20 @@ describe('ODAK — bileşene ayrılmış Canlı Not', () => {
       { id: 'g', type: 'mnt-2dview', x: 1240, y: 323, width: 60, height: 56 }, { id: 'l', type: 'mnt-library', x: 1450, y: 163, width: 60, height: 56 }] });
     await tarif(e);
     expect(e.cagri[0]).toEqual(['kur', 'mnt-parametric', 1600, 163]);
+  });
+
+  // Çözücü odağı (kullanıcı 2026-11-13): AYNI tarif, tip mnt-solver. Örnekte Çözücü var — kurulmaz.
+  test('Çözücü odağı: örneğin Çözücü’sünü açar; yoksa aynı yoldan kurar', async () => {
+    const ic = [{ id: 'm', type: 'mnt-motor', x: 540, y: 392 }, { id: 'cz', type: 'mnt-solver', x: 1030, y: 163 }];
+    const w = sahteProgram({ takozda: true, nodes: ic });
+    w.componentDefs['mnt-solver'] = { defaultWidth: 60, defaultHeight: 56 };
+    expect(await K.ODAKLAR.cozucu(w)).toEqual({ tip: 'mnt-solver', id: 'cz', kurulan: false });
+    expect(w.cagri).toEqual([['pencere', true, 'cz']]);
+    const b = sahteProgram({ karsilama: true });
+    b.componentDefs['mnt-solver'] = { defaultWidth: 60, defaultHeight: 56 };
+    expect(await K.ODAKLAR.cozucu(b)).toEqual({ tip: 'mnt-solver', id: 'p1', kurulan: true });
+    expect(b.cagri).toEqual([['modul', 'mount-analysis'], ['ornek', 'tulga'], ['kur', 'mnt-solver', 1345, 323],
+      ['taban'], ['pencere', true, 'p1']]);
   });
 
   test('tarif kurulamayan bileşeni söyler (sessizce bitmez)', async () => {
