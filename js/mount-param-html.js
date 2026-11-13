@@ -207,7 +207,12 @@ var veMntParamHtml = (function(){
     'table.izg td{min-width:var(--sutun);background:var(--kagit)}',
     'table.izg thead th{background:var(--zemin)}',
     'table.izg th.grup{text-align:center}',
-    'table.izg .yuk{position:sticky;left:0;z-index:1;background:var(--zemin);font-weight:600;border-right:2px solid var(--cizgi-koyu)}',
+    // Yük durumu: yapışık (yatay kaydırmada yerinde), kalın yazılı, gri zeminde; kenar çizgileri öteki
+    // hücrelerinki gibi ince (Canlı not 2010: "Şuradaki kalın çizginin amacı ne? Diğerleri gibi olsun,
+    // kalın olmasın.") ve hücrenin İÇİNDE çizili (iç gölge): birleşik kenarlık yapışık hücreyle gitmez,
+    // tablo kayınca sütunun iki kenarı da kayboluyordu; birleşik kenarlık bastırılır, çizgi ikilenmez
+    'table.izg .yuk{position:sticky;left:0;z-index:1;background:var(--zemin);font-weight:600;',
+    '  border-left-style:hidden;border-right-style:hidden;box-shadow:inset 1px 0 0 var(--cizgi),inset -1px 0 0 var(--cizgi)}',
     'table.izg tbody tr:hover td{background:var(--vurgu-zemin)}',
     'table.izg tbody tr:hover td.yuk{background:var(--zemin)}',
     // Sehim: takozların blokları arasında bir sütunluk boşluk (Canlı not 2009) — çizgisiz ve zeminsiz:
