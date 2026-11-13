@@ -742,7 +742,7 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     const kapi = el().querySelector('.ve-bas-kapi');
     const sek = (i) => el().querySelectorAll('.ve-bas-sekme')[i];
     const satirlar = () => [...el().querySelectorAll('.ve-bas-satir')].map((r) => r.getAttribute('data-v'));
-    expect(satirlar()).toEqual(['siper', 'tulga', 'asfat', 'tta10', 'tta10askili']);
+    expect(satirlar()).toEqual(['siper', 'tulga', 'asfat', 'tta10', 'tta10askili', 'isg430askili']);
     sek(1).click();
     expect(satirlar()).toEqual(['kutu', 'hafif', 'kamyon']);
     expect(sek(1).getAttribute('aria-selected')).toBe('true');
