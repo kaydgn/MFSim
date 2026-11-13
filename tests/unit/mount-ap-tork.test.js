@@ -5,7 +5,8 @@
  * kataloğu veri sayfası olmayan aileleri programın ortak kataloğundan (Araç
  * Performans'ın VE_GEARBOX_PRESETS · VE_FT_TC_PRESETS), transferin kataloğu
  * VE_TRANSFER_PRESETS'ten okur — kopya yok. Projede Araç Performans modeli varsa
- * Çözücü'nün "Araç Performans'tan doldur"u zinciri ondan yazar (tek geri-al adımı).
+ * Motor penceresinin "Araç Performans'tan doldur"u zinciri ondan yazar (tek geri-al adımı;
+ * bölüm yük kitabıyla birlikte Çözücü'den Motor'un Tork zinciri'nin altına taşındı — Canlı Not 3001).
  *
  *   · KATALOG — ortak kayıtlar listede; veri sayfasıyla aynı oranlı düzen ve aynı
  *     konvertör ikinci kez yok; yediden çok vitesli düzen yok.
@@ -102,10 +103,18 @@ describe('DOLDUR — Araç Performans modelinden (ap_isg430_4000sp)', () => {
       g1: 3.51, g2: 1.906, g6: 0.639, g7: null, gR: -4.8, iTransfer: 1.536 });
     expect(Z.not).toEqual([]);
   });
+  test('bölüm Motor penceresinde, Tork zinciri’nin altında; Çözücü’de yok', () => {
+    global.nodes = takoz([apKart()]);
+    const bas = (html) => [...new DOMParser().parseFromString(html, 'text/html').querySelectorAll('.ve-fp-sect b')].map((b) => b.textContent);
+    const motor = bas(_mntEngineSection(nodes[0]));
+    expect(motor.indexOf('Araç Performans')).toBe(motor.indexOf('Tork zinciri') + 1);
+    expect(_mntEngineSection(nodes[0])).toContain('veMntApDoldur(\'m\')');
+    expect(getMntSolverPropertiesHTML(nodes[3])).not.toContain('Araç Performans’tan doldur');
+  });
   test('yazım okuyan gövdeye, tek geri-al adımı, bağ düşer; mil torku zincirden', () => {
     global.nodes = takoz([apKart()]);
-    expect(_mntCozucuApGovde(nodes[3])).toContain('Takoz’daki değerler farklı');
-    expect(veMntApDoldur('s')).toBe(14);
+    expect(_mntApTorkGovde(nodes[0])).toContain('Takoz’daki değerler farklı');
+    expect(veMntApDoldur('m')).toBe(14);
     expect(stubs.saveState).toHaveBeenCalledTimes(1);
     expect(nodes[0].data).toMatchObject({ Te: 2000, idleRpm: 700, cylinders: 6 });
     expect(nodes[0].data.enginePreset).toBeUndefined();
@@ -114,14 +123,14 @@ describe('DOLDUR — Araç Performans modelinden (ap_isg430_4000sp)', () => {
     expect(nodes[2].data.iTransfer).toBe(1.536);
     const Zc = _mntTorkZinciri();
     expect(Zc.ileri).toBeCloseTo(2000 * 1.62 * 3.51 * 1.536, 6);
-    const ap = _mntCozucuApGovde(nodes[3]);
+    const ap = _mntApTorkGovde(nodes[0]);
     expect(ap).toContain('birebir');
     expect(ap).toContain('aria-disabled="true"');
   });
   test('transfer gövdesi yoksa transfer oranı onu okuyan şanzımana', () => {
     global.nodes = takoz([apKart()]).filter((n) => n.id !== 't');
     nodes[1].data.iTransfer = 1.2;
-    veMntApDoldur('s');
+    veMntApDoldur('m');
     expect(nodes[1].data.iTransfer).toBe(1.536);
   });
 });
@@ -130,8 +139,8 @@ describe('YOK — Araç Performans modeli yoksa', () => {
   test('bölüm yok, değer yazılmaz', () => {
     global.nodes = takoz();
     expect(veMntApModeli()).toBeNull();
-    expect(_mntCozucuApGovde(nodes[3])).toBe('');
-    expect(veMntApDoldur('s')).toBe(0);
+    expect(_mntApTorkGovde(nodes[0])).toBe('');
+    expect(veMntApDoldur('m')).toBe(0);
     expect(nodes[0].data.Te).toBe(1500);
   });
 });

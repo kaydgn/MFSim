@@ -459,9 +459,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `mount-duyarlilik.test.js` + `mount-adams-isg.test.js` (fikstür `tests/fixtures/adams-isg430.js`).
 - **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
   kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
-  kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs; değer
-  yük kitabının Kerb Strike satırında. Örneğin kaydı okunur (Siper: Adams'ın 3,5 g virajla aynı). Kapı:
-  `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR*.
+  kaldırım 2,5 g virajın tersi (Tulga'nın yük kitabı; önce 1,55 g), şok 3 g · 20 ms yarım sinüs. Örneğin
+  kaydı okunur (Siper: Adams'ın 3,5 g virajla aynı). **Çözücü'de YÜK KİTABI YOK** (kullanıcı 2026-11-13,
+  Canlı Not 3001: *"yük kitabı şeysini ek bir bileşen olarak ekleyeceğiz daha sonra"*): Çözücü yalnız sayısal
+  yöntemi taşır; kitap tek üreticiden (`_mntYukDurumlari`), sonuçları raporda; Araç Performans'tan tork doldurma
+  Motor penceresinde, Tork zinciri'nin altında. Kapı: `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR* +
+  `mount-ap-tork.test.js` → *DOLDUR*.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).

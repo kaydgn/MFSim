@@ -13,8 +13,8 @@
  *   · TORK YÖNÜ ileri yönden TÜRETİLMEZ (krankın modeldeki dönüşü ve
  *     aktarmanın çevirmesi): ayrı ayar, vites başına durumlar da okur.
  *   · KALDIRIM DARBESİ ivme ve yön; L ile R ayna.
- *   · Ayar imzaya girer (sonuç bayatlar, parametrik tarama eskir); pencere yük
- *     kitabını yerinde tazeler; varsayılan seçim alan yazmaz.
+ *   · Ayar imzaya girer (sonuç bayatlar, parametrik tarama eskir); Çözücü'de yük
+ *     kitabı yok (Canlı Not 3001), yön çözümün kitabına gider; varsayılan seçim alan yazmaz.
  *   · Örneğin iki kopyası (JSON topolojisi + çekirdek modeli) aynı ayarı taşır.
  */
 const fs = require('fs');
@@ -219,40 +219,37 @@ describe('İMZA — ayar sonucu bayatlatır', () => {
   });
 });
 
-describe('PENCERE — Çözücü\'nün "Yük durumları" kategorisi', () => {
+describe('PENCERE — Çözücü\'de yük kitabı YOK (Canlı Not 3001)', () => {
   const ac = (n) => { document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntSolverPropertiesHTML(n) + '</div>'; };
-  // KALDIRIM DARBESİNİN BÖLÜMÜ YOK (kullanıcı 2026-11-11, Canlı Not 144: "Bunu kullanıcıya
-  // girdirmeyelim … standart olarak verelim"): girdisi yok, değeri yük kitabının Kerb Strike
-  // satırında — Siper'in kaydındaki Adams değeri (3,5 g virajla aynı) okunur. Araç ekseni de yok
-  // (Canlı Not 121).
-  test('Kaldırım darbesi bölümü YOK; Araç ekseni bölümü yok; örneğin kaydı yük kitabında', () => {
+  const kitap = (n) => cp._mntToSI(cp._mntGatherForSolver(n), 9.81).loadCases;
+  // YÜK KİTABI ÇÖZÜCÜ'DEN ÇIKTI (kullanıcı 2026-11-13, Canlı Not 3001: *"yük kitabı şeysini ek
+  // bir bileşen olarak ekleyeceğiz daha sonra. Oradan kullanıcı girdilerini yapabilecek."*):
+  // pencere yalnız sayısal yöntemi taşır; kitap standart (tek üretici _mntYukDurumlari) ve
+  // örneğin kaydı (Siper: 3,5 g virajla aynı) yine çözüme gider. Kaldırım darbesi ve araç ekseni
+  // girdisi de yok (Canlı Not 144 · 121).
+  test('Yük durumları kategorisi, yük kitabı ve yön seçicileri YOK; örneğin kaydı yine çözümün kitabında', () => {
     kur('siper');
     const n = cozucu();
     ac(n);
-    const bolumler = [...document.querySelectorAll('.ve-fp-kat[data-k="dur"] .ve-fp-sect b')].map((b) => b.textContent);
-    expect(bolumler).toEqual(['Yük kitabı']);
+    expect(document.querySelector('.ve-fp-kat[data-k="dur"]')).toBeNull();
+    expect([...document.querySelectorAll('.ve-fp-sect b')].map((b) => b.textContent)).not.toContain('Yük kitabı');
+    expect(document.getElementById('ve-mnt-cdur-' + n.id)).toBeNull();
     ['ileri', 'torkYon', 'kaldirimYon', 'kaldirimG'].forEach((k) => expect(document.getElementById('ve-mnt-' + k + '-' + n.id)).toBeNull());
-    const kerb = [...document.querySelectorAll('#ve-mnt-cdur-' + n.id + ' tbody tr')]
-      .find((tr) => tr.firstChild && tr.firstChild.getAttribute('title') === rep._mntRepCaseTr('Kerb Strike L'));
-    expect(kerb.children[2].textContent.replace('−', '-')).toMatch(/^-?3,5/);
-    expect(document.querySelector('#ve-mnt-cdur-' + n.id + ' .ve-fp-sect em').textContent).toMatch(/ · ileri \+X · tork −X$/);
+    const kerb = kitap(n).find((lc) => lc.name === 'Kerb Strike L');
+    expect(kerb.n[1]).toBeCloseTo(-3.5, 12);                          // ileri +X'te çevrilmiş, virajla aynı yönde
   });
 
-  test('ayar değişince yük kitabı YERİNDE tazelenir; seçici kurulmaz', () => {
+  test('projede yazılan yön çözümün kitabına gider; pencere yerinde tazelenir, seçici kurulmaz', () => {
     kur('tulga');
     const n = cozucu();
     ac(n);
     const sec = document.getElementById('ve-mnt-solveMode-' + n.id);
-    const ad = rep._mntRepCaseTr('Braking');
-    const fren = () => [...document.querySelectorAll('#ve-mnt-cdur-' + n.id + ' tbody tr')]
-      .find((tr) => tr.firstChild && tr.firstChild.getAttribute('title') === ad);
-    const nx = () => fren().children[1].textContent;
-    const once = nx();
+    const fren = () => kitap(n).find((lc) => lc.name === 'Braking').n[0];
+    const once = fren();
     cp.veMntSetYon(n.id, 'ileri', '+x');                                // projede yazılı yön (programın yazıcısı)
-    expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
-    expect(sec).toBeTruthy();
+    expect(fren()).toBe(-once);
+    cp.veMntPencereTazele();
     expect(document.getElementById('ve-mnt-solveMode-' + n.id)).toBe(sec);
-    expect(nx()).not.toBe(once);
   });
 
   test('yazıcı: varsayılan alan yazmaz (ileri yön hariç — onay); geçersiz ivme varsayılana döner; saveState mutasyondan sonra', () => {

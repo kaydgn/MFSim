@@ -81,7 +81,8 @@ describe('Panel üreticileri', () => {
     const html = cp.getMntSolverPropertiesHTML(node);
     expect(html).toContain("veMntSolverCompute('sv')");
     expect(html).toContain('ve-mnt-results');
-    expect(html).toContain('otomatik');
+    expect(html).toContain('Otomatik');                              // çözüm modunun seçeneği
+    expect(html).not.toContain('Yük kitabı');                        // Canlı Not 3001
   });
 });
 

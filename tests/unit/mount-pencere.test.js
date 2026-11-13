@@ -225,7 +225,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     onTakoz().data.kzs = '0';
     const html = cp.getMntSolverPropertiesHTML(cozucu());
     expect(html).toMatch(/id="ve-mnt-results"[^>]*>.*Statik rijitlik ≤ 0: Ön Takoz/);
-    expect(cp._mntCozucuDurumlari(cozucu()).dur.yazi).toBe('çözülemez');
+    expect(cp._mntCozucuDurumlari(cozucu()).dur).toBeUndefined();   // ön denetim sağ sütunun cevabında (Canlı Not 3001)
   });
 
   // TİP LİSTESİ = NOTUN EŞLEŞMESİ (kullanıcı turu 2026-10-19: "Örnek modelin

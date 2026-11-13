@@ -1079,17 +1079,6 @@ function _mntDugum(id){
   for(var i=0;i<nodes.length;i++){ if(nodes[i] && nodes[i].id===id) return nodes[i]; }
   return null;
 }
-// Yük durumunun penceredeki KISA adı — dar sütunda raporun uzun adı
-// ("Frenlemeli viraj — sol") kırpılıyordu; tam adı `title`da.
-var _MNT_DURUM_KISA = {
-  'Static':'Statik', 'Max Bump':'Tümsek 3,5g', 'Braking':'Frenleme', 'Acceleration':'Hızlanma',
-  'Cornering Left':'Viraj sol', 'Cornering Right':'Viraj sağ',
-  'Brake in Turn L':'Fren + viraj sol', 'Brake in Turn R':'Fren + viraj sağ',
-  'Pothole Braking':'Çukur + fren', 'Kerb Strike L':'Bordür sol', 'Kerb Strike R':'Bordür sağ',
-  'Max Rebound':'Geri esneme', 'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork'
-};
-function _mntDurumAdi(name){ return (typeof _mntRepCaseTr==='function') ? _mntRepCaseTr(name) : String(name||''); }
-function _mntDurumKisa(name){ return _MNT_DURUM_KISA[name] || _mntDurumAdi(name); }
 
 // ── KATEGORİ DURUMU — FEAD'in dört durumu (ok · eksik · bos · yok) ───────────
 // `bant:false` durumu banttan ayırır: bir BULGU (üç durumda çekme) eksik bir
@@ -1551,6 +1540,7 @@ function _mntEngineSection(node){
   f+='<tr><td>Silindir sayısı</td>'+_mntFoyGir(node, 'cylinders', 'Silindir sayısı', { zorunlu:true })+'<td class="sf">—</td></tr>';
   h+=_mntBolum('Motor noktaları', '', f+_MNT_FOY_KAPA);
   h+=_mntBolum('Tork zinciri', '', _mntZincirHTML(node.id));
+  h+=_mntApTorkGovde(node);                    // projede Araç Performans modeli varsa
   var fa=_mntAtesleme(d);
   h+=_mntBolum('Ateşleme', 'f = (N/60)·(z/2)',
       _mntIzgara(2,
@@ -6030,13 +6020,14 @@ function veMntResultState(R){
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ÇÖZÜCÜ PENCERESİ — Yük durumları · Ayarlar + Hesapla
+//  ÇÖZÜCÜ PENCERESİ — sayısal yöntem + Hesapla
 // ════════════════════════════════════════════════════════════════════════════
+// Çözücü programın modeli ÇÖZERKEN kullandığı sayısal yöntemi belirler (kullanıcı
+// 2026-11-13, Canlı Not 3001–3002). Yük kitabı YOK: yük durumlarının girdisi ileride
+// ayrı bir bileşende; bugün standart kitap (_mntYukDurumlari) raporda yazılı.
 // Pencere son çözümü TAŞIMAZ (kullanıcı kararı 2026-10-16: sonuç yalnız
-// ayrıntılı raporda). Yük kitabı CANLI modelin girdisidir — çözücünün
-// çözeceği durumlar; sehim, vites başına kuvvet ve modlar raporda (Modlar
-// kategorisi ve kitabın δz sütunu kalktı). Yöntem seçimleri "bir sonraki
-// Hesapla'da" uygulanır — hesap düğmeye kilitli.
+// ayrıntılı raporda). Yöntem seçimleri "bir sonraki Hesapla'da" uygulanır —
+// hesap düğmeye kilitli.
 
 // Çözüm modu etiketi — raporun kapağıyla (cp-mount-report.js _mntRepAntet)
 // aynı otorite sırası: kullanıcının niyeti + fiilen koşan yol.
@@ -6078,32 +6069,10 @@ function _mntCozucuNotu(node, S){
   return _mntS(M.mTop,1)+' kg · '+M.g.components.length+' kütle · '+M.g.mounts.length+' takoz · '
     + (!R ? 'hesaplanmadı' : (S.durum==='bayat' ? 'model değişti' : 'son hesap güncel'));
 }
-// YÜK KİTABI — canlı modelin çözülecek durumları (otomatik g-durumları +
-// tork girdisinden kurulan durumlar); n [g], T [kN·m].
-function _mntCozucuDurumGovde(node){
-  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
-  var satirlar=(C && C.mmToM) ? _mntToSI(_mntGatherForSolver(node), 9.81).loadCases : [];
-  var f=_mntFoyAc([{ b:'Durum', gen:'36%' }, { b:_mntSym('n<sub>x</sub>'), gen:'15%' }, { b:_mntSym('n<sub>y</sub>'), gen:'16%' },
-                   { b:_mntSym('n<sub>z</sub>'), gen:'15%' }, { b:_mntSym('T<sub>x</sub>'), gen:'18%', ipucu:'Tork [kN·m]' }],
-                  'Yük kitabı', 've-mnt-foy--sik');
-  var sayi=function(v){ return '<td'+(v===0 ? ' class="sf"' : '')+'>'+_mntS(v)+'</td>'; };
-  var tork=0;
-  satirlar.forEach(function(lc){
-    var n=lc.n||[0,0,0], T=lc.T||[0,0,0];
-    if(T[0]!==0) tork++;
-    f+='<tr><td title="'+_mntEsc(_mntDurumAdi(lc.name))+'">'+_mntEsc(_mntDurumKisa(lc.name))+'</td>'
-      + sayi(n[0])+sayi(n[1])+sayi(n[2])
-      + '<td'+(T[0]===0 ? ' class="sf"' : '')+'>'+(T[0]===0 ? '0' : _mntS(T[0]/1000,1))+'</td></tr>';
-  });
-  var Y=_mntYonAyari(node.data, _mntIleriOnerisi(), _mntTorkOnerisi()), eks=function(v){ return v==='+x' ? '+X' : '−X'; };
-  var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok')
-    + ' · ileri '+eks(Y.ileri)+' · tork '+eks(Y.torkYon);
-  // Kaldırım darbesinin bölümü YOK (Canlı Not 144): değeri yük kitabının Kerb Strike satırları
-  return _mntCozucuApGovde(node)
-    + '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
-}
 // ARAÇ PERFORMANS'TAN DOLDUR (F002, 2026-11-11) — Takoz kendi başına kurulur;
-// projede Araç Performans modeli varsa tork zinciri ondan doldurulabilir.
+// projede Araç Performans modeli varsa tork zinciri ondan doldurulabilir. Bölüm Motor
+// penceresinde, Tork zinciri'nin altında (Canlı Not 3001: yük kitabıyla birlikte Çözücü'den
+// çıktı — Çözücü yalnız sayısal yöntemi taşır).
 // Kaynak: motorun tam yük eğrisi (tepe tork, maks. güç, rölanti), konvertörün
 // K/τ eğrisinin SR = 0 noktası (stall), şanzımanın ileri vitesleri ve geri vites
 // (düğümde yoksa çözülen katalog kaydından), transferin EN YÜKSEK oranlı kademesi
@@ -6199,7 +6168,7 @@ function _mntApHedef(k, K){
   if(!n && tip==='mnt-transfer') n=L.filter(function(x){ return x && x.type==='mnt-gearbox'; })[0];
   return n || null;
 }
-function veMntApDoldur(solverId){
+function veMntApDoldur(nodeId){
   var Z=_mntApZinciri(); if(!Z) return 0;
   var K=_mntGatherTorqueKaynakli().kaynak, yaz=[], atla=[];
   Object.keys(_MNT_AP_HEDEF).forEach(function(k){
@@ -6217,11 +6186,11 @@ function veMntApDoldur(solverId){
   if(typeof saveState==='function') saveState();
   var sayi=yaz.filter(function(w){ return w.v!==null; }).length;
   if(atla.length && typeof showToast==='function') showToast(atla.length+' tork alanı aktarılmadı: gövdesi yok.', 'warning');
-  var cz=(typeof nodes!=='undefined' ? nodes : []).filter(function(n){ return n && n.id===solverId; })[0];
-  if(cz && typeof showNodeProperties==='function') showNodeProperties(cz);
+  var kn=(typeof nodes!=='undefined' ? nodes : []).filter(function(n){ return n && n.id===nodeId; })[0];
+  if(kn && typeof showNodeProperties==='function') showNodeProperties(kn);
   return sayi;
 }
-function _mntCozucuApGovde(node){
+function _mntApTorkGovde(node){
   var Z=_mntApZinciri(); if(!Z) return '';
   var S=_mntApSapma(Z), v=Z.v;
   var f=_mntFoyAc([{ b:'Halka', gen:'50%' }, { b:'Araç Performans', gen:'50%', sinif:'cz ay' }], 'Araç Performans');
@@ -6235,8 +6204,8 @@ function _mntCozucuApGovde(node){
   var btn='<button type="button" class="ve-fp-dugme" id="ve-mnt-apdoldur-'+node.id+'"'
     + (S.farkli.length ? ' onclick="veMntApDoldur(\''+node.id+'\')"' : ' aria-disabled="true" title="Değerler aynı."')+'>'
     + veIkon('download')+' Araç Performans’tan doldur</button>';
-  return _mntBolum('Tork zinciri', _mntEsc(Z.ad), f+_MNT_FOY_KAPA+not+'<div class="ve-fp-eylem">'+btn+'</div>',
-                   { id:'ve-mnt-cap-'+node.id, tazele:true });
+  return _mntBolum('Araç Performans', _mntEsc(Z.ad), f+_MNT_FOY_KAPA+not+'<div class="ve-fp-eylem">'+btn+'</div>',
+                   { id:'ve-mnt-ap-'+node.id, tazele:true });
 }
 function _mntCozucuAyarGovde(node){
   var d=node.data||{}, sm=d.solveMode||'auto';
@@ -6261,16 +6230,10 @@ function _mntCozucuAyarGovde(node){
   return h;
 }
 
-// Kategori durumları — girdiden: ön denetim (çekirdeğin validateModel'i) ve
-// yöntem seçimi. Son hesabın durumu bantta değil, eylemin notunda.
+// Kategori durumları — yöntem seçiminden. Ön denetim (çekirdeğin validateModel'i)
+// sağ sütunun cevabında; son hesabın durumu eylemin notunda.
 function _mntCozucuDurumlari(node){
   var out={}, d=node.data||{};
-  var p=_mntOnDenetim(node);
-  if(p.length) out.dur=_mntDurum('eksik', 'çözülemez', p[0]+(p.length>1 ? ' (+'+(p.length-1)+')' : '')+' — Hesapla bu modeli reddeder.');
-  else {
-    var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
-    out.dur=_mntDurum('ok', ((C && C.mmToM) ? _mntToSI(_mntGatherForSolver(node), 9.81).loadCases.length : 0)+' durum');
-  }
   out.ayar=_mntEgriYok(node) ? _mntDurum('eksik', 'eğri yok', 'Nonlineer seçili, eğri yok: lineer çözülür.')
     : _mntDurum('ok', (!_mntBos(d.zeta) || (d.solveMode && d.solveMode!=='auto')) ? 'elle' : 'varsayılan');
   return out;
@@ -6282,7 +6245,6 @@ function getMntSolverPropertiesHTML(node){
   if(!node.data.solveMode) node.data.solveMode='auto';
   var D=_mntCozucuDurumlari(node);
   var kategoriler=[
-    { k:'dur', ad:'Yük durumları', govde:_mntCozucuDurumGovde(node), durum:D.dur },
     { k:'ayar', ad:'Ayarlar', govde:_mntCozucuAyarGovde(node), durum:D.ayar }
   ];
   // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (ön denetim) → eylem →
@@ -7052,7 +7014,7 @@ if(typeof module!=='undefined' && module.exports){
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
     MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
-    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, _mntTransferKatalog: _mntTransferKatalog, _mntTransferPresetValues: _mntTransferPresetValues, veMntApplyTransferPreset: veMntApplyTransferPreset, veMntApModeli: veMntApModeli, _mntApZinciri: _mntApZinciri, veMntApDoldur: veMntApDoldur, _mntCozucuApGovde: _mntCozucuApGovde, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
+    _mntYonAyari: _mntYonAyari, _mntIleriOnerisi: _mntIleriOnerisi, _mntTorkOnerisi: _mntTorkOnerisi, _mntTorkKaynak: _mntTorkKaynak, _mntDonusEtkin: _mntDonusEtkin, _mntTransferSection: _mntTransferSection, _mntTransferKatalog: _mntTransferKatalog, _mntTransferPresetValues: _mntTransferPresetValues, veMntApplyTransferPreset: veMntApplyTransferPreset, veMntApModeli: veMntApModeli, _mntApZinciri: _mntApZinciri, veMntApDoldur: veMntApDoldur, _mntApTorkGovde: _mntApTorkGovde, veMntSetDonus: veMntSetDonus, _mntIleriOnayli: _mntIleriOnayli,
     _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
     _mntYukDurumlari: _mntYukDurumlari,
     veMntSetYon: veMntSetYon,
