@@ -400,7 +400,7 @@ function _mntParamYeni(node){
 // aralık değeri girdiğinde, o aralık değerden dışında kalan takozlar otomatik olarak elensin."*; δ'nın
 // adı programda sehim — kullanıcı kararları S1·C · S2·C). Çözücü'nün çözümü her aday tipin EN
 // DÜŞÜK TAKOZ YÜKÜNDEKİ statik sehimini taşır (cp-mount.js → R.tipSehim · veMntTipSehim); sehimi
-// [en az, en çok] dışındaki tip aday listesinden düşer — Tüm kombinasyonlar, Özel kombinasyonun araması
+// [en az, en çok] dışındaki tip aday listesinden düşer — Tüm kombinasyonlar, Özel kombinasyonun listesi
 // ve sayılar aynı listeden. Kapasite kullanılmaz. Eleme yalnız çözüm GÜNCELKEN ve aralık geçerliyken
 // (0 < en az < en çok): çözüm yoksa ya da eskiyse alanlar kapalı, adaylar elenmez.
 // Aralık (yalnız node.data): d ∈ bos · alt · ust (o uç boş) · sifir · sira · tamam.
@@ -515,11 +515,11 @@ function _mntParamYerlesimHTML(node, Y){
 // ADAYLAR (Canlı Not 1005: *"adaylar alt penceresini kaldıralım … TÜM TAKOZ KOMBİNASYONU seçeneği,
 // hem de kullanıcının gireceği özel kombinasyonu seçebilsin … her konum için takoz aratarak girecek"*;
 // Canlı Not 1002'nin tip × grup işaret tablosunun yerine). Kip: Tüm kombinasyonlar · Özel kombinasyon.
-// Özelde her grubun bloğu: numara (plan ve föyle aynı), ad, denenecek tip sayısı (tipi eklenmeyen
-// grup "Mevcut tip"), arama kutusu, eklenen tiplerin satırları (ad · kz · kaldır). Sayı ve satırlar
-// yerinde tazelenir (`data-tazele`); arama kutusu TAZELENMEZ — ekleyince odak ve imleç kutuda kalır.
+// Özelde her grubun bloğu: numara (plan ve föyle aynı), ad, denenecek tip sayısı (tipi seçilmeyen
+// grup "Mevcut tip"), arama kutusu ve marka başlıklı SEÇİM LİSTESİ (Canlı Not 1012, aşağıda). Sayı ve
+// liste yerinde tazelenir (`data-tazele`); arama kutusu TAZELENMEZ — odak ve imleç kutuda kalır.
 // Bölümün yapısı (kip, grupların blokları) elemeden bağımsız: elenen tip yalnız sayıdan ve
-// listelerden düşer; başlıktaki sayı (aday tip, elemeden sonra) yerinde tazelenir.
+// listeden düşer; başlıktaki sayı (aday tip, elemeden sonra) yerinde tazelenir.
 function _mntParamAdaylarHTML(node, Y){
   var G=Y.M.G, A=Y.A, em={ emId:'ve-mnt-param-aday-em-'+node.id };
   if(!G.length || !Y.Atum.length) return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', '', em);   // durum sağ sütunda, bir kez
@@ -534,27 +534,66 @@ function _mntParamAdaylarHTML(node, Y){
   return _mntBolum('Adaylar', _mntS(A.length, 0)+' tip', h, em);
 }
 function _mntParamOzelHTML(node, Y, g, S){
-  var id=node.id+'-'+g.no, lid='ve-mnt-param-ara-l-'+id, n=(Y.sec[g.anahtar] || []).length;
-  var ek={};
-  (Y.sec[g.anahtar] || []).forEach(function(k){ ek[k]=true; });
+  var id=node.id+'-'+g.no, n=(Y.sec[g.anahtar] || []).length, D=_mntParamSecDurum(node.id, g.no);
   return '<div class="ve-prm-oz" data-dugum="'+node.id+'" data-no="'+g.no+'">'
     + '<div class="ve-prm-oz-bas">'+_mntParamNo(g.no)+'<span class="ve-prm-oz-ad">'+_mntParamAd(g.ad)+'</span>'
       + '<span class="ve-prm-oz-n" id="ve-mnt-param-oz-n-'+id+'" data-tazele>'+(n ? n+' tip' : 'Mevcut tip')+'</span></div>'
-    + '<div class="ve-prm-ara"><label class="ve-prm-ara-k">'+veIkon('search')
-      + '<input type="text" id="ve-mnt-param-ara-'+id+'" placeholder="Takoz ara" aria-label="'+_mntEsc('Takoz ara · '+g.ad)+'"'
-      + ' role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+lid+'" autocomplete="off" spellcheck="false"'
-      + ' oninput="veMntParamAra(this)" onfocus="veMntParamAraAc(this)" onclick="veMntParamAraAc(this)" onblur="veMntParamAraKapat(this)"'
-      + ' onkeydown="veMntParamAraTus(event,this)"></label>'
-      + '<div class="ve-prm-ara-l" id="'+lid+'" role="listbox" aria-label="'+_mntEsc(g.ad)+'" hidden'
-      + ' onmousedown="event.preventDefault()"></div></div>'
-    + '<ul class="ve-prm-oz-t" id="ve-mnt-param-oz-'+id+'" data-tazele aria-label="'+_mntEsc(g.ad)+'">'
-      + S.filter(function(a){ return ek[a.key]; }).map(function(a){
-          return '<li class="ve-prm-oz-s"><span class="ve-prm-oz-ad">'+_mntParamAd(a.name)+_mntParamMevcutIsaret(g, a)+'</span>'
-            + '<span class="ve-prm-kz">'+_mntParamKz(a.e)+'</span>'
-            + '<button type="button" class="ve-prm-oz-x" data-key="'+_mntEsc(a.key)+'" title="Kaldır"'
-            + ' aria-label="'+_mntEsc('Kaldır · '+a.name)+'" onclick="veMntParamOzelKaldir(this)">'+veIkon('x')+'</button></li>';
-        }).join('')+'</ul>'
+    + '<label class="ve-prm-ara-k">'+veIkon('search')
+      + '<input type="text" id="ve-mnt-param-ara-'+id+'" value="'+_mntEsc(D.q)+'" placeholder="Takoz ara"'
+      + ' aria-label="'+_mntEsc('Takoz ara · '+g.ad)+'" aria-controls="ve-mnt-param-sec-'+id+'" autocomplete="off" spellcheck="false"'
+      + ' oninput="veMntParamSecAra(this)" onkeydown="veMntParamSecTus(event,this)"></label>'
+    + _mntParamSecListeHTML(node.id, g, S, Y.sec[g.anahtar])
     + '</div>';
+}
+// SEÇİM LİSTESİ (kullanıcı 2026-11-13, Canlı Not 1012: *"özel kombinasyonda, takoz markası seçiyorum,
+// seçtiğim zaman marka seçtiğim pencere gitmediği için seçemiyorum takozları. Ayrıca bu seçilen takozlar
+// da kutucuk şeklinde olsun hızlı hızlı seçilsin."*; Canlı Not 1010'un açılır tablosu ve eklenenlerin ✕'li
+// satırları yerine): liste AKIŞTA — üstünde yüzen pencere yok. Veri Gezgini'nin ağacının dili: marka
+// satırında üç durumlu onay kutusu (markanın görünen aday tipleri: hepsi · bir kısmı · hiçbiri; tık
+// karışıkta ve boşta hepsini seçer, doluda hepsini bırakır), ok + ad (tipleri açar/kapar) ve
+// seçili / toplam; altında tip satırları — onay kutusu · ad (Mevcut işaretli) · kz, satırın TAMAMI tıklanır.
+// Her tık TEK geri-al adımı (veMntParamGrupAday · veMntParamGrupMarka). Arama listeyi süzer (sözcükler
+// adda ya da markada, eşleşen markalar açık); marka kutusu yalnız görünen tipleri seçer. Sıra Tip
+// listesininki. Elenen tip listede yok, kayıtta kalır.
+// GÖRÜNÜM DURUMU modelde değil, düğüm ve grup başına bellekte: sorgu (`q`), markanın açıklığı (`acik`:
+// açılıp kapanan marka; dokunulmayan marka seçili tipi varsa açık) ve sorgu sürerken kapatılan markalar
+// (`kapaliAra`, sorgu değişince düşer) — yerinde tazeleme ve pencerenin yeniden kurulması aynı listeyi çizer.
+var _MNT_PARAM_SEC = {};
+function _mntParamSecDurum(nodeId, no){
+  var k=nodeId+'-'+no;
+  return _MNT_PARAM_SEC[k] || (_MNT_PARAM_SEC[k]={ q:'', acik:{}, kapaliAra:{} });
+}
+function _mntParamSecListeHTML(nodeId, g, S, sec){
+  var id=nodeId+'-'+g.no, D=_mntParamSecDurum(nodeId, g.no), ara=String(D.q || '').trim();
+  var ek={}, M=[], idx={};
+  (sec || []).forEach(function(k){ ek[k]=true; });
+  _mntParamAra(S, D.q, []).forEach(function(a){
+    var m=_mntParamMarkaAd(a);
+    if(idx[m]===undefined){ idx[m]=M.length; M.push({ ad:m, T:[] }); }
+    M[idx[m]].T.push(a);
+  });
+  var h=M.map(function(m, i){
+    var s=m.T.filter(function(a){ return ek[a.key]; }).length, t=m.T.length, mid='ve-mnt-param-sec-'+id+'-m'+i;
+    var ac=ara ? !D.kapaliAra[m.ad] : (D.acik[m.ad]!==undefined ? !!D.acik[m.ad] : s>0);
+    return '<div class="ve-prm-sec-g" data-marka="'+_mntEsc(m.ad)+'">'
+      + '<div class="ve-prm-sec-m">'
+        + '<button type="button" class="vsig-ck'+(s===t ? ' all' : s ? ' some' : '')+'" id="'+mid+'" role="checkbox"'
+        + ' aria-checked="'+(s===t ? 'true' : s ? 'mixed' : 'false')+'" aria-label="'+_mntEsc(m.ad)+'" onclick="veMntParamSecMarka(this)"></button>'
+        + '<button type="button" class="ve-prm-sec-ac" id="'+mid+'-ac" aria-expanded="'+ac+'" onclick="veMntParamSecAc(this)">'
+          + veIkon(ac ? 'chevron-down' : 'chevron-right')+'<span class="ve-prm-oz-ad">'+_mntEsc(m.ad)+'</span></button>'
+        + '<span class="ve-prm-kz">'+_mntS(s, 0)+' / '+_mntS(t, 0)+'</span></div>'
+      + (ac ? m.T.map(function(a, j){
+          var on=!!ek[a.key];
+          return '<button type="button" class="ve-prm-sec-o" id="'+mid+'-t'+j+'" role="checkbox" aria-checked="'+on+'"'
+            + ' data-key="'+_mntEsc(a.key)+'" onclick="veMntParamSecTip(this)">'
+            + '<span class="vsig-ck'+(on ? ' on' : '')+'" aria-hidden="true"></span>'
+            + '<span class="ve-prm-oz-ad">'+_mntParamAd(a.name)+_mntParamMevcutIsaret(g, a)+'</span>'
+            + '<span class="ve-prm-kz">'+_mntParamKz(a.e)+'</span></button>';
+        }).join('') : '')
+      + '</div>';
+  }).join('');
+  return '<div class="ve-prm-sec" id="ve-mnt-param-sec-'+id+'" data-tazele role="group" aria-label="'+_mntEsc(g.ad)+'">'
+    + (h || '<div class="ve-prm-sec-yok">Eşleşen takoz yok.</div>')+'</div>';
 }
 // Satırın kz'si Takoz Özellikleri'nin Tip listesindeki yazımla ("kz 1.150"); grubun bugünkü tipi işaretli.
 function _mntParamKz(e){ return 'kz '+_mntS(_mntNum(e && e.sz, NaN), 0); }
@@ -633,9 +672,10 @@ function _mntParamGrupYaz(n, Y, g, eski, l){
   return true;
 }
 // MARKANIN TİPLERİ TOPLU (Canlı Not 1010: *"markaya göre de seçim yapabilelim … ön takozlar için tüm AMC
-// modellerini seçmek istiyorum"*): markanın aday tipleri — elemeden sonra, `sorgu` varsa sorguyu
-// taşıyanlar — gruba eklenir (`dahil`) ya da gruptan çıkar; TEK geri-al adımı, kayıt kütüphane sırasında,
-// tekrar yok; elenen ve aday olmayan tip girmez. Dönüş: seçim değişti mi.
+// modellerini seçmek istiyorum"*; 1012'den beri seçim listesinde marka satırının onay kutusu): markanın aday
+// tipleri — elemeden sonra, `sorgu` varsa sorguyu taşıyanlar — gruba eklenir (`dahil`) ya da gruptan çıkar;
+// TEK geri-al adımı, kayıt kütüphane sırasında, tekrar yok; elenen ve aday olmayan tip girmez. Dönüş: seçim
+// değişti mi.
 function _mntParamMarkaAd(a){ return (a && a.e && a.e.marka) || 'Diğer'; }
 function veMntParamGrupMarka(nodeId, no, marka, dahil, sorgu){
   var n=_mntParamDugum(nodeId); if(!n) return false;
@@ -646,17 +686,77 @@ function veMntParamGrupMarka(nodeId, no, marka, dahil, sorgu){
   var eski=Y.ham[g.anahtar] || [];
   return _mntParamGrupYaz(n, Y, g, eski, dahil ? eski.concat(M) : eski.filter(function(k){ return M.indexOf(k)<0; }));
 }
-// Satırın kaldır düğmesi: tip gruptan çıkar; odak aynı sıradaki satırın düğmesine, satır kalmadıysa
-// grubun arama kutusuna (düğme yerinde tazelemeyle gitti).
-function veMntParamOzelKaldir(b){
-  var kok=_mntParamAraKok(b); if(!kok) return;
-  var nodeId=kok.getAttribute('data-dugum'), no=Number(kok.getAttribute('data-no'));
-  var li=b.closest('li'), i=(li && li.parentNode) ? Array.prototype.indexOf.call(li.parentNode.children, li) : 0;
-  veMntParamGrupAday(nodeId, no, b.getAttribute('data-key'), false);
-  var ul=kok.querySelector('.ve-prm-oz-t'), D=ul ? ul.querySelectorAll('button') : [];
-  var hedef=D[Math.min(i, D.length-1)] || kok.querySelector('.ve-prm-ara-k input');
-  if(hedef && hedef.focus) hedef.focus({ preventScroll:true });
-  if(hedef && hedef.tagName==='INPUT') veMntParamAraKapat(hedef);          // odak kutuya döndü: tablo kendiliğinden açılmaz
+// Kutunun tıkı: model değişir (tek geri-al adımı), liste yerinde tazelenir; kaydırma ve odak yerinde —
+// tıklanan denetimin kimliği yeni listede aranır (klavyeyle Boşluk art arda çalışsın).
+function _mntParamSecKok(el){ return (el && el.closest) ? el.closest('.ve-prm-oz') : null; }
+function _mntParamSecDegis(b, f){
+  var kok=_mntParamSecKok(b); if(!kok) return false;
+  var L=kok.querySelector('.ve-prm-sec'), st=L ? L.scrollTop : 0, id=b.id;
+  var d=f(kok.getAttribute('data-dugum'), Number(kok.getAttribute('data-no')));
+  var L2=kok.querySelector('.ve-prm-sec');
+  if(L2 && L2!==L) L2.scrollTop=st;
+  var y=(id && typeof document!=='undefined') ? document.getElementById(id) : null;
+  if(y && y!==b && y.focus) y.focus({ preventScroll:true });
+  return d;
+}
+function veMntParamSecTip(b){
+  return _mntParamSecDegis(b, function(nodeId, no){
+    return veMntParamGrupAday(nodeId, no, b.getAttribute('data-key'), b.getAttribute('aria-checked')!=='true');
+  });
+}
+function veMntParamSecMarka(b){
+  var kok=_mntParamSecKok(b), G=b.closest ? b.closest('.ve-prm-sec-g') : null;
+  if(!kok || !G) return false;
+  var D=_mntParamSecDurum(kok.getAttribute('data-dugum'), kok.getAttribute('data-no'));
+  return _mntParamSecDegis(b, function(nodeId, no){
+    return veMntParamGrupMarka(nodeId, no, G.getAttribute('data-marka'), b.getAttribute('aria-checked')!=='true', D.q);
+  });
+}
+// Listeyi yalnız DOM'da yeniden kurar (sorgu ve açıklık değişince; model değişmez). Kaydırma yerinde;
+// `marka` verilirse o markanın bloğu görünür kalır (kapanınca liste kısalır).
+function _mntParamSecCiz(kok, marka){
+  var n=_mntParamDugum(kok.getAttribute('data-dugum')), L=kok.querySelector('.ve-prm-sec');
+  if(!n || !L) return null;
+  var Y=_mntParamYeni(n), g=Y.M.G[Number(kok.getAttribute('data-no'))-1];
+  if(!g) return null;
+  var st=L.scrollTop, tmp=document.createElement('div');
+  tmp.innerHTML=_mntParamSecListeHTML(n.id, g, _mntParamListeSira(Y.A), Y.sec[g.anahtar]);
+  var L2=tmp.firstChild;
+  L.parentNode.replaceChild(L2, L);
+  L2.scrollTop=st;
+  if(marka!=null){
+    var G=Array.prototype.find.call(L2.querySelectorAll('.ve-prm-sec-g'), function(x){ return x.getAttribute('data-marka')===marka; });
+    if(G && G.offsetTop<L2.scrollTop) L2.scrollTop=G.offsetTop;
+  }
+  return L2;
+}
+function veMntParamSecAc(b){
+  var kok=_mntParamSecKok(b), G=b.closest ? b.closest('.ve-prm-sec-g') : null;
+  if(!kok || !G) return;
+  var m=G.getAttribute('data-marka'), ac=b.getAttribute('aria-expanded')!=='true';
+  var D=_mntParamSecDurum(kok.getAttribute('data-dugum'), kok.getAttribute('data-no'));
+  if(String(D.q || '').trim()){ if(ac) delete D.kapaliAra[m]; else D.kapaliAra[m]=true; }
+  else D.acik[m]=ac;
+  var id=b.id;
+  _mntParamSecCiz(kok, m);
+  var y=document.getElementById(id);
+  if(y && y.focus) y.focus({ preventScroll:true });
+}
+// Arama: sorgu görünüm durumuna yazılır, liste süzülür (kutu yerinde, odak ve imleç kalır). Esc sorguyu
+// temizler; kutu boşken Esc pencereye gider (pencereyi kapatır).
+function veMntParamSecAra(inp){
+  var kok=_mntParamSecKok(inp); if(!kok) return;
+  var D=_mntParamSecDurum(kok.getAttribute('data-dugum'), kok.getAttribute('data-no')), q=String(inp.value || '');
+  if(q.trim()!==String(D.q || '').trim()) D.kapaliAra={};
+  D.q=q;
+  var L=_mntParamSecCiz(kok);
+  if(L) L.scrollTop=0;
+}
+function veMntParamSecTus(ev, inp){
+  if(!ev || ev.key!=='Escape' || !inp || !inp.value) return;
+  ev.preventDefault(); ev.stopPropagation();
+  inp.value='';
+  veMntParamSecAra(inp);
 }
 
 // Beklenen takoz sehiminin ucu (`alt` · `ust`, mm): sayı makine biçiminde yazılır; boş ya da sayı
@@ -687,147 +787,6 @@ function _mntParamAra(A, sorgu, haric){
     var t=norm(a.name+' '+((a.e && a.e.marka) || ''));
     return q.every(function(s){ return t.indexOf(s)>=0; });
   });
-}
-// Sonuç TABLOSU yalnız DOM'da (kayıt yok, yerinde tazelemenin dışında): kutuya tık ya da odak (boş
-// kutu dâhil) açar; marka başlığı satırları (ok · marka · tip sayısı · Hepsini ekle/çıkar) ve açık
-// markanın tipleri, Tip listesinin sırasıyla (Canlı Not 1010). Boş kutuda başlıklar kapalı (okla ya da →
-// ile açılır); sorgu tabloyu süzer: eşleşmeyen marka düşer, başlığın sayısı sorguyu taşıyan tiplerinki,
-// süzülen markalar açık. Etkin satır ilk TİP satırıdır (Enter tipi ekler); ↑↓ başlık
-// satırlarına da iner, Enter başlıkta markanın hepsini ekler/çıkarır. Tipin tıkı kutuyu boşaltır ve tabloyu
-// kapatır; başlığın tıkı tabloyu açık bırakır (sayı ve eylem tazelenir). Esc aramayı temizler; odak
-// kutudan çıkınca tablo kapanır.
-function _mntParamAraKok(el){ return (el && el.closest) ? el.closest('.ve-prm-oz') : null; }
-// Aramanın verisi (grup, listenin sırasıyla aday tipler, grubun eklenmişleri) tablo açıkken BİR kez
-// kurulur, kutuda durur ve tablo kapanınca düşer: tuş başına model kurmak ~12 ms'ydi.
-function _mntParamAraVeri(inp, kok){
-  if(inp._prmAra) return inp._prmAra;
-  var n=_mntParamDugum(kok.getAttribute('data-dugum')); if(!n) return null;
-  var Y=_mntParamYeni(n), g=Y.M.G[Number(kok.getAttribute('data-no'))-1];
-  if(!g) return null;
-  return (inp._prmAra={ g:g, S:_mntParamListeSira(Y.A), sec:Y.sec[g.anahtar] || [] });
-}
-// Tablonun markaları: sorguyu taşıyan tipler (eklenmişler dâhil) marka sırasıyla; `yeni` grupta olmayanlar
-// (satır olarak yazılır), eylem: eklenecek tip varsa ekle, yoksa (hepsi grupta) çıkar.
-function _mntParamAraMarkalar(V, q){
-  var tum=_mntParamAra(V.S, q, []), yeni=_mntParamAra(V.S, q, V.sec), y={}, M=[], idx={};
-  yeni.forEach(function(a){ y[a.key]=true; });
-  tum.forEach(function(a){
-    var m=_mntParamMarkaAd(a);
-    if(idx[m]===undefined){ idx[m]=M.length; M.push({ ad:m, tum:0, yeni:[] }); }
-    M[idx[m]].tum++;
-    if(y[a.key]) M[idx[m]].yeni.push(a);
-  });
-  return M;
-}
-function veMntParamAraAc(inp){
-  var kok=_mntParamAraKok(inp), L=kok ? kok.querySelector('.ve-prm-ara-l') : null;
-  if(L && L.hidden) veMntParamAra(inp, true);
-}
-// `yerinde`: tablo yeniden kurulurken kaydırma korunur (başlığın eylemi, açma/kapama).
-function veMntParamAra(inp, hepsi, yerinde){
-  var kok=_mntParamAraKok(inp), L=kok ? kok.querySelector('.ve-prm-ara-l') : null;
-  if(!L) return;
-  var q=String(inp.value || ''), V=(q.trim() || hepsi) ? _mntParamAraVeri(inp, kok) : null;
-  if(!V){ veMntParamAraKapat(inp); return; }
-  var M=_mntParamAraMarkalar(V, q), i=0, ilkTip=-1, st=L.scrollTop, acik=inp._prmAcik || {};
-  var id=function(){ return inp.id+'-o'+(i++); };
-  L.innerHTML=M.length ? M.map(function(m){
-    var ekle=m.yeni.length>0, say=ekle ? m.yeni.length : m.tum, ac=!!q.trim() || !!acik[m.ad];
-    return '<div class="ve-prm-ara-m" role="option" id="'+id()+'" aria-selected="false" data-marka="'+_mntEsc(m.ad)+'"'
-      + ' data-eylem="'+(ekle ? 'ekle' : 'cikar')+'" data-acik="'+ac+'" onmouseenter="veMntParamAraUzeri(this)" onclick="veMntParamAraSec(this)">'
-      + '<span class="ve-prm-ara-ok" onclick="veMntParamAraAcKapa(event,this)">'+veIkon(ac ? 'chevron-down' : 'chevron-right')+'</span>'
-      + '<span class="ve-prm-oz-ad">'+_mntEsc(m.ad)+'</span><span class="ve-prm-kz">'+_mntS(m.tum, 0)+' tip</span>'
-      + '<span class="ve-prm-ara-h">'+(ekle ? 'Hepsini ekle' : 'Hepsini çıkar')+' ('+_mntS(say, 0)+')</span></div>'
-      + (ac ? m.yeni : []).map(function(a){
-          if(ilkTip<0) ilkTip=i;
-          return '<div class="ve-prm-ara-o" role="option" id="'+id()+'" aria-selected="false" data-key="'+_mntEsc(a.key)+'"'
-            + ' onmouseenter="veMntParamAraUzeri(this)" onclick="veMntParamAraSec(this)">'
-            + '<span class="ve-prm-oz-ad">'+_mntParamAd(a.name)+_mntParamMevcutIsaret(V.g, a)+'</span>'
-            + '<span class="ve-prm-kz">'+_mntParamKz(a.e)+'</span></div>';
-        }).join('');
-  }).join('') : '<div class="ve-prm-ara-yok">Eşleşen takoz yok.</div>';
-  L.hidden=false;
-  L.scrollTop=yerinde ? st : 0;
-  inp.setAttribute('aria-expanded', 'true');
-  _mntParamAraEtkin(inp, L, ilkTip);
-}
-// Marka başlığının satırları: boş kutuda başlıklar KAPALI açılır (markaların hepsi tek bakışta), okla ya da
-// ←→ ile açılır; sorgu varken süzülen markalar hep açık. Durum yalnız DOM'da (kutuda), tablo kapanınca düşer.
-function _mntParamAraAcik(inp, marka, durum){
-  if(String(inp.value || '').trim()) return;
-  var A=inp._prmAcik || (inp._prmAcik={});
-  if(durum) A[marka]=true; else delete A[marka];
-  veMntParamAra(inp, true, true);
-  var L=_mntParamAraKok(inp).querySelector('.ve-prm-ara-l'), O=Array.prototype.slice.call(L.querySelectorAll('[role="option"]'));
-  var j=O.findIndex(function(x){ return x.getAttribute('data-marka')===marka; });
-  if(j>=0) _mntParamAraEtkin(inp, L, j);
-}
-function veMntParamAraAcKapa(ev, ok){
-  if(ev && ev.stopPropagation) ev.stopPropagation();
-  var o=ok && ok.closest ? ok.closest('.ve-prm-ara-m') : null, kok=_mntParamAraKok(o);
-  var inp=kok ? kok.querySelector('.ve-prm-ara-k input') : null;
-  if(inp) _mntParamAraAcik(inp, o.getAttribute('data-marka'), o.getAttribute('data-acik')!=='true');
-}
-function veMntParamAraKapat(inp){
-  var kok=_mntParamAraKok(inp), L=kok ? kok.querySelector('.ve-prm-ara-l') : null;
-  if(L){ L.hidden=true; L.innerHTML=''; }
-  if(inp){ inp._prmAra=null; inp._prmAcik=null; inp.setAttribute('aria-expanded', 'false'); inp.removeAttribute('aria-activedescendant'); }
-}
-// Etkin satır: işareti (aria-selected) ve kutunun aria-activedescendant'ı; liste yalnız kendi
-// içinde kayar (scrollIntoView pencereyi de kaydırırdı).
-function _mntParamAraEtkin(inp, L, i){
-  var O=L.querySelectorAll('[role="option"]');
-  Array.prototype.forEach.call(O, function(o, j){ o.setAttribute('aria-selected', j===i ? 'true' : 'false'); });
-  var o=O[i];
-  if(!o){ inp.removeAttribute('aria-activedescendant'); return; }
-  inp.setAttribute('aria-activedescendant', o.id);
-  if(o.offsetTop<L.scrollTop) L.scrollTop=o.offsetTop;
-  else if(o.offsetTop+o.offsetHeight>L.scrollTop+L.clientHeight) L.scrollTop=o.offsetTop+o.offsetHeight-L.clientHeight;
-}
-function veMntParamAraUzeri(o){
-  var kok=_mntParamAraKok(o), inp=kok ? kok.querySelector('.ve-prm-ara-k input') : null;
-  if(inp && o.parentNode) _mntParamAraEtkin(inp, o.parentNode, Array.prototype.indexOf.call(o.parentNode.querySelectorAll('[role="option"]'), o));
-}
-function veMntParamAraSec(o){
-  var kok=_mntParamAraKok(o); if(!kok) return;
-  var inp=kok.querySelector('.ve-prm-ara-k input');
-  var nodeId=kok.getAttribute('data-dugum'), no=Number(kok.getAttribute('data-no')), marka=o.getAttribute('data-marka');
-  if(marka!==null){                                                          // marka başlığı: tablo açık kalır
-    veMntParamGrupMarka(nodeId, no, marka, o.getAttribute('data-eylem')==='ekle', inp ? inp.value : '');
-    if(!inp) return;
-    inp._prmAra=null;
-    veMntParamAra(inp, true, true);
-    var L=kok.querySelector('.ve-prm-ara-l'), O=L ? Array.prototype.slice.call(L.querySelectorAll('[role="option"]')) : [];
-    var j=O.findIndex(function(x){ return x.getAttribute('data-marka')===marka; });
-    if(L && j>=0) _mntParamAraEtkin(inp, L, j);
-    return;
-  }
-  veMntParamGrupAday(nodeId, no, o.getAttribute('data-key'), true);
-  if(!inp) return;
-  inp.value='';
-  if(typeof document!=='undefined' && document.activeElement!==inp && inp.focus) inp.focus({ preventScroll:true });
-  veMntParamAraKapat(inp);
-}
-function veMntParamAraTus(ev, inp){
-  var kok=_mntParamAraKok(inp), L=kok ? kok.querySelector('.ve-prm-ara-l') : null;
-  if(!L || !ev) return;
-  var O=L.hidden ? [] : L.querySelectorAll('[role="option"]');
-  var i=Array.prototype.findIndex.call(O, function(o){ return o.getAttribute('aria-selected')==='true'; });
-  if(ev.key==='ArrowDown' || ev.key==='ArrowUp'){
-    ev.preventDefault();
-    if(L.hidden){ veMntParamAra(inp, true); return; }
-    if(O.length) _mntParamAraEtkin(inp, L, ev.key==='ArrowDown' ? Math.min(O.length-1, i+1) : Math.max(0, i-1));
-  } else if((ev.key==='ArrowRight' || ev.key==='ArrowLeft') && i>=0 && O[i].hasAttribute('data-marka') && !String(inp.value || '').trim()){
-    ev.preventDefault();
-    _mntParamAraAcik(inp, O[i].getAttribute('data-marka'), ev.key==='ArrowRight');
-  } else if(ev.key==='Enter'){
-    ev.preventDefault();
-    if(i>=0) veMntParamAraSec(O[i]);
-  } else if(ev.key==='Escape' && (inp.value || !L.hidden)){
-    ev.preventDefault(); ev.stopPropagation();
-    inp.value='';
-    veMntParamAraKapat(inp);
-  }
 }
 
 // ESKİ PENCERE (Canlı Not 1001'e dek) — kategoriler, gövdede alt alta: GRUPLAR (model
@@ -1251,9 +1210,10 @@ if(typeof module!=='undefined' && module.exports){
     _mntParamAksoVeri: _mntParamAksoVeri, _mntParamRenk: _mntParamRenk,
     VE_MNT_PARAM_ADAY_KIP: VE_MNT_PARAM_ADAY_KIP, _mntParamAdayKip: _mntParamAdayKip, veMntParamAdayKip: veMntParamAdayKip,
     _mntParamAdaylarHTML: _mntParamAdaylarHTML, _mntParamListeSira: _mntParamListeSira, _mntParamKz: _mntParamKz,
-    _mntParamAra: _mntParamAra, _mntParamAraMarkalar: _mntParamAraMarkalar, _mntParamMarkaAd: _mntParamMarkaAd, veMntParamAra: veMntParamAra, veMntParamAraKapat: veMntParamAraKapat,
-    veMntParamAraTus: veMntParamAraTus, veMntParamAraAc: veMntParamAraAc, veMntParamAraAcKapa: veMntParamAraAcKapa, veMntParamGrupMarka: veMntParamGrupMarka, veMntParamAraSec: veMntParamAraSec, veMntParamAraUzeri: veMntParamAraUzeri,
-    veMntParamOzelKaldir: veMntParamOzelKaldir,
+    _mntParamAra: _mntParamAra, _mntParamMarkaAd: _mntParamMarkaAd, veMntParamGrupMarka: veMntParamGrupMarka,
+    _MNT_PARAM_SEC: _MNT_PARAM_SEC, _mntParamSecDurum: _mntParamSecDurum, _mntParamSecListeHTML: _mntParamSecListeHTML,
+    veMntParamSecTip: veMntParamSecTip, veMntParamSecMarka: veMntParamSecMarka, veMntParamSecAc: veMntParamSecAc,
+    veMntParamSecAra: veMntParamSecAra, veMntParamSecTus: veMntParamSecTus,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
     _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,

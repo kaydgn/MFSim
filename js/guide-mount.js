@@ -546,23 +546,42 @@ var _GM_PARAM_ARALIK = { alt: 3, ust: 5 };
 var _GM_PARAM_ADAY = [
   { k: 'aday', bolum: 'Adaylar', ad: 'Adaylar', not: 'Başlıkta aday tip sayısı.' },
   { k: 'kip', s: '.ve-prm-kip', ad: 'Kip', yer: 'ic-sag',
-    not: 'Tüm kombinasyonlar: her grupta bütün aday tipler. Özel kombinasyon: grup başına eklenen tipler.' },
-  { k: 'sayi', s: '.ve-prm-oz-n', ad: 'Tip sayısı', yer: 'sag', not: 'Grupta denenecek tip sayısı; tip eklenmeyen grup mevcut tipinde.' },
+    not: 'Tüm kombinasyonlar: her grupta bütün aday tipler. Özel kombinasyon: grup başına seçilen tipler.' },
+  { k: 'sayi', s: '.ve-prm-oz-n', ad: 'Tip sayısı', yer: 'sag', not: 'Grupta denenecek tip sayısı; tip seçilmeyen grup mevcut tipinde.' },
   { k: 'ara', s: '.ve-prm-ara-k', ad: 'Takoz ara', yer: 'ic-sag',
-    not: 'Tık marka başlıklı tabloyu açar; sözcükler tipin adında ve markasında aranır. Tip satırı tipi, marka başlığı markanın hepsini ekler; Esc aramayı temizler.' },
-  { k: 'tip', s: '.ve-prm-oz-s', ad: 'Eklenen tip', yer: 'alt', not: 'Ad ve kz; çarpı tipi gruptan çıkarır.' },
+    not: 'Sözcükler tipin adında ve markasında aranır, liste süzülür; Esc aramayı temizler.' },
+  { k: 'marka', s: '.ve-prm-sec-m', ad: 'Marka', yer: 'ic-sag',
+    not: 'Onay kutusu markanın görünen tiplerini seçer ya da bırakır; ok tipleri açar; seçili / toplam.' },
+  { k: 'tip', s: '.ve-prm-sec-o', ad: 'Tip', yer: 'ic-sag', not: 'Satırın tıkı tipi seçer ya da bırakır; ad ve kz.' },
   { k: 'mevcut', s: '.ve-prm-mev', ad: 'Mevcut', yer: 'sag', not: 'Grubun bugünkü tipi.' }
 ];
 
 // Şeklin özel kombinasyonu örneğin modelinden (anahtar elle yazılmaz — kütüphane değişebilir):
-// birinci grup mevcut tipi ve listenin ilk tipi, ikinci grup bir tip, kalan gruplar mevcut tipinde.
+// birinci grup mevcut tipi ve aramasında mevcut tipin adının harfleri (liste süzülmüş, eşleşen ikinci tip de
+// seçili), ikinci grup bir tip (markası kapalı), kalan gruplar mevcut tipinde. Arama ve açıklık görünüm durumu:
+// şeklin düğümü ('gm-yeni') için yazılır (js/cp-mount-param.js → _mntParamSecDurum).
 function _gmParamOzel(){
   if(typeof _mntParamYeni !== 'function' || typeof _mntParamListeSira !== 'function') return { adaylarKip: 'ozel' };
   // eleme yok (örnek çözülmemiş): aday listesi kütüphanenin bütün çözülebilen tipleri
   var Y = _mntParamYeni({ data: {} }), S = _mntParamListeSira(Y.A), G = Y.M.G, ad = {};
   var tip = function(g, i){ return (S.filter(function(a){ return a.key !== g.tip; })[i] || {}).key; };
-  if(G[0]) ad[G[0].anahtar] = [G[0].tip, tip(G[0], 0)].filter(Boolean);
-  if(G[1]) ad[G[1].anahtar] = [tip(G[1], 1)].filter(Boolean);
+  var lib = Y.M.lib || {}, sec = typeof _mntParamSecDurum === 'function' ? _mntParamSecDurum : null;
+  if(G[0]){
+    var mev = lib[G[0].tip || G[0].benzer], q = mev ? ((/^[^\d\s]+/.exec(mev.name) || [''])[0]) : '';
+    var es = q && typeof _mntParamAra === 'function'
+      ? _mntParamAra(S, q, [G[0].tip].filter(Boolean)).map(function(a){ return a.key; }) : [];
+    ad[G[0].anahtar] = [G[0].tip, es.length ? es[0] : tip(G[0], 0)].filter(Boolean);
+    if(sec) Object.assign(sec('gm-yeni', G[0].no), { q: es.length ? q : '', acik: {}, kapaliAra: {} });
+  }
+  if(G[1]){
+    ad[G[1].anahtar] = [tip(G[1], 1)].filter(Boolean);
+    if(sec){
+      var a1 = S.filter(function(a){ return a.key === ad[G[1].anahtar][0]; })[0], kapali = {};
+      if(a1) kapali[(a1.e && a1.e.marka) || 'Diğer'] = false;
+      Object.assign(sec('gm-yeni', G[1].no), { q: '', acik: kapali, kapaliAra: {} });
+    }
+  }
+  G.slice(2).forEach(function(g){ if(sec) Object.assign(sec('gm-yeni', g.no), { q: '', acik: {}, kapaliAra: {} }); });
   return { adaylarKip: 'ozel', adaylar: ad };
 }
 
@@ -1749,16 +1768,17 @@ function _gmSec17(){
     + 'durumda takozların en küçük düşey yükünü (<strong>En düşük takoz yükü</strong>) ve kütüphanenin her aday '
     + 'tipinin o yükteki statik sehimini bulur; sehim tipin kendi kuvvet–sehim eğrisinden, eğrisiz tipte k<sub>z</sub> '
     + 'statik rijitlikten. <strong>En az</strong> ve <strong>En çok</strong> girilince sehimi aralığın dışında kalan '
-    + 'tip elenir: Tüm kombinasyonlar, Özel kombinasyonun araması ve sayılar kalan tiplerden. Model hesaptan sonra '
+    + 'tip elenir: Tüm kombinasyonlar, Özel kombinasyonun listesi ve sayılar kalan tiplerden. Model hesaptan sonra '
     + 'değişirse alanlar kapanır ve eleme durur; yeniden <strong>Hesapla</strong> ile çözülür. Aralık boşken bölüm '
     + 'eksik bandında sorulur.</p>';
   h += '<p><strong>Adaylar</strong> taramanın tiplerini belirler '
     + '(' + _gmS('parametrik-aday') + '): <strong>Tüm kombinasyonlar</strong> (varsayılan) her grupta bütün '
-    + 'aday tipleri dener; <strong>Özel kombinasyon</strong> seçilince her grubun tipleri arama kutusundan '
-    + 'eklenir — arama kutusuna tıklayınca marka başlıklı tablo açılır (başlıklar okla açılır); yazılan sözcükler tipin adında ve markasında aranır, '
-    + 'tip satırının tıkı tipi, marka başlığındaki <strong>Hepsini ekle</strong> markanın bütün aday tiplerini (örneğin ön takozlar için '
-    + 'bütün AMC modellerini) gruba ekler; hepsi grupta olan markanın başlığı <strong>Hepsini çıkar</strong> olur. '
-    + 'Tip eklenmeyen grup mevcut tipinde kalır. Takoz Özellikleri’nde eklenen ya da rijitliği tamamlanan '
+    + 'aday tipleri dener; <strong>Özel kombinasyon</strong> seçilince her grubun tipleri marka başlıklı '
+    + 'listeden onay kutusuyla seçilir: marka satırının kutusu markanın bütün aday tiplerini (örneğin ön takozlar için '
+    + 'bütün AMC modellerini) seçer ya da bırakır, ok markanın tiplerini açar; tip satırına tık o tipi seçer ya da bırakır. '
+    + 'Kısmen seçili markanın kutusu çizgilidir, satırında seçili / toplam tip sayısı yazar. Arama kutusuna yazılan '
+    + 'sözcükler tipin adında ve markasında aranır ve listeyi süzer; marka kutusu yalnız görünen tipleri seçer. '
+    + 'Tip seçilmeyen grup mevcut tipinde kalır. Takoz Özellikleri’nde eklenen ya da rijitliği tamamlanan '
     + 'tip kendiliğinden aday olur. <strong>Analiz</strong> kütüphanenin tip sayılarını, en düşük takoz '
     + 'yükünü, elenen tip sayısını, taranan grup ve kombinasyon sayısını yazar.</p>';
   h += _gmSahne('parametrik-p', _gmPencere('mnt-parametric', { tut: ['Takoz yerleşimi'], yan: false }),
@@ -1777,8 +1797,8 @@ function _gmSec17(){
       'Çözücü’nün güncel çözümüyle: en düşük takoz yükünde sehimi aralığın dışında kalan tip elenir. Çözüm '
       + 'yoksa ya da model hesaptan sonra değiştiyse alanlar kapalı, eleme yok'],
     ['Adaylar', 'Kip (Tüm kombinasyonlar · Özel kombinasyon); özelde grup başına numara, ad, tip sayısı, '
-      + 'arama kutusu (marka başlıklı tablo: Hepsini ekle) ve eklenen tipler (ad, kz, kaldır)',
-      'Aday: altı rijitliği tam kütüphane tipi, tahmini rijitlikli tip de. Tip eklenmeyen grup mevcut tipinde kalır'],
+      + 'arama kutusu ve marka başlıklı seçim listesi (marka: onay kutusu, seçili / toplam; tip: onay kutusu, ad, kz)',
+      'Aday: altı rijitliği tam kütüphane tipi, tahmini rijitlikli tip de. Tip seçilmeyen grup mevcut tipinde kalır'],
     ['Analiz', 'Kayıtlı takoz, aday tip (ölçülü ve tahmini rijitlik), rijitlik eksik, aday değil, en düşük takoz yükü, '
       + 'elenen, taranan grup, kombinasyon',
       'Kayıtlı takoz: aday tip + elenen + rijitlik eksik + aday değil; aday tip elemeden sonra. Rijitliği eksik tip çözülmez; aday değil, '

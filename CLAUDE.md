@@ -483,14 +483,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `_mntAksoKaynak` → `P.duzelt`, tam ekranı
   yok; kapı `mount-akso.test.js` → *GRUBUN RENGİ*) + **Adaylar** (tip × grup
   işaret tablosunun yerine İKİ KİP — Canlı Not 1005: *"kullanıcı bunları tek tek seçerek uğraşmasın"*):
-  **Tüm kombinasyonlar** varsayılan (her grupta bütün aday tipler) · **Özel kombinasyon** (`node.data.adaylarKip
-  = 'ozel'`; konum başına ARAMA kutusu — sorgunun her sözcüğü adda ya da markada, harf katlaması Takoz
-  Özellikleri'ninki (`_mntLibNorm`); tık ya da Enter ekler, Esc temizler; kutu yerinde tazelenmez, odak ve
-  imleç kalır; **kutuya tık ya da odak (boş kutu dâhil) MARKA BAŞLIKLI TABLOYU açar** (kullanıcı 2026-11-13, Canlı Not
-  1010: *"ön takozlar için tüm AMC modellerini seçmek istiyorum"*): başlık = marka · tip sayısı · Hepsini ekle (n) /
-  Hepsini çıkar (n), açık markanın tipleri (boş kutuda başlıklar kapalı, okla açılır); sorgu süzer, n sorguyu taşıyan aday tiplerin sayısı; başlığın eylemi TEK
-  geri-al adımı, elenen tip girmez (`veMntParamGrupMarka`); kapı `mount-param-marka.test.js`; `node.data.adaylar` = { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince
-  silinmez; tipi eklenmeyen grup mevcut tipinde). **Aday tip kütüphanenin ÇÖZÜLEBİLEN her tipi**
+  **Tüm kombinasyonlar** varsayılan (her grupta bütün aday tipler) · **Özel kombinasyon** (`node.data.adaylarKip = 'ozel'`): konum başına arama kutusu ve AKIŞTA duran **marka
+  başlıklı seçim listesi** (kullanıcı 2026-11-13, Canlı Not 1012: *"marka seçtiğim pencere gitmediği için seçemiyorum
+  takozları … kutucuk şeklinde olsun hızlı hızlı seçilsin"*; 1010'un açılır tablosu ve ✕'li satırları YOK): Veri
+  Gezgini'nin üç durumlu kutusu (`.vsig-ck`) — marka satırı kutu (görünen aday tiplerin hepsi · kısmı · hiçbiri; tık
+  karışıkta ve boşta hepsini seçer, doluda bırakır) · ok + ad (açar, kapatır) · seçili / toplam; tip satırı kutu · ad ·
+  kz, satırın tamamı tıklanır; her tık TEK geri-al adımı (`veMntParamGrupAday` · `veMntParamGrupMarka`), liste yerinde
+  tazelenir, kaydırma ve odak yerinde. Arama sözcükleri adda ya da markada (harf katlaması `_mntLibNorm`), liste
+  süzülür, marka kutusu yalnız görünenleri seçer; Esc temizler. Açıklık ve sorgu görünüm durumu (`_MNT_PARAM_SEC`;
+  dokunulmayan marka seçili tipi varsa açık), modele yazılmaz; kapı `mount-param-secim.test.js`; `node.data.adaylar` =
+  { grubun anahtarı: [tip] }, kütüphane sırasında, kip değişince silinmez; tipi seçilmeyen grup mevcut tipinde). **Aday tip kütüphanenin ÇÖZÜLEBİLEN her tipi**
   (kullanıcı 2026-11-13, Canlı Not 1008: *"takoz eklendiğinde kombinasyona dahil olduğundan emin olalım"*):
   `aday:false` dışında altı rijitliği tam olan, tahminli tip DE; liste her kurulumda haritadan TÜRER
   (gömülü · değiştirilmiş · özel tip) — eklenen ya da Takoz Özellikleri'nde tamamlanan tip kendiliğinden
@@ -499,7 +501,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çok [mm], `node.data.sehim` = { alt, ust }): Çözücü'nün çözümü Statik durumun EN DÜŞÜK TAKOZ YÜKÜNÜ (yalnız
   takozlar) ve kütüphanenin her aday tipinin o yükteki statik sehimini taşır (`R.tipSehim`, bellekte; tipin
   z yasasından, Lineer modda k_z; Çözücü penceresi göstermez); sehimi aralığın dışındaki tip aday listesinden
-  düşer — Tüm kombinasyonlar, Özel kombinasyonun araması ve sayılar aynı listeden; elenen tip özelin
+  düşer — Tüm kombinasyonlar, Özel kombinasyonun listesi ve sayılar aynı listeden; elenen tip özelin
   kaydında kalır. Kapasite kullanılmaz. Eleme yalnız çözüm GÜNCELKEN (`veMntSonucDurumu`) ve 0 < en az < en
   çok iken: çözüm yoksa ya da eskiyse alanlar kapalı (sebebi notta), boş aralık eksik bandında sorulur; alanlar
   yerinde tazelenmez, kapalılıkları çözümü izler (`data-mnt-izle`). Kapı: `mount-param-eleme.test.js` (→ *GİZLİ
@@ -512,7 +514,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (`_mntParamEskiPencereHTML`, e2e onu yerine koyar); tarayıcı bugün TEK aday listesi alır (parktaki
   listesi tahminsiz, `_mntParamAdaylar`) — grup başına liste bağlanırken karışık tabana geçer. Kapı:
   `mount-param.test.js` → *YERLEŞİM ve ADAYLAR* (→ *TÜM TİPLER* · *EKLENEN TİP* · *ANALİZ* · *SINIR YOK*) +
-  `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun açık listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
+  `kontrast.spec.js` · `yerlesim.spec.js` (Özel kombinasyonun seçim listesi, yüzey turu). İlk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz. **Sıralama Excel'in kuralı**
   (kullanıcı 2026-11-10 · 11: *"Bu bileşen çok eski kalmış … güncel ve modern"*): dört kesin
