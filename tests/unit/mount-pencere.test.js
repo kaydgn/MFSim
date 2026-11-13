@@ -553,3 +553,72 @@ describe('KAPASİTE · DURDURUCU SATIRDA — başlıkta açıklama yok, alan fö
     }
   });
 });
+
+// KONUM YAN YANA (Canlı Not 162, kullanıcı: *"Bu kısmı daha da güzelleştirelim. Yapabilirsek yan
+// yana yapalım bunları."*). Önce: Eksen | Konum | CG'ye Δ sütunları, eksen başına bir satır (X · Y ·
+// Z alt alta). Şimdi sütunlar X · Y · Z, satırlar Konum (üç girdi) ve CG'ye Δ (türetilen, oyuk) —
+// kimlikler, yazıcı ve geri-al adımı aynı. Askı Yayı aynı gövdeyi taşır.
+describe('KONUM YAN YANA (Canlı Not 162)', () => {
+  const sagOn = () => bul((n) => n.customName === 'Sağ Ön Takoz');
+  const ac = (html) => { document.body.innerHTML = '<div class="ve-properties-content">' + html + '</div>'; };
+  // Föyün biçimi: başlık X · Y · Z, Konum satırında üç girdi, CG'ye Δ satırında üç türetilen hücre.
+  function yanYana(t) {
+    const tab = document.querySelector('table[aria-label="Konum"]');
+    const bas = [...tab.tHead.rows[0].cells].map((c) => c.textContent);
+    const [konum, fark, ...fazla] = [...tab.tBodies[0].rows];
+    const cg = cp._mntCanliModel().mp.cg, F = { d: ['x', 'y', 'z'].map((k, i) => Number(t.data[k]) - cg[i] * 1000) };
+    expect([bas, fazla.length]).toEqual([['', 'X', 'Y', 'Z'], 0]);
+    expect([konum.cells.length, konum.cells[0].textContent, konum.cells[0].querySelector('label').htmlFor])
+      .toEqual([4, 'Konum', 've-mnt-x-' + t.id]);
+    ['x', 'y', 'z'].forEach((k, i) => {
+      const g = konum.cells[i + 1].querySelector('input');
+      expect([g.id, g.value, g.getAttribute('inputmode'), g.getAttribute('aria-label')])
+        .toEqual(['ve-mnt-' + k + '-' + t.id, String(t.data[k]), 'decimal', 'Konum ' + k.toUpperCase()]);
+    });
+    expect([fark.cells.length, fark.cells[0].textContent, fark.querySelectorAll('input').length]).toEqual([4, 'CG\'ye Δ', 0]);
+    [0, 1, 2].forEach((i) => {
+      const c = fark.cells[i + 1];
+      expect([c.id, c.className, c.hasAttribute('data-tazele'), c.textContent])
+        .toEqual(['ve-mnt-tamd-' + i + '-' + t.id, 'cz', true, veSayi(F.d[i], 1, { eksi: '−' })]);
+    });
+    expect(tab.textContent).not.toContain('Eksen');                            // eksen sütunu yok
+  }
+
+  test('Takoz penceresinde başlık X · Y · Z; Konum satırında üç girdi, CG\'ye Δ satırında üç türetilen hücre', () => {
+    tulga(); const t = sagOn();
+    ac(cp.getMntMountPropertiesHTML(t));
+    yanYana(t);
+    expect(document.getElementById('ve-mnt-tamd-0-' + t.id).textContent).toBe('−142,5');   // notun ekranındaki sayı
+  });
+
+  test('yazmak bileşenin alanını değiştirir; kayıt değişiklikten SONRA, alan başına tek adım; fark yerinde tazelenir', () => {
+    tulga(); const t = sagOn();
+    ac(cp.getMntMountPropertiesHTML(t));
+    global.veMntSet = cp.veMntSet;
+    const kayit = [];
+    stubs.saveState.mockImplementation(() => kayit.push([t.data.x, t.data.y, t.data.z]));
+    try {
+      const y = document.getElementById('ve-mnt-y-' + t.id), y0 = Number(t.data.y);
+      const fark0 = document.getElementById('ve-mnt-tamd-1-' + t.id);
+      y.value = '400'; y.dispatchEvent(new Event('change'));
+      expect(kayit).toEqual([[t.data.x, '400', t.data.z]]);
+      expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
+      expect(document.getElementById('ve-mnt-y-' + t.id)).toBe(y);                    // girdi yerinde
+      const fark1 = document.getElementById('ve-mnt-tamd-1-' + t.id);
+      // takoz kütle taşımaz: birleşik CG yerinde, fark kayma kadar
+      expect(veSayiOku(fark1.textContent) - veSayiOku(fark0.textContent)).toBeCloseTo(400 - y0, 0);
+      yanYana(t);
+    } finally {
+      stubs.saveState.mockReset();
+      delete global.veMntSet;
+    }
+  });
+
+  test('Askı Yayı penceresi aynı föyü taşır', () => {
+    const TTA = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tta10askili_topoloji.json'), 'utf8'));
+    global.nodes = JSON.parse(JSON.stringify(TTA.nodes)).map((n) => Object.assign(n, { def: componentDefs[n.type] }));
+    const a = bul((n) => n.type === 'mnt-aski');
+    ac(cp.getMntAskiPropertiesHTML(a));
+    yanYana(a);
+  });
+});
