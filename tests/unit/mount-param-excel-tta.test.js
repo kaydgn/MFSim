@@ -319,6 +319,28 @@ describe('HTML — Excel\'in planı', () => {
     expect(html).not.toMatch(/Mount 1\b/);
   });
 
+  // MARKA (kullanıcı 2026-11-13: "o filtrelemeyi takoz markasına göre de yapalım"): HTML raporu Tarama'nın her
+  // tipinin markasını programın kütüphanesinden taşır (Takoz Özellikleri'nin Marka listesiyle aynı), sırası o
+  // listeninki; Excel'in girdisi değişmez
+  test('Tarama\'nın her tipi markasıyla: kütüphanenin markası, Marka listesinin sırası; Excel\'in girdisinde yok', async () => {
+    const B = PS._mntParamMarkaBilgi(), L = global.veMntGetLibraryMap();
+    expect(B.markaSira).toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer', 'Özel takozlar']);
+    expect(B.markalar['LMT-1433-20 40 ShA']).toBe('LASPAR');
+    const html = await PS.veMntParamHtmlIndir('pa'), D = veri(html);
+    expect(D.markaSira).toEqual(B.markaSira);
+    const ad = {};
+    Object.keys(L).forEach((k) => { ad[L[k].name] = L[k].marka; });
+    let n = 0;
+    D.tarama.adlar.forEach((a, j) => a.forEach((x, i) => {
+      n++;
+      expect(D.tarama.marka[j][i]).toBe(ad[x]);
+    }));
+    expect(n).toBeGreaterThan(0);
+    expect(new Set([].concat(...D.tarama.marka)).size).toBeGreaterThan(1);
+    const Pl = PS._mntParamExcelPlan(ent, Hz);
+    expect(['markalar', 'markaSira'].filter((k) => k in Pl.E())).toEqual([]);
+  });
+
   // Canlı not 2008 ("Buraya aracın ismini falan da yazalım. Yani bilgi versin kullanıcıya."): künyenin
   // başı programın bildiğinden — tuvalin örneği (Araç: başlangıç sayfasının adı; eskimiş anahtar başka
   // aracın adını yazmaz), 3B'nin veri sayfası (Motor modeli · Şanzıman ailesi), yoksa gövde penceresinin

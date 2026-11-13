@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 120,
+ "sayi": 123,
  "dosyalar": {
   "js/command-palette.js": {
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
@@ -61,7 +61,9 @@
    "17b1e7178a": "Gövde ekle listesinden motor, şanzıman ve öteki gövdeleri ekleyin.",
    "1f23b039e7": "Modeli bir STEP dosyasından ya da bir örnekten başlatın.",
    "524a00b447": "Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.",
+   "53184e2838": "Kütle gövdeleri’nde şanzımanı Askılı seçin; Askı yayı ekle ile her yayı ekleyin.",
    "7214a8cfc7": "Transfer oranı ve aks paylarını girin; boş alan 1 sayılır.",
+   "996590c3b2": "Konumu yayın gövdedeki bağlantı noktasından girin.",
    "a42491d626": "Hesapla ile rollü birimlerin kütle ve konumlarını ölçün.",
    "a9e696c260": "Sihirbaza aktar ile birimleri gövde ve takoz olarak alın.",
    "c1b0e6210d": "Konumu üst bağlantı yüzeyinin merkezinden girin.",
@@ -69,6 +71,7 @@
    "c7c2b4c419": "STEP okununca 3B’de seç ile parçalara rol verin.",
    "c8be45ab59": "Modeli kur ile modeli tuvale kurun.",
    "cd33ab2e66": "Motor’u katalogdan seçin ya da tepe tork ve devirleri girin.",
+   "d064070d51": "Yay’ı katalogdan seçin; Kurulum’da kuvveti ya da boyu girin.",
    "ea48bd26bf": "Takoz ekle ile her takozu ekleyin.",
    "fa9c33edb5": "Şanzıman’ın vites oranlarını ve stall oranını girin."
   },

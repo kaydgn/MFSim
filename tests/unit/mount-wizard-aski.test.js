@@ -3,10 +3,11 @@
  * ─────────────────────────────────────────────────────────────────────────
  * Kullanıcı: *"'Başlangıç Sihirbazı' kısmında 'askı' özelinde hiç bir ekleme, hiç bir
  * görselleştirme, hiç bir arayüz görmüyorum … Programa 'askılı' seçeneğini entegre eder misin?"*
- *   · SEÇENEK — Takozlar adımında "Şanzıman askısı": Askısız · Askılı; askılıda yaylar (ilk
- *     seçimde sol ve sağ), konum, katalog yayı ya da k · L0 · Lc, kurulum ve karşılığı; askı ile
- *     takozun seçimi birbirini bırakır (adımda tek düzenleyici). Ayrı adım ve talimatı kullanıcının
- *     kararını bekliyor (talimat metni tabana yalnız onun kararıyla girer).
+ *   · SEÇENEK — şanzımanın satırında, Kütle gövdeleri'nde, TEK satır: Askı: Askısız · Askılı
+ *     (kullanıcı: *"şanzıman seçtiğimiz zaman sor … tek satırda halledelim"*); ilk Askılı'da sol
+ *     ve sağ yay
+ *   · ADIM — "Şanzıman askısı" kendi adımı, takozlardan sonra (kullanıcı: *"askıyı ayrı adım
+ *     yap"*): askısızda boş durum, askılıda yaylar, konum, katalog yayı ya da k · L0 · Lc, kurulum
  *   · DENETİM — eksik konum; yay ve kurulum Çözücü'nün kapısıyla AYNI cümle; engel çözümü durdurur
  *   · TUVAL ↔ SİHİRBAZ — Askı Yayı düğümleri duruma, durum düğümlere birebir; Askısız modele girmez
  *   · KURULUM — Modeli kur askı yaylarını kurar, tuvalden açılınca yerinde günceller, Askısız çıkarır
@@ -31,7 +32,8 @@ const KABUK = '<div id="ve-canvas-wrapper"></div>'
   + '<div id="ve-mntwiz-overlay" style="display:none;"><div class="ve-fw-shell">'
   + '<nav id="ve-mw-nav"></nav><div id="ve-mw-body"></div></div><div id="ve-mw-foot"></div>'
   + '<div id="ve-mw-3b" style="display:none;"></div></div>';
-const TAKOZ = W.VE_MW_STEPS.findIndex((s) => s.key === 'takoz');
+const ASKI = W.VE_MW_STEPS.findIndex((s) => s.key === 'aski');
+const GOVDE = W.VE_MW_STEPS.findIndex((s) => s.key === 'govde');
 const TTA = () => JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/tta10askili_topoloji.json'), 'utf8'));
 
 let k = 0;
@@ -58,44 +60,57 @@ afterEach(() => {
   delete global.confirm;
 });
 const govde = () => document.getElementById('ve-mw-body');
-const sorun = (st) => W.veMntWizSorunlar(st).filter((s) => s.adim === 'takoz' && /askı/i.test(s.m)).map((s) => s.m);
+const sorun = (st) => W.veMntWizSorunlar(st).filter((s) => s.adim === 'aski').map((s) => s.m);
 
-describe('SEÇENEK — Takozlar adımında Şanzıman askısı', () => {
-  test('rayın Takozlar satırı askıyı adlandırır; adım sayısı değişmez', () => {
-    expect(W.VE_MW_STEPS.map((s) => s.key)).toEqual(['kaynak', 'govde', 'takoz', 'tork', 'ozet']);
-    expect(W.VE_MW_STEPS[TAKOZ].girdi.split(' · ')).toEqual(['Konum', 'katalog', 'rijitlik', 'şanzıman askısı']);
-  });
-  test('Askısız varsayılan: yalnız seçenek; Askılı ilk seçimde sol ve sağ yayı ekler, takozun düzenleyicisi çekilir', () => {
+describe('SEÇENEK — şanzımanın satırında, tek satır', () => {
+  test('Şanzıman gövdesinin Kimlik bölümünde Askı: Askısız · Askılı — tek satır; öteki gövdede yok', () => {
     W.veMntWizAc();
-    W.veMntWizGoto(TAKOZ);
-    const seg = () => [...govde().querySelectorAll('.ve-fw-seg[aria-label="Şanzıman askısı"] button')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]);
-    expect(seg()).toEqual([['Askısız', 'true'], ['Askılı', 'false']]);
-    expect(govde().querySelector('#ve-mw-aski-liste')).toBeNull();
+    W.veMntWizGoto(GOVDE);
+    W.veMntWizGovdeEkle('mnt-motor');
+    expect(govde().querySelector('.ve-fw-seg[aria-label="Askı"]')).toBeNull();
+    W.veMntWizGovdeEkle('mnt-gearbox');
+    const seg = govde().querySelector('.ve-fw-seg[aria-label="Askı"]');
+    const satir = seg.closest('.ve-fw-ed-alan');
+    expect(satir.firstElementChild.textContent).toBe('Askı');
+    expect(satir.parentElement.querySelector('.ve-mw-ed-bas').textContent).toBe('Kimlik');
+    expect([...seg.querySelectorAll('button')].map((b) => [b.textContent, b.getAttribute('aria-pressed')])).toEqual([['Askısız', 'true'], ['Askılı', 'false']]);
+    W.veMntWizAskili(true);
+    expect(W.VE_MW_STEPS[[...document.querySelectorAll('.ve-fw-step')].findIndex((li) => li.classList.contains('on'))].key).toBe('govde');
+    expect([...govde().querySelectorAll('.ve-fw-seg[aria-label="Askı"] button')].map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    expect(W.veMntWizState().askilar.map((a) => a.ad)).toEqual(['Sol askı yayı', 'Sağ askı yayı']);
+    // ikinci kez Askılı: çift ikinci kez eklenmez
+    W.veMntWizAskili(false); W.veMntWizAskili(true);
+    expect(W.veMntWizState().askilar.length).toBe(2);
+  });
+});
+
+describe('ADIM — Şanzıman askısı, takozlardan sonra', () => {
+  test('rayda kendi adımı: adı, girilenler, talimatı; Takozlar askıyı taşımaz', () => {
+    expect(W.VE_MW_STEPS.map((s) => s.key)).toEqual(['kaynak', 'govde', 'takoz', 'aski', 'tork', 'ozet']);
+    const s = W.VE_MW_STEPS[ASKI];
+    expect([s.ad, s.girdi.split(' · '), s.talimat.length]).toEqual(['Şanzıman askısı', ['Askı yayları', 'konum', 'yay', 'kurulum'], 4]);
+    expect(W.VE_MW_STEPS[GOVDE].girdi.split(' · ').pop()).toBe('askı');
+  });
+  test('askısızda boş durum; askılıda liste, ekle, düzenleyici', () => {
+    W.veMntWizAc();
+    W.veMntWizGoto(ASKI);
+    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent)).toEqual(['Askı yayları']);
+    expect(govde().querySelector('.ve-fw-card-b').textContent).toBe('Şanzıman askısız. Kütle gövdeleri’nde şanzımanı Askılı seçin.');
     expect(sorun(W.veMntWizState())).toEqual([]);
     W.veMntWizAskili(true);
-    expect(seg()).toEqual([['Askısız', 'false'], ['Askılı', 'true']]);
-    expect(W.veMntWizState().askilar.map((a) => a.ad)).toEqual(['Sol askı yayı', 'Sağ askı yayı']);
-    expect([...govde().querySelectorAll('#ve-mw-aski-liste [data-mw-satir]')].length).toBe(2);
-    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent))
-      .toEqual(['Takozlar', 'Şanzıman askısı', 'Askı yayları', 'Seçili askı yayı']);
-    const ed = govde().querySelectorAll('.ve-mw-ed')[0];
+    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent)).toEqual(['Askı yayları', 'Seçili askı yayı']);
+    expect([...govde().querySelectorAll('#ve-mw-liste [data-mw-satir]')].length).toBe(2);
+    const ed = govde().querySelector('.ve-mw-ed');
     expect([...ed.querySelectorAll('.ve-mw-ed-bas')].map((b) => b.textContent)).toEqual(['Kimlik', 'Konum [mm]', 'Yay', 'Kurulum']);
     expect([...ed.querySelectorAll('select[aria-label="Yay kataloğu"] option')].map((o) => o.value)).toEqual(['', 'tta-aski']);
     expect([...ed.querySelectorAll('select[aria-label="Kurulum biçimi"] option')].map((o) => o.value)).toEqual(['kuvvet', 'boy', 'tasarim']);
-    // ikinci kez Askılı: çift ikinci kez eklenmez; Askısız liste durur, modele girmez
-    W.veMntWizAskili(false); W.veMntWizAskili(true);
-    expect(W.veMntWizState().askilar.length).toBe(2);
     W.veMntWizAskiEkle();
     expect(W.veMntWizState().askilar.map((a) => a.ad)).toEqual(['Sol askı yayı', 'Sağ askı yayı', 'Askı yayı 3']);
     W.veMntWizAskiSil(W.veMntWizState().askilar[2].key);
     expect(W.veMntWizState().askilar.length).toBe(2);
-    // takoz seçilince askının düzenleyicisi çekilir, tersi de
-    W.veMntWizTakozEkle();
-    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent))
-      .toEqual(['Takozlar', 'Seçili takoz', 'Şanzıman askısı', 'Askı yayları']);
-    W.veMntWizSec('aski', W.veMntWizState().askilar[1].key);
-    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent))
-      .toEqual(['Takozlar', 'Şanzıman askısı', 'Askı yayları', 'Seçili askı yayı']);
+    // Takozlar adımında askı yok
+    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((x) => x.key === 'takoz'));
+    expect([...govde().querySelectorAll('.ve-fw-card-h')].map((h) => h.textContent)).toEqual(['Takozlar']);
   });
 });
 
@@ -158,7 +173,7 @@ describe('TUVAL ↔ SİHİRBAZ — Askı Yayı düğümleri', () => {
     delete st.askilar[0].k;
     const c = W.veMntWizCoz(st);
     expect(c.ok).toBe(false);
-    expect(W.veMntWizIssues(c, TAKOZ).map((s) => s.m)).toContain('Sol askı yayı: yay sabiti girilmedi.');
+    expect(W.veMntWizIssues(c, ASKI).map((s) => s.m)).toContain('Sol askı yayı: yay sabiti girilmedi.');
   });
 });
 
@@ -207,11 +222,10 @@ describe('MASA — 2B ve 3B askıyı çizer', () => {
     W.veMntWizAc();
     Object.assign(W.veMntWizState(), st);
     W._mwMasaSec('aski:1');
-    expect(W.VE_MW_STEPS[[...document.querySelectorAll('.ve-fw-step')].findIndex((li) => li.classList.contains('on'))].key).toBe('takoz');
-    expect(document.querySelector('#ve-mw-aski-liste .ve-fw-kl.on').getAttribute('data-mw-satir')).toBe(st.askilar[1].key);
-    expect(document.querySelector('#ve-mw-liste .ve-fw-kl.on')).toBeNull();
+    expect(W.VE_MW_STEPS[[...document.querySelectorAll('.ve-fw-step')].findIndex((li) => li.classList.contains('on'))].key).toBe('aski');
+    expect(document.querySelector('#ve-mw-liste .ve-fw-kl.on').getAttribute('data-mw-satir')).toBe(st.askilar[1].key);
     W._mwMasaSec('takoz:0');
-    expect(document.querySelector('#ve-mw-aski-liste .ve-fw-kl.on')).toBeNull();
+    expect(W.VE_MW_STEPS[[...document.querySelectorAll('.ve-fw-step')].findIndex((li) => li.classList.contains('on'))].key).toBe('takoz');
   });
   test('3B: düğüm listesinde askılar, modelin askısı; gösterge askıyı adlandırır', () => {
     const st = W.veMntWizFromNodes(TTA().nodes);

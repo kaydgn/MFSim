@@ -74,7 +74,7 @@ var veMntParamHtml = (function(){
     var T = E.tarama || {}, V = T.veri || null, L = T.satirlar || [];
     var D = {
       v:1, baslik:E.baslik || 'Takoz konfigürasyonları', tarih:tarih((opt && opt.tarih) || new Date()),
-      arac:E.arac || null, motor:E.motor || null, sanziman:E.sanziman || null,
+      arac:E.arac || null, motor:E.motor || null, sanziman:E.sanziman || null, markaSira:(E.markaSira || []).slice(),
       fAtes:yuv(E.fAtes, 4), trSinir:XL ? XL.trSinir(E) : 0.15, rolanti:yuv(E.rolanti, 1), silindir:E.silindir || null,
       zeta:yuv(E.zeta, 4), kutle:yuv(E.kutle, 1),
       gruplar:(E.gruplar || []).map(kok), takozlar:(E.takozlar || []).map(function(t){ return { ad:kok(t.ad), grup:t.grup }; }),
@@ -90,21 +90,27 @@ var veMntParamHtml = (function(){
     };
     if(L.length){
       var tg = T.gruplar || [];
-      D.tarama = { N:T.N || L.length, n:L.length, gruplar:tg.slice(), adlar:tg.map(function(){ return []; }),
+      D.tarama = { N:T.N || L.length, n:L.length, gruplar:tg.slice(), adlar:tg.map(function(){ return []; }), marka:tg.map(function(){ return []; }),
         tip:tg.map(function(){ return []; }), d:[], T:[], fB:[], k:[],
         vaka:V ? V.vakaAdlari.slice() : [], nT:V ? V.nT : 0, nM:V ? V.nM : 0,
         modAdlar:V ? V.modAdlar.map(modAdi) : [], kod:null, modF:null, modAd:null };
     }
     return D;
   }
-  // Tarama'nın n0…n1 satırları: tipler ad dizinine, sayılar yuvarlanmış.
+  // Tipin markası (kullanıcı 2026-11-13: "o filtrelemeyi takoz markasına göre de yapalım"): programın
+  // verdiği ad → marka haritasından; bilinmeyen (konum taraması, eski girdi) boş — süzgeç markasız kalır.
+  function markasi(E, ham, ad){
+    var m = E.markalar || null;
+    return (m && (m[ham] || m[ad])) || '';
+  }
+  // Tarama'nın n0…n1 satırları: tipler ad dizinine, markası yanında, sayılar yuvarlanmış.
   function satirlar(D, E, ix, n0, n1){
     var T = D.tarama, L = E.tarama.satirlar;
     for(var n = n0; n < n1; n++){
       var x = L[n];
       T.gruplar.forEach(function(g, j){
         var ad = temiz(x.tipler[j]), i = ix[j][ad];
-        if(i === undefined){ i = ix[j][ad] = T.adlar[j].length; T.adlar[j].push(ad); }
+        if(i === undefined){ i = ix[j][ad] = T.adlar[j].length; T.adlar[j].push(ad); T.marka[j].push(markasi(E, x.tipler[j], ad)); }
         T.tip[j].push(i);
       });
       T.d.push(yuv(x.d, 4)); T.T.push(yuv(x.T, 6)); T.fB.push(yuv(x.fB, 4));
@@ -171,6 +177,9 @@ var veMntParamHtml = (function(){
     '.suz-liste .ad{flex:1;overflow:hidden;text-overflow:ellipsis}',
     '.suz-liste .say{color:var(--soluk)}',
     '.suz-hep{font-weight:600;border-bottom:1px solid var(--cizgi)}',
+    '.suz-liste .suz-marka{font-weight:600}',
+    '.suz-liste label.alt{padding-left:26px}',
+    '.suz.suz-markali{width:auto;min-width:280px;max-width:min(460px,calc(100vw - 16px))}',
     '.suz-aralik{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
     '.suz-aralik label{display:flex;flex-direction:column;gap:4px;color:var(--soluk)}',
     '.suz.suz-genis{width:300px}',
@@ -284,10 +293,16 @@ var veMntParamHtml = (function(){
     // kriterleri süzer: kriterin süzgeci sütunsuz (k0…k3), `kume` panelin süzgeçleri.
     var sira = [], anahtar = 'no', yon = 1, sayfa = 0, ADIM = T ? T.sayfa : 100, suz = {}, acikSuz = null;
     function tipAdi(j, i){ return T.adlar[j][T.tip[j][i]]; }
+    // takoz sütununun tip → markası; markasız belge (eski, konum taraması) panelde düz liste
+    var MARKA = T ? T.adlar.map(function(a, j){
+      var o = {};
+      a.forEach(function(ad, i){ o[ad] = (T.marka && T.marka[j] && T.marka[j][i]) || ''; });
+      return o;
+    }) : [], MSIRA = V.markaSira || [];
     var SUT = [], SUTK = {};
     if(T){
       SUT.push({ k:'no', ad:'No', tur:'sayi', sol:true, suz:false, deger:function(i){ return i + 1; } });
-      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, sira:false, deger:function(i){ return tipAdi(j, i); } }); });
+      T.gruplar.forEach(function(g, j){ SUT.push({ k:'g' + j, ad:esc(V.gruplar[g]), tur:'liste', sol:true, sira:false, grup:j, deger:function(i){ return tipAdi(j, i); } }); });
       SUT.push({ k:'d', ad:'Statik sehim [mm]', tur:'sayi', deger:function(i){ return T.d[i]; } });
       SUT.push({ k:'T', ad:'TR [%]', tur:'sayi', deger:function(i){ var v = T.T[i]; return v == null ? null : v * 100; } });
       SUT.push({ k:'fB', ad:'Zıplama f<sub>b</sub> [Hz]', tur:'sayi', deger:function(i){ return T.fB[i]; } });
@@ -366,12 +381,29 @@ var veMntParamHtml = (function(){
         if(f) Object.keys(f.izin).forEach(function(v){ if(!Object.prototype.hasOwnProperty.call(say, v)){ say[v] = 0; degerler.push(v); } });
         degerler.sort(function(a, b){ return String(a).localeCompare(String(b), 'tr', { numeric:true }); });
         if(c.azalan) degerler.reverse();
+        var deger = function(v, m){
+          return '<label data-deger="' + esc(v) + '"' + (m == null ? '' : ' data-marka="' + esc(m) + '" class="alt"') + '>'
+            + '<input type="checkbox" data-suz-deger="' + esc(v) + '"' + (!f || f.izin[v] ? ' checked' : '') + '>'
+            + '<span class="ad">' + esc(v) + '</span><span class="say">' + s(say[v], 0) + '</span></label>';
+        };
+        // Takoz sütununda tipler markasının altında (kullanıcı 2026-11-13: "o filtrelemeyi takoz markasına
+        // göre de yapalım"): marka kutusu tiplerinin hepsini alır ya da bırakır, sayısı tiplerinin toplamı.
+        var mk = c.grup != null ? MARKA[c.grup] : null, liste;
+        if(mk && degerler.some(function(v){ return !!mk[v]; })){
+          var gr = {}, mlar = [];
+          degerler.forEach(function(v){ var m = mk[v] || 'Diğer'; if(!gr[m]){ gr[m] = []; mlar.push(m); } gr[m].push(v); });
+          var yer = function(m){ var i = MSIRA.indexOf(m); return i < 0 ? MSIRA.length : i; };
+          mlar.sort(function(a, b){ return yer(a) - yer(b); });
+          liste = mlar.map(function(m){
+            var n = gr[m].reduce(function(t, v){ return t + say[v]; }, 0);
+            return '<label class="suz-marka" data-marka-bas="' + esc(m) + '"><input type="checkbox" data-suz-marka="' + esc(m) + '">'
+              + '<span class="ad">' + esc(m) + '</span><span class="say">' + s(n, 0) + '</span></label>'
+              + gr[m].map(function(v){ return deger(v, m); }).join('');
+          }).join('');
+        } else liste = degerler.map(function(v){ return deger(v, null); }).join('');
         h += (degerler.length > 8 ? '<input type="search" class="suz-ara" aria-label="Ara" placeholder="Ara">' : '')
           + '<div class="suz-liste"><label class="suz-hep"><input type="checkbox" data-suz-hep> Tümünü seç</label>'
-          + degerler.map(function(v){
-            return '<label data-deger="' + esc(v) + '"><input type="checkbox" data-suz-deger="' + esc(v) + '"' + (!f || f.izin[v] ? ' checked' : '') + '>'
-              + '<span class="ad">' + esc(v) + '</span><span class="say">' + s(say[v], 0) + '</span></label>';
-          }).join('') + '</div>' + (c.kume ? krSuz(krSay) : '');
+          + liste + '</div>' + (c.kume ? krSuz(krSay) : '');
       } else {
         var yaz = function(v){ return v == null ? '' : esc(veSayi(v, null, { binlik:false })); };
         h += '<div class="suz-aralik"><label>En az<input type="text" inputmode="decimal" data-suz-min value="' + yaz(f && f.min) + '"></label>'
@@ -380,6 +412,7 @@ var veMntParamHtml = (function(){
       h += '<div class="suz-alt"><button type="button" class="ana" data-suz-is="tamam">Tamam</button><button type="button" data-suz-is="iptal">İptal</button></div>';
       p.innerHTML = h;
       p.classList.toggle('suz-genis', !!c.kume);                          // kriterlerin satır sayısı iki sütunda
+      p.classList.toggle('suz-markali', !!p.querySelector('label[data-marka-bas]'));   // girintili tip adı sığsın
       p.hidden = false;
       acikSuz = { k:k, dug:dug };
       dug.setAttribute('aria-expanded', 'true');
@@ -405,12 +438,22 @@ var veMntParamHtml = (function(){
       return Array.prototype.filter.call($('ve-suz').querySelectorAll('label[data-deger]'), function(l){ return !l.hidden; })
         .map(function(l){ return l.querySelector('input'); });
     }
+    function markaKutulari(m){
+      return gorunenKutular().filter(function(x){ return x.parentNode.getAttribute('data-marka') === m; });
+    }
     function hepYaz(){
       var p = $('ve-suz'), hep = p.querySelector('[data-suz-hep]'), tamam = p.querySelector('[data-suz-is="tamam"]');
       if(!hep) return;
       var k = gorunenKutular(), on = k.filter(function(x){ return x.checked; }).length;
       hep.checked = on > 0 && on === k.length;
       hep.indeterminate = on > 0 && on < k.length;
+      Array.prototype.forEach.call(p.querySelectorAll('label[data-marka-bas]'), function(l){
+        var m = l.getAttribute('data-marka-bas'), alt = markaKutulari(m), n = alt.filter(function(x){ return x.checked; }).length;
+        var mx = l.querySelector('input');
+        l.hidden = !alt.length;                                           // aramada tipi kalmayan marka gizli
+        mx.checked = alt.length > 0 && n === alt.length;
+        mx.indeterminate = n > 0 && n < alt.length;
+      });
       var kr = p.querySelectorAll('[data-suz-kr]'), krBos = false;          // kriterin ✓'i de ✗'i de boşsa satır kalmaz
       for(var j = 0; j + 1 < kr.length; j += 2) if(!kr[j].checked && !kr[j + 1].checked) krBos = true;
       tamam.disabled = !on || krBos;
@@ -584,6 +627,7 @@ var veMntParamHtml = (function(){
       var t = e.target;
       if(!acikSuz || !(t.closest && t.closest('#ve-suz'))) return;
       if(t.hasAttribute('data-suz-hep')) gorunenKutular().forEach(function(x){ x.checked = t.checked; });
+      if(t.hasAttribute('data-suz-marka')) markaKutulari(t.getAttribute('data-suz-marka')).forEach(function(x){ x.checked = t.checked; });
       hepYaz();
     });
     document.addEventListener('input', function(e){
@@ -591,7 +635,8 @@ var veMntParamHtml = (function(){
       if(!acikSuz || !t.classList || !t.classList.contains('suz-ara')) return;
       var q = t.value.trim().toLocaleLowerCase('tr');
       Array.prototype.forEach.call($('ve-suz').querySelectorAll('label[data-deger]'), function(l){
-        l.hidden = !!q && String(l.getAttribute('data-deger')).toLocaleLowerCase('tr').indexOf(q) < 0;
+        var ad = (l.getAttribute('data-deger') + ' ' + (l.getAttribute('data-marka') || '')).toLocaleLowerCase('tr');
+        l.hidden = !!q && ad.indexOf(q) < 0;                              // tipin adı ya da markası
       });
       hepYaz();
     });

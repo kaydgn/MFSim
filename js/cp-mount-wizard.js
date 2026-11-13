@@ -45,15 +45,20 @@ var VE_MW_STEPS = [
     'STEP okununca 3B’de seç ile parçalara rol verin.',
     'Hesapla ile rollü birimlerin kütle ve konumlarını ölçün.',
     'Sihirbaza aktar ile birimleri gövde ve takoz olarak alın.'] },
-  { key:'govde',  ad:'Kütle gövdeleri', girdi:'Gövdeler · kütle · ağırlık merkezi · atalet', talimat:[
+  { key:'govde',  ad:'Kütle gövdeleri', girdi:'Gövdeler · kütle · ağırlık merkezi · atalet · askı', talimat:[
     'Gövde ekle listesinden motor, şanzıman ve öteki gövdeleri ekleyin.',
     'Her gövdeye kütle ve CG [mm] girin.',
     'Atalet tensörü seçiliyse I [kg·m²] değerlerini girin.',
     'Ataleti bilinmeyen gövdeyi Nokta kütle yapın.'] },
-  { key:'takoz',  ad:'Takozlar', girdi:'Konum · katalog · rijitlik · şanzıman askısı', talimat:[
+  { key:'takoz',  ad:'Takozlar', girdi:'Konum · katalog · statik ve dinamik rijitlik', talimat:[
     'Takoz ekle ile her takozu ekleyin.',
     'Konumu üst bağlantı yüzeyinin merkezinden girin.',
     'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.'] },
+  { key:'aski',   ad:'Şanzıman askısı', girdi:'Askı yayları · konum · yay · kurulum', talimat:[
+    'Askısız güç grubunda adımı geçin.',
+    'Kütle gövdeleri’nde şanzımanı Askılı seçin; Askı yayı ekle ile her yayı ekleyin.',
+    'Konumu yayın gövdedeki bağlantı noktasından girin.',
+    'Yay’ı katalogdan seçin; Kurulum’da kuvveti ya da boyu girin.'] },
   { key:'tork',   ad:'Tork ve çalışma', girdi:'Motor torku · vites oranları · transfer · aks payı', talimat:[
     'Motor’u katalogdan seçin ya da tepe tork ve devirleri girin.',
     'Şanzıman’ın vites oranlarını ve stall oranını girin.',
@@ -406,13 +411,13 @@ function veMntWizSorunlar(st){
   // kural ve cümle (cp-mount.js → _mntAskiSorunlari)
   if(st.askili){
     var A = st.askilar || [];
-    if(!A.length) ek('takoz', 'err', 'Askı yayı yok.');
+    if(!A.length) ek('aski', 'err', 'Askı yayı yok.');
     A.forEach(function(a){
-      if(!_mwVar(a.x) || !_mwVar(a.y) || !_mwVar(a.z)) ek('takoz', 'err', (a.ad || 'Askı yayı') + ': konum eksik.');
+      if(!_mwVar(a.x) || !_mwVar(a.y) || !_mwVar(a.z)) ek('aski', 'err', (a.ad || 'Askı yayı') + ': konum eksik.');
     });
     if(A.length && typeof _mntAskiSorunlari === 'function' && typeof _mntAskilarSI === 'function'){
       _mntAskiSorunlari(_mntAskilarSI(A.map(function(a){ return Object.assign({ name:a.ad || 'Askı yayı' }, a); }), 9.81))
-        .forEach(function(m){ ek('takoz', 'err', m); });
+        .forEach(function(m){ ek('aski', 'err', m); });
     }
   }
 
@@ -445,7 +450,7 @@ function veMntWizCoz(st){
       if(gR) out.tork.geri = C.torqueChain({ Te:Te, Rstall:Rs, iGear:gR, iTransfer:iTr, phiAxle:pr, derate:der });
     }
   }
-  var engel = out.sorun.some(function(s){ return s.tur === 'err' && (s.adim === 'govde' || s.adim === 'takoz'); });
+  var engel = out.sorun.some(function(s){ return s.tur === 'err' && (s.adim === 'govde' || s.adim === 'takoz' || s.adim === 'aski'); });
   if(engel || typeof _mntPrepareFrom !== 'function' || typeof _mntGatherForSolver !== 'function') return out;
   try {
     var prep = _mntPrepareFrom(_mntGatherForSolver(null, liste), { data:{} });
@@ -682,8 +687,10 @@ function veMntWizMotorKatalog(key){
 // ── ŞANZIMAN ASKISI (kullanıcı 2026-11-13: *"'Başlangıç Sihirbazı' kısmında 'askı' özelinde hiç bir
 // ekleme, hiç bir görselleştirme, hiç bir arayüz görmüyorum … Programa 'askılı' seçeneğini entegre eder
 // misin?"*): Askısız · Askılı; askılıda yaylar, konum, yay ve kurulum Askı Yayı bileşeninin alanları.
-// İlk kez Askılı seçilince sol ve sağ yay eklenir (askı bir çift; konum ve yay boş). Kartlar
-// Takozlar adımında (ayrı adımın talimatı kullanıcının kararını bekliyor). Kapı: mount-wizard-aski.test.js.
+// İlk kez Askılı seçilince sol ve sağ yay eklenir (askı bir çift; konum ve yay boş). Seçenek ŞANZIMANIN
+// satırında, Kütle gövdeleri'nde, tek satır (kullanıcı 2026-11-13: *"şanzımanın askılı olup olmadığını …
+// şanzıman seçtiğimiz zaman sor … tek satırda halledelim"*); yaylar kendi adımında ("Şanzıman askısı",
+// takozlardan sonra — kullanıcı: *"askıyı ayrı adım yap"*). Kapı: mount-wizard-aski.test.js.
 function veMntWizAskili(on){
   if(!_mwState) return;
   if(!_mwState.askilar) _mwState.askilar = [];
@@ -691,9 +698,8 @@ function veMntWizAskili(on){
   if(_mwState.askili && !_mwState.askilar.length){
     _mwState.askilar.push(_mwAskiYeni('Sol askı yayı'));
     _mwState.askilar.push(_mwAskiYeni('Sağ askı yayı'));
-    _mwSec.aski = _mwState.askilar[0].key; _mwSec.takoz = '';
+    _mwSec.aski = _mwState.askilar[0].key;
   }
-  if(!_mwState.askili && _mwSec.aski){ _mwSec.aski = null; _mwSec.takoz = null; }
   veMntWizRender();
 }
 function veMntWizAskiEkle(){
@@ -702,14 +708,14 @@ function veMntWizAskiEkle(){
   _mwState.askili = true;
   var a = _mwAskiYeni();
   _mwState.askilar.push(a);
-  _mwSec.aski = a.key; _mwSec.takoz = '';
+  _mwSec.aski = a.key;
   veMntWizRender();
   return a;
 }
 function veMntWizAskiSil(key){
   if(!_mwState) return;
   _mwState.askilar = (_mwState.askilar || []).filter(function(a){ return a.key !== key; });
-  if(_mwSec.aski === key){ _mwSec.aski = null; _mwSec.takoz = null; }
+  if(_mwSec.aski === key) _mwSec.aski = null;
   veMntWizRender();
 }
 // Katalogdan yay — Askı Yayı penceresinin yazdığı değerler (cp-mount.js → veMntAskiYay);
@@ -732,9 +738,6 @@ function veMntWizAskiKurulum(key, val){
 function veMntWizSec(tur, key){
   if(tur !== 'govde' && tur !== 'takoz' && tur !== 'aski') return;
   _mwSec[tur] = key;
-  // Takozlar adımında tek düzenleyici: takoz ile askı yayının seçimi birbirini bırakır
-  if(tur === 'aski') _mwSec.takoz = '';
-  if(tur === 'takoz') _mwSec.aski = null;
   veMntWizRender();
 }
 function veMntWizGorunus(g){
@@ -857,9 +860,9 @@ function veMntWizLive(){
   yama('ve-mw-live', _mwCipIcHTML(c));
   var k = VE_MW_STEPS[_mwStep].key;
   if(k === 'govde') yama('ve-mw-liste', _mwGovdeListeHTML(c));
-  if(k === 'takoz'){
-    yama('ve-mw-liste', _mwTakozListeHTML(c));
-    if(_mwState.askili) yama('ve-mw-aski-liste', _mwAskiListeHTML(c));
+  if(k === 'takoz') yama('ve-mw-liste', _mwTakozListeHTML(c));
+  if(k === 'aski'){
+    if(_mwState.askili) yama('ve-mw-liste', _mwAskiListeHTML(c));
     var ak = _mwSatir('aski', _mwSec.aski);
     if(ak) yama('ve-mw-aski-karsi', _mwAskiKarsi(ak));
   }
@@ -951,6 +954,7 @@ function veMntWizStepHTML(step, c){
   if(s.key === 'kaynak') yan = _mwStepKaynak(c);
   else if(s.key === 'govde') yan = _mwStepGovde(c);
   else if(s.key === 'takoz') yan = _mwStepTakoz(c);
+  else if(s.key === 'aski') yan = _mwStepAski(c);
   else if(s.key === 'tork') yan = _mwStepTork(c);
   else yan = _mwStepOzet(c);
   return '<div class="ve-fw-masa-duzen" data-adim="' + s.key + '">'
@@ -2353,8 +2357,12 @@ function _mwGovdeEditorHTML(g){
     atalet += _mwUclu('Eksenel' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixx', 'Ixx'], ['Iyy', 'Iyy'], ['Izz', 'Izz']], ['xx', 'yy', 'zz'])
       + _mwUclu('Çarpım' + _mwKaynakIsaret(g, 'I'), P, g, [['Ixy', 'Ixy'], ['Ixz', 'Ixz'], ['Iyz', 'Iyz']], ['xy', 'xz', 'yz']);
   }
+  // Şanzımanın askısı (tek satır): Askısız · Askılı — askılıda yaylar Şanzıman askısı adımında
+  var aski = (g.type === 'mnt-gearbox') ? _mwAlan('Askı', '<div class="ve-fw-seg" role="group" aria-label="Askı">'
+    + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!_mwState.askili) + '" onclick="veMntWizAskili(false)">Askısız</button>'
+    + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!!_mwState.askili) + '" onclick="veMntWizAskili(true)">Askılı</button></div>') : '';
   var h = '<div class="ve-fw-ed ve-mw-ed">'
-    + _mwBolum('Kimlik', _mwAlan('Tip', tip) + _mwAlan('Ad', _mwInp(P + 'ad', g.ad, { text:true, baslik:'Ad' })))
+    + _mwBolum('Kimlik', _mwAlan('Tip', tip) + _mwAlan('Ad', _mwInp(P + 'ad', g.ad, { text:true, baslik:'Ad' })) + aski)
     + _mwBolum('Kütle ve ağırlık merkezi',
         _mwAlan('Kütle <u>[kg]</u>' + _mwKaynakIsaret(g, 'mass'), _mwInp(P + 'mass', g.mass, { ph:'zorunlu', baslik:'Kütle' }))
       + _mwUclu('CG <u>[mm]</u>' + _mwKaynakIsaret(g, 'cg'), P, g, [['cgx', 'CG x'], ['cgy', 'CG y'], ['cgz', 'CG z']], ['x', 'y', 'z']))
@@ -2445,10 +2453,10 @@ function _mwStepTakoz(c){
     + '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn" onclick="veMntWizTakozEkle()">' + _mwIkon('plus') + ' Takoz ekle</button></div>');
   var t = _mwSatir('takoz', _mwSec.takoz);
   if(t) h += _mwCard('Seçili takoz', _mwTakozEditorHTML(t));
-  return h + _mwAskiKartlari(c);
+  return h;
 }
 
-// ── 3 · TAKOZLAR — ŞANZIMAN ASKISI ───────────────────────────────────────
+// ── 4 · ŞANZIMAN ASKISI ──────────────────────────────────────────────────
 function _mwAskiDurum(a){
   var kur = a.kurulum || 'kuvvet', alan = kur === 'tasarim' ? 'tasarimL' : (kur === 'boy' ? 'montajL' : 'montajF');
   var tamam = _mwVar(a.x) && _mwVar(a.y) && _mwVar(a.z) && _mwNum(a.k) > 0 && _mwNum(a.L0) > 0 && _mwVar(a.Lc) && _mwVar(a[alan]);
@@ -2518,24 +2526,22 @@ function _mwAskiEditorHTML(a){
     + '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizAskiSil(\'' + k + '\')">'
     + _mwIkon('trash') + ' Sil</button></div></div>';
 }
-// Takozlar adımının askı kartları (Canlı Not 116'nın dili): seçenek; askılıda liste ve seçilenin
-// düzenleyicisi. Askı seçilince takozun düzenleyicisi çekilir (adımda tek düzenleyici).
-function _mwAskiKartlari(c){
+// Şanzıman askısı adımı: askısızda boş durum (seçenek şanzımanın satırında), askılıda liste ve
+// seçilenin düzenleyicisi.
+function _mwStepAski(c){
   var st = _mwState, A = st.askilar || [];
+  if(!st.askili)
+    return _mwCard('Askı yayları', '<div class="ve-fw-dim">Şanzıman askısız. ' + veYon('Kütle gövdeleri’nde şanzımanı Askılı seçin.') + '</div>');
   if(_mwSec.aski && !_mwSatir('aski', _mwSec.aski)) _mwSec.aski = null;
-  var secim = '<div class="ve-fw-seg" role="group" aria-label="Şanzıman askısı">'
-    + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!st.askili) + '" onclick="veMntWizAskili(false)">Askısız</button>'
-    + '<button type="button" class="ve-fw-seg-b" aria-pressed="' + (!!st.askili) + '" onclick="veMntWizAskili(true)">Askılı</button></div>';
-  var h = _mwCard('Şanzıman askısı', secim);
-  if(!st.askili) return h;
-  h += _mwCard('Askı yayları', '<div class="ve-mw-liste" id="ve-mw-aski-liste">' + _mwAskiListeHTML(c) + '</div>'
+  if(_mwSec.aski == null && A.length) _mwSec.aski = A[0].key;   // '' bırakılmış: seçilmez
+  var h = _mwCard('Askı yayları', '<div class="ve-mw-liste" id="ve-mw-liste">' + _mwAskiListeHTML(c) + '</div>'
     + '<div class="ve-fw-ed-ops"><button type="button" class="ve-fw-btn" onclick="veMntWizAskiEkle()">' + _mwIkon('plus') + ' Askı yayı ekle</button></div>');
   var a = _mwSatir('aski', _mwSec.aski);
   if(a) h += _mwCard('Seçili askı yayı', _mwAskiEditorHTML(a));
   return h;
 }
 
-// ── 4 · TORK VE ÇALIŞMA ───────────────────────────────────────────────────
+// ── 5 · TORK VE ÇALIŞMA ───────────────────────────────────────────────────
 function _mwMotorKatalogHTML(){
   var P = (typeof _mntEnginePresets === 'function') ? _mntEnginePresets() : null;
   if(!P) return '';
@@ -2835,7 +2841,7 @@ function _mwFigurVeri(c){
       .map(function(t){ return t.key; }).indexOf(_mwSec.takoz);
     if(ti >= 0) secili = { tur:'takoz', i:ti };
   }
-  if(k === 'takoz' && _mwSec.aski){
+  if(k === 'aski' && _mwSec.aski){
     var ai = _mwAskilar(st).filter(function(a){ return _mwVar(a.x) && _mwVar(a.y) && _mwVar(a.z); })
       .map(function(a){ return a.key; }).indexOf(_mwSec.aski);
     if(ai >= 0) secili = { tur:'aski', i:ai };
@@ -2882,8 +2888,8 @@ function _mwMasa3B(el, k, o){
   _mntAksoKaynak[VE_MW_AKSO] = function(){ return P; };
   // çizim göstergenin ÜSTÜNDE biter (eksen üçlüsü çizimin sol altında, gösterge masanın)
   var W = Math.max(240, Math.round(o.w - ((k === 'ozet' && o.w > 760) ? VE_MW_OZET_PANEL + 24 : 0))), H = Math.max(200, Math.round(o.h - VE_MW_AKSO_ALT));
-  var sec = (k === 'govde' && _mwSec.govde) ? 'mw:' + _mwSec.govde : ((k === 'takoz' && _mwSec.takoz && !_mwSec.aski) ? 'mw:' + _mwSec.takoz
-          : ((k === 'takoz' && _mwSec.aski) ? 'mw:' + _mwSec.aski : ''));
+  var sec = (k === 'govde' && _mwSec.govde) ? 'mw:' + _mwSec.govde : ((k === 'takoz' && _mwSec.takoz) ? 'mw:' + _mwSec.takoz
+          : ((k === 'aski' && _mwSec.aski) ? 'mw:' + _mwSec.aski : ''));
   var ortu = _mwAksoOrtu(el);
   el.innerHTML = '<div id="' + VE_MW_AKSO + '" class="ve-mw-akso" data-yalin="1" data-perde="' + (sec ? '1' : '0') + '" data-etiket="genis" data-balon="1"'
     + ' data-w="' + W + '" data-h="' + H + '"' + (sec ? ' data-sec="' + _mwEsc(sec) + '"' : '')
@@ -2917,9 +2923,7 @@ function _mwMasa3BSec(ak){
   if(!x){ x = (c3.m.aski || []).filter(function(a){ return a.k === ak; })[0]; tur = 'aski'; }
   if(!x || !x.id) return false;
   _mwSec[tur] = String(x.id).replace(/^mw:/, '');
-  if(tur === 'aski') _mwSec.takoz = ''; else if(tur === 'takoz') _mwSec.aski = null;
-  var adim = (tur === 'aski') ? 'takoz' : tur;
-  if(VE_MW_STEPS[_mwStep].key !== adim) _mwStep = _mwAdimNo(adim) - 1;
+  if(VE_MW_STEPS[_mwStep].key !== tur) _mwStep = _mwAdimNo(tur) - 1;
   veMntWizRender();
   return true;
 }
@@ -2990,9 +2994,8 @@ function _mw2BNokta(e){
 // gösterge) bırakmaz. Kapı: mount-sihirbaz-doku.test.js → *BOŞLUĞA TIK*.
 function _mwMasaBirak(){
   var k = VE_MW_STEPS[_mwStep].key;
-  if((k !== 'govde' && k !== 'takoz') || !(_mwSec[k] || (k === 'takoz' && _mwSec.aski))) return false;
+  if((k !== 'govde' && k !== 'takoz' && k !== 'aski') || !_mwSec[k]) return false;
   _mwSec[k] = '';
-  if(k === 'takoz') _mwSec.aski = null;
   veMntWizRender();
   return true;
 }
@@ -3079,13 +3082,13 @@ function _mwMasaSec(deger){
   if(!st || !Number.isFinite(i)) return;
   if(p[0] === 'takoz'){
     var ts = st.takozlar.filter(function(t){ return _mwVar(t.x) && _mwVar(t.y) && _mwVar(t.z); });
-    if(ts[i]){ _mwSec.takoz = ts[i].key; _mwSec.aski = null; if(VE_MW_STEPS[_mwStep].key !== 'takoz') _mwStep = _mwAdimNo('takoz') - 1; veMntWizRender(); }
+    if(ts[i]){ _mwSec.takoz = ts[i].key; if(VE_MW_STEPS[_mwStep].key !== 'takoz') _mwStep = _mwAdimNo('takoz') - 1; veMntWizRender(); }
   } else if(p[0] === 'govde'){
     var gs = st.govdeler.filter(function(g){ return _mwVar(g.cgx) && _mwVar(g.cgy) && _mwVar(g.cgz); });
     if(gs[i]){ _mwSec.govde = gs[i].key; if(VE_MW_STEPS[_mwStep].key !== 'govde') _mwStep = _mwAdimNo('govde') - 1; veMntWizRender(); }
   } else if(p[0] === 'aski'){
     var as = _mwAskilar(st).filter(function(a){ return _mwVar(a.x) && _mwVar(a.y) && _mwVar(a.z); });
-    if(as[i]){ _mwSec.aski = as[i].key; _mwSec.takoz = ''; if(VE_MW_STEPS[_mwStep].key !== 'takoz') _mwStep = _mwAdimNo('takoz') - 1; veMntWizRender(); }
+    if(as[i]){ _mwSec.aski = as[i].key; if(VE_MW_STEPS[_mwStep].key !== 'aski') _mwStep = _mwAdimNo('aski') - 1; veMntWizRender(); }
   }
 }
 
@@ -3261,7 +3264,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizAskili: veMntWizAskili, veMntWizAskiEkle: veMntWizAskiEkle, veMntWizAskiSil: veMntWizAskiSil,
     veMntWizAskiYay: veMntWizAskiYay, veMntWizAskiKurulum: veMntWizAskiKurulum, VE_MW_ASKI_ALAN: VE_MW_ASKI_ALAN,
-    _mwAskiKartlari: _mwAskiKartlari, _mwAskiListeHTML: _mwAskiListeHTML, _mwAskiKarsi: _mwAskiKarsi, _mwMasaSec: _mwMasaSec,
+    _mwStepAski: _mwStepAski, _mwAskiListeHTML: _mwAskiListeHTML, _mwAskiKarsi: _mwAskiKarsi, _mwMasaSec: _mwMasaSec,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
     veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, veMntWizTransferKatalog: veMntWizTransferKatalog, _mwTransferKatalogHTML: _mwTransferKatalogHTML, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
