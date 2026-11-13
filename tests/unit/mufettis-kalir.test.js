@@ -37,7 +37,7 @@ window.veMufettisSil = (id) => veMufettisSil(id);
 window.veMufettisGenisAc = () => veMufettisGenisAc();
 
 const genisEkran = (evet) => {
-  window.matchMedia = (q) => ({ matches: !!evet && /min-width:\s*1280px/.test(q), media: q });
+  window.matchMedia = (q) => ({ matches: !!evet && /min-width:\s*1024px/.test(q), media: q });
 };
 
 function kur() {
@@ -336,5 +336,42 @@ describe('KONU KENDİ PENCERESİNİN ALTINDA KALMAZ — sütun tuvali sağdan da
     sahne({ B: [300, 700] });                 // 300–1000
     ciftTik(B);
     expect(kutu('B').left).toBe(VE_MUFETTIS_KADRAJ_PAY);
+  });
+});
+
+// SÜTUNUN EŞİĞİ (kullanıcı 2026-11-13, Canlı Not 1011: "Parametrik analiz penceresini neden
+// açılır pencere yaptın … Eski haline getir"): 1242 px'lik ekranda pencere tuvali örten
+// açılır pencereye dönüyordu — eşik 1280'di. Eşik 1024 ve CSS'in @media'sı JS'inkiyle AYNI;
+// ayrışsa sütun kipinde tuval daralmaz ya da kadraj yanlış kipte ölçülür.
+describe('SÜTUNUN EŞİĞİ — 1024 px, CSS ile JS aynı', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../../js/map.js'), 'utf8');
+  const cssEsik = () => {
+    const m = css.match(/@media \(min-width:(\d+)px\)\{\s*\.ve-properties-overlay:not\(:has\(\.ve-properties--modal\)\)/);
+    return m ? Number(m[1]) : null;
+  };
+  const jsEsik = () => {
+    const m = js.match(/function veMufettisSutunKipi\(\)[\s\S]*?min-width:(\d+)px/);
+    return m ? Number(m[1]) : null;
+  };
+  test('CSS ile JS aynı eşikte', () => {
+    expect(cssEsik()).toBe(jsEsik());
+  });
+  test('1242 px sütunda, 1000 px açılır pencerede', () => {
+    const esik = jsEsik();
+    expect(esik).toBeLessThanOrEqual(1242);
+    expect(esik).toBeGreaterThan(1000);
+  });
+  test('sütun kipi eşikte açılır', () => {
+    window.matchMedia = (q) => {
+      const m = /min-width:\s*(\d+)px/.exec(q);
+      return { matches: !!m && 1242 >= Number(m[1]), media: q };
+    };
+    expect(veMufettisSutunKipi()).toBe(true);
+    window.matchMedia = (q) => {
+      const m = /min-width:\s*(\d+)px/.exec(q);
+      return { matches: !!m && 1000 >= Number(m[1]), media: q };
+    };
+    expect(veMufettisSutunKipi()).toBe(false);
   });
 });

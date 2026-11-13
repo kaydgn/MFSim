@@ -2973,10 +2973,11 @@ function veMufettisKonusu() {
   for(var i = 0; i < nodes.length; i++) if(nodes[i] && nodes[i].id === _veLastPropNodeId) return nodes[i];
   return null;
 }
-// Geniş ekranda pencere bir SÜTUNDUR — eşik CSS'teki @media ile aynı (1280 px).
+// Geniş ekranda pencere bir SÜTUNDUR — eşik CSS'teki @media ile aynı (1024 px;
+// 1280'di, 1242 px'lik ekranda pencere tuvali örtüyordu — Canlı Not 1011).
 function veMufettisSutunKipi() {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    && window.matchMedia('(min-width:1280px)').matches;
+    && window.matchMedia('(min-width:1024px)').matches;
 }
 // YAZILMIŞ AMA ONAYLANMAMIŞ GİRDİ ESKİ BİLEŞENE YAZILIR. İçerik değişmeden önce
 // odak bırakılır: alanın change/blur dinleyicisi (bileşenin kimliğiyle) koşar.
