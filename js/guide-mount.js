@@ -1082,9 +1082,12 @@ function _gmSec8(){
   h += _gmAdimlar([
     'Bileşenler sütunundan <strong>Askı Yayı</strong>’nı tuvale sürükleyin ve çift tıklayın.',
     '<strong>Katalog</strong> listesinden yayı seçin — yay sabiti, serbest boy, blok boyu ve gerilme alanları '
-      + 'dolar. Katalogda yoksa üç zorunlu alanı resimden yazın.',
+      + 'dolar; Katalog’un yanındaki <strong>(i)</strong> yayın teknik resmini açar. Katalogda yoksa üç zorunlu '
+      + 'alanı resimden yazın.',
     '<strong>Kurulum</strong>’da biçimi seçin ve değerini yazın: statik montaj kuvveti (föylerin kg’ı), '
-      + 'statik montaj boyu ya da tasarım konumundaki boy. Karşılığı yanında türetilir.',
+      + 'statik montaj boyu, tasarım konumundaki ön yük (Adams’ın “preload”u) ya da tasarım konumundaki boy. '
+      + 'Karşılığı yanında türetilir. Katalog yayında <strong>Resmin noktaları</strong> resmin ilk, montaj ve blok '
+      + 'noktalarını gösterir; <strong>Resmin ön yükü</strong> kurulumu resmin ilk kuvvetine çevirir.',
     '<strong>Konum</strong>’a yayın şanzıman tarafındaki bağlantı noktasını yazın (mm, takozlarla aynı çerçevede).'
   ]);
   h += _gmAlanTablo('Askı yayı penceresi — alanlar', [
@@ -1093,6 +1096,7 @@ function _gmSec8(){
     ['Tel çapı · ortalama çap · aktif sarım · R<sub>m</sub>', 'Gerilme denetimi (EN 13906-1); boş bırakılabilir', 'Yay resmi ve malzeme şartnamesi'],
     ['Statik montaj kuvveti [kgf]', 'Yayın statik dengede taşıdığı kuvvet', 'Montaj föyü'],
     ['Statik montaj boyu [mm]', 'Yayın statik dengedeki boyu', 'Montaj resmi'],
+    ['Tasarım konumundaki ön yük [kgf]', 'Takozlar yüksüzken yayın kuvveti; tasarım boyu L<sub>0</sub> − F·g/k', 'Yay resminin ilk noktası · Adams'],
     ['Tasarım konumundaki boy [mm]', 'Takozlar yüksüzken yayın boyu', 'CAD montajı']
   ]);
   h += _gmNot('Askı yayı modlara da girer',
@@ -1386,7 +1390,9 @@ function _gmSec14(){
     + 'durumunu (normal · açık · blok), gerilmesini ve — bağlantı yüzü tanımlıysa — <strong>montaj önerisini</strong> verir: '
     + 'bağlantı yüzündeki statik eğilme momentini sıfırlayan yay kuvveti ve Cummins’in tercih bandı (0 ile sınırın %20’si '
     + 'arası), ikisi de statik montaj kuvveti ve boyu olarak. Yayın statik ve işletme durumlarında çalışma aralığında '
-    + 'kalması uygunluk tablosunun askı satırıdır.</p>';
+    + 'kalması uygunluk tablosunun askı satırıdır. Katalog yayında <strong>Askı yayı ve resmi</strong> tablosu modelin '
+    + 'tasarım konumundaki ön yükünü resmin ilk noktasıyla, statik kuvvetini resmin montaj noktasıyla toleransıyla '
+    + 'karşılaştırır; yayın teknik resmi modelin statik noktalarını ve işletme aralığını gösterir.</p>';
   h += '<p>Güç grubunun <strong>hareket zarfı</strong> raporun <strong>§8.19</strong> bölümündedir: her gövdenin ağırlık '
     + 'merkezi ve eşdeğer kutusunun köşeleri bütün yük durumlarında, vites durumlarında ve tasarım yük koşullarında '
     + 'statik konuma göre ne kadar yer değiştiriyor — ±X, ±Y, ±Z, belirleyen nokta ve durumla. Aynı bölümde '
@@ -1412,7 +1418,7 @@ function _gmSec15(){
     ['3 · Takozlar', 'Takoz başına konum, katalogdan tip ya da statik ve dinamik rijitlik, kapasite',
       _gmB('takoz')],
     ['4 · Şanzıman askısı', 'Askılı şanzımanda yay başına bağlantı noktası, katalogdan yay ya da yay sabiti ve '
-      + 'boylar, kurulum (statik kuvvet, statik boy ya da tasarım boyu)', 'Askısız güç grubunda boş geçilir · ' + _gmB('aski')],
+      + 'boylar, kurulum (statik kuvvet, statik boy, tasarım konumundaki ön yük ya da tasarım boyu)', 'Askısız güç grubunda boş geçilir · ' + _gmB('aski')],
     ['5 · Tork ve çalışma', 'Motor torku ve devirleri, rölanti, silindir sayısı; vites oranları, stall oranı, '
       + 'transfer oranı ve aks payı', _gmB('tork')],
     ['6 · Özet ve kurulum', 'Modelin özeti ve denetimi; <strong>Modeli kur</strong>', 'Kurulum tek geri-al adımıdır']

@@ -325,8 +325,8 @@
         "D": 61,
         "n": 5,
         "Rm": 1481,
-        "kurulum": "tasarim",
-        "tasarimL": 90,
+        "kurulum": "onyuk",
+        "onyukF": 0,
         "labelPos": "right"
       }
     },
@@ -353,8 +353,8 @@
         "D": 61,
         "n": 5,
         "Rm": 1481,
-        "kurulum": "tasarim",
-        "tasarimL": 90,
+        "kurulum": "onyuk",
+        "onyukF": 0,
         "labelPos": "right"
       }
     },

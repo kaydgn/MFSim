@@ -444,8 +444,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/mount-yay.js` + bileşen **Askı Yayı** (`mnt-aski`) — **şanzıman askısı** (kullanıcı 2026-11-11: *"Tamam,
   bunu programa ekleyelim"*): ön yüklü helisel basma yayı, yalnız z ve yalnız basma; durum (normal · açık · blok,
   k_B = 1000·k) her yük durumunda aktif kümeyle (`solveWithHangers`), ön yük birleşik ağırlık merkezinde eşdeğer yük.
-  Kurulum statik kuvvet [kgf] · statik boy · tasarım boyu; statikler tasarım boyuna bilinen kuvvetli statik dengeden
-  (`askiTasarimBoylari`). **Dinamik analizler `R.dinMounts`'tan** (takozlar + askının statik durumdaki z rijitliği;
+  Kurulum statik kuvvet [kgf] · statik boy · **tasarım konumundaki ön yük** [kgf] (Adams'ın preload'u; tasarım boyu
+  L0 − F·g/k, çekirdeğe tasarım boyu olarak girer) · tasarım boyu; statikler tasarım boyuna bilinen kuvvetli statik dengeden
+  (`askiTasarimBoylari`). **Yayın resmi** (kullanıcı 2026-11-13: *"bu yay muhabbetini programa iyi bir şekilde entegre
+  edelim. Ön yük falan filan … yayın teknik resmini de attım"*): katalog yayında Kurulum'un altında **Resmin noktaları**
+  (ilk = tasarım konumundaki ön yük · montaj = statik · blok) ve **Resmin ön yükü** (kurulumu resmin ilk kuvvetine
+  çevirir, TEK geri-al adımı); Katalog'un adında (i) **teknik resmi** açar — PROGRAMIN ÇİZİMİ (`js/mount-yay-ciz.js`:
+  yandan görünüş, boy ölçüleri yığını, kuvvet–boy doğrusu toleranslarıyla, çaplar; iki tema), resmin TARAMASI programa
+  GİRMEZ (parça kodu, kişi adları, üreticinin çoğaltma kısıtı); sihirbazın askı adımı aynısı. Raporun §8.20'si **Askı
+  yayı ve resmi**: tasarım konumundaki ön yük ↔ resmin ilk noktası, statik kuvvet ↔ montaj noktası (tolerans ✓ · ✗) ve
+  teknik resim modelin statik noktaları ve işletme aralığıyla. Kapı: `mount-yay-ciz.test.js`. **Dinamik analizler `R.dinMounts`'tan** (takozlar + askının statik durumdaki z rijitliği;
   sönümsüz, durdurucusuz; şokta tam yasa): askısız modal Adams'tan %1,9 sapıyor. Takoz başına çıktılar listenin ilk
   N'i; yumuşatma askıyı ölçeklemez; duyarlılık askıyı da satırlar (Σe = ½). Rapor §8.20 (boy · kuvvet · EN 13906-1
   gerilmesi · montaj önerisi: M_b = 0 ve Cummins bandı 0–%20 sınır) + uygunluğun askı satırı; §8.18 askının momentini
@@ -453,7 +461,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   oturağına zikzakla çizer (yazısız). **Yayların üst uçları, üstlerindeki dikdörtgen prizma bir askı braketine bağlıdır** (kullanıcı 2026-11-13, Canlı Not 166 · 167: *"braketi alt tarafa yapmışsın, öyle olmayacak"* — referans görselde braket yayların üstünde; alt yüzü yayların üst uçlarında, uçların her yanında pay; `askiBraket`); kapı `mount-akso.test.js` → *ASKI BRAKETİ*. Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
   taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Örnek `isg430askili`:
   Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); bileşen kütleleri sunumda
-  yok, Adams'ın 60 sonucuna uydurma; askı ADAMS'IN ÇÖZDÜĞÜ GİBİ ön yüksüz (tasarım boyu = serbest boy; sunumun 918,4 N'u
+  yok, Adams'ın 60 sonucuna uydurma; askı ADAMS'IN ÇÖZDÜĞÜ GİBİ ön yük 0 (sunumun 918,4 N'u = resmin ilk noktası
   Adams'ın sonuçlarında yok — örnek onu taşırken Parametrik Analiz'in HTML'i sunumun sehimlerini vermiyordu); Adams'ın
   Left'i konum tablosunun +y'si (programın Sağ'ı). Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
   `mount-duyarlilik.test.js` + `mount-adams-isg.test.js` (fikstür `tests/fixtures/adams-isg430.js`).

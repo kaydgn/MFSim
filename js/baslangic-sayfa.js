@@ -337,9 +337,10 @@ function veBasResimAc(dugme){
   });
 }
 // o: { src, ad, odak (kapanınca odak dönen öğe), g · y (dosyanın ölçüsü; yoksa görsel kendi ölçüsünde açılır),
-//      azami (CSS px; varsa görselin uzun kenarı en çok bu kadar — CSS: [data-azami]) }
+//      azami (CSS px; varsa görselin uzun kenarı en çok bu kadar — CSS: [data-azami]),
+//      html (görselin yerine programın çizimi — güvenilir işaretleme, çağıran kurar: askı yayının resmi) }
 function veBasResimGoster(o){
-  if(typeof document === 'undefined' || !o || !o.src) return false;
+  if(typeof document === 'undefined' || !o || (!o.src && !o.html)) return false;
   veBasResimKapat();
   var ad = o.ad || '';
   var az = o.azami > 0 ? Math.round(o.azami) : 0;
@@ -351,8 +352,9 @@ function veBasResimGoster(o){
     + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-image"></span>'
     + '<b id="ve-bas-buyuk-baslik">' + veBasEsc(ad) + '</b></span>'
     + '<button type="button" class="ve-settings-close" aria-label="Kapat" title="Kapat (Esc)"><span class="mf-ico mf-ico-x"></span></button></div>'
-    + '<div class="ve-bas-buyuk-govde"><img src="' + veBasEsc(o.src) + '"' + (o.g > 0 && o.y > 0 ? ' width="' + o.g + '" height="' + o.y + '"' : '')
-    + ' alt="' + veBasEsc(ad) + '" decoding="async"></div></div>';
+    + '<div class="ve-bas-buyuk-govde">' + (o.html ? o.html
+      : '<img src="' + veBasEsc(o.src) + '"' + (o.g > 0 && o.y > 0 ? ' width="' + o.g + '" height="' + o.y + '"' : '')
+        + ' alt="' + veBasEsc(ad) + '" decoding="async">') + '</div></div>';
   // Perdenin kendisine basmak kapatır; pencerenin içi değil.
   perde.addEventListener('mousedown', function(e){ if(e.target === perde) veBasResimKapat(); });
   perde.querySelector('.ve-settings-close').onclick = function(){ veBasResimKapat(); };

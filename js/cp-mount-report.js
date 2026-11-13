@@ -709,6 +709,79 @@ function _mntRepAskiAralik(R){
   return o;
 }
 function _mntRepAskiHal(h){ return h==='acik' ? 'açık' : (h==='blok' ? 'blok' : 'normal'); }
+// ASKI YAYI VE RESMİ (kullanıcı 2026-11-13: *"yayın teknik resmini de attım … Ön yük falan
+// filan"*): katalog yayının resmindeki noktalarla modelin durumu — ilk ↔ tasarım konumu
+// (L_d · ön yük F_d), montaj ↔ statik (L_s · F_s); fark resmin toleransıyla. Şekil programın
+// çizdiği teknik resim (js/mount-yay-ciz.js): resmin noktaları (kare), modelin statik
+// noktaları (daire, yay başına) ve işletme aralığı (doğrunun üstünde şerit). Aynı katalog
+// yayını taşıyan askılar tek tablo ve tek şekilde. Resmi olmayan yayda bölüm yok.
+function _mntRepAskiResim(R, O){
+  var A=R.askilar||[], g=R.g||9.81;
+  if(typeof veMntYay!=='function' || typeof veMntYayCiz==='undefined') return '';
+  var grup={}, sira=[];
+  A.forEach(function(a, j){
+    var e=a.yay ? veMntYay(a.yay) : null;
+    if(!e || !e.noktalar || !e.noktalar.length) return;
+    if(!grup[e.k]){ grup[e.k]={ e:e, j:[] }; sira.push(e.k); }
+    grup[e.k].j.push(j);
+  });
+  var mm=function(v, d){ return _rF(v*1000, d==null ? 1 : d); };
+  var onda=function(v){ return Math.abs(v%1)>1e-9 ? 1 : 0; };
+  var h='';
+  sira.forEach(function(k){
+    var G=grup[k], e=G.e, N={};
+    e.noktalar.forEach(function(p){ N[p.ad]=p; });
+    var nokta=function(p){ return p ? _rF(p.L, onda(p.L))+' mm · '+_rF(p.F, onda(p.F))+(p.tol ? ' ± '+_rF(p.tol, onda(p.tol)) : '')+' kgf' : '—'; };
+    var fark=function(Fkgf, p){
+      if(!p || !Number.isFinite(Fkgf)) return '—';
+      var dF=Fkgf-p.F, ok=Math.abs(dF)<=(p.tol || 0.5);
+      var ay=_rF(Math.abs(dF), 1), sifir=Math.abs(dF)<0.05;
+      return (ok ? '<span class="ok">✓</span>' : '<span style="color:var(--warn);font-weight:600;">✗</span>')
+        +' '+(sifir ? _rF(0, 0) : (dF>0 ? '+' : '−')+ay);
+    };
+    h+='<p>Resimdeki kuvvet–boy noktaları ('+_rEsc(e.uretici+' '+e.ad)+'): ilk '+nokta(N.ilk)+', montaj '+nokta(N.montaj)
+      +(N.st ? ', blok '+_rF(N.st.L, 0)+' mm min · '+_rF(N.st.F, onda(N.st.F))+' kgf' : '')
+      +'. İlk nokta tasarım konumundaki (takozlar yüksüzken) ön yük, montaj noktası statik durumdaki kuvvettir. '
+      +'✓: modelin kuvveti resmin toleransı içinde.</p>';
+    h+='<table><caption>Tablo '+_rTbl()+' — Askı yayı ve resmi</caption>';
+    h+='<tr><th>Yay</th><th>L<sub>d</sub> [mm]</th><th>F<sub>d</sub> [kgf]</th><th>F<sub>d</sub> − F<sub>ilk</sub> [kgf]</th>'
+      +'<th>L<sub>s</sub> [mm]</th><th>F<sub>s</sub> [kgf]</th><th>F<sub>s</sub> − F<sub>montaj</sub> [kgf]</th></tr>';
+    var model=[];
+    G.j.forEach(function(j){
+      var a=A[j], Fd=(Number.isFinite(a.Ld) && a.k>0) ? Math.max(0, a.k*(a.L0-a.Ld)) : NaN;
+      var st=(O && O.statik) ? O.statik[j] : null;
+      if(st) model.push({ L:st.L*1000, F:st.F/g });
+      h+='<tr><td class="l">'+_rEsc(a.name)+'</td><td>'+(Number.isFinite(a.Ld) ? mm(a.Ld, 2) : '—')+'</td>'
+        +'<td>'+(Number.isFinite(Fd) ? _rF(Fd/g, 1) : '—')+'</td><td class="c">'+fark(Fd/g, N.ilk)+'</td>'
+        +'<td>'+(st ? mm(st.L, 2) : '—')+'</td><td>'+(st ? _rF(st.F/g, 1) : '—')+'</td>'
+        +'<td class="c">'+(st ? fark(st.F/g, N.montaj) : '—')+'</td></tr>';
+    });
+    h+='</table>';
+    var ar=(O && O.islMin<Infinity) ? [O.islMin*1000, O.islMax*1000] : null;
+    var C=veMntYayCiz.cizim(e, { px:11, model:model, aralik:ar });
+    h+='<figure class="rp-yay">'+C.svg+'<figcaption><b>Şekil '+_rFig()+' —</b> '+_rEsc(e.uretici+' '+e.ad)
+      +': serbest boyda yandan görünüş, boylar sağ yüzden; kuvvet–boy doğrusu ('+_rF(e.kgfmm, 2)+' kgf/mm) resmin noktalarıyla '
+      +'(kare, toleransıyla), modelin statik noktaları (daire, yay başına)'+(ar ? ' ve işletme aralığı (şerit)' : '')+'.</figcaption></figure>';
+  });
+  return h ? '<style>'+_MNT_REP_YAY_CSS+'</style>'+h : '';
+}
+// Teknik resmin renkleri — belgenin kâğıdı; çizicinin her sınıfının kuralı (kapı:
+// tests/unit/mount-yay-ciz.test.js → SINIFLAR).
+var _MNT_REP_YAY_CSS =
+  '.rp-yay svg{display:block;width:auto;max-width:100%;height:auto;margin:0 auto}'
+ +'.rp-yay .ve-yay-zem{fill:#fff}'
+ +'.rp-yay .ve-yay-eksen{stroke:#8b8f99;stroke-width:.8;stroke-dasharray:10 3 2 3}'
+ +'.rp-yay .ve-yay-tel{stroke:var(--ink);stroke-width:1.2}'
+ +'.rp-yay .ve-yay-kesit{fill:#e3e6ea;stroke:var(--ink);stroke-width:1.1}'
+ +'.rp-yay .ve-yay-yuz{stroke:var(--ink);stroke-width:1.4}'
+ +'.rp-yay .ve-yay-olcu{stroke:#5a6270;stroke-width:.8}.rp-yay .ve-yay-ok{fill:#5a6270}'
+ +'.rp-yay .ve-yay-uzat,.rp-yay .ve-yay-kilavuz{stroke:#8b8f99;stroke-width:.7}'
+ +'.rp-yay .ve-yay-dogru{stroke:var(--vurgu);stroke-width:1.6}'
+ +'.rp-yay .ve-yay-nokta{fill:#fff;stroke:var(--vurgu);stroke-width:1.4}'
+ +'.rp-yay .ve-yay-tol{stroke:var(--vurgu);stroke-width:1.2}'
+ +'.rp-yay .ve-yay-model{fill:var(--warn);stroke:#fff;stroke-width:1}'
+ +'.rp-yay .ve-yay-aralik{stroke:rgba(180,35,24,.3);stroke-width:6;stroke-linecap:round}'
+ +'.rp-yay .ve-yay-y{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fill:var(--ink);font-variant-numeric:tabular-nums}';
 // Sütun başlığı: adın " · " ayracından önceki kısmı ("Sol askı yayı · arka" → "Sol askı yayı")
 function _mntRepAskiKisa(ad){ return _mntRepShort(String(ad||'askı').split(' · ')[0], 16); }
 function _mntRepAski(R){
@@ -729,6 +802,7 @@ function _mntRepAski(R){
     +'z rijitliğiyle ve sönümsüz girer.</p>';
   // ── Tanım
   var kurulum=function(a){
+    if(a.giris==='onyuk') return 'ön yük '+kgf(a.P)+' kgf';
     if(a.kurulum==='tasarim') return 'tasarım boyu '+mm(a.Ld, 1)+' mm';
     if(a.kurulum==='boy') return 'statik boy '+mm(a.Ls, 1)+' mm';
     return 'statik kuvvet '+kgf(a.Fs)+' kgf';
@@ -742,6 +816,7 @@ function _mntRepAski(R){
       +'<td>'+(Number.isFinite(a.Ld) ? mm(a.Ld, 2) : '—')+'</td></tr>';
   });
   h+='</table>';
+  h+=_mntRepAskiResim(R, O);
   // ── Yük durumu başına boy ve kuvvet (aynı yükün iki adı tek satırda)
   var durumlar=[], anahtar={};
   _mntRepZarfDurumlari(R).forEach(function(rc){
@@ -2832,7 +2907,7 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     veMntGenerateReport: veMntGenerateReport,
     veMntUygunluk: veMntUygunluk, MNT_TR_SINIR: MNT_TR_SINIR,
-    _mntRepAski: _mntRepAski, _mntRepAskiAralik: _mntRepAskiAralik,
+    _mntRepAski: _mntRepAski, _mntRepAskiAralik: _mntRepAskiAralik, _mntRepAskiResim: _mntRepAskiResim, _MNT_REP_YAY_CSS: _MNT_REP_YAY_CSS,
     veMntRaporOpts: veMntRaporOpts,
     _mntReportEnsureAssets: _mntReportEnsureAssets,
     _mntBuildReportHTML: _mntBuildReportHTML,

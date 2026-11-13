@@ -33,18 +33,18 @@ const P = require('../../js/cp-mount-param.js');
 Object.keys(P).forEach((k) => { if (global[k] === undefined) global[k] = P[k]; });
 global.veMntParamExcel = require('../../js/mount-param-excel.js');
 const PS = require('../../js/cp-mount-param-sonuc.js');
-const PD = 74;          // sunumun ön yükü: k(L0 − 74) = 57,39 · 16 = 918,2 N
+const PD = A.yay.onYuk / 9.81;   // sunumun ön yükü [kgf]: 918,4 N = 93,6 kgf (resmin ilk noktası 74 mm · 93,5 ± 8)
 
 const KOMBI = Object.keys(A.kombinasyon);
-// Örneğin topolojisi, takozlar kombinasyonun tipleriyle; Ld: askının tasarım boyu [mm] (90 = ön yüksüz)
-function topo(kb, Ld) {
+// Örneğin topolojisi, takozlar kombinasyonun tipleriyle; P: askının tasarım konumundaki ön yükü [kgf]
+function topo(kb, P) {
   const t = H.ornek('isg430askili');
   const K = A.kombinasyon[kb];
   t.nodes.filter((n) => n.type === 'mnt-mount').forEach((n, i) => {
     const tp = A.tip[i < 2 ? K.on : K.arka];
     Object.assign(n.data, { kxs: tp[0][0], kys: tp[0][1], kzs: tp[0][2], kxd: tp[1][0], kyd: tp[1][1], kzd: tp[1][2] });
   });
-  if (Ld != null) t.nodes.filter((n) => n.type === 'mnt-aski').forEach((n) => { n.data.tasarimL = Ld; });
+  if (P != null) t.nodes.filter((n) => n.type === 'mnt-aski').forEach((n) => { n.data.onyukF = P; });
   return t;
 }
 const statik = (R) => R.allCases.find((rc) => rc.name === 'Static').res;
@@ -60,11 +60,13 @@ describe('ÖRNEK — sunumun girdisi', () => {
     expect(tak.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.takoz);
     const as = t.nodes.filter((n) => n.type === 'mnt-aski');
     expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.yay.ust);
-    // Adams'ın çözdüğü gibi tasarım konumunda ön yüksüz (tasarım boyu = serbest boy); sunumun
-    // yazdığı ön yük PD'de: k(L0 − PD) = 918,4 N (resmin yayı; k 57,39 ↔ sunum 57,4)
+    // Adams'ın çözdüğü gibi tasarım konumundaki ön yük 0; sunumun yazdığı ön yük (PD) yayın
+    // resminin ilk noktası: 74 mm'de k(L0 − 74) = 93,6 kgf, resim 93,5 ± 8 kgf
+    const ilk = global.veMntYay('tta-aski').noktalar.find((p) => p.ad === 'ilk');
     as.forEach((n) => {
-      expect([n.data.kurulum, n.data.tasarimL]).toEqual(['tasarim', n.data.L0]);
-      expect(n.data.k * (n.data.L0 - PD)).toBeCloseTo(A.yay.onYuk, -1);
+      expect([n.data.kurulum, n.data.onyukF, n.data.yay]).toEqual(['onyuk', 0, 'tta-aski']);
+      expect(n.data.k * (n.data.L0 - ilk.L) / 9.81).toBeCloseTo(PD, 1);
+      expect(Math.abs(PD - ilk.F)).toBeLessThan(ilk.tol);
     });
     const gv = t.nodes.filter((n) => n.data && n.data.mass > 0);
     expect(gv.reduce((s, n) => s + n.data.mass, 0)).toBeCloseTo(A.toplamKutle, 6);

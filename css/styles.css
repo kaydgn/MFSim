@@ -11590,6 +11590,31 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   max-width:min(var(--ve-bas-azami, 100vw), calc(100vw - 74px));
   max-height:min(var(--ve-bas-azami, 100vh), calc(100vh - 74px - var(--bant-h)));
 }
+/* Askı yayının teknik resmi (programın çizimi, js/mount-yay-ciz.js): pencere ailesinin
+   penceresinde (veBasResimGoster → html) çizim ve resmin verisi alt alta; renk temadan.
+   Yazı en sonda ve zeminin renginde hâle taşır: altından geçen çizgiyi örter. */
+.ve-yay-resim{ display:flex; flex-direction:column; gap:10px; min-width:0; max-width:calc(100vw - 74px); }
+.ve-yay{ display:block; max-width:100%; height:auto; margin:0 auto; font-family:inherit; border:1px solid var(--border-color); }
+.ve-yay-zem{ fill:var(--bg-input); }
+.ve-yay-eksen{ stroke:var(--text-muted); stroke-width:.8; stroke-dasharray:10 3 2 3; }
+.ve-yay-tel{ stroke:var(--text-primary); stroke-width:1.2; }
+.ve-yay-kesit{ fill:var(--bg-tertiary); stroke:var(--text-primary); stroke-width:1.1; }
+.ve-yay-yuz{ stroke:var(--text-primary); stroke-width:1.4; }
+.ve-yay-olcu{ stroke:var(--text-secondary); stroke-width:.8; }
+.ve-yay-ok{ fill:var(--text-secondary); }
+.ve-yay-uzat, .ve-yay-kilavuz{ stroke:var(--text-muted); stroke-width:.7; }
+.ve-yay-dogru{ stroke:var(--seri-1); stroke-width:1.6; }
+.ve-yay-nokta{ fill:var(--bg-input); stroke:var(--seri-1); stroke-width:1.4; }
+.ve-yay-tol{ stroke:var(--seri-1); stroke-width:1.2; }
+.ve-yay-model{ fill:var(--accent-danger); stroke:var(--bg-input); stroke-width:1; }
+.ve-yay-aralik{ stroke:color-mix(in srgb, var(--accent-danger) 35%, transparent); stroke-width:6; stroke-linecap:round; }
+.ve-yay-y{ fill:var(--text-primary); paint-order:stroke; stroke:var(--bg-input); stroke-width:3px; stroke-linejoin:round; font-variant-numeric:tabular-nums; }
+.ve-yay-veri{ width:100%; border-collapse:collapse; font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
+.ve-yay-veri th{ text-align:left; font-weight:500; color:var(--text-muted); padding:3px 12px 3px 0; white-space:nowrap; width:1%; }
+.ve-yay-veri td{ color:var(--text-primary); padding:3px 0; }
+.ve-yay-veri tr + tr > *{ border-top:1px solid var(--border-color); }
+/* Teknik resmin (i)'si pencere açar: imleç el, yardım değil */
+.ve-fp-i.ve-mnt-yay-resim{ cursor:pointer; }
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }

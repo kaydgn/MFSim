@@ -15,16 +15,24 @@
 //   L0 · Lc                 serbest boy · blok boyu [mm]
 //   d · Do · Di · nt · n    tel çapı, dış ve iç çap [mm], toplam ve aktif sarım
 //   Rm                      malzemenin çekme dayanımı [MPa] (meneviş 482 °C)
-//   noktalar                resmin kuvvet–boy noktaları [{ ad, L mm, F kgf, tol kgf }]
+//   uc · yon · onGerilimli · kumlama · blokSikistirma · tolerans
+//                           resmin üretim verileri (uç tipi, sarım yönü, ön gerilim,
+//                           kumlama şiddeti, blok boyuna sıkıştırma, tolerans sınıfı)
+//   noktalar                resmin kuvvet–boy noktaları [{ ad, L mm, F kgf, tol kgf }]:
+//                           ilk — tasarım konumu (ön yük), montaj — statik, st — blok
+// Teknik resim programın çizimi (js/mount-yay-ciz.js): resmin taraması programa girmez
+// (parça kodu, kişi adları ve üreticinin çoğaltma kısıtı — Canlı Not 1004).
 //
 // Kapı: tests/unit/mount-aski.test.js → KATALOG.
 var VE_MNT_YAY_G = 9.81;            // kgf → N (programın yerçekimi)
 var VE_MNT_YAY_GMOD = 78500;        // kayma modülü, sıcak şekillendirilmiş yay çeliği [N/mm²]
 var VE_MNT_YAY_IZIN = 0.56;         // blok boyunda izin verilen düzeltmesiz kayma gerilmesi / Rm (EN 13906-1 §10.1, soğuk şekillendirilmiş)
 var VE_MNT_YAY = [
-  { k: 'tta-aski', ad: 'TTA şanzıman askı yayı', uretici: 'BMC', kaynak: 'BMC teknik resmi, yayın 3',
+  { k: 'tta-aski', ad: 'Şanzıman askı yayı', uretici: 'BMC', kaynak: 'BMC teknik resmi, yayın 3',
     kgfmm: 5.85, kgfmmTol: 0.5, L0: 90, Lc: 63, d: 9, Do: 70, Di: 52, nt: 7, n: 5,
     malzeme: 'SAE 9262H (60SiCr7)', Rm: 1481,
+    uc: 'kapalı, taşlanmış', yon: 'sağ', onGerilimli: true, kumlama: '31A–35A', blokSikistirma: true,
+    tolerans: 'DIN 2095 sınıf 1',
     noktalar: [ { ad: 'ilk', L: 74, F: 93.5, tol: 8 }, { ad: 'montaj', L: 70, F: 117, tol: 10 }, { ad: 'st', L: 63, F: 158 } ] }
 ];
 
