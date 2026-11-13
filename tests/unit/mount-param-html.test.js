@@ -282,6 +282,45 @@ describe('SAYFA', () => {
     expect(mod.parentElement.className).toBe('kap dar');
   });
 
+  // Canlı not 2010: "Şuradaki kalın çizginin amacı ne? Diğerleri gibi olsun, kalın olmasın." — Yük
+  // durumu sütununun sağındaki kalın, koyu çizgi (Canlı not 2002) yok: sütunun iki kenarı öteki
+  // hücrelerin çizgisiyle (ızgaranın kalınlığı ve rengi), hücrenin İÇİNDE (iç gölge; birleşik kenarlık
+  // bastırılır) — birleşik kenarlık yapışık hücreyle gitmez, gerçek tarayıcıda tablo yana kayınca sütunun
+  // iki kenarı da kayboluyordu. Sütun yapışık, kalın yazılı, gri zeminde kalır. Belgenin hiçbir tablo
+  // kuralında ızgaradan kalın ya da koyu çizgi yok (Modlar · Özet · Tarama dâhil).
+  test('Sehim: Yük durumu sütununun çizgisi öteki hücrelerinki gibi — kalın çizgi yok; sütun yapışık, kalın yazılı, gri zeminde', () => {
+    const w = ac(html, '#T2'), d = w.document, cs = (e) => w.getComputedStyle(e);
+    const kurallar = [...d.styleSheets].flatMap((s) => [...s.cssRules]).filter((r) => r.selectorText);
+    // öteki hücrelerin çizgisi: kalınlık · tür · renk
+    const izgara = kurallar.find((r) => r.selectorText.replace(/\s*,\s*/g, ',') === 'table.izg th,table.izg td').style.getPropertyValue('border');
+    expect(izgara).toBe('1px solid var(--cizgi)');
+    const [kal, , renk] = izgara.split(' ');
+    const yuk = [...d.querySelector('#ve-sonuc table').querySelectorAll('.yuk')];
+    expect(yuk.map((c) => c.tagName)).toEqual(['TH', 'TD', 'TD']);              // başlık + iki yük durumu
+    // hücreye uyan kuralların bildirdiği değer (jsdom'un hesabı değişkenli kısa yazımın yanında
+    // kenarın türünü vermiyor)
+    const bildirim = (c, ad) => kurallar.filter((r) => c.matches(r.selectorText)).map((r) => r.style.getPropertyValue(ad)).filter(Boolean);
+    yuk.forEach((c) => {
+      const s = cs(c);
+      expect([bildirim(c, 'border-left-style'), bildirim(c, 'border-right-style')]).toEqual([['hidden'], ['hidden']]);
+      expect(s.boxShadow.split(/,\s*/)).toEqual(['inset ' + kal + ' 0 0 ' + renk, 'inset -' + kal + ' 0 0 ' + renk]);
+      expect([s.position, s.left, s.fontWeight, s.background]).toEqual(['sticky', '0px', '600', 'var(--zemin)']);
+    });
+    // belgenin tablo kuralları: hiçbir çizgi ızgaradan kalın ya da koyu değil
+    const tablo = /(^|[\s,>+~])(table|thead|tbody|tr|th|td)\b|\.(yuk|izg)\b/;
+    const cizgi = [], kalin = [];
+    kurallar.filter((r) => tablo.test(r.selectorText)).forEach((r) => {
+      for (let i = 0; i < r.style.length; i++) {
+        const ad = r.style[i], v = r.style.getPropertyValue(ad);
+        if (!/^(border|box-shadow|outline)/.test(ad)) continue;
+        cizgi.push(ad);
+        if ((v.match(/\d*\.?\d+px/g) || []).some((x) => parseFloat(x) > parseFloat(kal)) || /cizgi-koyu/.test(v)) kalin.push(r.selectorText + ' → ' + ad + ': ' + v);
+      }
+    });
+    expect(kalin).toEqual([]);
+    expect(cizgi).toEqual(expect.arrayContaining(['border', 'border-bottom', 'box-shadow']));   // tarama boş değil
+  });
+
   // Belge Canlı Not'ta çerçevede (srcdoc) açılır: "#tarama" üst sayfanın adresine çözülür ve
   // varsayılan gezinme çerçeveyi sayfanın kendisine götürüyordu ("MFSim açılıyor", 2026-11-11).
   test('bağlantı varsayılan yoldan GİTMEZ: tık yakalanır, görünüm belgenin içinde değişir', () => {
