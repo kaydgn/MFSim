@@ -2462,6 +2462,15 @@ function veMntPencereTazele(){
     var yeni=bul(el.id), o=yeni && yeni.querySelector('option[selected]');
     if(o && el!==document.activeElement && el.value!==o.getAttribute('value')){ el.value=o.getAttribute('value'); n++; }
   });
+  // Çözümü izleyen sayı alanı (Parametrik Analiz'in beklenen sehimi): kapalılığı ve sebebi
+  // yeni kurulumdan, değeri modelden (odaktaki açık alana yazılmaz; alan kurulmaz — odak ve imleç kalır).
+  Array.prototype.forEach.call(kok.querySelectorAll('input[data-mnt-izle][id]'), function(el){
+    var yeni=bul(el.id); if(!yeni) return;
+    var kap=yeni.hasAttribute('disabled'), tar=yeni.getAttribute('aria-describedby'), v=yeni.getAttribute('value') || '';
+    if(el.disabled!==kap){ el.disabled=kap; n++; }
+    if(tar) el.setAttribute('aria-describedby', tar); else el.removeAttribute('aria-describedby');
+    if((el.disabled || el!==document.activeElement) && String(el.value)!==v){ el.value=v; n++; }
+  });
   // Zorunlu alanın tonu yazılan değeri izler.
   Array.prototype.forEach.call(kok.querySelectorAll('input[data-zorunlu]'), function(i){
     var bos=String(i.value).trim()==='';
@@ -5694,37 +5703,43 @@ function _mntToSI(gather, g){
       // zarfının köşeleri (çekirdek motionEnvelope), ağırlık merkezi `cg`de kalır.
       if(_mntZincirMi(c)) s.kc=[s.cg[0], 0, s.cg[2]];
       return s; }),
-    mounts: gather.mounts.map(function(m){
-      var mnt={
-        id:m.id, name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
-        kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
-        kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
-      // Kapasite [kg] → SI'da KUVVET [N] olarak taşınır: raporlama katmanı bir
-      // daha g ile çarpmak zorunda kalmasın (iki yerde çarpılırsa biri unutulur
-      // ve % kullanım 9,81 kat şaşar). Tanımsızsa alan HİÇ eklenmez.
-      var ml=_mntNum(m.maxLoad,0);
-      if(ml>0) mnt.fCap=ml*(g||9.81);
-      // Yanal durdurucu boşluğu [mm] → gapY [m]; boş ya da ≤ 0 → alan HİÇ eklenmez (durdurucu yok).
-      var by=_mntNum(m.bosY,0);
-      if(by>0) mnt.gapY=C.mmToM(by);
-      // Nonlineer yasa → çekirdek. Eksen başına FİT (analitik) ÖNCELİKLİ: mm/N olarak
-      // AYNEN geçer (çekirdek makeAxisLaw mm↔m dönüşümünü yapar). Yoksa nokta tablosu:
-      // burada SI'ya (δ mm→m, f N aynı) çevrilir. Çekirdek mnt.fits/mnt.curves okur.
-      var fits={}, curves={};
-      [['X','x'],['Y','y'],['Z','z']].forEach(function(ax){
-        var f=m['fit'+ax[0]];
-        if(f && (f.form==='poly'||f.form==='asym')){ fits[ax[1]]=f; return; }
-        var src=m['curve'+ax[0]];
-        if(Array.isArray(src) && src.length>=2){
-          curves[ax[1]]=src.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; });
-        }
-      });
-      if(Object.keys(fits).length) mnt.fits=fits;
-      if(Object.keys(curves).length) mnt.curves=curves;
-      return mnt; }),
+    mounts: gather.mounts.map(function(m){ return _mntTakozSI(m, g); }),
     askilar: _mntAskilarSI(gather.askilar, g||9.81),
     loadCases: _mntYukDurumlari(gather)
   };
+}
+// Takozun SI kaydı (toplayıcının biçiminden): konum [m], rijitlik [N/m], kapasite [N],
+// yanal boşluk [m], nonlineer yasa (fit mm/N olduğu gibi, nokta tablosu SI). Çözücü'nün
+// toplayıcısı ve tip sehimi (_mntTipSehimHesap) AYNI çeviriden geçer.
+function _mntTakozSI(m, g){
+  var C=veMountCore;
+  var mnt={
+    id:m.id, name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
+    kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
+    kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
+  // Kapasite [kg] → SI'da KUVVET [N] olarak taşınır: raporlama katmanı bir
+  // daha g ile çarpmak zorunda kalmasın (iki yerde çarpılırsa biri unutulur
+  // ve % kullanım 9,81 kat şaşar). Tanımsızsa alan HİÇ eklenmez.
+  var ml=_mntNum(m.maxLoad,0);
+  if(ml>0) mnt.fCap=ml*(g||9.81);
+  // Yanal durdurucu boşluğu [mm] → gapY [m]; boş ya da ≤ 0 → alan HİÇ eklenmez (durdurucu yok).
+  var by=_mntNum(m.bosY,0);
+  if(by>0) mnt.gapY=C.mmToM(by);
+  // Nonlineer yasa → çekirdek. Eksen başına FİT (analitik) ÖNCELİKLİ: mm/N olarak
+  // AYNEN geçer (çekirdek makeAxisLaw mm↔m dönüşümünü yapar). Yoksa nokta tablosu:
+  // burada SI'ya (δ mm→m, f N aynı) çevrilir. Çekirdek mnt.fits/mnt.curves okur.
+  var fits={}, curves={};
+  [['X','x'],['Y','y'],['Z','z']].forEach(function(ax){
+    var f=m['fit'+ax[0]];
+    if(f && (f.form==='poly'||f.form==='asym')){ fits[ax[1]]=f; return; }
+    var src=m['curve'+ax[0]];
+    if(Array.isArray(src) && src.length>=2){
+      curves[ax[1]]=src.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; });
+    }
+  });
+  if(Object.keys(fits).length) mnt.fits=fits;
+  if(Object.keys(curves).length) mnt.curves=curves;
+  return mnt;
 }
 
 // ── ASKI YAYI (2026-11-11) ───────────────────────────────────────────────────
@@ -6442,6 +6457,64 @@ function _mntPrepareFrom(gather, solver){
   return prep;
 }
 
+// ── TİP SEHİMİ (kullanıcı 2026-11-13: *"Çözücü bileşeninden program girdilere göre çözerken,
+// bir yandan da program tüm takozları programdaki EN DÜŞÜK TAKOZ YÜKÜNE göre çözsün gizlice"*) ──
+// Referans yük Statik (1 g) durumunda takozların düşey basma kuvvetlerinin EN KÜÇÜĞÜ — yalnız
+// takozlar (askı yayı ve nokta kütle takoz değil). Kütüphanenin çözülebilen her tipinin (aday
+// tip: `aday:false` değil, altı rijitliği tam) o yükteki statik düşey sehimi tipin KENDİ z yasasından
+// ters çözülür — Çözücü'nün yasası (fit → nokta tablosu → k_z,stat; Lineer çözüm modunda eğri yok).
+// Kapasite KULLANILMAZ (kullanıcı: "kapasite mantıklı değil"). Sonuç R'de, bellekte; Çözücü
+// penceresi göstermez — Parametrik Analiz'in elemesi okur (cp-mount-param.js → _mntParamEleme).
+// T = { yuk [kg], F [N], takoz (kimlik), ad, lineer, d: { tip: sehim [mm] }, yasa: { tip: z yasasının
+// imzası } } | null (Statik çözülmedi ya da takoz yok). En düşük yük ≤ 0 (yüksüz takoz) ise d boş.
+// Kapı: tests/unit/mount-param-eleme.test.js → GİZLİ HESAP.
+function _mntTipAday(e){ return !!e && e.aday!==false && _mntLibTam(e); }
+// Tipin z yasasının imzası — kütüphane çözümden sonra değişirse (Takoz Özellikleri) sehim
+// yeniden hesaplanır (veMntTipSehim).
+function _mntTipZYasaImza(e, lineer){
+  return lineer ? String(_mntNum(e.sz, NaN)) : JSON.stringify([_mntNum(e.sz, NaN), e.fitZ || null, e.curveZ || null]);
+}
+// F [N] basma kuvvetinde z yasasının sehimi [mm, > 0]. Yasa çekirdeğinki (δ < 0 basma, kuvvet
+// eksi): doğrusalda F/k, eğride ikiye bölme (yasa monoton); 1 m'de de F'yi taşımayan eğri: ∞.
+function _mntSehimTers(law, F){
+  var k=law.tangent(0);
+  if(!law.curve) return k>0 ? 1000*F/k : Infinity;
+  var g=function(x){ return -law.force(-x)-F; };
+  var a=0, b=(k>0 && isFinite(F/k)) ? F/k : 1e-3;
+  while(!(g(b)>=0)){ a=b; b*=2; if(b>1) return Infinity; }
+  for(var i=0;i<200 && b-a>1e-13;i++){ var c=0.5*(a+b); if(g(c)<0) a=c; else b=c; }
+  return (a+b)>2 ? Infinity : 500*(a+b);
+}
+// Tipin sehimi: girdisi takoza yazılır (Takoz penceresinin yazıcısı), SI'ya çevrilir
+// (toplayıcının çevirisi), z yasası çekirdekten.
+function _mntTipSehimHesap(e, F, lineer){
+  var d={};
+  _mntLibGirdiYaz(d, e, e.key);
+  var m=_mntTakozSI(d, 9.81);
+  if(lineer){ delete m.fits; delete m.curves; }
+  return _mntSehimTers(veMountCore.mountStaticLaws(m)[2], F);
+}
+function _mntTipSehimKur(prep, stat){
+  var pm=stat && stat.res && stat.res.perMount;
+  if(!pm || !pm.length) return null;
+  var j=0;
+  for(var i=1;i<pm.length;i++) if(-pm[i].f[2] < -pm[j].f[2]) j=i;
+  var F=-pm[j].f[2], m=prep.mounts[j] || {};
+  var T={ yuk:F/prep.si.g, F:F, takoz:m.id, ad:m.name, lineer:prep.mode==='linear', d:{}, yasa:{} };
+  if(!(F>0)) return T;
+  var L=veMntGetLibraryMap();
+  Object.keys(L).forEach(function(k){ if(_mntTipAday(L[k])) veMntTipSehim(T, L[k]); });
+  return T;
+}
+// Tipin referans yükteki sehimi [mm]: çözümde hesaplanan; tip çözümden sonra eklendiyse ya
+// da z yasası değiştiyse yeniden hesaplanır ve R'ye yazılır. NaN: sehim yok (çözüm ya da yük yok).
+function veMntTipSehim(T, e){
+  if(!T || !e || !(T.F>0)) return NaN;
+  var s=_mntTipZYasaImza(e, T.lineer);
+  if(T.yasa[e.key]!==s || !(e.key in T.d)){ T.d[e.key]=_mntTipSehimHesap(e, T.F, T.lineer); T.yasa[e.key]=s; }
+  return T.d[e.key];
+}
+
 // prep + çözülmüş durumlar → R (ve _veMntLast). Sync ve async yol AYNI R'yi üretir.
 function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   var R={ mp:prep.mp, allCases:allCases, mounts:prep.mounts, modes:modes, gather:prep.gather,
@@ -6483,6 +6556,9 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   // Nonlineer yasada süperpozisyon geçmediği için kuvvet TOPLAM sehimde
   // okunmalı; ±15 mm durdurucu boşluğu da yüksüz konumdan ölçülür.
   R.qStatic    = (stat && stat.res) ? stat.res.q : null;
+  // Tip sehimi — en düşük takoz yükünde kütüphanenin her tipi (Parametrik Analiz'in elemesi).
+  // Çözümü bağlamaz: patlarsa alan yok.
+  try { R.tipSehim=_mntTipSehimKur(prep, stat); } catch(e){ R.tipSehim=null; }
   R.components = prep.si.components;                       // modal enerji gövde dağılımı için
   // ── Hareket zarfı (2026-11-09) — gövdelerin ve eşdeğer kutularının köşelerinin
   // STATİK konuma göre yer değiştirmesi, yük durumları + vitesler + tasarım durumları
@@ -6781,7 +6857,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntEksikGit: veMntEksikGit,
     veMntPencereTazele: veMntPencereTazele, veMntIsaretYaz: veMntIsaretYaz,
     // Pencere ailesi (2026-10-16): FEAD'in not satırı ve cevap kutusu, iki kategori
-    _mntNot: _mntNot,
+    _mntNot: _mntNot, _mntDurum: _mntDurum,
     _mntDurumKutu: _mntDurumKutu,
     _mntKutleCgDurumu: _mntKutleCgDurumu,
     _mntAtaletDurumu: _mntAtaletDurumu,
@@ -6812,6 +6888,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntEnginePresetSelect: _mntEnginePresetSelect,
     _mntEngineSection: _mntEngineSection,
     _mntComputeResults: _mntComputeResults,
+    veMntTipSehim: veMntTipSehim, _mntTipSehimKur: _mntTipSehimKur, _mntTipSehimHesap: _mntTipSehimHesap, _mntSehimTers: _mntSehimTers, _mntTipAday: _mntTipAday,
+    _mntTakozSI: _mntTakozSI,
     veMntSolverCompute: veMntSolverCompute,
     _mntForgetResults: _mntForgetResults,
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
