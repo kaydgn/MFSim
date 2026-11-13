@@ -2530,10 +2530,13 @@ var veMountCore = (function() {
   // misin?"*): Adams sunumunun modeli — takoz konumları ve rijitlikleri, askı yaylarının noktaları,
   // yay sabiti ve ön yükü, motor · şanzıman · braket ataletleri, toplam kütle 1.560,5 kg sunumdan.
   // Bileşenlerin KÜTLESİ sunumda yok: dağılım Adams'ın beş kombinasyonunun 30 statik sehimine ve 30
-  // frekansına uyduruldu (ön yüksüz yayla — Adams'ın sonuçları ön yüksüz bir yayınki). Takozlar
-  // sunumun en düşük iletilebilirlikli kombinasyonu: önde Cone 38-40, ortada ve arkada Cone 39-40
-  // (sunumun tablosu AMC'nin değerleri). Askı sunumun ön yüküyle: tasarım konumunda 918,4 N
-  // (tasarım boyu 74 mm). Kapı: tests/unit/mount-adams-isg.test.js.
+  // frekansına uyduruldu. Takozlar sunumun en düşük iletilebilirlikli kombinasyonu: önde Cone 38-40,
+  // ortada ve arkada Cone 39-40 (sunumun tablosu AMC'nin değerleri; doğrusal — kütüphanedeki Cone
+  // 38-40'ın eğrisi Adams'ta yok). Askı ADAMS'IN ÇÖZDÜĞÜ GİBİ tasarım konumunda ön yüksüz (tasarım
+  // boyu = serbest boy 90 mm; kullanıcı 2026-11-13: parametrik analizin HTML'i sunumun sehimlerini
+  // vermiyordu — örnek sunumun yazdığı 918,4 N'u taşıyordu): sunumun ön yükü Adams'ın sonuçlarında
+  // yok — takozların toplam yükü m·g'den yalnız yayın sehim kuvveti kadar az, kütleler yeniden
+  // uydurulsa da 918,4 N'la sehim RMS 0,53 mm (ön yüksüz 0,022). Kapı: tests/unit/mount-adams-isg.test.js.
   const _ISG_I = function(a){ return { Ixx:a[0]*1e-6, Iyy:a[1]*1e-6, Izz:a[2]*1e-6, Ixy:0, Ixz:0, Iyz:0 }; };
   const _CONE3840 = { kstat:[1200, 780, 450], kdyn:[1440, 936, 540] };
   const _CONE3940 = { kstat:[1340, 1340, 720], kdyn:[1608, 1608, 864] };
@@ -2555,8 +2558,8 @@ var veMountCore = (function() {
       Object.assign({name:'Sağ arka takoz', pos:[1747.7,  356,   -150.9]}, _CONE3940)
     ],
     askilar: [
-      {name:'Sol askı yayı', pos:[2523.3, -350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:74},
-      {name:'Sağ askı yayı', pos:[2523.3,  350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:74}
+      {name:'Sol askı yayı', pos:[2523.3, -350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:90},
+      {name:'Sağ askı yayı', pos:[2523.3,  350, -44], yay:'tta-aski', k:57.39, L0:90, Lc:63, d:9, D:61, n:5, Rm:1481, kurulum:'tasarim', tasarimL:90}
     ],
     torque: ISG430_TORQUE,
     cozucu: { zeta:0.02 },

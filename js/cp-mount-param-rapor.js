@@ -130,7 +130,7 @@ function _mntPrmKapsam(E){
    + '<tr><th>No</th><th>Grup</th><th>Takozlar</th><th>x [mm]</th><th>Mevcut tip</th><th>Tarama</th></tr>';
   M.G.forEach(function(g){
     h+='<tr><td class="c">'+g.no+'</td><td class="l">'+_rEsc(g.ad)+'</td><td class="c">'+g.uyeler.length+'</td>'
-     + '<td>'+_rF(g.x, 0)+'</td><td class="l">'+_mntPrmTipYaz(_mntPrmTipAdi(E, g.tip))+'</td>'
+     + '<td>'+_rF(g.x, 0)+'</td><td class="l">'+_mntPrmTipYaz(_mntParamGrupTipAdi(E.M, g))+'</td>'
      + '<td class="c">'+(E.sabit[g.anahtar] ? 'sabit' : 'taranır')+'</td></tr>';
   });
   h+='</table>';
@@ -153,7 +153,7 @@ function _mntPrmKapsamKonum(E){
    + '<tr><th>No</th><th>Grup</th><th>Takozlar</th><th>x [mm]</th><th>z [mm]</th><th>Tip</th><th>Tarama</th></tr>';
   M.G.forEach(function(g){
     h+='<tr><td class="c">'+g.no+'</td><td class="l">'+_rEsc(g.ad)+'</td><td class="c">'+g.uyeler.length+'</td>'
-     + '<td>'+_rF(g.x, 0)+'</td><td>'+_rF(g.z, 0)+'</td><td class="l">'+_mntPrmTipYaz(_mntPrmTipAdi(E, g.tip))+'</td>'
+     + '<td>'+_rF(g.x, 0)+'</td><td>'+_rF(g.z, 0)+'</td><td class="l">'+_mntPrmTipYaz(_mntParamGrupTipAdi(E.M, g))+'</td>'
      + '<td class="c">'+(E.sabit[g.anahtar] ? 'sabit' : 'taranır')+'</td></tr>';
   });
   h+='</table>';

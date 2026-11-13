@@ -323,10 +323,12 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     const n = kur('tulga'), d = dom(P.getMntParamPropertiesHTML(n));
     expect([...d.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label'))).toEqual(['Takoz yerleşimi', 'Beklenen takoz sehimi', 'Adaylar']);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent.trim()));
+    // Tulga'nın takozları doğrusal (Adams'ın girdisi), kütüphanenin TK0xx'leri yasalı: mevcut tip
+    // o tip DEĞİL — adı "· doğrusal" (mount-adams-isg.test.js → PARAMETRİK ANALİZ)
     expect(satir).toEqual([
-      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA'],
-      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA'],
-      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA']]);
+      ['1', 'Ön Takoz', '1', '−196', 'TK050 50 ShA · doğrusal'],
+      ['2', 'Sağ/Sol Ön Takoz', '2', '440', 'TK040 45 ShA · doğrusal'],
+      ['3', 'Sağ/Sol Arka Takoz', '2', '1.382', 'TK035 35 ShA · doğrusal']]);
     expect(d.querySelector('.ve-fp-kat[data-k="yerlesim"] .ve-fp-sect em').textContent).toBe('3 grup · 5 takoz');
     // föyün numarası grubun renginde (kare + düz yazı — NUMARA BALONSUZ)
     expect([...d.querySelectorAll('.ve-fp-kat[data-k="yerlesim"] tbody .ve-prm-no')].map((e) => [e.textContent, e.dataset.renk]))
@@ -641,7 +643,12 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
       expect(r.querySelector('button').getAttribute('aria-label')).toBe('Kaldır · ' + S[i].name);
       expect(r.querySelector('button .mf-ico-x')).not.toBeNull();
     });
-    expect(li.filter((r) => r.querySelector('.ve-prm-mev')).map((r) => r.querySelector('button').dataset.key)).toEqual([G[0].tip]);
+    const mev = (dd) => [...dd.querySelectorAll('#ve-mnt-param-oz-py-1 li')].filter((r) => r.querySelector('.ve-prm-mev'))
+      .map((r) => r.querySelector('button').dataset.key);
+    // doğrusal ön takoz yasalı TK050 değil: işaret yok; tip yasasıyla uygulanınca işaretli
+    expect([G[0].tip, mev(d)]).toEqual([null, []]);
+    global.nodes.filter((x) => G[0].idler.includes(x.id)).forEach((x) => cp._mntLibUygula(x.data, G[0].benzer));
+    expect(mev(dom(P.getMntParamPropertiesHTML(n)))).toEqual([G[0].benzer]);
   });
 
   test('takozsuz model: bölümler başlıklı ve boş, durum sağ sütunda bir kez — iki kipte', () => {

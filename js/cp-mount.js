@@ -2132,6 +2132,16 @@ function _mntYasaVar(o){
     return (f && (f.form==='poly' || f.form==='asym')) || (Array.isArray(c) && c.length>=2);
   });
 }
+// Yasanın imzası — eksen başına fit ya da eğri, kütüphanenin yazıcısının (_mntLibGirdiYaz)
+// biçiminde: tip uygulanan takozun imzası tipinkiyle aynıdır, yasasız takozunki boştur.
+function _mntYasaImza(o){
+  return ['X','Y','Z'].map(function(A){
+    var f=o['fit'+A], c=o['curve'+A];
+    if(f && (f.form==='poly' || f.form==='asym')) return JSON.stringify(f);
+    if(Array.isArray(c) && c.length>=2) return JSON.stringify(c.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; }));
+    return '';
+  }).join('|');
+}
 function _mntKutuphaneEslesme(node){
   var d=node.data||{}, map=veMntGetLibraryMap();
   // İki tarafı da BOŞ alan eşittir: AMC'nin radyalini yayımlamadığı tip uygulanınca
@@ -2151,7 +2161,8 @@ function _mntKutuphaneEslesme(node){
   }
   if(!e) return null;
   var s=say(e);
-  return { e:e, ayni:s.ayni, farkli:s.farkli, yasaKut:_mntYasaVar(e), yasaTk:_mntYasaVar(d) };
+  return { e:e, ayni:s.ayni, farkli:s.farkli, yasaKut:_mntYasaVar(e), yasaTk:_mntYasaVar(d),
+           yasaAyni:_mntYasaImza(d)===_mntYasaImza(e) };
 }
 // Durum satırı Marka · Tip'in altında; Elle Marka listesinde yazdığı için satır onu tekrarlamaz.
 function _mntKutuphaneNotu(node){
@@ -6956,7 +6967,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAtalet: _mntAtalet,
     _mntOranYayilim: _mntOranYayilim,
     _MNT_ORAN_YAYILIM_SINIR: _MNT_ORAN_YAYILIM_SINIR,
-    _mntKutuphaneEslesme: _mntKutuphaneEslesme, _mntTakozTipGovde: _mntTakozTipGovde,
+    _mntKutuphaneEslesme: _mntKutuphaneEslesme, _mntYasaImza: _mntYasaImza, _mntTakozTipGovde: _mntTakozTipGovde,
     _mntGatherTorqueKaynakli: _mntGatherTorqueKaynakli,
     _mntGolgelenen: _mntGolgelenen,
     _mntMotorSapma: _mntMotorSapma,
