@@ -1282,6 +1282,17 @@ function veMntParamExcelIndir(nodeId){
 // şanzıman önce 3B'nin veri sayfasından (Motor modeli · Şanzıman ailesi — 3D Görüntüleyici'nin rol
 // kaydı), yoksa gövde penceresinin Katalog'undan (Motor · Vites konfigürasyonu). Yalnız HTML:
 // Excel'in girdisi değişmez.
+// TİPİN MARKASI (kullanıcı 2026-11-13: "o filtrelemeyi takoz markasına göre de yapalım"): HTML
+// raporunun Tarama'sı tipin adından markasını bilir — kütüphanenin her girdisi ad → marka
+// (Takoz Özellikleri'nin Marka listesiyle aynı kaynak), sıra o listeninki, Özel takozlar sonda.
+// Yalnız HTML: Excel'in girdisi değişmez.
+function _mntParamMarkaBilgi(){
+  var L=(typeof veMntGetLibraryMap==='function') ? veMntGetLibraryMap() : {}, m={};
+  Object.keys(L).forEach(function(k){ var e=L[k]; if(e && e.name && !(e.name in m)) m[e.name]=e.marka || 'Diğer'; });
+  var sira=((typeof VE_MNT_LIB_MARKALAR!=='undefined') ? VE_MNT_LIB_MARKALAR : [])
+    .concat([(typeof VE_MNT_LIB_MARKA_OZEL!=='undefined') ? VE_MNT_LIB_MARKA_OZEL : 'Özel takozlar']);
+  return { markalar:m, markaSira:sira };
+}
 function _mntParamKimlik(){
   var nl=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
   var key=(typeof veMntTuvalOrnegi==='function') ? veMntTuvalOrnegi() : null;
@@ -1342,7 +1353,7 @@ function veMntParamHtmlIndir(nodeId){
     var B=null, Pz=null, j=0, bl=[], TIP='text/html;charset=utf-8';
     var adim=function(){
       if(is.i<is.n){ P.adim[is.i++](); return true; }
-      if(!B) B=veMntParamHtml.is(Object.assign(P.E(), _mntParamKimlik()));   // künyenin başı (Canlı not 2008)
+      if(!B) B=veMntParamHtml.is(Object.assign(P.E(), _mntParamKimlik(), _mntParamMarkaBilgi()));   // künyenin başı (Canlı not 2008) · tipin markası
       if(!Pz){
         if(B.adim()){ is.dosya=0.9*B.oran(); return true; }
         Pz=B.parcalar(); return true;
@@ -1396,7 +1407,7 @@ if(typeof module!=='undefined' && module.exports){
     _MNT_PARAM_SECIM: _MNT_PARAM_SECIM,
     _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz,
     _mntParamExcelPlan: _mntParamExcelPlan, veMntParamExcelIndir: veMntParamExcelIndir, _mntPrmUygunluk: _mntPrmUygunluk,
-    veMntParamHtmlIndir: veMntParamHtmlIndir, _mntParamDosyaIndir: _mntParamDosyaIndir, _mntParamKimlik: _mntParamKimlik,
+    veMntParamHtmlIndir: veMntParamHtmlIndir, _mntParamDosyaIndir: _mntParamDosyaIndir, _mntParamKimlik: _mntParamKimlik, _mntParamMarkaBilgi: _mntParamMarkaBilgi,
     VE_MNT_PRM_XLS_TAVAN: VE_MNT_PRM_XLS_TAVAN
   };
 }

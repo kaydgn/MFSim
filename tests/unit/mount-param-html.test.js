@@ -33,6 +33,9 @@ function E_(buyuk) {
   const vaka = (ad, dz) => ({ ad, d: [[0.2, 0, dz[0]], [-0.5, 0.0044, dz[1]], [-0.45, 0.0044, dz[2]]] });
   return {
     baslik: 'Takoz konfigürasyonları', arac: '10 Ton TTA', motor: 'Cummins ISM11', sanziman: 'Allison 4500 SP',
+    markalar: { 'Cone 121 NP 55 ShA (AMC 137829)': 'AMC Mecanocaucho', 'Cone 39 50 ShA (AMC 137982)': 'AMC Mecanocaucho',
+      'LMT-1433-20 40 ShA': 'LASPAR', 'TK040 45 ShA': 'LASPAR' },
+    markaSira: ['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR', 'Diğer', 'Özel takozlar'],
     fAtes: 35, trSinir: 0.15, rolanti: 700, silindir: 6, zeta: 0.02, kutle: 1739.1,
     gruplar: ['Ön takoz', 'Sağ/Sol arka takoz'],
     takozlar: [{ ad: 'Ön takoz', grup: 0 }, { ad: 'Sağ arka takoz', grup: 1 }, { ad: 'Sol arka takoz', grup: 1 }],
@@ -426,6 +429,61 @@ describe('SAYFA', () => {
       expect(no(d)).toEqual(['3', '1', '2']);
       expect(d.querySelector('#ve-tarama button[data-suz="kr"]').hasAttribute('aria-pressed')).toBe(false);
       expect(d.querySelector('#ve-tarama .suz-ozet')).toBeNull();
+    });
+
+    // MARKA (kullanıcı 2026-11-13: "Tarama kısmında modelleri filtreliyoruz ya, o filtrelemeyi takoz markasına
+    // göre de yapalım."): takoz sütununun panelinde tipler markasının altında, marka Marka listesinin sırasında;
+    // marka kutusu tiplerinin hepsini alır ya da bırakır, kısmi seçimde yarım; arama markayla da eşleşir.
+    test('takoz sütununda tipler markasının altında; marka kutusu tiplerini alır · bırakır, yarım', () => {
+      const w = ac(html, '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      ac_(d, 'g0');
+      const satirlar = () => [...p.querySelectorAll('.suz-liste label:not(.suz-hep)')].map((l) =>
+        (l.hasAttribute('data-marka-bas') ? '# ' : '  ') + metin(l.querySelector('.ad')) + ' ' + metin(l.querySelector('.say')));
+      expect(satirlar()).toEqual(['# AMC Mecanocaucho 2', '  Cone 39 50 ShA (AMC 137982) 1', '  Cone 121 NP 55 ShA (AMC 137829) 1',
+        '# LASPAR 1', '  LMT-1433-20 40 ShA 1']);
+      const amc = p.querySelector('input[data-suz-marka="AMC Mecanocaucho"]');
+      expect(amc.checked).toBe(true);
+      isaret(w, amc, false);
+      expect([...p.querySelectorAll('label[data-marka="AMC Mecanocaucho"] input')].map((x) => x.checked)).toEqual([false, false]);
+      expect(p.querySelector('input[data-suz-deger="LMT-1433-20 40 ShA"]').checked).toBe(true);
+      expect(p.querySelector('[data-suz-hep]').indeterminate).toBe(true);
+      isaret(w, p.querySelector('input[data-suz-deger="Cone 39 50 ShA (AMC 137982)"]'), true);
+      expect([amc.checked, amc.indeterminate]).toEqual([false, true]);
+      isaret(w, p.querySelector('input[data-suz-deger="Cone 39 50 ShA (AMC 137982)"]'), false);
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(no(d)).toEqual(['3']);                                          // yalnız LASPAR'ın satırı
+      ac_(d, 'g0');
+      expect([p.querySelector('input[data-suz-marka="AMC Mecanocaucho"]').checked, p.querySelector('input[data-suz-marka="LASPAR"]').checked])
+        .toEqual([false, true]);
+      p.querySelector('[data-suz-is="temizle"]').click();
+      expect(no(d)).toEqual(['1', '2', '3']);
+    });
+
+    test('arama markanın adıyla da süzer: tipi kalmayan marka gizli; markasız belgede düz liste', () => {
+      const L = [...Array(9).keys()].map((i) => ({ tipler: ['Cone ' + (31 + i) + ' 60 ShA'], f: [5, 6, 7, 8, 9, 10], fB: 8, T: 0.1, d: 3 + i, k: [true, true, true, true] }));
+      const E = E_();
+      E.tarama = Object.assign({}, E.tarama, { N: 12, satirlar: E.tarama.satirlar.concat(L), veri: null });
+      L.forEach((x, i) => { E.markalar[x.tipler[0]] = i < 4 ? 'Angst+Pfister' : 'AMC Mecanocaucho'; });
+      const w = ac(H.belge(E, TARIH), '#tarama'), d = w.document, p = d.getElementById('ve-suz');
+      ac_(d, 'g0');
+      expect([...p.querySelectorAll('label[data-marka-bas]')].map((l) => l.getAttribute('data-marka-bas')))
+        .toEqual(['AMC Mecanocaucho', 'Angst+Pfister', 'LASPAR']);
+      const ara = p.querySelector('.suz-ara');
+      ara.value = 'angst';
+      ara.dispatchEvent(new w.Event('input', { bubbles: true }));
+      const gorunen = (sec) => [...p.querySelectorAll(sec)].filter((l) => !l.hidden).map((l) => l.getAttribute('data-deger') || l.getAttribute('data-marka-bas'));
+      expect(gorunen('label[data-marka-bas]')).toEqual(['Angst+Pfister']);
+      expect(gorunen('label[data-deger]')).toEqual(['Cone 31 60 ShA', 'Cone 32 60 ShA', 'Cone 33 60 ShA', 'Cone 34 60 ShA']);
+      p.querySelector('[data-suz-is="tamam"]').click();
+      expect(no(d).length).toBe(4);
+      // markasız belge (eski çıktı, konum taraması): düz liste, marka başlığı yok
+      const E2 = E_();
+      delete E2.markalar;
+      const w2 = ac(H.belge(E2, TARIH), '#tarama'), d2 = w2.document;
+      ac_(d2, 'g0');
+      const p2 = d2.getElementById('ve-suz');
+      expect(p2.querySelectorAll('label[data-marka-bas]').length).toBe(0);
+      expect(p2.querySelectorAll('label[data-deger]').length).toBe(3);
     });
 
     // Canlı not 2006: "Takozların üstüne tıklayınca sıralıyor, onu da istemiyorum. Filtreleyince çıkan
