@@ -4,11 +4,16 @@
  * Kullanıcı: *"PPTX belgesindeki analizi çözer misin?"* Sunumun girdisi ve sonucu
  * tests/fixtures/adams-isg430.js'te; model programın örneği (isg430askili), çözüm
  * Çözücü'nün YOLUNDAN (H.coz → _mntComputeResults: toplayıcı, birim, askı elemanı).
- *   · ADAMS = PROGRAM — beş kombinasyonun 30 statik sehimi ve 30 frekansı, ön yüksüz yayla:
- *     sehimde RMS 0,022 mm, frekansta RMS %0,17; TR'ler sunumun yuvarlamasında aynı.
+ *   · ADAMS = PROGRAM — beş kombinasyonun 30 statik sehimi ve 30 frekansı, örneğin ön yüksüz
+ *     yayıyla: sehimde RMS 0,022 mm, frekansta RMS %0,17; TR'ler sunumun yuvarlamasında aynı.
  *     İki bulgu sayıyla: (1) Adams'ın sonuçları ön yüksüz bir yayınki — sunumun 918,4 N'u
- *     çözüme girmemiş; (2) Adams'ın "Left" takozları konum tablosunun +y'sinde (sehimin
- *     sol/sağı tabloya göre ayna).
+ *     çözüme girmemiş (örnek Adams'ın çözdüğünü taşır); (2) Adams'ın "Left" takozları konum
+ *     tablosunun +y'sinde (sehimin sol/sağı tabloya göre ayna).
+ *   · PARAMETRİK ANALİZ = ADAMS — kullanıcı 2026-11-13: *"bu HTML raporu … senin RMS farklarını
+ *     bulduğun değerler çıkmıyor"*. Örnek 918,4 N'u taşıyordu (K0'da sehim RMS 0,93 mm) ve ön
+ *     grubun doğrusal Cone 38-40'ı kütüphanenin EĞRİLİ tipinin adını alıyordu (K0 4,76 mm, aynı
+ *     adlı tarama satırı 5,05 mm). K0 = Çözücü = Adams; değerleri aynı yasası farklı takoz o tip
+ *     değil, adı "· doğrusal".
  *   · SUNUMUN ÖN YÜKÜ — 918,4 N tasarım konumunda: modlar ve TR değişmez (yay doğrusal),
  *     yük önden arkaya kayar; yay statikte 72 mm, Max Bump'ta blok boyunda.
  *   · SUNUMUN ÖLÇÜTÜ — son mod < 35/1,41 = 24,82 Hz: TK65 geçmiyor, öteki dördü geçiyor.
@@ -23,6 +28,12 @@ Object.keys(rp).forEach((k) => { if (global[k] === undefined) global[k] = rp[k];
 global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
 Object.assign(global, require('../../js/mount-yay.js'));
 const core = require('../../js/mount-core.js');
+global.veMntKatalog = require('../../js/mount-katalog.js');
+const P = require('../../js/cp-mount-param.js');
+Object.keys(P).forEach((k) => { if (global[k] === undefined) global[k] = P[k]; });
+global.veMntParamExcel = require('../../js/mount-param-excel.js');
+const PS = require('../../js/cp-mount-param-sonuc.js');
+const PD = 74;          // sunumun ön yükü: k(L0 − 74) = 57,39 · 16 = 918,2 N
 
 const KOMBI = Object.keys(A.kombinasyon);
 // Örneğin topolojisi, takozlar kombinasyonun tipleriyle; Ld: askının tasarım boyu [mm] (90 = ön yüksüz)
@@ -49,8 +60,12 @@ describe('ÖRNEK — sunumun girdisi', () => {
     expect(tak.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.takoz);
     const as = t.nodes.filter((n) => n.type === 'mnt-aski');
     expect(as.map((n) => [n.data.x, n.data.y, n.data.z])).toEqual(A.yay.ust);
-    // ön yük tasarım konumunda: k(L0 − Ld) = 918,4 N (resmin yayı; k 57,39 ↔ sunum 57,4)
-    as.forEach((n) => expect(n.data.k * (n.data.L0 - n.data.tasarimL)).toBeCloseTo(A.yay.onYuk, -1));
+    // Adams'ın çözdüğü gibi tasarım konumunda ön yüksüz (tasarım boyu = serbest boy); sunumun
+    // yazdığı ön yük PD'de: k(L0 − PD) = 918,4 N (resmin yayı; k 57,39 ↔ sunum 57,4)
+    as.forEach((n) => {
+      expect([n.data.kurulum, n.data.tasarimL]).toEqual(['tasarim', n.data.L0]);
+      expect(n.data.k * (n.data.L0 - PD)).toBeCloseTo(A.yay.onYuk, -1);
+    });
     const gv = t.nodes.filter((n) => n.data && n.data.mass > 0);
     expect(gv.reduce((s, n) => s + n.data.mass, 0)).toBeCloseTo(A.toplamKutle, 6);
     expect(gv.find((n) => n.type === 'mnt-motor').data).toMatchObject({ Ixx: 47.5, Iyy: 133, Izz: 114, idleRpm: A.rolanti.devir, cylinders: A.rolanti.silindir });
@@ -66,9 +81,9 @@ describe('ÖRNEK — sunumun girdisi', () => {
   });
 });
 
-describe('ADAMS = PROGRAM — ön yüksüz yayla beş kombinasyon', () => {
+describe('ADAMS = PROGRAM — örneğin ön yüksüz yayıyla beş kombinasyon', () => {
   const sonuc = {};
-  beforeAll(() => { KOMBI.forEach((kb) => { sonuc[kb] = H.coz(topo(kb, 90)); }); });
+  beforeAll(() => { KOMBI.forEach((kb) => { sonuc[kb] = H.coz(topo(kb)); }); });
   test('sehim: 30 değerde RMS < 0,03 mm (ayna eşlemesiyle); eşlemesiz sol/sağ farkı ters', () => {
     const fark = [], tersFark = [];
     KOMBI.forEach((kb) => {
@@ -106,9 +121,53 @@ describe('ADAMS = PROGRAM — ön yüksüz yayla beş kombinasyon', () => {
   });
 });
 
+describe('PARAMETRİK ANALİZ = ADAMS — K0 Çözücü\'nün çözümü, mevcut tip yasasıyla', () => {
+  let Hz, O;
+  beforeAll(() => {
+    const t = H.ornek('isg430askili');
+    global.nodes = JSON.parse(JSON.stringify(t.nodes));
+    global.connections = t.connections || [];
+    Hz = P._mntParamHazirlik({ data: {} });
+    O = P._mntParamOlcucu(Hz.M, global.veMntKatalog.baglam(Hz.ctx));
+  });
+  test('K0: Çözücü\'nün sehimi ve modları birebir; Adams\'tan sehim RMS < 0,03 mm, TR sunumun yuvarlamasında', () => {
+    const R = H.coz(H.ornek('isg430askili')), k0 = O.tam(null).o, a = A.kombinasyon.F3840R3940;
+    expect(k0.dz).toEqual(sehim(R).map((v) => expect.closeTo(v, 9)));
+    expect(k0.f).toEqual(R.modes.map((m) => expect.closeTo(m.f_Hz, 9)));
+    expect(rms(ayna(k0.dz).map((v, i) => v - a.d[i]))).toBeLessThan(0.03);
+    expect(Math.abs(k0.T * 100 - a.TR)).toBeLessThan(0.1);
+  });
+  test('tarama: Cone 39-40 × 3 Adams\'ın C3940\'ı; eğrili Cone 38-40\'lı satır önde K0\'dan > 0,2 mm fazla çöker', () => {
+    const c = O.tam(['amc137981', 'amc137981', 'amc137981']).o, a = A.kombinasyon.C3940;
+    expect(rms(ayna(c.dz).map((v, i) => v - a.d[i]))).toBeLessThan(0.03);
+    const k0 = O.tam(null).o, e = O.tam(['amc137961', 'amc137981', 'amc137981']).o;
+    [0, 1].forEach((i) => expect(e.dz[i]).toBeLessThan(k0.dz[i] - 0.2));
+  });
+  test('değerleri aynı yasası farklı takoz o tip DEĞİL: ad "· doğrusal" · "· eğri", kısa adda da', () => {
+    const [on, orta, arka] = Hz.M.G, lib = Hz.M.lib;
+    expect([on.tip, on.benzer, orta.tip, arka.tip]).toEqual([null, 'amc137961', 'amc137981', 'amc137981']);
+    expect(P._mntParamGrupTipAdi(Hz.M, on)).toBe(lib.amc137961.name + ' · doğrusal');
+    expect(P._mntParamGrupTipAdi(Hz.M, orta)).toBe(lib.amc137981.name);
+    const ks = PS._mntPrmKisaF({ M: Hz.M, D: { adaylar: Hz.aday } });
+    expect(ks(P._mntParamGrupTipAdi(Hz.M, on))).toBe('Cone38-40 · doğrusal');
+    const uye = (g) => global.nodes.filter((n) => g.idler.includes(n.id));
+    uye(on).forEach((n) => cp._mntLibUygula(n.data, 'amc137961'));               // tip yasasıyla → o tip
+    uye(orta).forEach((n) => { n.data.curveZ = [[0, 0], [2, 1500], [5, 4200]]; });  // tipte olmayan eğri
+    const M2 = P._mntParamModel();
+    expect([M2.G[0].tip, M2.G[0].benzer, M2.G[1].tip, M2.G[1].benzer]).toEqual(['amc137961', null, null, 'amc137981']);
+    expect(P._mntParamGrupTipAdi(M2, M2.G[1])).toBe(lib.amc137981.name + ' · eğri');
+    // iki tarafta da yasa, yasa başka (eğrinin kuvveti %10 fazla): o tip değil
+    uye(on).forEach((n) => { ['fitZ', 'curveZ'].forEach((a) => { if (n.data[a]) n.data[a] = JSON.parse(JSON.stringify(n.data[a])); });
+      if (n.data.curveZ) n.data.curveZ = n.data.curveZ.map((q) => [q[0], q[1] * 1.1]);
+      else n.data.fitZ.k0 *= 1.1; });
+    const M3 = P._mntParamModel();
+    expect([M3.G[0].tip, M3.G[0].benzer, P._mntParamGrupTipAdi(M3, M3.G[0])]).toEqual([null, 'amc137961', lib.amc137961.name + ' · eğri']);
+  });
+});
+
 describe('SUNUMUN ÖN YÜKÜ — 918,4 N tasarım konumunda', () => {
   test('modlar değişmez; yük öne kayar; yay statikte ~72 mm, Max Bump\'ta blok boyunda', () => {
-    const R0 = H.coz(topo('F3840R3940', 90)), R = H.coz(H.ornek('isg430askili'));
+    const R0 = H.coz(H.ornek('isg430askili')), R = H.coz(topo('F3840R3940', PD));
     expect(R.modes.map((m) => m.f_Hz)).toEqual(R0.modes.map((m) => m.f_Hz).map((f) => expect.closeTo(f, 9)));
     const d0 = sehim(R0), d = sehim(R);
     [0, 1].forEach((i) => expect(d[i]).toBeLessThan(d0[i] - 0.9));          // ön takozlar ~1 mm daha çöker
@@ -121,7 +180,7 @@ describe('SUNUMUN ÖN YÜKÜ — 918,4 N tasarım konumunda', () => {
 
 describe('SUNUMUN ÖLÇÜTÜ — son mod < 24,82 Hz', () => {
   test('TK65 geçmiyor (25,6 Hz); öteki dört kombinasyon geçiyor', () => {
-    const son = Object.fromEntries(KOMBI.map((kb) => [kb, Math.max(...H.coz(topo(kb, 90)).modes.map((m) => m.f_Hz))]));
+    const son = Object.fromEntries(KOMBI.map((kb) => [kb, Math.max(...H.coz(topo(kb)).modes.map((m) => m.f_Hz))]));
     expect(A.rolanti.fAtes / A.rolanti.guvenlik).toBeCloseTo(A.rolanti.sonModSinir, 1);
     expect(KOMBI.filter((kb) => son[kb] < A.rolanti.sonModSinir)).toEqual(['C3940', 'C3850', 'F3840R3940', 'F3840R3850']);
     expect(son.TK65).toBeCloseTo(25.62, 1);

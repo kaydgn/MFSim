@@ -634,8 +634,8 @@ function _mntPrmKAdi(ent, k, mutlak){
     return 'x '+_mntS(p.x, 0)+' · z '+_mntS(p.z, 0)+' mm';
   });
   return M.G.map(function(g, i){
-    var key=k.tipler[i] || g.tip;
-    return (key && M.lib[key]) ? M.lib[key].name : '—';
+    var key=k.tipler[i];
+    return key ? ((M.lib[key] && M.lib[key].name) || '—') : _mntParamGrupTipAdi(M, g);
   });
 }
 // Kısa tip — Excel'in ayırıcısıyla AYNI kümeden (adaylar + grupların mevcut tipi):
@@ -644,8 +644,13 @@ function _mntPrmKisaF(ent){
   var M=ent.M, X=(typeof veMntParamExcel!=='undefined') ? veMntParamExcel : null;
   if(!X || !X.ayirici || M.analiz==='konum') return function(ad){ return String(ad); };
   var adlar=((ent.D && ent.D.adaylar) || []).map(function(a){ return a.name; });
-  M.G.forEach(function(g){ if(g.tip && M.lib[g.tip]) adlar.push(M.lib[g.tip].name); });
-  return X.ayirici(adlar);
+  M.G.forEach(function(g){ var key=g.tip || g.benzer; if(key && M.lib[key]) adlar.push(M.lib[key].name); });
+  var f=X.ayirici(adlar);
+  // yasası farklı mevcut tipin eki (· doğrusal · eğri) kısa adın arkasında kalır
+  return function(ad){
+    var s=String(ad==null ? '' : ad), y=VE_MNT_PRM_YASA_EK.exec(s);
+    return y ? f(s.slice(0, y.index))+' · '+y[1] : f(s);
+  };
 }
 var _MNT_PRM_KRITER_NO = ['1', '1a', '1b', '2'];
 function _mntParamKonfigHTML(node, ent, L, sec){

@@ -33,12 +33,16 @@ function _mntParamModel(liste){
   var gather=_mntGatherForSolver(solver, nl);
   var byId={};
   nl.forEach(function(n){ if(n) byId[n.id]=n; });
-  // Mevcut tip: kütüphanenin girdisiyle 6/6 değeri aynı olan tip (seçili
-  // girdi ya da değerleri tam tutan tek girdi — Takoz penceresinin eşleşmesi).
+  // Mevcut tip: kütüphanenin girdisiyle 6/6 değeri VE nonlineer yasası aynı olan tip (seçili
+  // girdi ya da değerleri tam tutan tek girdi — Takoz penceresinin eşleşmesi). Değerleri aynı,
+  // yasası farklı takoz o tip DEĞİL (`benzer`): tarama tipi yasasıyla takar, K0 takozun kendi
+  // verisiyle çözülür — kullanıcı 2026-11-13: ISG'nin doğrusal Cone 38-40'ı "AMC 137961" adıyla
+  // K0'da 4,76 mm, aynı adlı tarama satırında (eğriyle) 5,05 mm çıkıyordu.
   var tak=gather.mounts.map(function(m){
-    var E=byId[m.id] ? _mntKutuphaneEslesme(byId[m.id]) : null;
+    var E=byId[m.id] ? _mntKutuphaneEslesme(byId[m.id]) : null, deger=!!(E && !E.farkli.length);
     return { id:m.id, name:m.name, x:_mntNum(m.x), y:_mntNum(m.y), z:_mntNum(m.z),
-             libKey:(E && !E.farkli.length) ? E.e.key : null };
+             libKey:(deger && E.yasaAyni) ? E.e.key : null, benzer:(deger && !E.yasaAyni) ? E.e.key : null,
+             yasa:!!(E && E.yasaTk) };
   });
   var eng=(typeof _mntRepEngine==='function')
     ? _mntRepEngine({ gather:{ torque:gather.torque } }, (typeof veMntRaporOpts==='function') ? veMntRaporOpts() : {})
@@ -92,7 +96,18 @@ function _mntParamAdayAdi(M, key){
 // Grubun bugünkü değeri: katalogda tipi, konumda kaymasız aday.
 function _mntParamMevcutAdi(M, g){
   if(M.analiz==='konum') return _mntParamKonumAd(0, 0);
-  return (g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—';
+  return _mntParamGrupTipAdi(M, g);
+}
+// Grubun modeldeki tipi: kütüphanenin tipi; değerleri aynı yasası farklıysa tipin adı +
+// takozun yasası (· doğrusal · eğri); yoksa —. Pencere, Excel, HTML ve rapor buradan.
+var VE_MNT_PRM_YASA_EK = / · (doğrusal|eğri)$/;
+function _mntParamGrupTipAdi(M, g){
+  if(g.tip && M.lib[g.tip]) return M.lib[g.tip].name;
+  if(g.benzer && M.lib[g.benzer]){
+    var egri=g.uyeler.some(function(i){ return M.tak[i] && M.tak[i].yasa; });
+    return M.lib[g.benzer].name+' · '+(egri ? 'eğri' : 'doğrusal');
+  }
+  return '—';
 }
 // Aday grubun bugünkü değeri mi (katalog: aynı tip · konum: Δ 0).
 function _mntParamAdayAyni(M, g, key){
@@ -490,7 +505,7 @@ function _mntParamYerlesimHTML(node, Y){
   var h=_mntFoyAc([{ b:'No', gen:'9%' }, { b:'Grup', gen:'28%', sinif:'sol' }, { b:'Adet', gen:'13%' },
     { b:'x <u>[mm]</u>', gen:'13%' }, { b:'Mevcut tip', gen:'37%', sinif:'sol' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
   G.forEach(function(g){
-    var tip=(g.tip && Y.M.lib[g.tip]) ? Y.M.lib[g.tip].name : '—';
+    var tip=_mntParamGrupTipAdi(Y.M, g);
     h+='<tr><td>'+_mntParamNo(g.no)+'</td><td class="sol sar">'+_mntParamAd(g.ad)+'</td>'
      + '<td>'+g.uyeler.length+'</td><td>'+_mntS(g.x, 0)+'</td><td class="sol sar">'+_mntParamAd(tip)+'</td></tr>';
   });
@@ -872,7 +887,9 @@ function _mntParamYanHTML(node, H){
 // ("ASR-SR-116", "Sağ/Sol"), büyük harfli önek + numara ("NG 55") ve sertlik
 // ("60 ShA").
 function _mntParamAd(ad){
-  var s=String(ad==null ? '' : ad), m=/^(.*\S)\s+(\([^()]*\))$/.exec(s);
+  var s=String(ad==null ? '' : ad), yasa=VE_MNT_PRM_YASA_EK.exec(s);
+  if(yasa) return _mntParamAd(s.slice(0, yasa.index))+' <span class="ve-mnt-nw">· '+yasa[1]+'</span>';
+  var m=/^(.*\S)\s+(\([^()]*\))$/.exec(s);
   var kod=function(x){
     return _mntEsc(x).replace(/(^|[^\p{L}\p{N}])(\p{Lu}{2,} \d\S*(?: ShA)?|\d+ ShA)|\S*[-–/]\S*/gu, function(t, on, k){
       return k ? on+'<span class="ve-mnt-nw">'+k+'</span>' : '<span class="ve-mnt-nw">'+t+'</span>';
@@ -891,7 +908,7 @@ function _mntParamGrupHTML(node, H){
     : [{ b:'No', gen:'8%' }, { b:'Grup', gen:'31%', sinif:'sol' }, { b:'x <u>[mm]</u>', gen:'15%' },
        { b:'Mevcut tip', gen:'33%', sinif:'sol' }, { b:'Tara', gen:'13%', sinif:'ve-mnt-sec' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
   G.forEach(function(g){
-    var tip=(g.tip && H.M.lib[g.tip]) ? H.M.lib[g.tip].name : '—';
+    var tip=_mntParamGrupTipAdi(H.M, g);
     h+='<tr><td>'+g.no+'</td><td class="sol sar">'+_mntParamAd(g.ad)+'</td><td>'+_mntS(g.x, 0)+'</td>'
      + (konum ? '<td>'+_mntS(g.z, 0)+'</td>' : '<td class="sol sar">'+_mntParamAd(tip)+'</td>')
      + '<td class="ve-mnt-sec"><input type="checkbox"'+(H.sabit[g.anahtar] ? '' : ' checked')
@@ -1250,7 +1267,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntParamSabit: veMntParamSabit, veMntParamAday: veMntParamAday,
     veMntParamAnaliz: veMntParamAnaliz, veMntParamKonum: veMntParamKonum, _mntParamAnaliz: _mntParamAnaliz,
     _mntParamKonumAdaylar: _mntParamKonumAdaylar, _mntParamKonumAd: _mntParamKonumAd, _mntParamAdayAdi: _mntParamAdayAdi,
-    _mntParamMevcutAdi: _mntParamMevcutAdi, _mntParamAdayAyni: _mntParamAdayAyni, _mntParamGrupKonum: _mntParamGrupKonum,
+    _mntParamMevcutAdi: _mntParamMevcutAdi, _mntParamGrupTipAdi: _mntParamGrupTipAdi, VE_MNT_PRM_YASA_EK: VE_MNT_PRM_YASA_EK, _mntParamAdayAyni: _mntParamAdayAyni, _mntParamGrupKonum: _mntParamGrupKonum,
     VE_MNT_PARAM_ANALIZ: VE_MNT_PARAM_ANALIZ, veMntParamAdayHepsi: veMntParamAdayHepsi,
     veMntParamTolerans: veMntParamTolerans, veMntParamToleransAc: veMntParamToleransAc, veMntParamTara: veMntParamTara
   };

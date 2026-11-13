@@ -66,8 +66,8 @@ var veMntKatalog = (function() {
     return q.join('');
   }
 
-  // takozlar: [{ id, name, x, y, z (mm), libKey? }]
-  // Dönüş: [{ no, anahtar, ad, uyeler:[i], idler:[id], x, cift, tip }]
+  // takozlar: [{ id, name, x, y, z (mm), libKey?, benzer? }]
+  // Dönüş: [{ no, anahtar, ad, uyeler:[i], idler:[id], x, cift, tip, benzer }]
   function gruplar(takozlar){
     var T = takozlar || [], n = T.length, es = [];
     for(var i = 0; i < n; i++) es.push(-1);
@@ -102,13 +102,17 @@ var veMntKatalog = (function() {
       var ad = (uy.length === 1 ? String(T[i].name == null ? '' : T[i].name)
         : adla[i] ? ciftAdi(ay[i]) : T[uy[0]].name + ' + ' + T[uy[1]].name).replace(/\s+/g, ' ').trim();
       var tipler = uy.map(function(k){ return T[k].libKey || ''; });
+      var benz = uy.map(function(k){ return T[k].libKey || T[k].benzer || ''; });
+      var tip = (tipler[0] && tipler.every(function(t){ return t === tipler[0]; })) ? tipler[0] : null;
       G.push({
         anahtar: uy.map(function(k){ return String(T[k].id); }).sort().join('|'),
         ad: ad, uyeler: uy, idler: uy.map(function(k){ return T[k].id; }),
         x: uy.reduce(function(s, k){ return s + T[k].x; }, 0) / uy.length,
         z: uy.reduce(function(s, k){ return s + T[k].z; }, 0) / uy.length,
         cift: uy.length === 2,
-        tip: (tipler[0] && tipler.every(function(t){ return t === tipler[0]; })) ? tipler[0] : null
+        tip: tip,
+        // değerleri bir tipin, yasası başka (cp-mount-param.js → _mntParamModel): ad için
+        benzer: (!tip && benz[0] && benz.every(function(t){ return t === benz[0]; })) ? benz[0] : null
       });
     }
     G.sort(function(p, q){ return p.x - q.x || p.z - q.z || p.uyeler[0] - q.uyeler[0]; });

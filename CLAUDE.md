@@ -453,7 +453,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   oturağına zikzakla çizer (yazısız). Örnek `tta10askili`: föy takoz TİPİ vermiyor — tipler ve ön yük katalog
   taramasından, askıyla (kullanıcı 2026-11-13: *"hangi takozlar bu sistem için uygun olur"*). Örnek `isg430askili`:
   Adams sunumunun modeli (kullanıcı 2026-11-13: *"PPTX belgesindeki analizi çözer misin?"*); bileşen kütleleri sunumda
-  yok, Adams'ın 60 sonucuna uydurma; askı sunumun ön yüküyle. Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
+  yok, Adams'ın 60 sonucuna uydurma; askı ADAMS'IN ÇÖZDÜĞÜ GİBİ ön yüksüz (tasarım boyu = serbest boy; sunumun 918,4 N'u
+  Adams'ın sonuçlarında yok — örnek onu taşırken Parametrik Analiz'in HTML'i sunumun sehimlerini vermiyordu); Adams'ın
+  Left'i konum tablosunun +y'si (programın Sağ'ı). Kapı: `mount-aski.test.js` + `mount-aski-secim.test.js` +
   `mount-duyarlilik.test.js` + `mount-adams-isg.test.js` (fikstür `tests/fixtures/adams-isg430.js`).
 - **Çözücü'de kaldırım ve şok darbesinin GİRDİSİ YOK** (kullanıcı 2026-11-11, Canlı Not 144 · 145: *"Bunu
   kullanıcıya girdirmeyelim … standart olarak verelim. Daha sonra … 'Yük Durumları' bileşeni yapacağız."*):
@@ -464,6 +466,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
   Canlı Not 1002 (*"takoz yerlerine göre parametrik analize katılacak takozları seçecek"*):
+  **Mevcut tip YASASIYLA** (kullanıcı 2026-11-13: ISG'nin HTML'inde K0 ile aynı adlı tarama satırı ayrı sayı veriyordu):
+  değerleri bir tipin, nonlineer yasası başka olan takoz o tip DEĞİL — adı tipin adı + "· doğrusal" · "· eğri"
+  (`_mntParamGrupTipAdi`: pencere, Excel, HTML, rapor), Mevcut işareti yok, Modele uygula açık; K0 takozun verisiyle,
+  tarama tipi yasasıyla çözer (Tulga'nın doğrusal TK0xx'i: K0'da en büyük sehim 7,1 mm, yasalı tiplerle 2,6 mm). Kapı: `mount-adams-isg.test.js`
+  → *PARAMETRİK ANALİZ*.
   **Takoz yerleşimi** (gruplar `veMntKatalog.gruplar`'dan; çizim Görünümler'in BİLEŞENİ — Canlı Not 1003:
   *"Çok sade olmuş"*; takozun çipi grubun NUMARASI, küpü ve çipin kenarı grubun RENGİ — Canlı Not 1006,
   `--seri-1…4`, dörtten sonra döner; föyde numara DÜZ YAZI, rengi önündeki keskin köşeli küçük karede, BALON
