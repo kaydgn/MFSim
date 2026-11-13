@@ -342,11 +342,15 @@ function _mntParamYeni(node){
 // YERLEŞİMİN ÇİZİMİ (Canlı Not 1003: *"daha güzel yapalım. Çok sade olmuş."*) — güç grubunun
 // aksonometrisi, Görünümler'in ve "Güç grubundaki yeri"nin AYNI bileşeni (serbest kamera, bakış
 // düğmeleri, gösterge); takozun çipi GRUBUN numarası, küpü ve çipin kenarı GRUBUN RENGİ — föyün
-// ve aday tablosunun numara rozetiyle aynı (Canlı Not 1006: *"numaralandırmayı da güzel yapalım"*;
-// renk diyagramların seri paletinden, --seri-1…4, dörtten sonra döner). Çizimin kaynağı bu pencere
-// (_mntAksoKaynak): sürüklemenin bitişi de aynı numara ve renklerle kurar. Eskiden kendi şemasıydı.
+// ve aday tablosunun numarası da (Canlı Not 1006: *"numaralandırmayı da güzel yapalım"*; renk
+// diyagramların seri paletinden, --seri-1…4, dörtten sonra döner). Numara DÜZ YAZI, renk önündeki
+// keskin köşeli küçük karede — balon yok (Canlı Not 1007: *"baloncuk yapmana gerek yok. Çocukça
+// duruyor"*). Çizimin kaynağı bu pencere (_mntAksoKaynak): sürüklemenin bitişi de aynı numara ve
+// renklerle kurar. Eskiden kendi şemasıydı.
 function _mntParamRenk(no){ return ((Math.max(1, no)-1)%4)+1; }
-function _mntParamNo(no){ return '<span class="ve-prm-no" data-renk="'+_mntParamRenk(no)+'">'+no+'</span>'; }
+function _mntParamNo(no){
+  return '<span class="ve-prm-no" data-renk="'+_mntParamRenk(no)+'"><span class="ve-prm-kare" aria-hidden="true"></span>'+no+'</span>';
+}
 function _mntParamAksoVeri(nodeId, Y){
   var P=_mnt2DPencereVeri();
   if(!Y){ var n=_mntParamDugum(nodeId); Y=n ? _mntParamYeni(n) : null; }
@@ -374,7 +378,7 @@ function _mntParamPlanHTML(node, Y){
 function _mntParamYerlesimHTML(node, Y){
   var G=Y.M.G;
   if(!G.length) return _mntBolum('Takoz yerleşimi', '0 grup', '');           // durum sağ sütunda, bir kez
-  // Mevcut tipin kodu tek blok (`.ve-mnt-ek`, "(57RS326612M)"): sütun dar pencerede de onu taşır.
+  // Mevcut tipin kodu tek blok (`.ve-mnt-ek`, "(AMC 137963)"): sütun dar pencerede de onu taşır.
   var h=_mntFoyAc([{ b:'No', gen:'9%' }, { b:'Grup', gen:'28%', sinif:'sol' }, { b:'Adet', gen:'13%' },
     { b:'x <u>[mm]</u>', gen:'13%' }, { b:'Mevcut tip', gen:'37%', sinif:'sol' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
   G.forEach(function(g){
@@ -506,7 +510,7 @@ function _mntParamYanHTML(node, H){
 }
 
 // Grubun ve tipin adı hücrede SARAR (`td.sar`): kırpılan ad kütüphanede iki
-// tipe birden uyuyordu ("Cone 67 50Sh (AMC 1…" · "57RS313774…"). Sondaki
+// tipe birden uyuyordu ("Cone 67 50Sh (AMC 1…"). Sondaki
 // parantezli künye tek blok (`.ve-mnt-ek`): sığmazsa bütünüyle alt satıra
 // iner. Kod satır sonunda bölünmez (`.ve-mnt-nw`): tireli ya da eğik çizgili
 // ("ASR-SR-116", "Sağ/Sol"), büyük harfli önek + numara ("NG 55") ve sertlik

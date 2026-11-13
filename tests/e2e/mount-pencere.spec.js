@@ -56,7 +56,7 @@ async function ornek(page, k, imza) {
   await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
   await page.waitForTimeout(700);
 }
-const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', '57RS']];
+const ORNEK = [['tulga', 'Ön Takoz Braketi'], ['siper', 'cradle'], ['asfat', 'Orta Takoz']];
 
 // BAŞLANGIÇ SİHİRBAZI BİLEŞENİ (kullanıcı 2026-11-10, Canlı Not 110: *"Bu bileşeni tamamen
 // kaldıralım … Onun yerine sihirbazı açan bir bileşen oluşturalım. Sembolü de sihirli falan"*):
@@ -504,7 +504,7 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
 test('Görünümler: kutunun arkasındaki takoz örtülü — tarayıcının isabeti 3B ışınla aynı, yazısı yok', async ({ page }) => {
   await bootApp(page);
   const sonuc = [], hata = [];
-  for (const [ad, isaret, acilar] of [['tulga', 'Ön Takoz Braketi', [[249.3, 19.5], [140, 30], [60, -30]]], ['asfat', '57RS', [[100, -60], [160, -50], [20, 20]]]]) {
+  for (const [ad, isaret, acilar] of [['tulga', 'Ön Takoz Braketi', [[249.3, 19.5], [140, 30], [60, -30]]], ['asfat', 'Orta Takoz', [[100, -60], [160, -50], [20, 20]]]]) {
     await ornek(page, ad, isaret);
     await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview') || createNode('mnt-2dview', 100, 40); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
     await page.waitForTimeout(700);

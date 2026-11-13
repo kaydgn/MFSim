@@ -47,16 +47,16 @@ const PIVOT = [-162 + 90 * Math.cos((168 * Math.PI) / 180),
                  91 + 90 * Math.sin((168 * Math.PI) / 180)];
 const ARM_ABS = (Math.atan2(91 - PIVOT[1], -162 - PIVOT[0]) * 180) / Math.PI;
 
-const MOTOR = E.veFeadEngineOf('57RS303234');   // ISL8.9E3 375 — defterin motoru
+const MOTOR = E.veFeadEngineOf('motor-10');   // ISL8.9E3 375 — defterin motoru
 
 function kirpiBuild(opt) {
   opt = opt || {};
   const order = [
     { id: 'SRC', name: 'Tahrik Kasnağı', data: {} },
     { id: 'ID1', name: 'Avara 1', data: {} },
-    { id: 'A_C', name: 'Klima Komp.', data: Object.assign({ accLib: '57RS322530' }, opt.ac) },
+    { id: 'A_C', name: 'Klima Komp.', data: Object.assign({ accLib: 'valeo-tm31' }, opt.ac) },
     { id: 'ID2', name: 'Avara 2', data: {} },
-    { id: 'ALT', name: 'Alternatör', data: Object.assign({ accLib: '57RS309348' }, opt.alt) },
+    { id: 'ALT', name: 'Alternatör', data: Object.assign({ accLib: 'prestolite-155a' }, opt.alt) },
     { id: 'TEN', name: 'Gergi Kasnağı', data: {} },
   ];
   const sys = FEADCore.makeSystem({

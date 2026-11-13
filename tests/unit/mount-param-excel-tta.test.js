@@ -67,7 +67,7 @@ const satirlar = (ad) => wb.readSheet(wb.sheets.findIndex((s) => s.name === ad))
 // Sonuç'un düzeni (14 yük durumu, 6 mod): blok boyu 36, adım 38; j. bloğun ilk satırı 7 + 38j,
 // başlığı bir altında (0 tabanlı dizin 7 + 38j). K0–K9 j = 0…9, Tarama'nın No'su n → j = 9 + n.
 const ADIM = 38, ILK = (j) => 7 + ADIM * j, BI = (j) => ILK(j), SERIT = (j) => '$A$' + ILK(j) + ':$A$' + (ILK(j) + 35);
-// Excel adı "ASR…" eki olmadan yazar ("57RS313773 (ASR-SR-116)" → "57RS313773"): ikisi de anahtara.
+// Excel adı "ASR…" eki olmadan yazar (bugünün adlarında ek yok): ikisi de anahtara.
 const ad2key = () => { const m = {}; ent.D.adaylar.forEach((a) => { m[a.name] = a.key; m[global.veMntParamExcel.temiz(a.name)] = a.key; }); return m; };
 // Kombinasyonu modelin KOPYASINA uygula ve Çözücü'yle çöz.
 function coz(tip) {
@@ -94,14 +94,14 @@ describe('SEÇİM ve ONAY', () => {
   test('K1–K9: onaylanan R12\'nin dokuzu, statik sehim küçükten büyüğe; K1 en uygun, kalanı uygun', () => {
     const oz = satirlar('Özet').slice(7, 16);
     expect(oz.map((r) => r[3] + ' + ' + r[4]).sort()).toEqual([
-      'Cone 39 40 ShA (AMC 137981) + 57RS313773 (A26)', 'LMT-1433-00 40 ShA + Cone 39 50 ShA (AMC 137982)',
-      'LMT-1433-00 55 ShA + 57RS313773 (A26)', 'LMT-1433-00 55 ShA + Cone 39 50 ShA (AMC 137982)',
+      'Cone 39 40 ShA (AMC 137981) + A26 takozu A', 'LMT-1433-00 40 ShA + Cone 39 50 ShA (AMC 137982)',
+      'LMT-1433-00 55 ShA + A26 takozu A', 'LMT-1433-00 55 ShA + Cone 39 50 ShA (AMC 137982)',
       'Mount 1 40 ShA + Cone 39 50 ShA (AMC 137982)', 'Mount 1 55 ShA + Cone 39 50 ShA (AMC 137982)',
-      'Mount 1 70 ShA + Cone 39 50 ShA (AMC 137982)', 'TK035 35 ShA (57RS328045) + Mount 1 55 ShA',
-      'TK040 45 ShA (57RS329001M) + Cone 121 NP 55 ShA (AMC 137829)'].sort());
+      'Mount 1 70 ShA + Cone 39 50 ShA (AMC 137982)', 'TK035 35 ShA + Mount 1 55 ShA',
+      'TK040 45 ShA + Cone 121 NP 55 ShA (AMC 137829)'].sort());
     const d = oz.map((r) => r[6]);
     for (let i = 1; i < d.length; i++) expect(d[i]).toBeGreaterThanOrEqual(d[i - 1]);
-    expect(oz[0].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA (57RS329001M)', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
+    expect(oz[0].slice(1, 6)).toEqual(['K1', 'K1 TK040-45 + Cone121NP-55', 'TK040 45 ShA', 'Cone 121 NP 55 ShA (AMC 137829)', 'En uygun']);
     expect(oz[0][6]).toBeCloseTo(5.9178, 3);
     oz.slice(1).forEach((r) => expect(r[5]).toBe('Uygun'));
     oz.forEach((r) => expect(r.slice(7, 11)).toEqual(['Uygun', 'Uygun', 'Uygun', 'Uygun']));
@@ -113,7 +113,7 @@ describe('SEÇİM ve ONAY', () => {
       const x = ent.D.indeks([r[3], r[4]].map((ad) => ent.D.adaylar.findIndex((a) => a.key === m[ad])));
       expect(r[6]).toBeCloseTo(ent.D.d[x], 9);
     });
-    expect(oz[6].slice(1, 6)).toEqual(['K0', 'K0 Mevcut', '57RS313774', '57RS313773', 'Uygun değil']);
+    expect(oz[6].slice(1, 6)).toEqual(['K0', 'K0 Mevcut', 'ASFAT takozu B', 'ASFAT takozu A', 'Uygun değil']);
     expect(oz[6].slice(7, 11)).toEqual(['Uygun', 'Uygun', 'Uygun değil', 'Uygun']);
   });
 });

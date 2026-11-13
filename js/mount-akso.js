@@ -425,13 +425,13 @@ var veMntAkso = (function(){
       ara.push(e);
     });
     ara.forEach(ara2);
-    // 3 · ONARIM: yer bulamayan çip için en yakın dört yerleşmiş çipten biri
+    // 3 · ONARIM: yer bulamayan çip için en yakın altı yerleşmiş çipten biri
     // geçici kaldırılır; kalan önce, kaldırılan sonra aranır — ikisi de yer
     // bulursa tutulur, bulamazsa ikisi eski hâline döner.
     if(kalan.length && !surukle){
       var kal=kalan.splice(0, kalan.length);
       kal.forEach(function(f){
-        var komsu=yer.slice().sort(function(a, b){ return Math.hypot(a.e.x-f.x, a.e.y-f.y)-Math.hypot(b.e.x-f.x, b.e.y-f.y); }).slice(0, 4);
+        var komsu=yer.slice().sort(function(a, b){ return Math.hypot(a.e.x-f.x, a.e.y-f.y)-Math.hypot(b.e.x-f.x, b.e.y-f.y); }).slice(0, 6);
         for(var i=0;i<komsu.length;i++){
           var y=komsu[i], ix=yer.indexOf(y);
           yer.splice(ix, 1);

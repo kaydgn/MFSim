@@ -5,12 +5,12 @@
  * takozlar varsa kaldıralım … Takoz adları genel ve resmi olsun."
  *
  *   • ad = ürün + sertlik + (parça no), üreticinin adıyla — "Cone 38 60 ShA
- *     (AMC 137963)" · "TK040 45 ShA (57RS329001M)"; proje, rapor ve not ada
+ *     (AMC 137963)" · "TK040 45 ShA"; proje, rapor ve not ada
  *     girmez ("Cone 38 60Sh (AMC 137963 · BMC 8x8 çalışma noktası)", "Mount 1
  *     40 ShA (BMC FEA · parça no yok)" ve "AMC 55 ShA" — o parça LMT-1433-37 —
  *     böyleydi);
  *   • aynı parça TEK girdi (üç AMC parçası iki kez duruyordu: nominal + '-calc');
- *   • tek istisna 57RS313773/57RS313774: aynı kod iki kaynakta farklı değerlerle
+ *   • tek istisna a26-a/a26-b: aynı kod iki kaynakta farklı değerlerle
  *     geçiyor, kullanıcı teyidi "farklı takozlar" — ad kaynağı taşır
  *     (bkz. mount-library-sources.test.js);
  *   • kaldırılan girdiye bağlı kayıtlı takoz değerlerini korur.
@@ -29,7 +29,7 @@ const cp = require('../../js/cp-mount.js');
 beforeEach(() => { resetStubs(stubs); global.nodes = []; });
 
 const L = cp.VE_MOUNT_LIBRARY;
-const KAYNAKLI = { '57RS313773': 'A26', '57RS313774': 'A26', '57RS313773-sr116': 'ASR-SR-116', '57RS313774-sr116': 'ASR-SR-116' };
+const KAYNAKLI = { 'a26-a': 'A26', 'a26-b': 'A26', 'asfat-a': 'ASFAT', 'asfat-b': 'ASFAT' };
 // Sertliği üreticinin yazmadığı AMC ürünleri (Cone 100 A/B/C, Cone 200 A/B — sitede Shore "-"):
 // ad = ürün + (parça no). Liste veri modülünden (js/mount-amc.js → KOD[k][1] === null).
 const AMC = require('../../js/mount-amc.js');
@@ -60,9 +60,10 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
     SINIFLI.forEach((k) => expect(L[k].name).toMatch(/^H-Mount (I|II|III) \d{3}-\d{3}-\d{3} (soft|middle soft|middle hard|hard) \(A\+P 12\.2147\.\d{4}\)$/));
   });
 
-  test('istisna yalnız 57RS çiftleri: ad = kod (kaynak)', () => {
+  // Parça kodu programda yok (Canlı Not 1004): ad kaynak + harf, aynı harf iki kaynakta aynı eski kod.
+  test('istisna yalnız A26 · ASR-SR-116 çiftleri: ad = kaynak takozu harf', () => {
     Object.entries(KAYNAKLI).forEach(([k, kaynak]) =>
-      expect(L[k].name).toBe(k.replace('-sr116', '') + ' (' + kaynak + ')'));
+      expect(L[k].name).toBe(kaynak + ' takozu ' + k.slice(-1).toUpperCase()));
   });
 
   test('adlar tekil; aynı parça tek girdi', () => {

@@ -12,7 +12,7 @@
 // Sadece konumları, ön, orta, arka gibi takoz grupları farklı olacak"):
 //   (1) AD — adında tek bir yan sözcüğü (sağ/sol) olan iki takoz, o sözcük
 //       çıkınca kalan ad aynıysa çifttir ("Sağ Ön Takoz" ↔ "Sol Ön Takoz",
-//       "Ön Sağ · 57RS313774" ↔ "Ön Sol · 57RS313774").
+//       "Ön sağ takoz" ↔ "Ön sol takoz").
 //   (2) GEOMETRİ — eşleşmemiş iki takoz y'de ayna, x ve z'de aynıysa
 //       (TOL_MM içinde) çifttir.
 //   (3) Kalan takoz tek başına bir gruptur (orta hattaki takoz).
@@ -98,7 +98,7 @@ var veMntKatalog = (function() {
       var uy = [i];
       if(es[i] >= 0){ uy.push(es[i]); gor[es[i]] = true; }
       // Ad tek boşlukla: ekran art arda boşluğu birleştirir, ipucu (title) birleştirmez
-      // (ASFAT: "Ön Sol   · 57RS313774").
+      // (eski ASFAT adı "Ön Sol   · …").
       var ad = (uy.length === 1 ? String(T[i].name == null ? '' : T[i].name)
         : adla[i] ? ciftAdi(ay[i]) : T[uy[0]].name + ' + ' + T[uy[1]].name).replace(/\s+/g, ' ').trim();
       var tipler = uy.map(function(k){ return T[k].libKey || ''; });
