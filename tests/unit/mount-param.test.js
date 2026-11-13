@@ -665,21 +665,23 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
     const govde = document.querySelector('#ve-fp-panes-py'), cizim = document.querySelector('#ve-mnt-param-ak-py');
     const kutu = document.getElementById('ve-mnt-param-ara-py-1'), liste = document.getElementById('ve-mnt-param-ara-l-py-1');
-    const sonuc = () => [...liste.querySelectorAll('[role="option"]')];
+    const sonuc = () => [...liste.querySelectorAll('.ve-prm-ara-o')];                    // tip satırları (marka başlıkları ayrı)
     const yaz = (q) => { kutu.value = q; kutu.dispatchEvent(new Event('input', { bubbles: true })); };
     const tus = (key) => { const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }); kutu.dispatchEvent(e); return e; };
     const satir = (no) => [...document.querySelectorAll('#ve-mnt-param-oz-py-' + no + ' li button')].map((b) => b.dataset.key);
     kutu.focus();
-    expect([document.activeElement === kutu, liste.hidden]).toEqual([true, true]);
-    // yazınca: sonuçlar Tip listesinin sırasıyla, ilk satır etkin
+    expect([document.activeElement === kutu, liste.hidden]).toEqual([true, false]);     // boş kutuda odak tabloyu açar (Canlı Not 1010)
+    kutu.value = ''; P.veMntParamAraKapat(kutu);
+    // yazınca: sonuçlar Tip listesinin sırasıyla, ilk tip satırı etkin
     const bek = P._mntParamAra(P._mntParamListeSira(A), 'cone 60', []);
     expect(bek.length).toBeGreaterThan(2);
     yaz('cone 60');
     expect([liste.hidden, kutu.getAttribute('aria-expanded')]).toEqual([false, 'true']);
     expect(sonuc().map((o) => o.dataset.key)).toEqual(bek.map((a) => a.key));
     expect(kutu.getAttribute('aria-activedescendant')).toBe(sonuc()[0].id);
+    const sira = () => [...liste.querySelectorAll('[role="option"]')];
     tus('ArrowDown');
-    expect(sonuc().map((o) => o.getAttribute('aria-selected'))).toEqual(bek.map((a, i) => String(i === 1)));
+    expect(sira().filter((o) => o.getAttribute('aria-selected') === 'true').map((o) => o.dataset.key)).toEqual([bek[1].key]);
     expect(tus('Enter').defaultPrevented).toBe(true);
     expect(n.data.adaylar).toEqual({ [G[0].anahtar]: [bek[1].key] });
     expect(document.getElementById('ve-mnt-param-ara-py-1')).toBe(kutu);                 // kutu tazelenmedi
@@ -696,8 +698,11 @@ describe('YERLEŞİM ve ADAYLAR — Canlı Not 1002 · 1005 · 1008', () => {
     expect(n.data.adaylar[G[0].anahtar]).toEqual(A.filter((a) => a.key === bek[0].key || a.key === bek[1].key).map((a) => a.key));
     expect(satir(1)).toEqual([bek[0].key, bek[1].key]);
     expect([document.activeElement === kutu, kutu.value, liste.hidden]).toEqual([true, '', true]);
-    // ↓ boş sorguda bütün tipleri açar (eklenenler hariç)
+    // ↓ boş sorguda tabloyu açar: marka başlıkları kapalı, açılınca bütün tipler (eklenenler hariç)
+    P.veMntParamAraKapat(kutu);
     tus('ArrowDown');
+    expect(sonuc().length).toBe(0);
+    for (let i = 0; i < liste.querySelectorAll('.ve-prm-ara-m').length; i++) liste.querySelectorAll('.ve-prm-ara-ok')[i].click();
     expect(sonuc().length).toBe(A.length - 2);
     // Esc aramayı temizler ve listeyi kapatır; olay pencereye gitmez
     yaz('zzz');
