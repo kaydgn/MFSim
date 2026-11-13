@@ -50,6 +50,14 @@ describe('AD KURALI — ürün + sertlik + (parça no)', () => {
       expect([e.name, /BMC|FEA|8x8|çalışma noktası|parça no|·/i.test(e.name)]).toEqual([e.name, false]));
   });
 
+  // Canlı not 2011 ("Şu programda tanımlı olan 'mount 1, mount 2' gibi garip isimli takozların ne
+  // olduğunu araştırabilir misin? Tam isimlerini koyalım."): kaynağın SIRA ETİKETİ ad olamaz — FEA
+  // raporunun "Mount 1"i LASPAR LMT-1433-20 adıyla durur (mount-library-lmt1433.test.js → KİMLİK).
+  test('ad kaynağın sıra etiketi değil: "Mount 1" · "Takoz 2" gibi numaralı ad yok', () => {
+    expect(Object.values(L).filter((e) => /^(mount|takoz|isolator)\s*\d/i.test(e.name)).map((e) => e.name)).toEqual([]);
+    expect(L['bmc-mount1-55sh'].name).toBe('LMT-1433-20 55 ShA');
+  });
+
   test('sertliği yazılmayan AMC ürünü: ad = ürün + (AMC kod) — Cone 100 A/B/C, Cone 200 A/B', () => {
     expect(SERTLIKSIZ.sort()).toEqual(['amc137213', 'amc137214', 'amc137215', 'amc137437', 'amc137438']);
     SERTLIKSIZ.forEach((k) => expect(L[k].name).toMatch(/^Cone (100|200) [ABC] \(AMC 1\d{5}\)$/));
