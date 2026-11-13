@@ -273,28 +273,33 @@ describe('ARTIM — N artım tek artımın dengesine iner (elastik, yol bağıms
 
 // ═══════════════════ KESME ═══════════════════
 // Eğrili kutu, denge asimptotun %86'sında: takoz başına x* = −12 mm, F = k0·x*/(1 + x*/xmax).
-// Aramasız tam Newton ilk adımda asimptotun ötesine (u < 0,02) atlar ve 60 iterasyonda
-// geri gelemez; yük ikiye bölününce ilk adım asimptotun berisinde kalır.
+// Aramasız tam Newton ilk adımda asimptotun ötesine (u < 0,02) atlar; yasanın tanjantı orada
+// tutarlı olduğundan (C¹ uzantı) geri gelir ama çok iterasyonla — 6 iterasyonluk sınırda tek
+// artım yetmez, yük ikiye bölününce her adım asimptotun berisinde kalır.
 
 describe('KESME — yakınsamayan artım ikiye bölünür, tükenirse söylenir', () => {
   const X = -12, FM = ASYM.comp.k0 * X / (1 + X / ASYM.comp.xmax);       // N, takoz başına
   const SERT = lc('Asimptot', [0, 0, 4 * FM / (N1.m * G)]);
+  // Asimptotlu yasanın tanjantı kırpmanın ötesinde tutarlı olunca (mount-yasa-tanjant.test.js)
+  // aramasız tam Newton bu yükü tek artımda 9 iterasyonda indiriyor; bölme mekanizması 6
+  // iterasyonluk sınırla sınanır (ölçüldü: kesme 0 ve 1 yetmiyor, varsayılan 5 bölmeyle iner).
+  const SINIR = 6;
 
   test('kesme 0: aramasız Newton yakınsamıyor ve bu SÖYLENİYOR (yük oranı 0)', () => {
-    const { r } = coz(N1, SERT, { arama: false, kesme: 0 });
+    const { r } = coz(N1, SERT, { arama: false, kesme: 0, maxIter: SINIR });
     expect(r.checks).toEqual(expect.objectContaining({ converged: false, kesme: 0, artim: 0, yukOrani: 0,
-      newtonIters: core.STATIK_VARSAYILAN.maxIter }));
+      newtonIters: SINIR }));
     expect(r.checks.sumFzOk).toBe(false);
   });
 
   test('bölme ART ARDA sınırlı: kesme 1 yetmiyor, kesme sayısı 1', () => {
-    const { r } = coz(N1, SERT, { arama: false, kesme: 1 });
+    const { r } = coz(N1, SERT, { arama: false, kesme: 1, maxIter: SINIR });
     expect(r.checks.converged).toBe(false);
     expect(r.checks.kesme).toBe(1);
   });
 
   test('varsayılan kesme: aramasız Newton iner; sehim kapalı formda, denge bağımsız hakemde', () => {
-    const { r } = coz(N1, SERT, { arama: false });
+    const { r } = coz(N1, SERT, { arama: false, maxIter: SINIR });
     expect(r.checks).toEqual(expect.objectContaining({ converged: true, stopConverged: true, yukOrani: 1, clampCount: 0 }));
     expect(r.checks.kesme).toBeGreaterThanOrEqual(1);
     expect(r.checks.artim).toBeGreaterThan(1);

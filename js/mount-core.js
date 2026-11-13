@@ -372,14 +372,20 @@ var veMountCore = (function() {
     //   'asym' (eksenel): MODEL konvansiyonu δ<0 = BASMA (compression).
     //     δ<0 (basma) → comp.k0·δ/(1+δ/comp.xmax)   — rasyonel, asimptot δ=−xmax (bump-stop)
     //     δ≥0 (geri-gelme) → ext.k0·δ + ext.c3·δ³   — kübik (daha yumuşak)
-    //     Payda EPS'te kırpılır → asimptot ötesi SONLU ama çok sert (Newton'da tekillik yok).
+    //     Payda EPS'te kırpılır → asimptot ötesi SONLU ama çok sert (Newton'da tekillik yok):
+    //     kırpma sınırının (u = EPS, x_b = (EPS−1)·xmax) ötesinde kuvvet sınırdaki TEĞETLE
+    //     doğrusal sürer (C¹: kuvvet ve eğim sürekli), tanjant k0/EPS². Eskiden ötede kuvvet
+    //     k0·x/EPS (eğim k0/EPS) iken tanjant k0/EPS² yazılıyordu — 50 kat tutarsız tanjant
+    //     Newton'u orada doğrusal yakınsamaya düşürüyordu. Kapı: mount-yasa-tanjant.test.js.
     if(spec && (spec.form==='poly' || spec.form==='asym')){
       const MM=1000;                        // δ(m) → x(mm)
       let fx, dfx;                          // x(mm)→F(N),  x(mm)→dF/dx(N/mm)
       if(spec.form==='asym'){
         const cp=spec.comp||{}, ex=spec.ext||{}, xmax=(Number.isFinite(cp.xmax)&&cp.xmax>0)?cp.xmax:1, EPS=0.02;
-        fx =function(x){ if(x>=0) return (ex.k0||0)*x+(ex.c3||0)*x*x*x; let u=1+x/xmax; if(u<EPS)u=EPS; return (cp.k0||0)*x/u; };
-        dfx=function(x){ if(x>=0) return (ex.k0||0)+3*(ex.c3||0)*x*x;   let u=1+x/xmax; if(u<EPS)u=EPS; return (cp.k0||0)/(u*u); };
+        const k0c=cp.k0||0, xb=(EPS-1)*xmax, kb=k0c/(EPS*EPS);
+        fx =function(x){ if(x>=0) return (ex.k0||0)*x+(ex.c3||0)*x*x*x; const u=1+x/xmax;
+                         return (u>=EPS) ? k0c*x/u : k0c*xb/EPS + kb*(x-xb); };
+        dfx=function(x){ if(x>=0) return (ex.k0||0)+3*(ex.c3||0)*x*x; const u=Math.max(1+x/xmax, EPS); return k0c/(u*u); };
       } else {
         const k0=spec.k0||0, c3=spec.c3||0, c5=spec.c5||0;
         fx =function(x){ return k0*x + c3*x*x*x + c5*x*x*x*x*x; };
