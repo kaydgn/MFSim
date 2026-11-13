@@ -9311,15 +9311,20 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-kat[data-d="eksik"]{ margin-left:-10px; padding-left:8px; border-left:2px solid var(--accent-warning); }
 
 /* EKSİK BANDI — gövdenin üstünde, yalnız eksik varken: sonucu ve oraya giden
-   bağlantı. Sonuç eskiden yalnız sağ sütunun dibinde yazıyordu. */
+   bağlantı. Sonuç eskiden yalnız sağ sütunun dibinde yazıyordu.
+   Görünüşü pencerenin yüzeyi (Canlı Not 1009: *"temaya uygun hale getirelim"*):
+   zemin ve çerçeve kartlarınki, uyarı yalnız sol kenarın çizgisinde — eksik
+   kategorinin çizgisiyle aynı (2 px kehribar); kehribar zemin YOK. Sol dolgu
+   9 px: içerik 1 px'lik çerçeveli hâlin hizasında kalır. */
 .ve-fp-eksik{
-  display:flex; flex-direction:column; gap:6px; margin:0 0 12px; padding:8px 10px;
+  display:flex; flex-direction:column; gap:6px; margin:0 0 12px; padding:8px 10px 8px 9px;
   border-radius:var(--radius-md); font-size:var(--fs-tiny); color:var(--text-primary);
-  background:color-mix(in srgb, var(--accent-warning) 12%, var(--bg-secondary));
-  border:1px solid color-mix(in srgb, var(--accent-warning) 50%, var(--border-color));
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color); border-left:2px solid var(--accent-warning);
 }
 .ve-fp-eksik-s{ display:flex; align-items:flex-start; gap:8px; min-width:0; }
-.ve-fp-eksik-s .mf-ico{ color:var(--ink-warning); flex:none; margin-top:1px; }
+/* Kehribar yalnız durumun işaretinde; bağlantının oku bağlantının renginde. */
+.ve-fp-eksik-s > .mf-ico{ color:var(--ink-warning); flex:none; margin-top:1px; }
 .ve-fp-eksik-t{ flex:1; min-width:0; }
 .ve-fp-eksik-t b{ color:var(--text-heading); }
 .ve-fp-eksik-s button{
