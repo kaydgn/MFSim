@@ -2838,15 +2838,10 @@ var veMountCore = (function() {
     return problems;
   }
 
-  // ═══════════════════ Çözücü ayarı — statik denge ve geçici rejim (Canlı Not 3002) ═══════════════════
-  // Çözücü penceresinin seçenekleri; varsayılanın ve aralığın TEK kaynağı. Varsayılan bugünkü
-  // çözücüdür: tam Newton–Raphson, geri izlemeli doğrusal arama, tek artım, 1e-9 artık ölçütü,
-  // 60 iterasyon; durdurucu 100·k ve 50 aktif küme turu; şokta Newmark ortalama ivme, periyot
-  // başına 40 adım, adım başına en çok 20 Newton. Aralık dışı sayı sınıra kırpılır, tanınmayan
-  // seçenek varsayılana düşer. Kapı: mount-cozucu-ayar.test.js.
-  const STATIK_YONTEMLER = ['newton', 'modnewton', 'bfgs'];
-  const STATIK_VARSAYILAN = { yontem:'newton', arama:true, artim:1, kesme:5, tolF:NL_RTOL, tolM:NL_RTOL, tolU:0,
-                              maxIter:NL_NEWTON_MAXITER, stiffRatio:STOP_STIFF_RATIO, aktifTur:STOP_MAXITER };
+  // ═══════════════════ Çözücü ayarı — geçici rejim (Canlı Not 3002) ═══════════════════
+  // Statik denge ayarı solveCaseNL'in yanında (STATIK_VARSAYILAN · statikAyar). Geçici rejim:
+  // şokta Newmark ortalama ivme, periyot başına 40 adım, adım başına en çok 20 Newton. Aralık
+  // dışı sayı sınıra kırpılır, tanınmayan seçenek varsayılana düşer. Kapı: mount-cozucu-ayar.test.js.
   const GECICI_ENTEGRATORLER = ['newmark-ort', 'newmark-dogrusal', 'hht', 'gen-alfa'];
   const GECICI_VARSAYILAN = { entegrator:'newmark-ort', alfa:-0.05, rhoInf:0.8, adimPeriyot:40,
                               newtonTol:NL_RTOL, newtonMaxIter:SHOCK_NEWTON_MAXITER };
@@ -2855,21 +2850,6 @@ var veMountCore = (function() {
     if(v === null || v === undefined || v === '' || !Number.isFinite(n)) return vars;
     const k = Math.min(ust, Math.max(alt, n));
     return tam ? Math.round(k) : k;
-  }
-  function statikAyar(ham){
-    const h = ham || {}, V = STATIK_VARSAYILAN;
-    return {
-      yontem: STATIK_YONTEMLER.indexOf(h.yontem) >= 0 ? h.yontem : V.yontem,
-      arama: h.arama === false ? false : true,
-      artim: _ayarSayi(h.artim, V.artim, 1, 100, true),
-      kesme: _ayarSayi(h.kesme, V.kesme, 0, 20, true),
-      tolF: _ayarSayi(h.tolF, V.tolF, 1e-14, 1e-2),
-      tolM: _ayarSayi(h.tolM, V.tolM, 1e-14, 1e-2),
-      tolU: _ayarSayi(h.tolU, V.tolU, 0, 1e-2),
-      maxIter: _ayarSayi(h.maxIter, V.maxIter, 1, 500, true),
-      stiffRatio: _ayarSayi(h.stiffRatio, V.stiffRatio, 1, 1e6),
-      aktifTur: _ayarSayi(h.aktifTur, V.aktifTur, 1, 500, true)
-    };
   }
   function geciciAyar(ham){
     const h = ham || {}, V = GECICI_VARSAYILAN;
@@ -3930,7 +3910,7 @@ var veMountCore = (function() {
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Çözücü ayarı — statik denge ve geçici rejim
-    STATIK_VARSAYILAN, statikAyar, GECICI_VARSAYILAN, geciciAyar,
+    GECICI_VARSAYILAN, geciciAyar,
     // Sabitler
     TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO, DEFAULT_ZETA
   };
