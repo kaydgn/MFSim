@@ -508,10 +508,16 @@ var _GM_TAKOZ = [
   { k: 'yer', bolum: 'Güç grubundaki yeri', ad: 'Güç grubundaki yeri', yer: 'sag', not: 'Takozun modeldeki yeri.' }
 ];
 
+// Takoz Özellikleri iki şekil (Özet gelince tek şekil A4 sayfasından uzundu): Özet · Takoz tipi ·
+// Öneri, sonra seçili tipin Rijitlik · Kuvvet–sehim'i.
 var _GM_KUTUPHANE = [
+  { k: 'ozet', bolum: 'Özet', ad: 'Özet', not: 'Marka başına aile, tip ve takoz sayısı; altta toplamı.' },
   { k: 'tip', bolum: 'Takoz tipi', ad: 'Takoz tipi', not: 'Marka seçilir; tip o markanın tiplerinden seçilir, oklar listede gezer.' },
   { k: 'yeni', metin: 'Yeni takoz', ust: 'button', ad: 'Yeni takoz', yer: 'sag-orta', not: 'Özel takoz tipi ekler.' },
-  { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' },
+  { k: 'oneri', bolum: 'Öneri', ad: 'Öneri', not: 'Modele uyan tipler; satır tipi seçer.' }
+];
+
+var _GM_KUTUPHANE_TIP = [
   { k: 'rijitlik', bolum: 'Rijitlik', ad: 'Rijitlik', not: 'Tipin üç eksendeki statik ve dinamik rijitliği.' },
   { k: 'egri', bolum: 'Kuvvet–sehim', ad: 'Kuvvet–sehim', not: 'Üç eksen tek diyagramda; z-eğrisi özel takozda girilir.' }
 ];
@@ -1079,12 +1085,20 @@ function _gmSec9(){
   var h = _gmH2('m9');
   h += _gmH3('Takoz Özellikleri', 'ozellikler');
   h += '<p><strong>Takoz Özellikleri</strong> bileşeni takoz tiplerinin kataloğunu taşır: '
-    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). Tipler markaya '
-    + 'göre ayrılır: önce <strong>Marka</strong>, sonra o markanın tipi seçilir. Seçilen tip takoza '
-    + 'uygulanınca rijitlikler dolar; <strong>konum dolmaz</strong> — o motorun verisidir, parçanın '
-    + 'değil.</p>';
-  h += _gmSahne('kutuphane', _gmPencere('mnt-library'), 'Takoz Özellikleri penceresi.', null, _GM_KUTUPHANE);
+    + 'katalogdaki künyeler ve eklenen özel takozlar (' + _gmS('kutuphane') + '). <strong>Özet</strong> '
+    + 'markaların takoz sayılarını verir. Tipler markaya göre ayrılır: önce <strong>Marka</strong>, sonra '
+    + 'o markanın tipi seçilir; seçili tipin rijitliği ve kuvvet–sehim eğrisi alttaki bölümlerdedir ('
+    + _gmS('kutuphane-tip') + '). Seçilen tip takoza uygulanınca rijitlikler dolar; <strong>konum '
+    + 'dolmaz</strong> — o motorun verisidir, parçanın değil.</p>';
+  h += _gmSahne('kutuphane', _gmPencere('mnt-library', { tut: ['Özet', 'Takoz tipi', 'Öneri'] }),
+    'Takoz Özellikleri penceresi: Özet, Takoz tipi ve Öneri.', null, _GM_KUTUPHANE);
+  h += _gmSahne('kutuphane-tip', _gmPencere('mnt-library', { tut: ['Rijitlik', 'Kuvvet–sehim'] }),
+    'Takoz Özellikleri penceresi: seçili tipin Rijitlik ve Kuvvet–sehim bölümleri.', null, _GM_KUTUPHANE_TIP);
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
+    ['Özet', 'Marka başına aile, tip ve takoz sayısı; <strong>Toplam</strong> satırı',
+      'Takoz sayısı markanın <strong>Tip</strong> listesindeki satır sayısıdır; eklenen özel takozlar '
+      + '<strong>Özel takozlar</strong> satırında sayılır. Aile ve tip üreticinin kataloğundan sayılır; '
+      + 'kataloğu olmayan markada (Diğer, Özel takozlar) ikisi de boş kalır (—)'],
     ['Takoz tipi', 'Marka listesi, o markanın tiplerinin listesi, <strong>Önceki tip</strong> · '
       + '<strong>Sonraki tip</strong> okları ve <strong>Yeni takoz</strong>; özel tipte ad alanı ve '
       + '<strong>Sil</strong>', 'Katalogdaki tipin adı değişmez; alttaki bölümler seçili tipin adını '
@@ -1138,8 +1152,8 @@ function _gmSec9(){
     + 'takoz kuvvetini <strong>az</strong> gösterir. Raporun <em>Lineerlik (±10 mm)</em> '
     + 'satırı bunu bildirir; aşım varsa eğri girin.');
   h += _gmNot('Eğrinin noktaları',
-      'z-eğrisi özel bir takoz tipinde, ' + _gmN(_GM_KUTUPHANE, 'egri') + ' <strong>Takoz Özellikleri → '
-    + 'Kuvvet–sehim</strong> bölümünde tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
+      'z-eğrisi özel bir takoz tipinde, <strong>Takoz Özellikleri → Kuvvet–sehim</strong> bölümünde '
+    + _gmNS('kutuphane-tip', _GM_KUTUPHANE_TIP, 'egri') + ' tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
     + 'Çözücü noktaları sehime (δ) göre sıralar; monoton bir eğri girin (basma eksi).');
   return h;
 }
