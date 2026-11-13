@@ -133,6 +133,29 @@ describe('BİLEŞEN MENÜSÜ (Canlı Not 143)', () => {
     expect(document.getElementById('ve-node-context-menu').getAttribute('role')).toBe('menu');
   });
 
+  test('GERİ-AL KAYDI DEĞİŞİKLİKTEN SONRA: Boyut · Ad · Yeniden adlandır yığına YENİ hâli yazar', () => {
+    // Yığının tepesi şimdiki hâldir (state.js → undo). Kayıt değişiklikten ÖNCE alınınca değişiklik
+    // yığına hiç girmiyordu: menüden adlandırıp bir bileşen silince Ctrl+Z adlandırmayı da geri
+    // alıyordu (bilesen-menusu.spec.js → Ctrl+Z'den sonra "Ana motor").
+    const n = dugum('mnt-motor', { customName: 'Motor' }); const el = dom(n);
+    global.selectedNodes.push(n);
+    const yakala = [];
+    stubs.saveState.mockImplementation(() => yakala.push({ w: n.width, ad: n.data.labelPos, isim: n.customName }));
+    CM.veBilesenMenuEylem('boyut:buyuk', n);
+    CM.veBilesenMenuEylem('ad:top', n);
+    CM.veBilesenAdDuzenle(n);
+    const inp = el.querySelector('.ve-node-label input');
+    inp.value = 'Ana motor';
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    const d = veNodeDefaultSize('mnt-motor');
+    expect(yakala).toEqual([
+      { w: Math.round(d.w * 1.5), ad: undefined, isim: 'Motor' },
+      { w: Math.round(d.w * 1.5), ad: 'top', isim: 'Motor' },
+      { w: Math.round(d.w * 1.5), ad: 'top', isim: 'Ana motor' },
+    ]);
+    stubs.saveState.mockReset();
+  });
+
   test('YENİDEN ADLANDIR tuvalde: Enter uygular (tek geri-al), Esc vazgeçer, boş ad tipin adına döner', () => {
     const n = dugum('mnt-motor', { customName: 'Motor' }); const el = dom(n);
     const lbl = el.querySelector('.ve-node-label');
