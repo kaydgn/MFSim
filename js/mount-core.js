@@ -2389,12 +2389,24 @@ var veMountCore = (function() {
         out.dTotMax.push(worstTot);
       };
 
+      // ENERJİ DENGESİ (Canlı Not 3002; Abaqus ETOTAL'ın karşılığı): dış iş W = ∫Fᵀdq, kinetik
+      // T = ½q̇ᵀMq̇, takozların iç enerjisi U = ∫Ψᵀdq, sönümde harcanan D = ∫(Cq̇)ᵀdq — adım adım.
+      // Ortalama ivmeli Newmark YAMUK integraliyle ölçülen enerjiyi ayrık olarak TAM korur; bu
+      // yüzden U adımın orta noktasıyla (Simpson) ölçülür: yamuk ile Simpson'ın farkı, kaba adımda
+      // sert temasın yarattığı sayısal enerji KAZANCIDIR (ölçüldü: Tulga 15 g, periyot başına 4 adım,
+      // 195 mm ↔ yakınsamış 20 mm). HHT-α ve genelleştirilmiş-α'da denge ara noktada kurulduğundan
+      // uç noktalarda ölçülen fark birinci mertebe bir artık taşır (periyot başına 8 adımda %1,4–2,
+      // 40 adımda %0,07 — adımla söner, sınırın altında). Lineer yolda Ψ = K·q: yamuk kesin. Göreli
+      // değerler koşunun en büyük mekanik enerjisine (T + U) göre.
+      let enW = 0, enU = 0, enD = 0, enRef = 0, enArti = 0, enEksi = 0, enSon = 0;
+      let enF = Fof(0), enPsi = [0,0,0,0,0,0], enCq = matVec(C6, qd);
+
       record(0, q, qd);
       for(let n=1;n<=nStep;n++){
         const t = n*dt;
         // Dış kuvvet ara anda: t_{n+1−αf} = t_{n+1} − αf·Δt (Newmark'ta t_{n+1})
         const F = Fof(alfaF ? t - alfaF*dt : t);
-        let qn;
+        let qn, psiN1 = null;                       // Ψ(q_{n+1}) — enerji dengesi için
         if(!nl){
           // ── Lineer yol: sabit K_eff, adım başına tek çözüm ──
           const rhs = [0,0,0,0,0,0];
@@ -2413,6 +2425,7 @@ var veMountCore = (function() {
           }
           qn = solveLinear(Keff, rhs);
           if(!qn) return null;
+          psiN1 = matVec(K6, qn);
         } else {
           // ── Newton yolu: adım başına denge iterasyonu ──
           const qP=q, qdP=qd, qddP=qdd;
@@ -2471,15 +2484,43 @@ var veMountCore = (function() {
           // Sonraki adımın ortalaması için Ψ(q_{n+1}): son değerlendirme her
           // yolda (yakınsama, geri izleme, üst sınır) kabul edilen x'te yapıldı.
           if(psiN) for(let i=0;i<6;i++) psiN[i] = sonG6[i] - gStat[i];
+          psiN1 = sonG6.map(function(v, i){ return v - gStat[i]; });
         }
         const qddN = [], qdN = [];
         for(let i=0;i<6;i++){
           qddN.push(a0*(qn[i]-q[i]) - a2*qd[i] - a3*qdd[i]);
           qdN.push(qd[i] + dt*((1-gamma)*qdd[i] + gamma*qddN[i]));
         }
+        {
+          const Fn1 = Fof(t), cqN = matVec(C6, qdN);
+          // İç enerji: lineerde yamuk (kesin), Newton yolunda Simpson (orta nokta bir değerlendirme)
+          let psiOrta = null;
+          if(nl){
+            const orta = [0,0,0,0,0,0];
+            for(let i=0;i<6;i++) orta[i] = q0[i] + 0.5*(q[i] + qn[i]);
+            const g6o = internal(orta, false).g6;
+            psiOrta = g6o.map(function(v, i){ return v - gStat[i]; });
+          }
+          for(let i=0;i<6;i++){
+            const dqi = qn[i] - q[i];
+            enW += 0.5*(enF[i] + Fn1[i])*dqi;
+            enD += 0.5*(enCq[i] + cqN[i])*dqi;
+            enU += psiOrta ? (enPsi[i] + 4*psiOrta[i] + psiN1[i])*dqi/6 : 0.5*(enPsi[i] + psiN1[i])*dqi;
+          }
+          const enT = 0.5*quadForm(M6, qdN);
+          enRef = Math.max(enRef, enT + enU);
+          const fark = enT + enU + enD - enW;
+          enArti = Math.max(enArti, fark); enEksi = Math.max(enEksi, -fark); enSon = fark;
+          enF = Fn1; enPsi = psiN1; enCq = cqN;
+        }
         q = qn; qd = qdN; qdd = qddN;
         if(n % every === 0 || n === nStep) record(t, q, qd);
       }
+      // Farkın en büyüğü koşunun EN BÜYÜK mekanik enerjisine göre (anlık enerjiye bölmek, enerji
+      // henüz sıfıra yakınken küçük farkı büyütüyordu).
+      // `son`: koşu sonundaki işaretli fark (net — α-yöntemlerinde anlık fark çevrim içinde salınır).
+      out.enerji = { kazanc: enRef > 0 ? enArti/enRef : 0, kayip: enRef > 0 ? enEksi/enRef : 0,
+                     son: enRef > 0 ? enSon/enRef : 0, dis: enW, sonum: enD };
       out.stopHit = stopHit;
       out.converged = converged;
       out.newtonIters = newtonIters;
@@ -3209,6 +3250,11 @@ var veMountCore = (function() {
     }
     return problems;
   }
+
+  // Geçici rejimin enerji dengesi sınırı: sayısal kazanç ya da kayıp, koşunun en büyük mekanik
+  // enerjisinin bu payını aşarsa eğri sayısal olarak güvenilmez (yorum söyler). Ölçüldü (Tulga,
+  // durdurucu teması): periyot başına 40 adımda en çok %1,1; 4–8 adımda %10–122.
+  const GECICI_ENERJI_SINIR = 0.05;
 
   // ═══════════════════ Varsayılan yük durumu şablonu (SPEC 4.4) ═══════════════════
 
@@ -4240,7 +4286,7 @@ var veMountCore = (function() {
     mountLoadShares, mountDamping, sectionMoment, motionEnvelope,
     ASKI_BLOK_KAT, askiDurum, askiKuvvet, askiEleman, askiTakozlari, askiYasalari, yukeKuvvetEkle, noktaYerDegisimi, askiTasarimBoylari, solveWithHangers,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
-    entegratorParam, entegratorYukseltme, geciciAyar, GECICI_VARSAYILAN,
+    entegratorParam, entegratorYukseltme, geciciAyar, GECICI_VARSAYILAN, GECICI_ENERJI_SINIR,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
     hessenbergQR, complexModes,

@@ -67,7 +67,7 @@ describe('PENCERE — dört kategori, bölümler, seçiciler', () => {
     expect([...document.querySelectorAll('.ve-fp-kat')].map((k) => k.getAttribute('aria-label')))
       .toEqual(['Ayarlar', 'Statik denge', 'Dinamik', 'Geçici rejim']);
     expect([...document.querySelectorAll('.ve-fp-sect b')].map((b) => b.textContent))
-      .toEqual(['Yöntem', 'Nonlineer çözüm', 'Yakınsama', 'Temas', 'Modal', 'Frekans yanıtı', 'Entegratör', 'Newton yinelemesi']);
+      .toEqual(['Yöntem', 'Nonlineer çözüm', 'Yakınsama', 'Temas', 'Modal', 'Frekans yanıtı', 'Zaman entegrasyonu', 'Newton yinelemesi']);
     // her seçici modeli izler (yerinde tazelemede kurulmaz)
     [...document.querySelectorAll('select[id^="ve-mnt-coz-"]')].forEach((s) => expect(s.hasAttribute('data-mnt-izle')).toBe(true));
   });
@@ -184,6 +184,31 @@ describe('AKIŞ — ayar çözüme, Sonuçlar\'a ve rapora gider', () => {
     const o = sp.mock.calls[0][4];
     expect([o.entegrator, o.alfa]).toEqual(['hht', -0.2]);
     expect(R.cozucu.gecici).toMatchObject({ entegrator: 'hht', alfa: -0.2 });
+  });
+
+  test('koşullu kararlı entegratör: kaba adım kararlılık sınırına iner ve Sonuçlar\'ın yorumu söyler', () => {
+    kur();
+    const n = cozucu();
+    // Tulga'da durdurucu teması var; temas oranı 10⁴ ve periyot başına 4 adımda temas frekansı
+    // doğrusal ivmenin kararlılık sınırını aşar (ölçüldü: Δt 5 → 0,743 ms). Temasın oranı statik
+    // dengeyle aynı: şoka da gider.
+    cp.veMntSetCozucu(n.id, 'statik', 'stiffRatio', '10000');
+    cp.veMntSetCozucu(n.id, 'gecici', 'entegrator', 'newmark-dogrusal');
+    cp.veMntSetCozucu(n.id, 'gecici', 'adimPeriyot', '4');
+    const sp = jest.spyOn(core, 'shockResponse');
+    const R = coz();
+    expect(sp.mock.calls[0][4].stiffRatio).toBe(10000);
+    sp.mockRestore();
+    const ds = R.signals.find((d) => d.key === 'shockz');
+    expect(ds.meta).toMatchObject({ entegrator: 'newmark-dogrusal', dtKisit: true, kararli: true });
+    const B = global.veMntBrief.forLane(ds, R, [ds.channels.find((c) => /bileşke sehim/.test(c.name)).id]);
+    expect(B.paras.join('\n')).toMatch(/Kararlılık için zaman adımı .* ms.* oldu\./);
+    cp.veMntSetCozucu(n.id, 'gecici', 'entegrator', 'hht');            // koşulsuz kararlı: kısıt yok, cümle yok
+    const R2 = coz();
+    const ds2 = R2.signals.find((d) => d.key === 'shockz');
+    expect(ds2.meta.dtKisit).toBe(false);
+    const B2 = global.veMntBrief.forLane(ds2, R2, [ds2.channels.find((c) => /bileşke sehim/.test(c.name)).id]);
+    expect(B2.paras.join('\n')).not.toMatch(/Kararlılık için zaman adımı/);
   });
 
   test('frekans yanıtı ayarı Sonuçlar\'ın ve raporun ızgarası: aralık ve nokta sayısı, inceltme kapalıyken taban', () => {

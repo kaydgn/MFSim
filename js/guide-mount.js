@@ -421,7 +421,7 @@ var _GM_COZUCU = [
   { k: 'yontem', bolum: 'Yöntem', ad: 'Yöntem', not: 'Çözüm modu ve sönüm oranı ζ.' },
   { k: 'statik', bolum: 'Nonlineer çözüm', ad: 'Statik denge', not: 'Çözüm tekniği, doğrusal arama, yük artımı; altında Yakınsama ve Temas.' },
   { k: 'dinamik', bolum: 'Modal', ad: 'Dinamik', not: 'Rijitlik tabanı; altında frekans yanıtının taraması.' },
-  { k: 'gecici', bolum: 'Entegratör', ad: 'Geçici rejim', not: 'Zaman entegratörü ve adımı; altında Newton yinelemesi.' },
+  { k: 'gecici', bolum: 'Zaman entegrasyonu', ad: 'Geçici rejim', not: 'Entegratör ve adımı; altında Newton yinelemesi.' },
   { k: 'hesapla', metin: 'Hesapla', ad: 'Hesapla', yer: 'sag', not: 'Bütün yük durumlarını ve modları çözer.' },
   { k: 'not', s: '.ve-fp-solve-not', ad: 'Durum notu', not: 'Toplam kütle, gövde ve takoz sayısı, son hesabın durumu.' }
 ];
@@ -1254,7 +1254,7 @@ function _gmSec11(){
       'Çözüm tekniği yalnız eğrili takozda; temas her modelde'],
     [_gmN(_GM_COZUCU, 'dinamik') + ' Dinamik', 'Modal · Frekans yanıtı',
       'Rijitlik tabanı modal, frekans yanıtı, şok, sönüm ve duyarlılıkta ortak'],
-    [_gmN(_GM_COZUCU, 'gecici') + ' Geçici rejim', 'Entegratör · Newton yinelemesi', 'Şok darbesinin zaman çözümü']
+    [_gmN(_GM_COZUCU, 'gecici') + ' Geçici rejim', 'Zaman entegrasyonu · Newton yinelemesi', 'Şok darbesinin zaman çözümü']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAdimlar([
     _gmN(_GM_COZUCU, 'yontem') + ' <strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı '

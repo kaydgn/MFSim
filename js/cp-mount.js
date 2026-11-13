@@ -6322,7 +6322,7 @@ function _mntCozucuGeciciParam(node){
   return '<div id="ve-mnt-coz-param-'+node.id+'" data-tazele>'+ic+'</div>';
 }
 function _mntCozucuGeciciGovde(node){
-  return _mntBolum('Entegratör', '',
+  return _mntBolum('Zaman entegrasyonu', '',
       _mntIzgara(2, _mntCozSecim(node, 'gecici', 'entegrator', 'Entegratör', MNT_COZ_ENTEGRATOR)
         + _mntCozucuGeciciParam(node)
         + _mntCozSayi(node, 'gecici', 'adimPeriyot', 'Adım / periyot', 'çözücü')))

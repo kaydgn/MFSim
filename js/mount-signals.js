@@ -520,8 +520,10 @@ var veMntSignals = (function() {
     try {
       // Entegratör ve adım Çözücü'nün ayarından (R.cozucu.gecici — Canlı Not 3002);
       // eski çözümde çekirdeğin varsayılanı (Newmark ortalama ivme).
+      // Temasın ceza oranı statik dengeyle AYNI (R.cozucu.statik.stiffRatio): aynı durdurucu.
+      var Cz = (R && R.cozucu) || {};
       res = C.shockResponse(_dinTakoz(R), R.mp.cg, M6, R.damping, Object.assign({},
-        (R.cozucu && R.cozucu.gecici) || {}, {
+        Cz.gecici || {}, (Cz.statik && Cz.statik.stiffRatio > 0) ? { stiffRatio: Cz.statik.stiffRatio } : {}, {
         dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81,
         useStop: true, q0: R.qStatic || null, kBasis: R.kBasis || null
       }));
@@ -560,6 +562,11 @@ var veMntSignals = (function() {
               nonlinear: !!res.nonlinear, useStop: !!res.useStop,
               stopHit: !!res.stopHit, converged: res.converged !== false,
               newtonIters: res.newtonIters || 0,
+              // Entegratör (Çözücü'nün ayarı — Canlı Not 3002): adım kararlılık için küçültüldü
+              // mü (dtKisit), bütçe yetmeyip çözüm kararsız mı kaldı (kararli) — yorum söyler.
+              entegrator: res.entegrator || 'newmark-ort', dt: res.dt,
+              dtKisit: !!res.dtKisit, kararli: res.kararli !== false,
+              enerji: res.enerji || null,
               preloadMm: Math.max.apply(null, res.d0 || [0]),
               dTotPeak: (res.dTotMax && res.dTotMax.length)
                         ? Math.max.apply(null, res.dTotMax) : NaN }

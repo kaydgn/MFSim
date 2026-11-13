@@ -467,6 +467,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yöntemi taşır; kitap tek üreticiden (`_mntYukDurumlari`), sonuçları raporda; Araç Performans'tan tork doldurma
   Motor penceresinde, Tork zinciri'nin altında. Kapı: `mount-arac-ekseni.test.js` → *PENCERE* · *AYAR* +
   `mount-ap-tork.test.js` → *DOLDUR*.
+- **ÇÖZÜCÜ SAYISAL YÖNTEMİ BELİRLER** (kullanıcı 2026-11-13, Canlı Not 3002: *"profesyonel ticari programları
+  aratmayan bir yapı"*): pencere Ayarlar · Statik denge · Dinamik · Geçici rejim; ayar `data.cozucu = { statik, modal,
+  frf, gecici }`, yalnız varsayılandan farklı alanlar. Varsayılanın ve aralığın TEK kaynağı çekirdek (`statikAyar` ·
+  `modalAyar` · `frfAyar` · `geciciAyar`); varsayılan ayar bugünkü çözümü birebir verir. Çözülmüş ayar hazırlığa
+  (Parametrik Analiz dâhil), imzaya, R.cozucu'ya, Sonuçlar'a ve rapora (Sayısal çözüm ayarları tablosu) AYNI nesne
+  olarak gider. Kesin sönümlü modlar (durum uzayı) raporun modal tablosunda; şokun enerji dengesi sınırı aşarsa
+  (`GECICI_ENERJI_SINIR`) yorum söyler. Kapı: `mount-cozucu-ayar.test.js` + `mount-statik-yontem.test.js` +
+  `mount-entegrator.test.js` + `mount-kompleks-modal.test.js` + `mount-yasa-tanjant.test.js` + `mount-enerji-dengesi.test.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`). **PENCERE ADIM ADIM KURULUYOR** (kullanıcı 2026-11-11,
   Canlı Not 1001: *"TÜM BİLEŞEN PENCERESİNİ temizleyelim … Adım adım kurgulayacağız sistemimizi"*).
