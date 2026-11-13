@@ -849,7 +849,7 @@ describe('PENCERE (parkta: eski pencere) — yalnız girdi', () => {
     expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
     expect(P._mntParamAd('Cone 121 NG 55 ShA (AMC 137830)'))
       .toBe('Cone 121 <span class="ve-mnt-nw">NG 55 ShA</span> <span class="ve-mnt-ek">(<span class="ve-mnt-nw">AMC 137830)</span></span>');
-    expect(P._mntParamAd('Mount 1 40 ShA')).toBe('Mount 1 <span class="ve-mnt-nw">40 ShA</span>');
+    expect(P._mntParamAd('LMT-1433-20 40 ShA')).toBe('<span class="ve-mnt-nw">LMT-1433-20</span> <span class="ve-mnt-nw">40 ShA</span>');
   });
 
   test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit; kombinasyonun sınırı yok', () => {
